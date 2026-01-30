@@ -51,7 +51,7 @@ type Issue struct {
 
 // User represents an AtomGit user
 type User struct {
-	ID      int64  `json:"id"`
+	ID      string `json:"id"`
 	Login   string `json:"login"`
 	Name    string `json:"name"`
 	Email   string `json:"email"`
