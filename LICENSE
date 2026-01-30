@@ -1,0 +1,105 @@
+木兰宽松许可证第2版
+
+您对软件的使用、复制、分发和修改受木兰宽松许可证第2版（以下简称"本许可证"）约束。如果您接受本许可证的条款和条件，则您被授予本许可证中规定的权利。
+
+1. 定义
+
+"软件"是指由贡献者提供的、随本许可证分发的软件及相关文档。
+
+"贡献者"是指对软件作出修改或贡献的个人或实体。
+
+"贡献"是指贡献者对软件作出的任何修改或添加。
+
+"您"（或"您的"）是指行使本许可证授予的权利的个人或实体。
+
+2. 授权
+
+在遵守本许可证条款和条件的前提下，每位贡献者特此授予您永久的、全球性的、非独占的、免费的、免版税的、不可撤销的版权许可，允许您以源代码或二进制形式使用、复制、修改、分发软件，无论是否修改。
+
+3. 条件
+
+您在分发软件时必须满足以下条件：
+
+(a) 您必须在软件的每个副本或实质性部分中包含本许可证的副本。
+
+(b) 如果您修改软件，您必须在修改的文件中显著地声明您已更改文件。
+
+(c) 如果您以二进制形式分发软件，您必须在分发的文档或材料中包含本许可证的副本。
+
+4. 专利授权
+
+每位贡献者特此授予您永久的、全球性的、非独占的、免费的、免版税的、不可撤销的（本节所述除外）专利许可，允许您制造、委托制造、使用、许诺销售、销售、进口和以其他方式转让软件。
+
+5. 免责声明
+
+软件按"原样"提供，不提供任何形式的明示或暗示的保证，包括但不限于对适销性、特定用途适用性和非侵权性的保证。在任何情况下，作者或版权持有人均不对任何索赔、损害或其他责任负责，无论是在合同、侵权或其他方面，由软件或软件的使用或其他交易引起或与之相关。
+
+6. 责任限制
+
+在任何情况下，任何贡献者均不对您因使用软件而产生的任何直接、间接、附带、特殊、惩罚性或后果性损害（包括但不限于采购替代商品或服务；使用、数据或利润损失；或业务中断）负责，无论责任理论如何，无论是合同、严格责任还是侵权（包括疏忽或其他），即使已被告知此类损害的可能性。
+
+7. 终止
+
+如果您违反本许可证的任何条款，本许可证授予您的权利将自动终止。但是，如果您纠正违规行为，则从纠正之日起，您的权利将恢复。
+
+8. 其他
+
+本许可证受中华人民共和国法律管辖并按其解释。
+
+如果本许可证的任何条款被认定为不可执行，该条款应仅在使其可执行的必要范围内进行修改，其余条款仍具有完全效力。
+
+这是本许可证的全部协议，取代您与贡献者之间关于软件的任何先前或同时的口头或书面通信、建议和陈述。
+
+---
+
+Mulan Permissive Software License, Version 2 (Mulan PSL v2)
+
+Your use, reproduction, distribution and modification of the Software are governed by this Mulan Permissive Software License, Version 2 (the "License").
+
+1. Definitions
+
+"Software" means the software and related documentation distributed with this License.
+
+"Contributor" means the individual or entity that makes modifications to or contributes to the Software.
+
+"Contribution" means any modification or addition to the Software made by a Contributor.
+
+"You" (or "Your") means an individual or entity exercising rights under this License.
+
+2. Grant of Rights
+
+Subject to the terms and conditions of this License, each Contributor hereby grants You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to use, reproduce, modify, distribute the Software in source or binary form, with or without modification.
+
+3. Conditions
+
+You must satisfy the following conditions when You distribute the Software:
+
+(a) You must include a copy of this License in every copy or substantial portion of the Software.
+
+(b) If You modify the Software, You must cause the modified files to carry prominent notices stating that You have changed the files.
+
+(c) If You distribute the Software in binary form, You must include a copy of this License in the documentation or other materials provided with the distribution.
+
+4. Patent License
+
+Each Contributor hereby grants You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Software.
+
+5. Disclaimer of Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+6. Limitation of Liability
+
+IN NO EVENT SHALL ANY CONTRIBUTOR BE LIABLE TO YOU FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+7. Termination
+
+This License and the rights granted hereunder will terminate automatically upon any breach by You of the terms of this License. However, if You cure such breach, Your rights under this License shall be reinstated from the date of such cure.
+
+8. Miscellaneous
+
+This License shall be governed by and construed in accordance with the laws of the People's Republic of China.
+
+If any provision of this License is held to be unenforceable, such provision shall be modified only to the extent necessary to make it enforceable, and the remaining provisions shall remain in full force and effect.
+
+This License constitutes the entire agreement between You and the Contributors with respect to the Software and supersedes all prior or contemporaneous oral or written communications, proposals and representations with respect to the Software.
