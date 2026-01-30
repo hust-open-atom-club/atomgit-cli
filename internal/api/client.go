@@ -113,6 +113,33 @@ func (c *Client) Put(path string, body, result interface{}) error {
 	return nil
 }
 
+func (c *Client) Patch(path string, body, result interface{}) error {
+	var bodyReader io.Reader
+	if body != nil {
+		jsonBody, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+		bodyReader = bytes.NewReader(jsonBody)
+	}
+
+	resp, err := c.doRequest("PATCH", path, bodyReader)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+	}
+
+	if result != nil {
+		return json.NewDecoder(resp.Body).Decode(result)
+	}
+	return nil
+}
+
 func (c *Client) Delete(path string) error {
 	resp, err := c.doRequest("DELETE", path, nil)
 	if err != nil {

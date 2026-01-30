@@ -20,6 +20,7 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdPRList(f))
 	cmd.AddCommand(newCmdPRView(f))
 	cmd.AddCommand(newCmdPRCreate(f))
+	cmd.AddCommand(newCmdPRClose(f))
 
 	return cmd
 }
@@ -185,6 +186,56 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "PR body")
 	cmd.Flags().StringVar(&opts.Base, "base", "master", "Base branch")
 	cmd.Flags().StringVar(&opts.Head, "head", "", "Head branch")
+
+	return cmd
+}
+
+func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "close [<owner>/]<repo> <number>",
+		Short: "Close a pull request",
+		Args:  cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
+			}
+
+			client := api.NewClient(token)
+
+			var owner, repo string
+			var number int
+
+			if len(args) == 1 {
+				return fmt.Errorf("repository and PR number required")
+			}
+
+			parts := strings.Split(args[0], "/")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			}
+			owner, repo = parts[0], parts[1]
+
+			number, err = strconv.Atoi(args[1])
+			if err != nil {
+				return fmt.Errorf("invalid PR number: %s", args[1])
+			}
+
+			body := map[string]string{
+				"state": "closed",
+			}
+
+			var pr api.PullRequest
+			path := fmt.Sprintf("/repos/%s/%s/pulls/%d", owner, repo, number)
+			if err := client.Patch(path, body, &pr); err != nil {
+				return err
+			}
+
+			fmt.Printf("Closed PR #%d: %s\n", pr.Number, pr.HTMLURL)
+
+			return nil
+		},
+	}
 
 	return cmd
 }
