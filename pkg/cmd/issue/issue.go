@@ -54,24 +54,15 @@ func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 
 			number = args[1]
 
-			// Get current issue to preserve title
-			var currentIssue api.Issue
-			path := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
-			if err := client.Get(path, &currentIssue); err != nil {
-				return err
+			// Close issue by adding "/close" comment
+			req := api.CommentRequest{Body: "/close"}
+			path := fmt.Sprintf("/repos/%s/%s/issues/%s/comments", owner, repo, number)
+			var comment api.Comment
+			if err := client.Post(path, req, &comment); err != nil {
+				return fmt.Errorf("failed to close issue: %w", err)
 			}
 
-			body := map[string]string{
-				"title":       currentIssue.Title,
-				"state_event": "close",
-			}
-
-			var issue api.Issue
-			if err := client.Patch(path, body, &issue); err != nil {
-				return err
-			}
-
-			fmt.Printf("Closed issue #%s: %s\n", issue.GetNumber(), issue.HTMLURL)
+			fmt.Printf("Closed issue #%s\n", number)
 
 			return nil
 		},
