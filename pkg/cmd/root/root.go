@@ -3,6 +3,7 @@ package root
 import (
 	"github.com/shinwell/ag-cli/pkg/cmd/auth"
 	"github.com/shinwell/ag-cli/pkg/cmd/issue"
+	"github.com/shinwell/ag-cli/pkg/cmd/license"
 	"github.com/shinwell/ag-cli/pkg/cmd/pr"
 	"github.com/shinwell/ag-cli/pkg/cmd/repo"
 	"github.com/shinwell/ag-cli/pkg/cmd/ssh-key"
@@ -25,6 +26,7 @@ func NewCmdRoot(f *cmdutil.Factory) (*cobra.Command, error) {
 	cmd.AddCommand(issue.NewCmdIssue(f))
 	cmd.AddCommand(auth.NewCmdAuth(f))
 	cmd.AddCommand(key.NewCmdSSHKey(f))
+	cmd.AddCommand(license.NewCmdLicense(f))
 
 	return cmd, nil
 }

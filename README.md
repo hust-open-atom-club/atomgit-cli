@@ -131,6 +131,15 @@ ag issue comment delete owner/repo 42 789
 ag issue comment delete owner/repo 42 789 --yes
 ```
 
+### License
+
+```bash
+# 检查 license 合规性
+ag license check MIT
+ag license check Apache-2.0
+ag license check GPL-3.0
+```
+
 ### SSH Key
 
 ```bash
@@ -167,6 +176,9 @@ ag-cli/
 │       ├── issue/              # Issue 命令
 │       │   ├── issue.go
 │       │   └── comment/        # Issue 评论命令
+│       ├── license/            # License 命令
+│       │   ├── license.go
+│       │   └── check.go
 │       └── ssh-key/ssh_key.go  # SSH key 命令
 └── go.mod
 ```
