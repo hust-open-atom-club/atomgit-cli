@@ -20,6 +20,7 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdPRList(f))
 	cmd.AddCommand(newCmdPRView(f))
 	cmd.AddCommand(newCmdPRCreate(f))
+	cmd.AddCommand(newCmdPREdit(f))
 	cmd.AddCommand(newCmdPRClose(f))
 	cmd.AddCommand(newCmdViewIssues(f))
 	cmd.AddCommand(newCmdLinkIssues(f))
@@ -202,6 +203,69 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "PR body")
 	cmd.Flags().StringVar(&opts.Base, "base", "master", "Base branch")
 	cmd.Flags().StringVar(&opts.Head, "head", "", "Head branch")
+
+	return cmd
+}
+
+func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
+	var opts struct {
+		Title string
+		Body  string
+	}
+
+	cmd := &cobra.Command{
+		Use:   "edit [<owner>/]<repo> <number>",
+		Short: "Edit a pull request",
+		Args:  cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
+			}
+
+			client := api.NewClient(token)
+
+			var owner, repo string
+			var number string
+
+			if len(args) == 1 {
+				return fmt.Errorf("repository and PR number required")
+			}
+
+			parts := strings.Split(args[0], "/")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			}
+			owner, repo = parts[0], parts[1]
+
+			number = args[1]
+
+			body := map[string]interface{}{}
+			if opts.Title != "" {
+				body["title"] = opts.Title
+			}
+			if opts.Body != "" {
+				body["body"] = opts.Body
+			}
+
+			if len(body) == 0 {
+				return fmt.Errorf("at least one of --title or --body must be provided")
+			}
+
+			var pr api.PullRequest
+			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
+			if err := client.Patch(path, body, &pr); err != nil {
+				return err
+			}
+
+			fmt.Printf("Updated PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "New PR title")
+	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "New PR body")
 
 	return cmd
 }

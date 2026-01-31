@@ -7,6 +7,7 @@ import (
 	"github.com/shinwell/ag-cli/pkg/cmd/pr"
 	"github.com/shinwell/ag-cli/pkg/cmd/repo"
 	"github.com/shinwell/ag-cli/pkg/cmd/ssh-key"
+	"github.com/shinwell/ag-cli/pkg/cmd/tag"
 	"github.com/shinwell/ag-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -24,6 +25,7 @@ func NewCmdRoot(f *cmdutil.Factory) (*cobra.Command, error) {
 	cmd.AddCommand(repo.NewCmdRepo(f))
 	cmd.AddCommand(pr.NewCmdPR(f))
 	cmd.AddCommand(issue.NewCmdIssue(f))
+	cmd.AddCommand(tag.NewCmdTag(f))
 	cmd.AddCommand(auth.NewCmdAuth(f))
 	cmd.AddCommand(key.NewCmdSSHKey(f))
 	cmd.AddCommand(license.NewCmdLicense(f))
