@@ -1,5 +1,7 @@
 package api
 
+import "fmt"
+
 // Repository represents an AtomGit repository
 type Repository struct {
 	ID              int64  `json:"id"`
@@ -20,33 +22,65 @@ type Repository struct {
 
 // PullRequest represents an AtomGit pull request
 type PullRequest struct {
-	ID        int64  `json:"id"`
-	Number    string `json:"number"`
-	Title     string `json:"title"`
-	Body      string `json:"body"`
-	State     string `json:"state"`
-	HTMLURL   string `json:"html_url"`
-	User      User   `json:"user"`
-	Head      Branch `json:"head"`
-	Base      Branch `json:"base"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
-	Merged    bool   `json:"merged"`
-	Mergeable bool   `json:"mergeable"`
+	ID        int64       `json:"id"`
+	Number    interface{} `json:"number"`
+	Title     string      `json:"title"`
+	Body      string      `json:"body"`
+	State     string      `json:"state"`
+	HTMLURL   string      `json:"html_url"`
+	User      User        `json:"user"`
+	Head      Branch      `json:"head"`
+	Base      Branch      `json:"base"`
+	CreatedAt string      `json:"created_at"`
+	UpdatedAt string      `json:"updated_at"`
+	Merged    bool        `json:"merged"`
+	Mergeable bool        `json:"mergeable"`
+}
+
+// GetNumber returns the PR number as a string
+func (pr *PullRequest) GetNumber() string {
+	switch v := pr.Number.(type) {
+	case string:
+		return v
+	case float64:
+		return fmt.Sprintf("%.0f", v)
+	case int:
+		return fmt.Sprintf("%d", v)
+	case int64:
+		return fmt.Sprintf("%d", v)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
 }
 
 // Issue represents an AtomGit issue
 type Issue struct {
-	ID        int64   `json:"id"`
-	Number    string  `json:"number"`
-	Title     string  `json:"title"`
-	Body      string  `json:"body"`
-	State     string  `json:"state"`
-	HTMLURL   string  `json:"html_url"`
-	User      User    `json:"user"`
-	Labels    []Label `json:"labels"`
-	CreatedAt string  `json:"created_at"`
-	UpdatedAt string  `json:"updated_at"`
+	ID        int64       `json:"id"`
+	Number    interface{} `json:"number"`
+	Title     string      `json:"title"`
+	Body      string      `json:"body"`
+	State     string      `json:"state"`
+	HTMLURL   string      `json:"html_url"`
+	User      User        `json:"user"`
+	Labels    []Label     `json:"labels"`
+	CreatedAt string      `json:"created_at"`
+	UpdatedAt string      `json:"updated_at"`
+}
+
+// GetNumber returns the Issue number as a string
+func (i *Issue) GetNumber() string {
+	switch v := i.Number.(type) {
+	case string:
+		return v
+	case float64:
+		return fmt.Sprintf("%.0f", v)
+	case int:
+		return fmt.Sprintf("%d", v)
+	case int64:
+		return fmt.Sprintf("%d", v)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
 }
 
 // User represents an AtomGit user

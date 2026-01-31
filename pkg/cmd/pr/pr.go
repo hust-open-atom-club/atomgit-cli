@@ -62,7 +62,7 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			for _, pr := range prs {
-				fmt.Printf("#%s %s [%s]\n", pr.Number, pr.Title, pr.State)
+				fmt.Printf("#%s %s [%s]\n", pr.GetNumber(), pr.Title, pr.State)
 			}
 
 			return nil
@@ -174,7 +174,7 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Created PR #%s: %s\n", pr.Number, pr.HTMLURL)
+			fmt.Printf("Created PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
 
 			return nil
 		},
@@ -226,7 +226,7 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Closed PR #%s: %s\n", pr.Number, pr.HTMLURL)
+			fmt.Printf("Closed PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
 
 			return nil
 		},

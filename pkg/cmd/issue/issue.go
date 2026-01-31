@@ -71,7 +71,7 @@ func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Closed issue #%s: %s\n", issue.Number, issue.HTMLURL)
+			fmt.Printf("Closed issue #%s: %s\n", issue.GetNumber(), issue.HTMLURL)
 
 			return nil
 		},
@@ -116,7 +116,7 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			for _, issue := range issues {
-				fmt.Printf("#%s %s [%s]\n", issue.Number, issue.Title, issue.State)
+				fmt.Printf("#%s %s [%s]\n", issue.GetNumber(), issue.Title, issue.State)
 			}
 
 			return nil
@@ -223,7 +223,7 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Created issue #%s: %s\n", issue.Number, issue.HTMLURL)
+			fmt.Printf("Created issue #%s: %s\n", issue.GetNumber(), issue.HTMLURL)
 
 			return nil
 		},
