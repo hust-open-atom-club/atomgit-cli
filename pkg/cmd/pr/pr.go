@@ -112,11 +112,26 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
+			// Get PR labels from separate endpoint
+			var labels []api.Label
+			labelsPath := fmt.Sprintf("/repos/%s/%s/pulls/%s/labels", owner, repo, number)
+			if err := client.Get(labelsPath, &labels); err != nil {
+				// Labels endpoint might not exist or fail, continue without labels
+				labels = nil
+			}
+
 			fmt.Printf("Title: %s\n", pr.Title)
 			fmt.Printf("State: %s\n", pr.State)
 			fmt.Printf("Author: %s\n", pr.User.Login)
 			fmt.Printf("URL: %s\n", pr.HTMLURL)
 			fmt.Printf("Branch: %s -> %s\n", pr.Head.Ref, pr.Base.Ref)
+			if len(labels) > 0 {
+				labelNames := make([]string, len(labels))
+				for i, label := range labels {
+					labelNames[i] = label.Name
+				}
+				fmt.Printf("Labels: %s\n", strings.Join(labelNames, ", "))
+			}
 			fmt.Printf("Created: %s\n", pr.CreatedAt)
 			if pr.Body != "" {
 				fmt.Printf("\n%s\n", pr.Body)

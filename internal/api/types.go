@@ -31,6 +31,7 @@ type PullRequest struct {
 	User      User        `json:"user"`
 	Head      Branch      `json:"head"`
 	Base      Branch      `json:"base"`
+	Labels    []Label     `json:"labels"`
 	CreatedAt string      `json:"created_at"`
 	UpdatedAt string      `json:"updated_at"`
 	Merged    bool        `json:"merged"`
