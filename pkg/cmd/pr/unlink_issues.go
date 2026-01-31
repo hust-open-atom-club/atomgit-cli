@@ -47,25 +47,23 @@ func newCmdUnlinkIssues(f *cmdutil.Factory) *cobra.Command {
 
 			client := api.NewClient(token)
 
-			// Unlink each issue
-			unlinkedIssues := []string{}
+			// Convert issue numbers to integers
+			issueNumbers := []int{}
 			for _, issueNumber := range opts.Issues {
-				// Validate issue number
-				if _, err := strconv.Atoi(issueNumber); err != nil {
+				num, err := strconv.Atoi(issueNumber)
+				if err != nil {
 					return fmt.Errorf("invalid issue number: %s", issueNumber)
 				}
-
-				body := map[string]string{
-					"issue_number": issueNumber,
-				}
-
-				path := fmt.Sprintf("/repos/%s/%s/pulls/%s/issues", owner, repo, prNumber)
-				if err := client.DeleteWithBody(path, body); err != nil {
-					return fmt.Errorf("failed to unlink issue #%s: %w", issueNumber, err)
-				}
-
-				unlinkedIssues = append(unlinkedIssues, issueNumber)
+				issueNumbers = append(issueNumbers, num)
 			}
+
+			// Unlink issues using array format
+			path := fmt.Sprintf("/repos/%s/%s/pulls/%s/issues?", owner, repo, prNumber)
+			if err := client.DeleteWithBody(path, issueNumbers); err != nil {
+				return fmt.Errorf("failed to unlink issues: %w", err)
+			}
+
+			unlinkedIssues := opts.Issues
 
 			// Output result
 			if len(unlinkedIssues) == 1 {

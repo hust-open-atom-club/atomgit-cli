@@ -47,25 +47,23 @@ func newCmdLinkIssues(f *cmdutil.Factory) *cobra.Command {
 
 			client := api.NewClient(token)
 
-			// Link each issue
-			linkedIssues := []string{}
+			// Convert issue numbers to integers
+			issueNumbers := []int{}
 			for _, issueNumber := range opts.Issues {
-				// Validate issue number
-				if _, err := strconv.Atoi(issueNumber); err != nil {
+				num, err := strconv.Atoi(issueNumber)
+				if err != nil {
 					return fmt.Errorf("invalid issue number: %s", issueNumber)
 				}
-
-				body := map[string]string{
-					"issue_number": issueNumber,
-				}
-
-				path := fmt.Sprintf("/repos/%s/%s/pulls/%s/issues", owner, repo, prNumber)
-				if err := client.Post(path, body, nil); err != nil {
-					return fmt.Errorf("failed to link issue #%s: %w", issueNumber, err)
-				}
-
-				linkedIssues = append(linkedIssues, issueNumber)
+				issueNumbers = append(issueNumbers, num)
 			}
+
+			// Link issues using array format
+			path := fmt.Sprintf("/repos/%s/%s/pulls/%s/issues?", owner, repo, prNumber)
+			if err := client.Post(path, issueNumbers, nil); err != nil {
+				return fmt.Errorf("failed to link issues: %w", err)
+			}
+
+			linkedIssues := opts.Issues
 
 			// Output result
 			if len(linkedIssues) == 1 {
