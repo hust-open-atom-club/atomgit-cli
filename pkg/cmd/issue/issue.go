@@ -2,10 +2,10 @@ package issue
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/shinwell/ag-cli/internal/api"
+	"github.com/shinwell/ag-cli/pkg/cmd/issue/comment"
 	"github.com/shinwell/ag-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -20,6 +20,53 @@ func NewCmdIssue(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdIssueList(f))
 	cmd.AddCommand(newCmdIssueView(f))
 	cmd.AddCommand(newCmdIssueCreate(f))
+	cmd.AddCommand(newCmdIssueClose(f))
+	cmd.AddCommand(comment.NewCmdComment(f))
+
+	return cmd
+}
+
+func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "close [<owner>/]<repo> <number>",
+		Short: "Close an issue",
+		Args:  cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
+			}
+
+			client := api.NewClient(token)
+
+			var owner, repo string
+			var number string
+
+			if len(args) == 1 {
+				return fmt.Errorf("repository and issue number required")
+			}
+
+			parts := strings.Split(args[0], "/")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			}
+			owner, repo = parts[0], parts[1]
+
+			number = args[1]
+
+			// Close issue by adding "/close" comment
+			req := api.CommentRequest{Body: "/close"}
+			path := fmt.Sprintf("/repos/%s/%s/issues/%s/comments", owner, repo, number)
+			var comment api.Comment
+			if err := client.Post(path, req, &comment); err != nil {
+				return fmt.Errorf("failed to close issue: %w", err)
+			}
+
+			fmt.Printf("Closed issue #%s\n", number)
+
+			return nil
+		},
+	}
 
 	return cmd
 }
@@ -60,7 +107,7 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			for _, issue := range issues {
-				fmt.Printf("#%d %s [%s]\n", issue.Number, issue.Title, issue.State)
+				fmt.Printf("#%s %s [%s]\n", issue.GetNumber(), issue.Title, issue.State)
 			}
 
 			return nil
@@ -87,7 +134,7 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 			client := api.NewClient(token)
 
 			var owner, repo string
-			var number int
+			var number string
 
 			if len(args) == 1 {
 				return fmt.Errorf("repository and issue number required")
@@ -99,13 +146,10 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 			}
 			owner, repo = parts[0], parts[1]
 
-			number, err = strconv.Atoi(args[1])
-			if err != nil {
-				return fmt.Errorf("invalid issue number: %s", args[1])
-			}
+			number = args[1]
 
 			var issue api.Issue
-			path := fmt.Sprintf("/repos/%s/%s/issues/%d", owner, repo, number)
+			path := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
 			if err := client.Get(path, &issue); err != nil {
 				return err
 			}
@@ -170,7 +214,7 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Created issue #%d: %s\n", issue.Number, issue.HTMLURL)
+			fmt.Printf("Created issue #%s: %s\n", issue.GetNumber(), issue.HTMLURL)
 
 			return nil
 		},
