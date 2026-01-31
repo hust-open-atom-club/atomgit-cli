@@ -2,10 +2,10 @@ package pr
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/shinwell/ag-cli/internal/api"
+	"github.com/shinwell/ag-cli/pkg/cmd/pr/comment"
 	"github.com/shinwell/ag-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -21,6 +21,7 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdPRView(f))
 	cmd.AddCommand(newCmdPRCreate(f))
 	cmd.AddCommand(newCmdPRClose(f))
+	cmd.AddCommand(comment.NewCmdComment(f))
 
 	return cmd
 }
@@ -61,7 +62,7 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			for _, pr := range prs {
-				fmt.Printf("#%d %s [%s]\n", pr.Number, pr.Title, pr.State)
+				fmt.Printf("#%s %s [%s]\n", pr.Number, pr.Title, pr.State)
 			}
 
 			return nil
@@ -88,7 +89,7 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 			client := api.NewClient(token)
 
 			var owner, repo string
-			var number int
+			var number string
 
 			if len(args) == 1 {
 				return fmt.Errorf("repository and PR number required")
@@ -100,13 +101,10 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 			}
 			owner, repo = parts[0], parts[1]
 
-			number, err = strconv.Atoi(args[1])
-			if err != nil {
-				return fmt.Errorf("invalid PR number: %s", args[1])
-			}
+			number = args[1]
 
 			var pr api.PullRequest
-			path := fmt.Sprintf("/repos/%s/%s/pulls/%d", owner, repo, number)
+			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
 			if err := client.Get(path, &pr); err != nil {
 				return err
 			}
@@ -176,7 +174,7 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Created PR #%d: %s\n", pr.Number, pr.HTMLURL)
+			fmt.Printf("Created PR #%s: %s\n", pr.Number, pr.HTMLURL)
 
 			return nil
 		},
@@ -204,7 +202,7 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 			client := api.NewClient(token)
 
 			var owner, repo string
-			var number int
+			var number string
 
 			if len(args) == 1 {
 				return fmt.Errorf("repository and PR number required")
@@ -216,22 +214,19 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 			}
 			owner, repo = parts[0], parts[1]
 
-			number, err = strconv.Atoi(args[1])
-			if err != nil {
-				return fmt.Errorf("invalid PR number: %s", args[1])
-			}
+			number = args[1]
 
 			body := map[string]string{
 				"state": "closed",
 			}
 
 			var pr api.PullRequest
-			path := fmt.Sprintf("/repos/%s/%s/pulls/%d", owner, repo, number)
+			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
 			if err := client.Patch(path, body, &pr); err != nil {
 				return err
 			}
 
-			fmt.Printf("Closed PR #%d: %s\n", pr.Number, pr.HTMLURL)
+			fmt.Printf("Closed PR #%s: %s\n", pr.Number, pr.HTMLURL)
 
 			return nil
 		},

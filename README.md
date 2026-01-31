@@ -71,6 +71,31 @@ ag pr view owner/repo 123
 
 # 创建 PR
 ag pr create owner/repo --title "Fix bug" --body "Description" --base master --head feature-branch
+
+# 关闭 PR
+ag pr close owner/repo 123
+```
+
+#### PR 评论
+
+```bash
+# 创建评论
+ag pr comment create owner/repo 123 --body "LGTM!"
+ag pr comment create owner/repo 123 --body-file review.md
+
+# 查看所有评论（树形结构显示）
+ag pr comment view owner/repo 123
+
+# 编辑评论（交互式编辑）
+ag pr comment edit owner/repo 123 456
+ag pr comment edit owner/repo 123 456 --body "Updated comment"
+
+# 删除评论
+ag pr comment delete owner/repo 123 456
+ag pr comment delete owner/repo 123 456 --yes
+
+# 回复评论（PR 特有）
+ag pr comment reply owner/repo 123 456 --body "Thanks for the feedback!"
 ```
 
 ### Issue
@@ -85,6 +110,25 @@ ag issue view owner/repo 42
 
 # 创建 Issue
 ag issue create owner/repo --title "Bug report" --body "Description"
+```
+
+#### Issue 评论
+
+```bash
+# 创建评论
+ag issue comment create owner/repo 42 --body "I can reproduce this issue"
+ag issue comment create owner/repo 42 --body-file details.md
+
+# 查看所有评论
+ag issue comment view owner/repo 42
+
+# 编辑评论（交互式编辑）
+ag issue comment edit owner/repo 42 789
+ag issue comment edit owner/repo 42 789 --body "Updated information"
+
+# 删除评论
+ag issue comment delete owner/repo 42 789
+ag issue comment delete owner/repo 42 789 --yes
 ```
 
 ### SSH Key
@@ -117,8 +161,12 @@ ag-cli/
 │       │   ├── clone.go
 │       │   ├── delete.go
 │       │   └── fork.go
-│       ├── pr/pr.go            # PR 命令
-│       ├── issue/issue.go      # Issue 命令
+│       ├── pr/                 # PR 命令
+│       │   ├── pr.go
+│       │   └── comment/        # PR 评论命令
+│       ├── issue/              # Issue 命令
+│       │   ├── issue.go
+│       │   └── comment/        # Issue 评论命令
 │       └── ssh-key/ssh_key.go  # SSH key 命令
 └── go.mod
 ```

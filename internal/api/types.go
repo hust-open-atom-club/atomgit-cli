@@ -21,7 +21,7 @@ type Repository struct {
 // PullRequest represents an AtomGit pull request
 type PullRequest struct {
 	ID        int64  `json:"id"`
-	Number    int    `json:"number"`
+	Number    string `json:"number"`
 	Title     string `json:"title"`
 	Body      string `json:"body"`
 	State     string `json:"state"`
@@ -38,7 +38,7 @@ type PullRequest struct {
 // Issue represents an AtomGit issue
 type Issue struct {
 	ID        int64   `json:"id"`
-	Number    int     `json:"number"`
+	Number    string  `json:"number"`
 	Title     string  `json:"title"`
 	Body      string  `json:"body"`
 	State     string  `json:"state"`
@@ -72,4 +72,21 @@ type Label struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Color       string `json:"color"`
+}
+
+// Comment represents a comment on an issue or pull request
+type Comment struct {
+	ID        int64  `json:"id"`
+	Body      string `json:"body"`
+	User      User   `json:"user"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+	HTMLURL   string `json:"html_url"`
+	// ParentID is used for PR review comments to indicate the parent comment in a thread
+	ParentID *int64 `json:"parent_id,omitempty"`
+}
+
+// CommentRequest represents the request body for creating/updating a comment
+type CommentRequest struct {
+	Body string `json:"body"`
 }
