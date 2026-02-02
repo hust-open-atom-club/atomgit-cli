@@ -51,7 +51,7 @@ func (c *Client) Get(path string, result interface{}) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
 	}

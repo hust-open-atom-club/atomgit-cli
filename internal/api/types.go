@@ -31,6 +31,7 @@ type PullRequest struct {
 	User      User        `json:"user"`
 	Head      Branch      `json:"head"`
 	Base      Branch      `json:"base"`
+	Labels    []Label     `json:"labels"`
 	CreatedAt string      `json:"created_at"`
 	UpdatedAt string      `json:"updated_at"`
 	Merged    bool        `json:"merged"`
@@ -123,4 +124,26 @@ type Comment struct {
 // CommentRequest represents the request body for creating/updating a comment
 type CommentRequest struct {
 	Body string `json:"body"`
+}
+
+// Tag represents a git tag
+type Tag struct {
+	Name    string `json:"name"`
+	Message string `json:"message"`
+	Commit  struct {
+		SHA string `json:"sha"`
+		URL string `json:"url"`
+	} `json:"commit"`
+	Tagger struct {
+		Name  string `json:"name"`
+		Email string `json:"email"`
+		Date  string `json:"date"`
+	} `json:"tagger"`
+}
+
+// TagRequest represents the request body for creating a tag
+type TagRequest struct {
+	TagName string `json:"tag_name"`
+	Message string `json:"message"`
+	Refs    string `json:"refs"`
 }
