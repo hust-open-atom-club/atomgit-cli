@@ -64,9 +64,9 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 			})
 
 			// Build comment tree
-			commentMap := make(map[int64]*api.Comment)
-			children := make(map[int64][]int64)
-			var roots []int64
+			commentMap := make(map[string]*api.Comment)
+			children := make(map[string][]string)
+			var roots []string
 
 			for i := range comments {
 				commentMap[comments[i].ID] = &comments[i]
@@ -88,7 +88,7 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 	}
 }
 
-func printCommentTree(commentMap map[int64]*api.Comment, children map[int64][]int64, id int64, depth int, currentUser string) {
+func printCommentTree(commentMap map[string]*api.Comment, children map[string][]string, id string, depth int, currentUser string) {
 	comment := commentMap[id]
 	if comment == nil {
 		return
@@ -106,7 +106,7 @@ func printCommentTree(commentMap map[int64]*api.Comment, children map[int64][]in
 		userMarker = " (你)"
 	}
 
-	fmt.Printf("%s[%d] @%s %s%s\n", indent, comment.ID, comment.User.Login, timeStr, userMarker)
+	fmt.Printf("%s[%s] @%s %s%s\n", indent, comment.ID, comment.User.Login, timeStr, userMarker)
 
 	// Print body with indentation
 	bodyLines := strings.Split(comment.Body, "\n")
