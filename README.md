@@ -14,8 +14,20 @@ go install ./cmd/ag
 
 ## 配置
 
-在使用之前，需要配置访问令牌。创建文件 `~/.atomgit_personal_token.json`：
+在使用之前，需要配置访问令牌。创建token文件：
 
+**推荐方式：遵循XDG规范**
+```
+$XDG_CONFIG_HOME/ag-cli/token.json
+```
+默认路径为 `~/.config/ag-cli/token.json`
+
+**兼容旧方式的路径**：
+```
+~/.atomgit_personal_token.json
+```
+
+文件内容：
 ```json
 {
   "access_token": "your-token-here",
