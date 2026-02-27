@@ -84,7 +84,7 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Created comment #%d: %s\n", comment.ID, comment.HTMLURL)
+			fmt.Printf("Created comment #%s: %s\n", comment.ID, comment.HTMLURL)
 			return nil
 		},
 	}

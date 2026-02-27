@@ -78,12 +78,13 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 			client := api.NewClient(token)
 			req := api.CommentRequest{Body: body}
 
+			var comment api.Comment
 			path := fmt.Sprintf("/repos/%s/%s/pulls/%d/comments", owner, repo, number)
-			if err := client.Post(path, req, nil); err != nil {
+			if err := client.Post(path, req, &comment); err != nil {
 				return err
 			}
 
-			fmt.Printf("Created comment on PR #%d\n", number)
+			fmt.Printf("Created comment #%s on PR #%d: %s\n", comment.ID, number, comment.HTMLURL)
 			return nil
 		},
 	}
