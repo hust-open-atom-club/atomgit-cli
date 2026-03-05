@@ -121,6 +121,16 @@ type Comment struct {
 	ParentID *string `json:"parent_id,omitempty"`
 }
 
+// CreateCommentResponse represents the response from creating a comment
+type CreateCommentResponse struct {
+	ID        string `json:"id"`
+	Body      string `json:"body"`
+	User      User   `json:"user"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+	HTMLURL   string `json:"html_url"`
+}
+
 // CommentRequest represents the request body for creating/updating a comment
 type CommentRequest struct {
 	Body string `json:"body"`

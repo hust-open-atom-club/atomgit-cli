@@ -78,7 +78,7 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 			client := api.NewClient(token)
 			req := api.CommentRequest{Body: body}
 
-			var comment api.Comment
+			var comment api.CreateCommentResponse
 			path := fmt.Sprintf("/repos/%s/%s/pulls/%d/comments", owner, repo, number)
 			if err := client.Post(path, req, &comment); err != nil {
 				return err
