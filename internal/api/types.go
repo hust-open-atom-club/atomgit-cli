@@ -111,7 +111,7 @@ type Label struct {
 
 // Comment represents a comment on an issue or pull request
 type Comment struct {
-	ID        string `json:"id"`
+	ID        int64  `json:"id"`
 	Body      string `json:"body"`
 	User      User   `json:"user"`
 	CreatedAt string `json:"created_at"`

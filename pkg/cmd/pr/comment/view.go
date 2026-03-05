@@ -2,6 +2,7 @@ package comment
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -64,14 +65,15 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 			})
 
 			// Build comment tree
-			commentMap := make(map[string]*api.Comment)
-			children := make(map[string][]string)
-			var roots []string
+			commentMap := make(map[int64]*api.Comment)
+			children := make(map[int64][]int64)
+			var roots []int64
 
 			for i := range comments {
 				commentMap[comments[i].ID] = &comments[i]
 				if comments[i].ParentID != nil {
-					children[*comments[i].ParentID] = append(children[*comments[i].ParentID], comments[i].ID)
+					parentID, _ := strconv.ParseInt(*comments[i].ParentID, 10, 64)
+					children[parentID] = append(children[parentID], comments[i].ID)
 				} else {
 					roots = append(roots, comments[i].ID)
 				}
@@ -88,7 +90,127 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 	}
 }
 
-func printCommentTree(commentMap map[string]*api.Comment, children map[string][]string, id string, depth int, currentUser string) {
+// convertHTMLToMarkdown converts HTML content to Markdown, focusing on tables
+func convertHTMLToMarkdown(body string) string {
+	// Check if body contains HTML table
+	if !strings.Contains(body, "<table") {
+		return body
+	}
+
+	// Use custom table converter for better control
+	return convertHTMLTableToMarkdown(body)
+}
+
+// convertHTMLTableToMarkdown converts HTML tables to Markdown format
+func convertHTMLTableToMarkdown(html string) string {
+	// Extract and convert each table
+	tableRegex := regexp.MustCompile(`(?s)<table[^>]*>(.*?)</table>`)
+	result := tableRegex.ReplaceAllStringFunc(html, func(tableHTML string) string {
+		return parseTable(tableHTML)
+	})
+
+	// Clean up remaining HTML tags (except links which we'll handle)
+	result = cleanHTMLTags(result)
+
+	return strings.TrimSpace(result)
+}
+
+// parseTable parses a single HTML table and converts it to Markdown
+func parseTable(tableHTML string) string {
+	var rows [][]string
+	var maxCols int
+
+	// Extract all rows
+	rowRegex := regexp.MustCompile(`(?s)<tr[^>]*>(.*?)</tr>`)
+	cellRegex := regexp.MustCompile(`(?s)<t[dh](?:[^>]*)>(.*?)</t[dh]>`)
+
+	rowMatches := rowRegex.FindAllStringSubmatch(tableHTML, -1)
+	for _, rowMatch := range rowMatches {
+		if len(rowMatch) < 2 {
+			continue
+		}
+		rowContent := rowMatch[1]
+
+		var cells []string
+		cellMatches := cellRegex.FindAllStringSubmatch(rowContent, -1)
+		for _, cellMatch := range cellMatches {
+			if len(cellMatch) >= 2 {
+				cell := cleanHTMLTags(cellMatch[1])
+				cell = strings.TrimSpace(cell)
+				cells = append(cells, cell)
+			}
+		}
+
+		if len(cells) > 0 {
+			rows = append(rows, cells)
+			if len(cells) > maxCols {
+				maxCols = len(cells)
+			}
+		}
+	}
+
+	if len(rows) == 0 {
+		return ""
+	}
+
+	// Build Markdown table
+	var md strings.Builder
+
+	// Header row
+	for i, cell := range rows[0] {
+		if i > 0 {
+			md.WriteString(" | ")
+		}
+		md.WriteString(cell)
+	}
+	md.WriteString("\n")
+
+	// Separator row
+	for i := 0; i < maxCols; i++ {
+		if i > 0 {
+			md.WriteString(" | ")
+		}
+		md.WriteString("---")
+	}
+	md.WriteString("\n")
+
+	// Data rows
+	for i := 1; i < len(rows); i++ {
+		for j, cell := range rows[i] {
+			if j > 0 {
+				md.WriteString(" | ")
+			}
+			md.WriteString(cell)
+		}
+		md.WriteString("\n")
+	}
+
+	return md.String()
+}
+
+// cleanHTMLTags removes HTML tags but preserves links
+func cleanHTMLTags(html string) string {
+	// First, convert <a href="...">text</a> to [text](url)
+	linkRegex := regexp.MustCompile(`<a\s+href="([^"]*)"[^>]*>(.*?)</a>`)
+	result := linkRegex.ReplaceAllString(html, "[$2]($1)")
+
+	// Remove all other HTML tags
+	tagRegex := regexp.MustCompile(`<[^>]+>`)
+	result = tagRegex.ReplaceAllString(result, "")
+
+	// Decode common HTML entities
+	result = strings.ReplaceAll(result, "&#9989;", "✅")
+	result = strings.ReplaceAll(result, "&#10060;", "❌")
+	result = strings.ReplaceAll(result, "&nbsp;", " ")
+	result = strings.ReplaceAll(result, "&lt;", "<")
+	result = strings.ReplaceAll(result, "&gt;", ">")
+	result = strings.ReplaceAll(result, "&amp;", "&")
+	result = strings.ReplaceAll(result, "&quot;", "\"")
+
+	return result
+}
+
+func printCommentTree(commentMap map[int64]*api.Comment, children map[int64][]int64, id int64, depth int, currentUser string) {
 	comment := commentMap[id]
 	if comment == nil {
 		return
@@ -106,10 +228,11 @@ func printCommentTree(commentMap map[string]*api.Comment, children map[string][]
 		userMarker = " (你)"
 	}
 
-	fmt.Printf("%s[%s] @%s %s%s\n", indent, comment.ID, comment.User.Login, timeStr, userMarker)
+	fmt.Printf("%s[%d] @%s %s%s\n", indent, comment.ID, comment.User.Login, timeStr, userMarker)
 
-	// Print body with indentation
-	bodyLines := strings.Split(comment.Body, "\n")
+	// Convert HTML tables to Markdown and print body with indentation
+	body := convertHTMLToMarkdown(comment.Body)
+	bodyLines := strings.Split(body, "\n")
 	for _, line := range bodyLines {
 		fmt.Printf("%s    %s\n", indent, line)
 	}
