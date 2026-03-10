@@ -3,7 +3,7 @@ package cmdutil
 import (
 	"net/http"
 
-	"github.com/shinwell/ag-cli/internal/config"
+	"gitcode.com/openeuler/ag-cli/internal/config"
 )
 
 type Factory struct {

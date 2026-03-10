@@ -24,7 +24,7 @@
 
 1. **Fork 仓库**
    ```bash
-   git clone https://github.com/shinwell/ag-cli.git
+   git clone https://gitcode.com/openeuler/ag-cli.git
    cd ag-cli
    ```
 

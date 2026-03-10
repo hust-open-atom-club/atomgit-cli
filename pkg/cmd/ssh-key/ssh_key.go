@@ -5,8 +5,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/shinwell/ag-cli/internal/api"
-	"github.com/shinwell/ag-cli/pkg/cmdutil"
+	"gitcode.com/openeuler/ag-cli/internal/api"
+	"gitcode.com/openeuler/ag-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 

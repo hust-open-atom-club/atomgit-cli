@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/shinwell/ag-cli/internal/agcmd"
+	"gitcode.com/openeuler/ag-cli/internal/agcmd"
 )
 
 func main() {

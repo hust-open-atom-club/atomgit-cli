@@ -3,7 +3,7 @@ package auth
 import (
 	"fmt"
 
-	"github.com/shinwell/ag-cli/pkg/cmdutil"
+	"gitcode.com/openeuler/ag-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 
