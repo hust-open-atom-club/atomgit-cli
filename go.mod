@@ -1,4 +1,4 @@
-module gitcode.com/openeuler/ag-cli
+module atomgit.com/openeuler/ag-cli
 
 go 1.24.2
 
