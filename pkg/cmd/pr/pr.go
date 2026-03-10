@@ -199,7 +199,8 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Created PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			htmlURL := strings.Replace(pr.HTMLURL, "/pulls/", "/pull/", 1)
+			fmt.Printf("Created PR #%s: %s\n", pr.GetNumber(), htmlURL)
 
 			return nil
 		},
