@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/shinwell/ag-cli/internal/config"
-	"github.com/shinwell/ag-cli/pkg/cmd/root"
-	"github.com/shinwell/ag-cli/pkg/cmdutil"
+	"gitcode.com/openeuler/ag-cli/internal/config"
+	"gitcode.com/openeuler/ag-cli/pkg/cmd/root"
+	"gitcode.com/openeuler/ag-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 

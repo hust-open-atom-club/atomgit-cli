@@ -1,14 +1,14 @@
 package root
 
 import (
-	"github.com/shinwell/ag-cli/pkg/cmd/auth"
-	"github.com/shinwell/ag-cli/pkg/cmd/issue"
-	"github.com/shinwell/ag-cli/pkg/cmd/license"
-	"github.com/shinwell/ag-cli/pkg/cmd/pr"
-	"github.com/shinwell/ag-cli/pkg/cmd/repo"
-	"github.com/shinwell/ag-cli/pkg/cmd/ssh-key"
-	"github.com/shinwell/ag-cli/pkg/cmd/tag"
-	"github.com/shinwell/ag-cli/pkg/cmdutil"
+	"gitcode.com/openeuler/ag-cli/pkg/cmd/auth"
+	"gitcode.com/openeuler/ag-cli/pkg/cmd/issue"
+	"gitcode.com/openeuler/ag-cli/pkg/cmd/license"
+	"gitcode.com/openeuler/ag-cli/pkg/cmd/pr"
+	"gitcode.com/openeuler/ag-cli/pkg/cmd/repo"
+	"gitcode.com/openeuler/ag-cli/pkg/cmd/ssh-key"
+	"gitcode.com/openeuler/ag-cli/pkg/cmd/tag"
+	"gitcode.com/openeuler/ag-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 

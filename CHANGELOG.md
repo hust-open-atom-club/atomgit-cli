@@ -60,5 +60,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Core API client implementation
 - Initial set of commands for repository, PR, and issue management
 
-[Unreleased]: https://github.com/shinwell/ag-cli/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/shinwell/ag-cli/releases/tag/v0.1.0
+[Unreleased]: https://gitcode.com/openeuler/ag-cli/compare/v0.1.0...HEAD
+[0.1.0]: https://gitcode.com/openeuler/ag-cli/releases/tag/v0.1.0

@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/shinwell/ag-cli/pkg/cmdutil"
+	"gitcode.com/openeuler/ag-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 
