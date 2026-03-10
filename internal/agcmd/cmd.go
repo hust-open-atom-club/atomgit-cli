@@ -4,9 +4,15 @@ import (
 	"fmt"
 	"os"
 
-	"gitcode.com/openeuler/ag-cli/internal/config"
-	"gitcode.com/openeuler/ag-cli/pkg/cmd/root"
-	"gitcode.com/openeuler/ag-cli/pkg/cmdutil"
+<<<<<<< HEAD
+	"atomgit.com/openeuler/ag-cli/internal/config"
+	"atomgit.com/openeuler/ag-cli/pkg/cmd/root"
+	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
+=======
+	"atomgit.com/openeuler/ag-cli/internal/config"
+	"atomgit.com/openeuler/ag-cli/pkg/cmd/root"
+	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
+>>>>>>> 4ec08c7 (fix: update module path to atomgit.com/openeuler/ag-cli)
 	"github.com/spf13/cobra"
 )
 
