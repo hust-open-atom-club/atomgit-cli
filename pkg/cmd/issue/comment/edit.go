@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"gitcode.com/openeuler/ag-cli/internal/api"
-	"gitcode.com/openeuler/ag-cli/pkg/cmdutil"
+	"atomgit.com/openeuler/ag-cli/internal/api"
+	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 
@@ -99,7 +99,7 @@ func newCmdEdit(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("failed to update comment: %w", err)
 			}
 
-			fmt.Printf("Updated comment #%s: %s\n", comment.ID, comment.HTMLURL)
+			fmt.Printf("Updated comment #%d: %s\n", comment.ID, comment.HTMLURL)
 			return nil
 		},
 	}

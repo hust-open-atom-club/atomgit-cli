@@ -1,7 +1,7 @@
 package comment
 
 import (
-	"gitcode.com/openeuler/ag-cli/pkg/cmdutil"
+	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 

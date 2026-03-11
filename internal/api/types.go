@@ -111,7 +111,7 @@ type Label struct {
 
 // Comment represents a comment on an issue or pull request
 type Comment struct {
-	ID        string `json:"id"`
+	ID        int64  `json:"id"`
 	Body      string `json:"body"`
 	User      User   `json:"user"`
 	CreatedAt string `json:"created_at"`
@@ -119,6 +119,16 @@ type Comment struct {
 	HTMLURL   string `json:"html_url"`
 	// ParentID is used for PR review comments to indicate the parent comment in a thread
 	ParentID *string `json:"parent_id,omitempty"`
+}
+
+// CreateCommentResponse represents the response from creating a comment
+type CreateCommentResponse struct {
+	ID        string `json:"id"`
+	Body      string `json:"body"`
+	User      User   `json:"user"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+	HTMLURL   string `json:"html_url"`
 }
 
 // CommentRequest represents the request body for creating/updating a comment

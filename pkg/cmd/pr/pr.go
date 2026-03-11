@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"gitcode.com/openeuler/ag-cli/internal/api"
-	"gitcode.com/openeuler/ag-cli/pkg/cmd/pr/comment"
-	"gitcode.com/openeuler/ag-cli/pkg/cmdutil"
+	"atomgit.com/openeuler/ag-cli/internal/api"
+	"atomgit.com/openeuler/ag-cli/pkg/cmd/pr/comment"
+	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 
@@ -193,7 +193,8 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Created PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			htmlURL := strings.Replace(pr.HTMLURL, "/pulls/", "/pull/", 1)
+			fmt.Printf("Created PR #%s: %s\n", pr.GetNumber(), htmlURL)
 
 			return nil
 		},

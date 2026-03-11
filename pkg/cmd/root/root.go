@@ -1,14 +1,14 @@
 package root
 
 import (
-	"gitcode.com/openeuler/ag-cli/pkg/cmd/auth"
-	"gitcode.com/openeuler/ag-cli/pkg/cmd/issue"
-	"gitcode.com/openeuler/ag-cli/pkg/cmd/license"
-	"gitcode.com/openeuler/ag-cli/pkg/cmd/pr"
-	"gitcode.com/openeuler/ag-cli/pkg/cmd/repo"
-	"gitcode.com/openeuler/ag-cli/pkg/cmd/ssh-key"
-	"gitcode.com/openeuler/ag-cli/pkg/cmd/tag"
-	"gitcode.com/openeuler/ag-cli/pkg/cmdutil"
+	"atomgit.com/openeuler/ag-cli/pkg/cmd/auth"
+	"atomgit.com/openeuler/ag-cli/pkg/cmd/issue"
+	"atomgit.com/openeuler/ag-cli/pkg/cmd/license"
+	"atomgit.com/openeuler/ag-cli/pkg/cmd/pr"
+	"atomgit.com/openeuler/ag-cli/pkg/cmd/repo"
+	"atomgit.com/openeuler/ag-cli/pkg/cmd/ssh-key"
+	"atomgit.com/openeuler/ag-cli/pkg/cmd/tag"
+	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 
