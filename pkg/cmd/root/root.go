@@ -1,7 +1,6 @@
 package root
 
 import (
-<<<<<<< HEAD
 	"atomgit.com/openeuler/ag-cli/pkg/cmd/auth"
 	"atomgit.com/openeuler/ag-cli/pkg/cmd/issue"
 	"atomgit.com/openeuler/ag-cli/pkg/cmd/license"
@@ -10,16 +9,6 @@ import (
 	"atomgit.com/openeuler/ag-cli/pkg/cmd/ssh-key"
 	"atomgit.com/openeuler/ag-cli/pkg/cmd/tag"
 	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
-=======
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/auth"
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/issue"
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/license"
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/pr"
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/repo"
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/ssh-key"
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/tag"
-	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
->>>>>>> 4ec08c7 (fix: update module path to atomgit.com/openeuler/ag-cli)
 	"github.com/spf13/cobra"
 )
 

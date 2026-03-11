@@ -7,13 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-<<<<<<< HEAD
 	"atomgit.com/openeuler/ag-cli/internal/api"
 	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
-=======
-	"atomgit.com/openeuler/ag-cli/internal/api"
-	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
->>>>>>> 4ec08c7 (fix: update module path to atomgit.com/openeuler/ag-cli)
 	"github.com/spf13/cobra"
 )
 
@@ -85,7 +80,7 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("failed to create reply: %w", err)
 			}
 
-			fmt.Printf("Created reply #%s: %s\n", comment.ID, comment.HTMLURL)
+			fmt.Printf("Created reply #%d: %s\n", comment.ID, comment.HTMLURL)
 			return nil
 		},
 	}

@@ -7,13 +7,8 @@ import (
 	"strings"
 	"time"
 
-<<<<<<< HEAD
 	"atomgit.com/openeuler/ag-cli/internal/api"
 	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
-=======
-	"atomgit.com/openeuler/ag-cli/internal/api"
-	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
->>>>>>> 4ec08c7 (fix: update module path to atomgit.com/openeuler/ag-cli)
 	"github.com/spf13/cobra"
 )
 
@@ -81,7 +76,7 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 					userMarker = " (你)"
 				}
 
-				fmt.Printf("[%s] @%s %s%s\n", comment.ID, comment.User.Login, timeStr, userMarker)
+				fmt.Printf("[%d] @%s %s%s\n", comment.ID, comment.User.Login, timeStr, userMarker)
 
 				// Print body
 				bodyLines := strings.Split(comment.Body, "\n")
