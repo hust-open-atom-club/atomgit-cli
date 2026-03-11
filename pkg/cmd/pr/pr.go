@@ -1,7 +1,10 @@
 package pr
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 
 	"atomgit.com/openeuler/ag-cli/internal/api"
@@ -22,6 +25,7 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdPRCreate(f))
 	cmd.AddCommand(newCmdPREdit(f))
 	cmd.AddCommand(newCmdPRClose(f))
+	cmd.AddCommand(newCmdPRDiff(f))
 	cmd.AddCommand(newCmdViewIssues(f))
 	cmd.AddCommand(newCmdLinkIssues(f))
 	cmd.AddCommand(newCmdUnlinkIssues(f))
@@ -314,6 +318,118 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 			return nil
 		},
 	}
+
+	return cmd
+}
+
+func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
+	var opts struct {
+		JSON bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "diff [<owner>/]<repo> <number>",
+		Short: "Show diff of a pull request",
+		Args:  cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
+			}
+
+			var owner, repo string
+			var number string
+
+			if len(args) == 1 {
+				return fmt.Errorf("repository and PR number required")
+			}
+
+			parts := strings.Split(args[0], "/")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			}
+			owner, repo = parts[0], parts[1]
+
+			number = args[1]
+
+			client := &http.Client{}
+			url := fmt.Sprintf("https://api.gitcode.com/api/v5/repos/%s/%s/pulls/%s/files.json", owner, repo, number)
+			req, err := http.NewRequest("GET", url, nil)
+			if err != nil {
+				return err
+			}
+			req.Header.Add("Authorization", "Bearer "+token)
+			req.Header.Add("Accept", "application/json")
+
+			res, err := client.Do(req)
+			if err != nil {
+				return err
+			}
+			defer res.Body.Close()
+
+			body, err := io.ReadAll(res.Body)
+			if err != nil {
+				return err
+			}
+
+			if opts.JSON {
+				fmt.Println(string(body))
+				return nil
+			}
+
+			// Parse and format as patch
+			var diffData struct {
+				Code  int `json:"code"`
+				Diffs []struct {
+					Statistic struct {
+						Path    string `json:"path"`
+						OldPath string `json:"old_path"`
+						NewPath string `json:"new_path"`
+					} `json:"statistic"`
+					AddedLines  int `json:"added_lines"`
+					RemoveLines int `json:"remove_lines"`
+					Content     struct {
+						Text []struct {
+							LineContent string `json:"line_content"`
+							Type        string `json:"type"`
+						} `json:"text"`
+					} `json:"content"`
+				} `json:"diffs"`
+			}
+
+			if err := json.Unmarshal(body, &diffData); err != nil {
+				return fmt.Errorf("failed to parse diff: %w", err)
+			}
+
+			for i, diff := range diffData.Diffs {
+				if i > 0 {
+					fmt.Println()
+				}
+
+				fmt.Printf("diff --git a/%s b/%s\n", diff.Statistic.OldPath, diff.Statistic.NewPath)
+				fmt.Printf("--- a/%s\n", diff.Statistic.OldPath)
+				fmt.Printf("+++ b/%s\n", diff.Statistic.NewPath)
+
+				// Output diff content with proper prefixes
+				for _, line := range diff.Content.Text {
+					switch line.Type {
+					case "match":
+						fmt.Printf(" %s\n", line.LineContent)
+					case "old":
+						fmt.Printf("-%s\n", line.LineContent)
+					case "new":
+						fmt.Printf("+%s\n", line.LineContent)
+					default:
+						fmt.Println(line.LineContent)
+					}
+				}
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output raw JSON")
 
 	return cmd
 }
