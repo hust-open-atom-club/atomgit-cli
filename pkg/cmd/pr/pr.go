@@ -179,13 +179,20 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 			if opts.Title == "" {
 				return fmt.Errorf("title is required")
 			}
+			head := opts.Head
+			// Convert owner:branch format to owner/repo:branch for AtomGit API
+			if strings.Contains(head, ":") && !strings.Contains(head, "/") {
+				headParts := strings.SplitN(head, ":", 2)
+				head = fmt.Sprintf("%s/%s:%s", headParts[0], repo, headParts[1])
+			}
 
 			body := map[string]interface{}{
 				"title": opts.Title,
 				"body":  opts.Body,
 				"base":  opts.Base,
-				"head":  opts.Head,
+				"head":  head,
 			}
+
 
 			var pr api.PullRequest
 			path := fmt.Sprintf("/repos/%s/%s/pulls", owner, repo)
