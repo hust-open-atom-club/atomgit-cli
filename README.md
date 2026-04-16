@@ -14,7 +14,9 @@ go install ./cmd/ag
 
 ## 配置
 
-在使用之前，需要配置访问令牌。创建token文件：
+在使用之前需要配置访问令牌。推荐先执行 **`ag auth login`**：会在浏览器中完成 AtomGit OAuth，并把 `access_token` 与 `user` 写入下面的 `token.json`（覆盖已有内容）。
+
+也可手动创建 token 文件：
 
 **推荐方式：遵循XDG规范**
 ```
@@ -27,25 +29,42 @@ $XDG_CONFIG_HOME/ag-cli/token.json
 ~/.atomgit_personal_token.json
 ```
 
-文件内容：
+文件内容示例：
 ```json
 {
   "access_token": "your-token-here",
-  "user": "your-username"
+  "user": "your-username",
+  "refresh_token": "…",
+  "expires_in": 3600,
+  "created_at": 1710000000,
+  "token_type": "Bearer"
 }
 ```
+`refresh_token` / `expires_in` / `created_at` 由 `ag auth login` 在 OAuth 返回时写入，供 `ag auth refresh` 使用；手动编辑时可省略。
 
 ## 命令
 
 ### 认证
 
 ```bash
+# 浏览器 OAuth 登录并写入 ~/.config/ag-cli/token.json（或 $XDG_CONFIG_HOME/ag-cli/token.json）
+ag auth login
+# 已登录时会提示无需重复登录；若要重新走浏览器：ag auth login --force
+
+# 用 refresh_token 刷新 access_token（需之前登录响应里包含 refresh_token）
+ag auth refresh
+
 # 查看认证状态
 ag auth status
 
 # 显示当前 token
 ag auth token
+
+# 删除本地保存的 token 与用户（XDG 下 token.json 及兼容路径）
+ag auth logout
 ```
+
+可选环境变量（覆盖默认 OAuth 应用）：`AG_OAUTH_CLIENT_ID`、`AG_OAUTH_CLIENT_SECRET`；若本机 **8765** 端口被占用，可设置 **`AG_OAUTH_REDIRECT_PORT`**（需与 AtomGit 应用配置的回调地址一致）。
 
 ### 仓库 (repo)
 

@@ -38,6 +38,7 @@ func (c *Client) doRequest(method, path string, body io.Reader) (*http.Response,
 	}
 
 	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("User-Agent", "AtomCode-CLI-v0.2")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
