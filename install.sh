@@ -13,7 +13,7 @@ REPO_OWNER="${AG_REPO_OWNER:-GitCode}"
 REPO_NAME="${AG_REPO_NAME:-ag-cli}"
 BASE_URL="https://gitcode.com/${REPO_OWNER}/${REPO_NAME}"
 # 默认下载该 tag 下的预编译包。仓库内请随最新 Release 更新；也可用 scripts/build-release.sh 生成 dist/<tag>/install.sh（已写入本次 TAG）再上传。
-_BUNDLED_TAG="v0.2"
+_BUNDLED_TAG="v0.3"
 DEFAULT_VERSION="${AG_DEFAULT_VERSION:-${_BUNDLED_TAG}}"
 VERSION="${AG_VERSION:-$DEFAULT_VERSION}"
 
