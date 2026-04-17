@@ -3,7 +3,7 @@
 # 仓库: https://gitcode.com/GitCode/ag-cli
 #
 # 用法:
-#   curl -fsSL https://gitcode.com/GitCode/ag-cli/releases/download/v0.2/install.sh | sh
+#   curl -fsSL https://gitcode.com/<owner>/<repo>/releases/download/v0.3/install.sh | sh
 #   AG_VERSION=v0.2 sh install.sh
 #   AG_FROM_SOURCE=1 sh install.sh    # 从本仓库源码构建（需 git、Go）
 
