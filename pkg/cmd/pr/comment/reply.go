@@ -18,8 +18,8 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "reply [<owner>/]<repo> <number> <parent-comment-id>",
-		Short: "Reply to a comment on a pull request",
+		Use:   "reply [<owner>/]<repo> <number> <discussion-id>",
+		Short: "Reply to a comment thread on a pull request",
 		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
@@ -28,10 +28,10 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			var owner, repo string
-			var number, parentID int
+			var number int
 
 			if len(args) < 3 {
-				return fmt.Errorf("repository, PR number, and parent comment ID required")
+				return fmt.Errorf("repository, PR number, and discussion ID required")
 			}
 
 			parts := strings.Split(args[0], "/")
@@ -45,15 +45,17 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid PR number: %s", args[1])
 			}
 
-			parentID, err = strconv.Atoi(args[2])
-			if err != nil {
-				return fmt.Errorf("invalid parent comment ID: %s", args[2])
+			// discussion_id is the thread identifier (a hex string), shown by
+			// `ag pr comment view` on the [discussion_id] header line.
+			discussionID := strings.TrimSpace(args[2])
+			if discussionID == "" {
+				return fmt.Errorf("discussion ID cannot be empty")
 			}
 
 			// Get body
 			body := opts.Body
 			if body == "" {
-				fmt.Printf("Enter reply to comment #%s (press Ctrl+D when done):\n", args[2])
+				fmt.Printf("Enter reply to discussion %s (press Ctrl+D when done):\n", discussionID)
 				reader := bufio.NewReader(os.Stdin)
 				var lines []string
 				for {
@@ -72,15 +74,16 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 
 			client := api.NewClient(token)
 
-			// Reply using discussions API
-			var comment api.Comment
+			// Reply using discussions API. The response carries the discussion id
+			// as `id` and the new reply's comment id as `note_id`.
+			var resp api.ReplyResponse
 			req := api.CommentRequest{Body: body}
-			path := fmt.Sprintf("/repos/%s/%s/pulls/%d/discussions/%d/comments", owner, repo, number, parentID)
-			if err := client.Post(path, req, &comment); err != nil {
+			path := fmt.Sprintf("/repos/%s/%s/pulls/%d/discussions/%s/comments", owner, repo, number, discussionID)
+			if err := client.Post(path, req, &resp); err != nil {
 				return fmt.Errorf("failed to create reply: %w", err)
 			}
 
-			fmt.Printf("Created reply #%d: %s\n", comment.ID, comment.HTMLURL)
+			fmt.Printf("Created reply #%d in discussion %s\n", resp.NoteID, resp.DiscussionID)
 			return nil
 		},
 	}

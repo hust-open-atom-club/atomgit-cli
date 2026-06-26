@@ -45,7 +45,9 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 			client := api.NewClient(token)
 
 			var comments []api.Comment
-			path := fmt.Sprintf("/repos/%s/%s/pulls/%d/comments", owner, repo, number)
+			// view=all returns both 普通评论 (pr_comment) and 检视意见 (diff_comment),
+			// with replies nested under each comment's `reply` field.
+			path := fmt.Sprintf("/repos/%s/%s/pulls/%d/comments?view=all", owner, repo, number)
 			if err := client.Get(path, &comments); err != nil {
 				return err
 			}
@@ -57,32 +59,12 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 
 			fmt.Printf("PR #%d 的评论 (共 %d 条):\n\n", number, len(comments))
 
-			// Sort comments by creation time
-			sort.Slice(comments, func(i, j int) bool {
-				t1, _ := time.Parse(time.RFC3339, comments[i].CreatedAt)
-				t2, _ := time.Parse(time.RFC3339, comments[j].CreatedAt)
-				return t1.Before(t2)
-			})
+			// Sort top-level comments by creation time.
+			sortCommentsByTime(comments)
 
-			// Build comment tree
-			commentMap := make(map[int64]*api.Comment)
-			children := make(map[int64][]int64)
-			var roots []int64
-
-			for i := range comments {
-				commentMap[comments[i].ID] = &comments[i]
-				if comments[i].ParentID != nil {
-					parentID, _ := strconv.ParseInt(*comments[i].ParentID, 10, 64)
-					children[parentID] = append(children[parentID], comments[i].ID)
-				} else {
-					roots = append(roots, comments[i].ID)
-				}
-			}
-
-			// Print comment tree
 			currentUser, _ := f.Config.GetUser()
-			for _, rootID := range roots {
-				printCommentTree(commentMap, children, rootID, 0, currentUser)
+			for i := range comments {
+				printComment(&comments[i], currentUser)
 			}
 
 			return nil
@@ -210,36 +192,148 @@ func cleanHTMLTags(html string) string {
 	return result
 }
 
-func printCommentTree(commentMap map[int64]*api.Comment, children map[int64][]int64, id int64, depth int, currentUser string) {
-	comment := commentMap[id]
+// sortCommentsByTime orders comments from oldest to newest by created_at.
+func sortCommentsByTime(comments []api.Comment) {
+	sort.Slice(comments, func(i, j int) bool {
+		t1, _ := time.Parse(time.RFC3339, comments[i].CreatedAt)
+		t2, _ := time.Parse(time.RFC3339, comments[j].CreatedAt)
+		return t1.Before(t2)
+	})
+}
+
+// formatTime parses an RFC3339 timestamp and renders it with the given layout,
+// falling back to the raw string when parsing fails.
+func formatTime(raw, layout string) string {
+	t, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return raw
+	}
+	return t.Format(layout)
+}
+
+// youMarker returns " (你)" when the comment belongs to the current user.
+func youMarker(c *api.Comment, currentUser string) string {
+	if currentUser != "" && c.User.Login == currentUser {
+		return " (你)"
+	}
+	return ""
+}
+
+// printBody prints a comment body (HTML tables converted to Markdown), prefixing
+// every line with indent.
+func printBody(body, indent string) {
+	body = convertHTMLToMarkdown(body)
+	for _, line := range strings.Split(body, "\n") {
+		fmt.Printf("%s%s\n", indent, line)
+	}
+}
+
+// diffLocation renders the file + line range for a 检视意见 (diff_comment).
+func diffLocation(c *api.Comment) string {
+	dp := c.DiffPosition
+
+	path := c.DiffFile
+	if path == "" {
+		path = c.Path
+	}
+	if path == "" && dp != nil {
+		switch {
+		case dp.NewPath != "":
+			path = dp.NewPath
+		case dp.Path != "":
+			path = dp.Path
+		case dp.OldPath != "":
+			path = dp.OldPath
+		}
+	}
+
+	var lines string
+	if dp != nil {
+		start, end := dp.StartNewLine, dp.EndNewLine
+		if start == 0 && end == 0 {
+			start, end = dp.StartOldLine, dp.EndOldLine
+		}
+		switch {
+		case start > 0 && end > 0 && start != end:
+			lines = fmt.Sprintf("L%d–%d", start, end)
+		case start > 0:
+			lines = fmt.Sprintf("L%d", start)
+		case end > 0:
+			lines = fmt.Sprintf("L%d", end)
+		}
+	}
+
+	switch {
+	case path != "" && lines != "":
+		return fmt.Sprintf("%s  %s", path, lines)
+	case path != "":
+		return path
+	default:
+		return lines
+	}
+}
+
+// printComment renders a top-level comment, then its nested replies.
+//
+//	[discussion_id]
+//	[id] @user reviewed 2026-06-26 14:32 (你)  [未解决]  [file  L25–27]
+//	   body
+//	   └─[id]  @user reply 2026-06-26 14:55 (你)
+//	      body
+func printComment(comment *api.Comment, currentUser string) {
 	if comment == nil {
 		return
 	}
 
-	indent := strings.Repeat("    ", depth)
-
-	// Format timestamp
-	t, _ := time.Parse(time.RFC3339, comment.CreatedAt)
-	timeStr := t.Format("2006-01-02 15:04")
-
-	// Mark current user's comments
-	userMarker := ""
-	if comment.User.Login == currentUser {
-		userMarker = " (你)"
+	// discussion_id on its own line (required to reply to the thread).
+	if comment.DiscussionID != "" {
+		fmt.Printf("[%s]\n", comment.DiscussionID)
 	}
 
-	fmt.Printf("%s[%d] @%s %s%s\n", indent, comment.ID, comment.User.Login, timeStr, userMarker)
-
-	// Convert HTML tables to Markdown and print body with indentation
-	body := convertHTMLToMarkdown(comment.Body)
-	bodyLines := strings.Split(body, "\n")
-	for _, line := range bodyLines {
-		fmt.Printf("%s    %s\n", indent, line)
+	verb := "commented"
+	if comment.CommentType == "diff_comment" {
+		verb = "reviewed"
 	}
+
+	header := fmt.Sprintf("[%d] @%s %s %s%s",
+		comment.ID, comment.User.Login, verb,
+		formatTime(comment.CreatedAt, "2006-01-02 15:04"),
+		youMarker(comment, currentUser))
+
+	// For 检视意见, append status and file/line range as bracketed tags.
+	if comment.CommentType == "diff_comment" {
+		status := "未解决"
+		if comment.Resolved {
+			status = "已解决"
+		}
+		header += "  [" + status + "]"
+		if loc := diffLocation(comment); loc != "" {
+			header += "  [" + loc + "]"
+		}
+	}
+	fmt.Println(header)
+
+	printBody(comment.Body, "   ")
+
+	sortCommentsByTime(comment.Reply)
+	for i := range comment.Reply {
+		printReply(&comment.Reply[i], currentUser)
+	}
+
 	fmt.Println()
+}
 
-	// Print children
-	for _, childID := range children[id] {
-		printCommentTree(commentMap, children, childID, depth+1, currentUser)
+// printReply renders a nested reply under a top-level comment.
+func printReply(comment *api.Comment, currentUser string) {
+	fmt.Printf("   └─[%d]  @%s reply %s%s\n",
+		comment.ID, comment.User.Login,
+		formatTime(comment.CreatedAt, "2006-01-02 15:04"),
+		youMarker(comment, currentUser))
+	printBody(comment.Body, "      ")
+
+	// Flatten any further-nested replies at the same level.
+	sortCommentsByTime(comment.Reply)
+	for i := range comment.Reply {
+		printReply(&comment.Reply[i], currentUser)
 	}
 }
