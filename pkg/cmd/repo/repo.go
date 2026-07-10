@@ -95,6 +95,24 @@ func listRepos(client *api.Client, limit int) ([]api.Repository, error) {
 	return repos, nil
 }
 
+func parseRepositoryName(value, defaultOwner string) (string, string, error) {
+	parts := strings.Split(value, "/")
+	if len(parts) > 2 {
+		return "", "", fmt.Errorf("invalid repository format: %s (expected repo or owner/repo)", value)
+	}
+
+	owner := strings.TrimSpace(defaultOwner)
+	repo := strings.TrimSpace(parts[0])
+	if len(parts) == 2 {
+		owner = strings.TrimSpace(parts[0])
+		repo = strings.TrimSpace(parts[1])
+	}
+	if owner == "" || repo == "" {
+		return "", "", fmt.Errorf("invalid repository format: %s (expected repo or owner/repo)", value)
+	}
+	return owner, repo, nil
+}
+
 func repositoryListName(repo api.Repository) string {
 	if repo.FullName != "" {
 		return repo.FullName

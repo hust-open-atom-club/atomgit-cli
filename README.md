@@ -79,7 +79,11 @@ ag repo list --limit 100
 ag repo view owner/repo
 
 # 创建仓库
-ag repo create my-project --public --description "My project"
+# 在当前用户账号下创建
+ag repo create my-project --public
+
+# 在指定个人或组织账号下创建
+ag repo create owner/my-project --public --description "My project"
 
 # 克隆仓库
 ag repo clone owner/repo
