@@ -6,13 +6,14 @@ import (
 	"atomgit.com/openeuler/ag-cli/internal/api"
 )
 
-func TestParseCreateRepositoryName(t *testing.T) {
+func TestParseRepositoryName(t *testing.T) {
 	tests := []struct {
 		name      string
 		value     string
 		wantOwner string
 		wantRepo  string
 		wantError bool
+		noOwner   bool
 	}{
 		{name: "current user repository", value: "repo", wantOwner: "current-user", wantRepo: "repo"},
 		{name: "explicit user repository", value: "user/repo", wantOwner: "user", wantRepo: "repo"},
@@ -21,23 +22,28 @@ func TestParseCreateRepositoryName(t *testing.T) {
 		{name: "missing owner", value: "/repo", wantError: true},
 		{name: "missing repository", value: "owner/", wantError: true},
 		{name: "empty repository", value: " ", wantError: true},
+		{name: "missing default owner", value: "repo", wantError: true, noOwner: true},
 		{name: "too many components", value: "owner/group/repo", wantError: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			owner, repo, err := parseCreateRepositoryName(tt.value, "current-user")
+			defaultOwner := "current-user"
+			if tt.noOwner {
+				defaultOwner = ""
+			}
+			owner, repo, err := parseRepositoryName(tt.value, defaultOwner)
 			if tt.wantError {
 				if err == nil {
-					t.Fatal("parseCreateRepositoryName() expected an error")
+					t.Fatal("parseRepositoryName() expected an error")
 				}
 				return
 			}
 			if err != nil {
-				t.Fatalf("parseCreateRepositoryName() unexpected error: %v", err)
+				t.Fatalf("parseRepositoryName() unexpected error: %v", err)
 			}
 			if owner != tt.wantOwner || repo != tt.wantRepo {
-				t.Fatalf("parseCreateRepositoryName() = %q/%q, want %q/%q", owner, repo, tt.wantOwner, tt.wantRepo)
+				t.Fatalf("parseRepositoryName() = %q/%q, want %q/%q", owner, repo, tt.wantOwner, tt.wantRepo)
 			}
 		})
 	}

@@ -55,24 +55,6 @@ Pass --clone to clone the repository locally after creation.`,
 	return cmd
 }
 
-func parseCreateRepositoryName(value, defaultOwner string) (string, string, error) {
-	parts := strings.Split(value, "/")
-	if len(parts) > 2 {
-		return "", "", fmt.Errorf("invalid repository format: %s (expected repo or owner/repo)", value)
-	}
-
-	owner := strings.TrimSpace(defaultOwner)
-	repo := strings.TrimSpace(parts[0])
-	if len(parts) == 2 {
-		owner = strings.TrimSpace(parts[0])
-		repo = strings.TrimSpace(parts[1])
-	}
-	if owner == "" || repo == "" {
-		return "", "", fmt.Errorf("invalid repository format: %s (expected repo or owner/repo)", value)
-	}
-	return owner, repo, nil
-}
-
 func createdRepositoryURL(result api.Repository, owner, repo string) string {
 	if url := strings.TrimSpace(result.HTMLURL); url != "" {
 		return url
@@ -86,7 +68,7 @@ func runCreate(f *cmdutil.Factory, opts *CreateOptions) error {
 		return fmt.Errorf("failed to get current user: %w", err)
 	}
 
-	owner, repoName, err := parseCreateRepositoryName(opts.Name, currentUser)
+	owner, repoName, err := parseRepositoryName(opts.Name, currentUser)
 	if err != nil {
 		return err
 	}

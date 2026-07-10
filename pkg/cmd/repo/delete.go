@@ -2,7 +2,6 @@ package repo
 
 import (
 	"fmt"
-	"strings"
 
 	"atomgit.com/openeuler/ag-cli/internal/api"
 	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
@@ -31,28 +30,22 @@ the confirmation prompt.`,
   ag repo delete my-org/my-project --yes`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			currentUser, err := f.Config.GetUser()
+			if err != nil {
+				return fmt.Errorf("failed to get current user: %w", err)
+			}
+
+			owner, repoName, err := parseRepositoryName(args[0], currentUser)
+			if err != nil {
+				return err
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
 			client := api.NewClient(token)
-
-			// Parse owner/repo
-			var owner, repoName string
-			parts := strings.Split(args[0], "/")
-			if len(parts) == 2 {
-				owner, repoName = parts[0], parts[1]
-			} else if len(parts) == 1 {
-				// Use current user as owner
-				user, err := f.Config.GetUser()
-				if err != nil {
-					return fmt.Errorf("failed to get current user: %w", err)
-				}
-				owner, repoName = user, args[0]
-			} else {
-				return fmt.Errorf("invalid repository name format: %s", args[0])
-			}
 
 			// Confirm deletion unless --yes flag is used
 			if !force {
