@@ -1,0 +1,76 @@
+package repo
+
+import (
+	"testing"
+
+	"atomgit.com/openeuler/ag-cli/internal/api"
+)
+
+func TestParseCreateRepositoryName(t *testing.T) {
+	tests := []struct {
+		name      string
+		value     string
+		wantOwner string
+		wantRepo  string
+		wantError bool
+	}{
+		{name: "current user repository", value: "repo", wantOwner: "current-user", wantRepo: "repo"},
+		{name: "explicit user repository", value: "user/repo", wantOwner: "user", wantRepo: "repo"},
+		{name: "organization repository", value: "org/project", wantOwner: "org", wantRepo: "project"},
+		{name: "trim whitespace", value: " user / repo ", wantOwner: "user", wantRepo: "repo"},
+		{name: "missing owner", value: "/repo", wantError: true},
+		{name: "missing repository", value: "owner/", wantError: true},
+		{name: "empty repository", value: " ", wantError: true},
+		{name: "too many components", value: "owner/group/repo", wantError: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			owner, repo, err := parseCreateRepositoryName(tt.value, "current-user")
+			if tt.wantError {
+				if err == nil {
+					t.Fatal("parseCreateRepositoryName() expected an error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("parseCreateRepositoryName() unexpected error: %v", err)
+			}
+			if owner != tt.wantOwner || repo != tt.wantRepo {
+				t.Fatalf("parseCreateRepositoryName() = %q/%q, want %q/%q", owner, repo, tt.wantOwner, tt.wantRepo)
+			}
+		})
+	}
+}
+
+func TestCreatedRepositoryURL(t *testing.T) {
+	tests := []struct {
+		name   string
+		result api.Repository
+		owner  string
+		repo   string
+		want   string
+	}{
+		{
+			name:   "API response URL",
+			result: api.Repository{HTMLURL: "https://atomgit.com/owner/repo"},
+			owner:  "owner",
+			repo:   "repo",
+			want:   "https://atomgit.com/owner/repo",
+		},
+		{
+			name:  "fallback URL",
+			owner: "owner",
+			repo:  "repo",
+			want:  "https://atomgit.com/owner/repo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := createdRepositoryURL(tt.result, tt.owner, tt.repo); got != tt.want {
+				t.Fatalf("createdRepositoryURL() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
