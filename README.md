@@ -69,8 +69,11 @@ ag auth logout
 ### 仓库 (repo)
 
 ```bash
-# 列出仓库
+# 列出仓库（默认第1页，每页30条）
 ag repo list
+
+# 分页列出仓库（第2页，每页50条）
+ag repo list 2 50
 
 # 查看仓库详情
 ag repo view owner/repo
