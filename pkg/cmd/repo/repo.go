@@ -10,8 +10,7 @@ import (
 )
 
 type ListOptions struct {
-	Page    int
-	PerPage int
+	Limit int
 }
 
 func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
@@ -33,40 +32,26 @@ func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 	opts := &ListOptions{
-		Page:    1,
-		PerPage: 30,
+		Limit: 30,
 	}
 
 	cmd := &cobra.Command{
-		Use:   "list [<page> <per-page>]",
+		Use:   "list",
 		Short: "List repositories",
-		Args:  cobra.MaximumNArgs(2),
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return fmt.Errorf("not authenticated. Please check your token file: %w", err)
 			}
 
-			if len(args) >= 1 {
-				page, err := parseIntArg(args[0], "page")
-				if err != nil {
-					return err
-				}
-				opts.Page = page
-			}
-			if len(args) >= 2 {
-				perPage, err := parseIntArg(args[1], "per-page")
-				if err != nil {
-					return err
-				}
-				opts.PerPage = perPage
+			if opts.Limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
 
 			client := api.NewClient(token)
-
-			var repos []api.Repository
-			path := fmt.Sprintf("/user/repos?page=%d&per_page=%d", opts.Page, opts.PerPage)
-			if err := client.Get(path, &repos); err != nil {
+			repos, err := listRepos(client, opts.Limit)
+			if err != nil {
 				return err
 			}
 
@@ -78,7 +63,35 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of repositories to list")
+
 	return cmd
+}
+
+func listRepos(client *api.Client, limit int) ([]api.Repository, error) {
+	const maxPerPage = 100
+
+	var repos []api.Repository
+	for page := 1; len(repos) < limit; page++ {
+		var pageRepos []api.Repository
+		path := fmt.Sprintf("/user/repos?page=%d&per_page=%d", page, maxPerPage)
+		if err := client.Get(path, &pageRepos); err != nil {
+			return nil, err
+		}
+		if len(pageRepos) == 0 {
+			break
+		}
+
+		repos = append(repos, pageRepos...)
+		if len(pageRepos) < maxPerPage {
+			break
+		}
+	}
+
+	if len(repos) > limit {
+		repos = repos[:limit]
+	}
+	return repos, nil
 }
 
 func repositoryListName(repo api.Repository) string {
@@ -86,17 +99,6 @@ func repositoryListName(repo api.Repository) string {
 		return repo.FullName
 	}
 	return fmt.Sprintf("%s/%s", repo.Owner.Login, repo.Name)
-}
-
-func parseIntArg(s string, name string) (int, error) {
-	var n int
-	if _, err := fmt.Sscanf(s, "%d", &n); err != nil {
-		return 0, fmt.Errorf("invalid %s: %q (must be a number)", name, s)
-	}
-	if n <= 0 {
-		return 0, fmt.Errorf("invalid %s: %d (must be positive)", name, n)
-	}
-	return n, nil
 }
 
 func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
