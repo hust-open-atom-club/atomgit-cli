@@ -68,5 +68,5 @@ sed "s/^\$BundledTag = '.*'/\$BundledTag = '${ESC_TAG}'/" "$ROOT/install.ps1" > 
 echo "已生成 ${OUT}/install.ps1（默认 TAG=${TAG}）"
 echo ""
 
-echo "完成。将 dist/${TAG}/ 下各 .tar.gz / .zip、install.sh 与 install.ps1 作为 GitCode Release「${TAG}」的附件上传即可。"
+echo "完成。将 dist/${TAG}/ 下各 .tar.gz / .zip、install.sh 与 install.ps1 作为 AtomGit Release「${TAG}」的附件上传即可。"
 echo "（Windows 也可：PowerShell 执行 install.ps1，或下载 ag_windows_*.zip 手动解压并加入 PATH。）"

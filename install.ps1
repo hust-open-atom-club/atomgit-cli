@@ -1,8 +1,8 @@
 # AtomGit CLI (ag) — Windows 一键安装
-# 仓库: https://gitcode.com/GitCode/ag-cli
+# 仓库: https://atomgit.com/hust-open-atom-club/atomgit-cli
 #
 # 用法（在 PowerShell 中）:
-#   irm https://gitcode.com/<owner>/<repo>/releases/download/v0.4/install.ps1 | iex
+#   irm https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/v0.4/install.ps1 | iex
 #   $env:AG_VERSION = "v0.4"; .\install.ps1
 #
 # 若提示执行策略，可先: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
@@ -19,9 +19,9 @@ function Die([string]$Msg) {
     exit 1
 }
 
-$RepoOwner = if ($env:AG_REPO_OWNER) { $env:AG_REPO_OWNER } else { "GitCode" }
-$RepoName = if ($env:AG_REPO_NAME) { $env:AG_REPO_NAME } else { "ag-cli" }
-$BaseUrl = "https://gitcode.com/$RepoOwner/$RepoName"
+$RepoOwner = if ($env:AG_REPO_OWNER) { $env:AG_REPO_OWNER } else { "hust-open-atom-club" }
+$RepoName = if ($env:AG_REPO_NAME) { $env:AG_REPO_NAME } else { "atomgit-cli" }
+$BaseUrl = "https://atomgit.com/$RepoOwner/$RepoName"
 
 $Version = if ($env:AG_VERSION) { $env:AG_VERSION }
 elseif ($env:AG_DEFAULT_VERSION) { $env:AG_DEFAULT_VERSION }

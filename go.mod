@@ -1,4 +1,4 @@
-module atomgit.com/openeuler/ag-cli
+module atomgit.com/hust-open-atom-club/atomgit-cli
 
 go 1.24.2
 

@@ -1,14 +1,14 @@
 package root
 
 import (
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/auth"
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/issue"
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/license"
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/pr"
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/repo"
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/ssh-key"
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/tag"
-	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/auth"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/issue"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/license"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/pr"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/repo"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/ssh-key"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/tag"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 
