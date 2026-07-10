@@ -3,7 +3,7 @@ package repo
 import (
 	"testing"
 
-	"atomgit.com/openeuler/ag-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 )
 
 func TestRepositoryVisibility(t *testing.T) {

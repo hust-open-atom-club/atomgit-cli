@@ -24,8 +24,8 @@
 
 1. **Fork 仓库**
    ```bash
-   git clone https://gitcode.com/openeuler/ag-cli.git
-   cd ag-cli
+   git clone https://atomgit.com/hust-open-atom-club/atomgit-cli.git
+   cd atomgit-cli
    ```
 
 2. **创建分支**
@@ -79,7 +79,7 @@
 ### 项目结构
 
 ```
-ag-cli/
+atomgit-cli/
 ├── cmd/ag/           # 主程序入口
 ├── internal/         # 内部包
 │   ├── agcmd/        # 核心命令处理

@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"atomgit.com/openeuler/ag-cli/internal/api"
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/pr/comment"
-	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/pr/comment"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 
@@ -32,6 +32,16 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(comment.NewCmdComment(f))
 
 	return cmd
+}
+
+func resolveBaseBranch(requested string, repository api.Repository) (string, error) {
+	if base := strings.TrimSpace(requested); base != "" {
+		return base, nil
+	}
+	if base := strings.TrimSpace(repository.DefaultBranch); base != "" {
+		return base, nil
+	}
+	return "", fmt.Errorf("repository default branch is empty; specify --base")
 }
 
 func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
@@ -183,6 +193,20 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 			if opts.Title == "" {
 				return fmt.Errorf("title is required")
 			}
+
+			base := strings.TrimSpace(opts.Base)
+			if base == "" {
+				var repository api.Repository
+				path := fmt.Sprintf("/repos/%s/%s", owner, repo)
+				if err := client.Get(path, &repository); err != nil {
+					return err
+				}
+				base, err = resolveBaseBranch("", repository)
+				if err != nil {
+					return err
+				}
+			}
+
 			head := opts.Head
 			// Convert owner:branch format to owner/repo:branch for AtomGit API
 			if strings.Contains(head, ":") && !strings.Contains(head, "/") {
@@ -193,10 +217,9 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 			body := map[string]interface{}{
 				"title": opts.Title,
 				"body":  opts.Body,
-				"base":  opts.Base,
+				"base":  base,
 				"head":  head,
 			}
-
 
 			var pr api.PullRequest
 			path := fmt.Sprintf("/repos/%s/%s/pulls", owner, repo)
@@ -213,7 +236,7 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "PR title")
 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "PR body")
-	cmd.Flags().StringVar(&opts.Base, "base", "master", "Base branch")
+	cmd.Flags().StringVar(&opts.Base, "base", "", "Base branch (defaults to repository default)")
 	cmd.Flags().StringVar(&opts.Head, "head", "", "Head branch")
 
 	return cmd
@@ -360,7 +383,7 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 			number = args[1]
 
 			client := &http.Client{}
-			url := fmt.Sprintf("https://api.gitcode.com/api/v5/repos/%s/%s/pulls/%s/files.json", owner, repo, number)
+			url := fmt.Sprintf("%s%s/repos/%s/%s/pulls/%s/files.json", api.BaseURL, api.APIVersion, owner, repo, number)
 			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				return err

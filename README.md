@@ -108,7 +108,7 @@ ag pr list owner/repo --state closed
 ag pr view owner/repo 123
 
 # 创建 PR
-ag pr create owner/repo --title "Fix bug" --body "Description" --base master --head feature-branch
+ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch
 
 # 关闭 PR
 ag pr close owner/repo 123
@@ -189,7 +189,7 @@ cat ~/.ssh/id_rsa.pub | ag ssh-key add --title "My Laptop"
 ## 项目结构
 
 ```
-ag-cli/
+atomgit-cli/
 ├── cmd/ag/main.go              # 入口
 ├── internal/
 │   ├── agcmd/cmd.go            # 核心命令处理

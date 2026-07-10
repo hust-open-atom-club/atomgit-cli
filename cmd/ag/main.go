@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"atomgit.com/openeuler/ag-cli/internal/agcmd"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/agcmd"
 )
 
 func main() {

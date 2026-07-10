@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"atomgit.com/openeuler/ag-cli/internal/config"
-	"atomgit.com/openeuler/ag-cli/pkg/cmd/root"
-	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/root"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 

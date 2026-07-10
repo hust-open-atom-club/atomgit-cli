@@ -1,24 +1,24 @@
 #!/bin/sh
 # AtomGit CLI (ag) — 一键安装
-# 仓库: https://gitcode.com/GitCode/ag-cli
+# 仓库: https://atomgit.com/hust-open-atom-club/atomgit-cli
 #
 # 用法:
-#   curl -fsSL https://gitcode.com/<owner>/<repo>/releases/download/v0.4/install.sh | sh
+#   curl -fsSL https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/v0.4/install.sh | sh
 #   AG_VERSION=v0.4 sh install.sh
 #   AG_FROM_SOURCE=1 sh install.sh    # 从本仓库源码构建（需 git、Go）
 
 set -eu
 
-REPO_OWNER="${AG_REPO_OWNER:-GitCode}"
-REPO_NAME="${AG_REPO_NAME:-ag-cli}"
-BASE_URL="https://gitcode.com/${REPO_OWNER}/${REPO_NAME}"
+REPO_OWNER="${AG_REPO_OWNER:-hust-open-atom-club}"
+REPO_NAME="${AG_REPO_NAME:-atomgit-cli}"
+BASE_URL="https://atomgit.com/${REPO_OWNER}/${REPO_NAME}"
 # 默认下载该 tag 下的预编译包。仓库内请随最新 Release 更新；也可用 scripts/build-release.sh 生成 dist/<tag>/install.sh（已写入本次 TAG）再上传。
 _BUNDLED_TAG="v0.4"
 DEFAULT_VERSION="${AG_DEFAULT_VERSION:-${_BUNDLED_TAG}}"
 VERSION="${AG_VERSION:-$DEFAULT_VERSION}"
 
-# 与 GitCode 默认分支一致（当前为 master）
-GIT_REF="${AG_GIT_REF:-master}"
+# 与 AtomGit 默认分支一致（当前为 main）
+GIT_REF="${AG_GIT_REF:-main}"
 
 die() {
   echo "install.sh: $*" >&2

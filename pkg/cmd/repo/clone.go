@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 
