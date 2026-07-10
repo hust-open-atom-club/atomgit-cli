@@ -71,7 +71,7 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			for _, repo := range repos {
-				fmt.Printf("%s/%s\n", repo.Owner.Login, repo.Name)
+				fmt.Println(repositoryListName(repo))
 			}
 
 			return nil
@@ -79,6 +79,13 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	return cmd
+}
+
+func repositoryListName(repo api.Repository) string {
+	if repo.FullName != "" {
+		return repo.FullName
+	}
+	return fmt.Sprintf("%s/%s", repo.Owner.Login, repo.Name)
 }
 
 func parseIntArg(s string, name string) (int, error) {
