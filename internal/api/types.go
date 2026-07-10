@@ -8,11 +8,18 @@ type Repository struct {
 	Name            string `json:"name"`
 	FullName        string `json:"full_name"`
 	Description     string `json:"description"`
-	HTMLURL         string `json:"html_url"`
+	HTMLURL         string `json:"web_url"`
 	Private         bool   `json:"private"`
+	Internal        bool   `json:"internal"`
 	DefaultBranch   string `json:"default_branch"`
-	StarsCount      int    `json:"stars_count"`
+	Language        string `json:"language"`
+	License         string `json:"license"`
+	Fork            bool   `json:"fork"`
+	ParentFullName  string `json:"parentfull_name"`
+	UpdatedAt       string `json:"updated_at"`
+	StarsCount      int    `json:"stargazers_count"`
 	ForksCount      int    `json:"forks_count"`
+	WatchersCount   int    `json:"watchers_count"`
 	OpenIssuesCount int    `json:"open_issues_count"`
 	Owner           struct {
 		Login string `json:"login"`

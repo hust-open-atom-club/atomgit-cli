@@ -3,6 +3,7 @@ package repo
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"atomgit.com/openeuler/ag-cli/internal/api"
 	"atomgit.com/openeuler/ag-cli/pkg/cmdutil"
@@ -101,6 +102,36 @@ func repositoryListName(repo api.Repository) string {
 	return fmt.Sprintf("%s/%s", repo.Owner.Login, repo.Name)
 }
 
+func repositoryVisibility(repo api.Repository) string {
+	if repo.Private {
+		return "private"
+	}
+	if repo.Internal {
+		return "internal"
+	}
+	return "public"
+}
+
+func repositoryParentName(repo api.Repository) string {
+	if !repo.Fork {
+		return ""
+	}
+	return strings.TrimSpace(repo.ParentFullName)
+}
+
+func formatRepositoryTime(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+
+	parsed, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return value
+	}
+	return parsed.Format("2006-01-02 15:04:05 -07:00")
+}
+
 func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "view [<owner>/]<repo>",
@@ -144,11 +175,23 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 			fmt.Printf("Name: %s\n", repository.FullName)
 			fmt.Printf("Description: %s\n", repository.Description)
 			fmt.Printf("URL: %s\n", repository.HTMLURL)
-			fmt.Printf("Stars: %d\n", repository.StarsCount)
-			fmt.Printf("Forks: %d\n", repository.ForksCount)
-			fmt.Printf("Open Issues: %d\n", repository.OpenIssuesCount)
+			if parent := repositoryParentName(repository); parent != "" {
+				fmt.Printf("Forked from: %s\n", parent)
+			}
 			fmt.Printf("Default Branch: %s\n", repository.DefaultBranch)
-			fmt.Printf("Private: %v\n", repository.Private)
+			fmt.Printf("Visibility: %s\n", repositoryVisibility(repository))
+			if repository.Language != "" {
+				fmt.Printf("Language: %s\n", repository.Language)
+			}
+			license := strings.TrimSpace(repository.License)
+			if license != "" && !strings.EqualFold(license, "NOASSERTION") {
+				fmt.Printf("License: %s\n", license)
+			}
+			fmt.Printf("Stars: %d Forks: %d Watches: %d\n", repository.StarsCount, repository.ForksCount, repository.WatchersCount)
+			fmt.Printf("Open Issues: %d\n", repository.OpenIssuesCount)
+			if updatedAt := formatRepositoryTime(repository.UpdatedAt); updatedAt != "" {
+				fmt.Printf("Updated: %s\n", updatedAt)
+			}
 
 			return nil
 		},
