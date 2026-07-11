@@ -338,7 +338,7 @@ func openBrowser(rawURL string) error {
 	case "linux":
 		cmd = exec.Command("xdg-open", rawURL)
 	case "windows":
-		cmd = exec.Command("cmd", "/C", "start", "", rawURL)
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", rawURL)
 	default:
 		return fmt.Errorf("unsupported GOOS: %s", runtime.GOOS)
 	}
