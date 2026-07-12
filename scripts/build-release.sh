@@ -8,9 +8,10 @@
 #   TAG=v0.1.0 ./scripts/build-release.sh
 #
 # 环境变量:
-#   TAG               必需的语义版本标签 (如 v0.5.0)
+#   TAG               版本标签或 git describe 版本 (如 v0.5、v0.5.0、v0.5-2-gabc1234)
 #   SOURCE_DATE_EPOCH 用于可复现构建的 Unix 时间戳
 #   AG_VERIFY_ONLY=1  仅构建校验一个二进制，不产生发布归档
+#   AG_RELEASE_OUT    发布输出根目录，默认 dist
 
 set -eu
 
@@ -22,36 +23,29 @@ cd "$ROOT"
 # ---------------------------------------------------------------------------
 TAG="${TAG:-}"
 if [ -z "$TAG" ]; then
-  TAG=$(git describe --tags --always 2>/dev/null) || TAG="dev"
+  TAG=$(git describe --tags --always --dirty 2>/dev/null) || TAG="dev"
 fi
 
-# validate_tag: 严格语义版本 vMAJOR.MINOR.PATCH[-预发布][+构建]
-# 使用 POSIX grep -E 实现跨平台正则匹配。
-validate_tag() {
-  tag=$1
-  echo "$tag" | grep -Eq \
-    '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$' || return 1
+validate_version() {
+  value=$1
+  echo "$value" | grep -Eq '^[0-9a-f]+(-dirty)?$' && return 0
+  echo "$value" | grep -Eq \
+    '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*))?-[0-9]+-g[0-9a-f]+(-dirty)?$' && return 0
+  echo "$value" | grep -Eq \
+    '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*))?(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$' || return 1
 
-  # SemVer forbids leading zeroes in numeric pre-release identifiers.
-  case "$tag" in
-    *-*) prerelease=${tag#*-}; prerelease=${prerelease%%+*} ;;
+  core=${value%%+*}
+  case "$core" in
+    *-*) prerelease=${core#*-} ;;
     *) return 0 ;;
   esac
-  old_ifs=$IFS
-  IFS=.
-  set -- $prerelease
-  IFS=$old_ifs
-  for identifier do
-    case "$identifier" in
-      0) ;;
-      0[0-9]*) return 1 ;;
-    esac
-  done
+  echo "$prerelease" | grep -Eq '(^|\.)0[0-9]+($|\.)' && return 1
+  return 0
 }
 
-if ! validate_tag "$TAG"; then
-  echo "错误: TAG 值 \"$TAG\" 不是有效的语义版本标签 (如 v0.5.0)" >&2
-  echo "请设置 TAG 为有效的语义版本后重试。" >&2
+if ! validate_version "$TAG"; then
+  echo "错误: TAG 值 \"$TAG\" 不是有效的发布或 git describe 版本" >&2
+  echo "请使用 v0.5、v0.5.0 或 v0.5-2-gabc1234 等格式。" >&2
   exit 1
 fi
 
@@ -120,10 +114,12 @@ build_windows() {
 # ---------------------------------------------------------------------------
 verify_injection() {
   tmpbin=$(mktemp)
-  trap "rm -f '$tmpbin'" EXIT
+  trap 'rm -f "$tmpbin"' EXIT
 
-  echo "==> 校验版本注入: 构建 linux/amd64 测试二进制 ..."
-  GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
+  verify_os=$(go env GOHOSTOS)
+  verify_arch=$(go env GOHOSTARCH)
+  echo "==> 校验版本注入: 构建 ${verify_os}/${verify_arch} 测试二进制 ..."
+  GOOS="$verify_os" GOARCH="$verify_arch" CGO_ENABLED=0 \
     go build -trimpath -ldflags="${LINK_FLAGS}" -o "$tmpbin" ./cmd/ag
 
   # 文本输出 — 至少包含 TAG
@@ -177,7 +173,8 @@ if [ "${AG_VERIFY_ONLY:-}" = "1" ]; then
 fi
 
 # 以下仅在完整发布构建时执行
-OUT="${ROOT}/dist/${TAG}"
+OUT_ROOT="${AG_RELEASE_OUT:-${ROOT}/dist}"
+OUT="${OUT_ROOT}/${TAG}"
 mkdir -p "$OUT"
 
 echo "输出目录: $OUT"
