@@ -43,7 +43,10 @@ The repository argument can be:
 			repoURL := args[0]
 
 			// Parse repository argument
-			cloneURL, repoName := parseRepoArg(repoURL)
+			cloneURL, repoName, err := resolveCloneRepoArg(f, repoURL)
+			if err != nil {
+				return err
+			}
 
 			// Determine target directory
 			targetDir := repoName
@@ -61,7 +64,19 @@ The repository argument can be:
 	return cmd
 }
 
-func parseRepoArg(arg string) (cloneURL, repoName string) {
+func resolveCloneRepoArg(f *cmdutil.Factory, arg string) (string, string, error) {
+	defaultOwner := ""
+	if !strings.Contains(arg, "/") && !strings.HasPrefix(arg, "git@") {
+		user, err := f.Config.GetUser()
+		if err != nil {
+			return "", "", fmt.Errorf("failed to get current user: %w", err)
+		}
+		defaultOwner = user
+	}
+	return parseRepoArg(arg, defaultOwner)
+}
+
+func parseRepoArg(arg, defaultOwner string) (cloneURL, repoName string, err error) {
 	// Full URL
 	if strings.HasPrefix(arg, "http://") || strings.HasPrefix(arg, "https://") {
 		cloneURL = arg
@@ -70,7 +85,7 @@ func parseRepoArg(arg string) (cloneURL, repoName string) {
 		if len(parts) >= 2 {
 			repoName = strings.TrimSuffix(parts[len(parts)-1], ".git")
 		}
-		return
+		return cloneURL, repoName, nil
 	}
 
 	// SSH format: git@atomgit.com:owner/repo.git
@@ -80,21 +95,31 @@ func parseRepoArg(arg string) (cloneURL, repoName string) {
 		if len(parts) >= 2 {
 			repoName = strings.TrimSuffix(parts[len(parts)-1], ".git")
 		}
-		return
+		return cloneURL, repoName, nil
 	}
 
 	// Owner/repo format
 	parts := strings.Split(arg, "/")
-	if len(parts) == 2 {
-		cloneURL = fmt.Sprintf("https://atomgit.com/%s/%s.git", parts[0], parts[1])
-		repoName = parts[1]
-	} else {
-		// Just repo name - will need current user
-		cloneURL = fmt.Sprintf("https://atomgit.com/%s", arg)
-		repoName = arg
+	switch len(parts) {
+	case 2:
+		owner := strings.TrimSpace(parts[0])
+		repoName = strings.TrimSuffix(strings.TrimSpace(parts[1]), ".git")
+		if owner == "" || repoName == "" {
+			return "", "", fmt.Errorf("invalid repository format: %s (expected repo or owner/repo)", arg)
+		}
+		cloneURL = fmt.Sprintf("https://atomgit.com/%s/%s.git", owner, repoName)
+	case 1:
+		repoName = strings.TrimSuffix(strings.TrimSpace(arg), ".git")
+		owner := strings.TrimSpace(defaultOwner)
+		if owner == "" || repoName == "" {
+			return "", "", fmt.Errorf("invalid repository format: %s (expected repo or owner/repo)", arg)
+		}
+		cloneURL = fmt.Sprintf("https://atomgit.com/%s/%s.git", owner, repoName)
+	default:
+		return "", "", fmt.Errorf("invalid repository format: %s (expected repo or owner/repo)", arg)
 	}
 
-	return
+	return cloneURL, repoName, nil
 }
 
 func runClone(cloneURL string, opts *CloneOptions) error {

@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"reflect"
@@ -12,8 +13,10 @@ func TestParseRepoArg(t *testing.T) {
 	tests := []struct {
 		name     string
 		arg      string
+		owner    string
 		wantURL  string
 		wantName string
+		wantErr  bool
 	}{
 		{
 			name:     "HTTPS URL",
@@ -42,18 +45,51 @@ func TestParseRepoArg(t *testing.T) {
 		{
 			name:     "repository only",
 			arg:      "project",
-			wantURL:  "https://atomgit.com/project",
+			owner:    "alice",
+			wantURL:  "https://atomgit.com/alice/project.git",
 			wantName: "project",
 		},
+		{name: "repository without owner", arg: "project", wantErr: true},
+		{name: "too many path components", arg: "owner/group/project", wantErr: true},
+		{name: "empty owner", arg: "/project", wantErr: true},
+		{name: "empty repository", arg: "owner/", wantErr: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotURL, gotName := parseRepoArg(tt.arg)
+			gotURL, gotName, err := parseRepoArg(tt.arg, tt.owner)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("parseRepoArg() expected an error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
 			if gotURL != tt.wantURL || gotName != tt.wantName {
 				t.Fatalf("parseRepoArg(%q) = (%q, %q), want (%q, %q)", tt.arg, gotURL, gotName, tt.wantURL, tt.wantName)
 			}
 		})
+	}
+}
+
+func TestResolveCloneRepoArgUsesCurrentUserForShortName(t *testing.T) {
+	factory := repoFactory(repoCommandConfig{user: "alice"}, nil)
+	cloneURL, repoName, err := resolveCloneRepoArg(factory, "project")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cloneURL != "https://atomgit.com/alice/project.git" || repoName != "project" {
+		t.Fatalf("resolveCloneRepoArg() = (%q, %q)", cloneURL, repoName)
+	}
+}
+
+func TestResolveCloneRepoArgReportsUserError(t *testing.T) {
+	factory := repoFactory(repoCommandConfig{userErr: errors.New("missing user")}, nil)
+	_, _, err := resolveCloneRepoArg(factory, "project")
+	if err == nil || !strings.Contains(err.Error(), "failed to get current user: missing user") {
+		t.Fatalf("error = %v", err)
 	}
 }
 
