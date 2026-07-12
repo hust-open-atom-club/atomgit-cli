@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -114,12 +115,23 @@ func LoadStoredCredentials() (*StoredCredentials, error) {
 
 	var failedPaths []string
 	for _, path := range paths {
-		data, err := os.ReadFile(path)
+		info, err := os.Stat(path)
 		if err != nil {
 			if os.IsNotExist(err) {
 				failedPaths = append(failedPaths, path)
 				continue
 			}
+			return nil, fmt.Errorf("stat token file info %s: %w", path, err)
+		}
+
+		if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
+			if err := os.Chmod(path, 0o600); err != nil {
+				return nil, fmt.Errorf("change token file mode %s: %w", path, err)
+			}
+		}
+
+		data, err := os.ReadFile(path)
+		if err != nil {
 			return nil, fmt.Errorf("read token file %s: %w", path, err)
 		}
 

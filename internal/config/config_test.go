@@ -32,6 +32,20 @@ func writeCredentialsFile(t *testing.T, path string, credentials StoredCredentia
 	}
 }
 
+func writeCredentialsFileWithBadMode(t *testing.T, path string, credentials StoredCredentials) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(credentials)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestGetTokenFilePaths(t *testing.T) {
 	home := isolateConfig(t)
 
@@ -147,6 +161,32 @@ func TestLoadStoredCredentials(t *testing.T) {
 		writeCredentialsFile(t, path, StoredCredentials{User: "alice"})
 		if _, err := LoadStoredCredentials(); err == nil || !strings.Contains(err.Error(), "empty access_token") {
 			t.Fatalf("error = %v", err)
+		}
+	})
+
+	t.Run("token file bad mode", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("windows doesn't use rwx")
+		}
+
+		home := isolateConfig(t)
+		path := filepath.Join(home, ".config", appName, tokenFile)
+		writeCredentialsFileWithBadMode(t, path, StoredCredentials{AccessToken: "invalid", User: "alice"})
+
+		got, err := LoadStoredCredentials()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.AccessToken != "invalid" || got.User != "alice" {
+			t.Fatalf("credentials = %#v", got)
+		}
+
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if perm := info.Mode().Perm(); perm != 0o600 {
+			t.Fatalf("perm = %#v", perm)
 		}
 	})
 }
