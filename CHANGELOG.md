@@ -1,64 +1,42 @@
-# Changelog
+atomgit-cli (0.4) unstable; urgency=medium
 
-All notable changes to this project will be documented in this file.
+  * Add display of pull request review comments and nested replies.
+  * Add replies to pull request review discussions.
+  * Refresh the macOS, Linux, and Windows installation scripts and release
+    artifacts.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+ -- xiaogang <xiaogang@csdn.net>  Sat, 11 Jul 2026 00:26:24 +0800
 
-## [Unreleased]
+atomgit-cli (0.3) unstable; urgency=medium
 
-### Added
-- Initial release of AtomGit CLI
-- Authentication commands: `auth status`, `auth token`
-- Repository commands: `repo list`, `repo view`, `repo create`, `repo clone`, `repo fork`, `repo delete`
-- Pull Request commands: `pr list`, `pr view`, `pr create`
-- Issue commands: `issue list`, `issue view`, `issue create`
-- SSH Key commands: `ssh-key add`
-- Configuration management via `~/.atomgit_personal_token.json`
-- HTTP API client for AtomGit API v5
+  * Add browser-based AtomGit OAuth login, token refresh, status, and logout.
+  * Add `pr diff` with optional JSON output.
+  * Support `owner:branch` head references for cross-repository pull requests.
+  * Convert HTML tables in comments to Markdown and fix comment creation
+    response decoding.
+  * Add installation scripts and release archives for macOS, Linux, and
+    Windows on amd64 and arm64.
 
-### Features
+ -- xiaogang <xiaogang@csdn.net>  Sat, 11 Jul 2026 00:26:23 +0800
 
-#### Authentication
-- Read access token from `~/.atomgit_personal_token.json`
-- Display authentication status with masked token
-- Show current token
+atomgit-cli (0.2) unstable; urgency=medium
 
-#### Repository Management
-- List all accessible repositories
-- View repository details (stars, forks, issues, etc.)
-- Create new repositories (public/private)
-- Clone repositories with optional branch selection
-- Fork repositories with custom name and visibility
-- Delete repositories with confirmation prompt
+  * Follow the XDG Base Directory specification when locating the token file,
+    while retaining the legacy token path as a fallback.
+  * Fix comment ID decoding for AtomGit API responses.
 
-#### Pull Request Management
-- List PRs with state filtering (open/closed/all)
-- View PR details including branch information
-- Create new PRs with title, body, base and head branches
+ -- Shinwell Hu <huxinwei@huawei.com>  Sat, 11 Jul 2026 00:25:46 +0800
 
-#### Issue Management
-- List issues with state filtering
-- View issue details
-- Create new issues with title and body
+atomgit-cli (0.1) unstable; urgency=medium
 
-#### SSH Key Management
-- Add SSH keys to AtomGit account
-- Support for reading key from file or stdin
+  * Add the initial AtomGit CLI with repository, pull request, issue,
+    authentication, and SSH key commands.
+  * Add pull request and issue comments, pull request close, issue close, and
+    pull request issue linking commands.
+  * Add repository tag management and license compliance checks.
+  * Support string and numeric issue and pull request numbers returned by the
+    AtomGit API.
+  * Fix AtomGit user ID decoding and remove generated binaries from the source
+    repository.
 
-### Technical Details
-- Built with Go 1.21+
-- Uses Cobra framework for CLI commands
-- RESTful API client with standard library
-- JSON-based configuration
-
-## [0.1.0] - 2026-01-30
-
-### Added
-- Project initialization
-- Basic command structure following gh-cli patterns
-- Core API client implementation
-- Initial set of commands for repository, PR, and issue management
-
-[Unreleased]: https://atomgit.com/hust-open-atom-club/atomgit-cli/compare/v0.1...HEAD
-[0.1.0]: https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/tag/v0.1
+ -- Shinwell Hu <huxinwei@huawei.com>  Mon, 2 Feb 2026 09:17:41 +0800
