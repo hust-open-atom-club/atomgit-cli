@@ -60,7 +60,9 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
+			if opts.Limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
+			}
 
 			var owner, repo string
 			if len(args) == 0 {
@@ -73,9 +75,14 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 			}
 			owner, repo = parts[0], parts[1]
 
-			var prs []api.PullRequest
-			path := fmt.Sprintf("/repos/%s/%s/pulls?state=%s", owner, repo, opts.State)
-			if err := client.Get(path, &prs); err != nil {
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
+			prs, err := api.GetPaginated[api.PullRequest](client, opts.Limit, func(page, perPage int) string {
+				return fmt.Sprintf("/repos/%s/%s/pulls?state=%s&page=%d&per_page=%d", owner, repo, opts.State, page, perPage)
+			})
+			if err != nil {
 				return err
 			}
 

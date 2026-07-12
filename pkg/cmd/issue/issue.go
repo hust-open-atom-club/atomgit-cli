@@ -87,7 +87,9 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
+			if opts.Limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
+			}
 
 			var owner, repo string
 			if len(args) == 0 {
@@ -100,9 +102,14 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 			}
 			owner, repo = parts[0], parts[1]
 
-			var issues []api.Issue
-			path := fmt.Sprintf("/repos/%s/%s/issues?state=%s", owner, repo, opts.State)
-			if err := client.Get(path, &issues); err != nil {
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
+			issues, err := api.GetPaginated[api.Issue](client, opts.Limit, func(page, perPage int) string {
+				return fmt.Sprintf("/repos/%s/%s/issues?state=%s&page=%d&per_page=%d", owner, repo, opts.State, page, perPage)
+			})
+			if err != nil {
 				return err
 			}
 
