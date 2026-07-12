@@ -221,7 +221,7 @@ JSON 输出包含固定的 `version`、`commit` 和 `buildDate` 字段：
 
 从源码构建或执行 `go install` 且未注入发布元数据时，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，`ag version` 会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
 
-发布版二进制文件通过 `scripts/build-release.sh` 构建，使用 `TAG` 环境变量（如 `TAG=v0.5.0`）注入语义版本标签。发布版构建还支持 `SOURCE_DATE_EPOCH`，以生成可复现的构建日期。
+发布版二进制文件通过 `scripts/build-release.sh` 构建，使用 `TAG` 环境变量（如项目既有格式 `TAG=v0.5`，也支持 `TAG=v0.5.0`）注入版本标签；未指定时使用 `git describe` 生成的版本。发布版构建还支持 `SOURCE_DATE_EPOCH`，以生成可复现的构建日期。
 
 ## 项目结构
 
