@@ -14,40 +14,47 @@ go install ./cmd/ag
 
 ## 配置
 
-在使用之前需要配置访问令牌。推荐先执行 **`ag auth login`**：会在浏览器中完成 AtomGit OAuth，并把 `access_token` 与 `user` 写入下面的 `token.json`（覆盖已有内容）。
+首次使用本工具前，需要选择以下任一方式配置访问令牌：
 
-也可手动创建 token 文件：
+- 使用 OAuth 登录（推荐）：运行 `ag auth login`，在浏览器中完成 AtomGit 授权。登录成功后，`ag` 会自动将认证信息写入令牌文件。
 
-**推荐方式：遵循XDG规范**
-```
-$XDG_CONFIG_HOME/ag-cli/token.json
-```
-默认路径为 `~/.config/ag-cli/token.json`
+- 手动创建访问令牌：参考 [AtomGit 访问令牌（PAT）文档](https://docs.gitcode.com/docs/help/home/user_center/security_management/user_pat/)，依次进入「个人设置」->「访问令牌」->「新建访问令牌」，按需设置权限范围和到期时间，再将生成的 PAT 写入令牌文件。PAT 创建后只显示一次，请立即妥善保存，不要将其提交到代码仓库或分享给他人。
 
-**兼容旧方式的路径**：
-```
-~/.atomgit_personal_token.json
-```
+令牌文件的默认路径因操作系统而异：
 
-文件内容示例：
+- Linux：`/home/<用户名>/.config/ag-cli/token.json`
+- macOS：`/Users/<用户名>/.config/ag-cli/token.json`
+- Windows：`C:\Users\<用户名>\.config\ag-cli\token.json`
+
+手动配置 PAT 时，文件内容至少包括：
+
 ```json
 {
-  "access_token": "your-token-here",
-  "user": "your-username",
-  "refresh_token": "…",
-  "expires_in": 3600,
-  "created_at": 1710000000,
+  "access_token": "your-personal-access-token",
+  "user": "your-atomgit-login",
   "token_type": "Bearer"
 }
 ```
-`refresh_token` / `expires_in` / `created_at` 由 `ag auth login` 在 OAuth 返回时写入，供 `ag auth refresh` 使用；手动编辑时可省略。
+
+配置文件字段说明：
+
+| 字段 | 是否必填 | 说明 |
+| --- | --- | --- |
+| `access_token` | 是 | 用于调用 AtomGit API 的访问令牌。手动配置时填写刚创建的 PAT；请勿泄露或提交到版本控制。 |
+| `user` | 是 | AtomGit 登录用户名（账号标识），不是昵称或邮箱。 |
+| `refresh_token` | 否 | OAuth 刷新令牌，仅由 `ag auth login` 获取，并供 `ag auth refresh` 换取新的访问令牌。PAT 没有该字段。 |
+| `expires_in` | 否 | OAuth 访问令牌从签发时刻起的有效秒数，由服务端返回。PAT 的有效期在创建 PAT 时设置，手动配置可省略。 |
+| `created_at` | 否 | CLI 保存或刷新 OAuth 凭据时记录的 Unix 时间戳（秒），用于表示签发/保存时间。手动配置 PAT 时可省略。 |
+| `token_type` | 是 | 令牌认证类型。当前 PAT 和 OAuth 访问令牌均使用 `Bearer`。 |
+
+`ag auth login` 会自动写入上述 OAuth 字段；手动使用 PAT 时不要自行编造 `refresh_token`、`expires_in` 或 `created_at`。请确保配置文件仅允许当前用户读取和写入令牌文件。
 
 ## 命令
 
 ### 认证
 
 ```bash
-# 浏览器 OAuth 登录并写入 ~/.config/ag-cli/token.json（或 $XDG_CONFIG_HOME/ag-cli/token.json）
+# 浏览器 OAuth 登录并写入令牌文件
 ag auth login
 # 已登录时会提示无需重复登录；若要重新走浏览器：ag auth login --force
 
@@ -60,7 +67,7 @@ ag auth status
 # 显示当前 token
 ag auth token
 
-# 删除本地保存的 token 与用户（XDG 下 token.json 及兼容路径）
+# 删除本地令牌文件
 ag auth logout
 ```
 
@@ -69,7 +76,7 @@ ag auth logout
 ### 仓库 (repo)
 
 ```bash
-# 列出仓库（默认最多30条）
+# 列出仓库（默认显示 30 条）
 ag repo list
 
 # 指定最多列出100条仓库
@@ -87,7 +94,7 @@ ag repo create owner/my-project --public --description "My project"
 
 # 克隆仓库
 ag repo clone owner/repo
-ag repo clone owner/repo --branch develop
+ag repo clone owner/repo --branch dev
 
 # Fork 仓库
 ag repo fork owner/repo
