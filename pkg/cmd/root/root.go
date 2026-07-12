@@ -8,6 +8,7 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/repo"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/ssh-key"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/tag"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/version"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -29,6 +30,7 @@ func NewCmdRoot(f *cmdutil.Factory) (*cobra.Command, error) {
 	cmd.AddCommand(auth.NewCmdAuth(f))
 	cmd.AddCommand(key.NewCmdSSHKey(f))
 	cmd.AddCommand(license.NewCmdLicense(f))
+	cmd.AddCommand(version.NewCmdVersion())
 
 	return cmd, nil
 }
