@@ -78,7 +78,10 @@ func runCreate(f *cmdutil.Factory, opts *CreateOptions) error {
 		return fmt.Errorf("not authenticated: %w", err)
 	}
 
-	client := api.NewClient(token)
+	client, err := newAPIClient(f, token)
+	if err != nil {
+		return err
+	}
 
 	// Determine visibility
 	visibility := "private"

@@ -98,6 +98,10 @@ func parseRepoArg(arg string) (cloneURL, repoName string) {
 }
 
 func runClone(cloneURL string, opts *CloneOptions) error {
+	return runCloneWithCommand(cloneURL, opts, exec.Command)
+}
+
+func runCloneWithCommand(cloneURL string, opts *CloneOptions, command func(string, ...string) *exec.Cmd) error {
 	args := []string{"clone"}
 
 	if opts.Branch != "" {
@@ -110,7 +114,7 @@ func runClone(cloneURL string, opts *CloneOptions) error {
 		args = append(args, opts.Directory)
 	}
 
-	cmd := exec.Command("git", args...)
+	cmd := command("git", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin

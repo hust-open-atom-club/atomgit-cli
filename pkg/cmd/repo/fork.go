@@ -61,7 +61,10 @@ func runFork(f *cmdutil.Factory, opts *ForkOptions, repoArg string) error {
 		return fmt.Errorf("not authenticated: %w", err)
 	}
 
-	client := api.NewClient(token)
+	client, err := newAPIClient(f, token)
+	if err != nil {
+		return err
+	}
 
 	// Parse owner/repo
 	var owner, repoName string
@@ -83,10 +86,6 @@ func runFork(f *cmdutil.Factory, opts *ForkOptions, repoArg string) error {
 	if opts.Name != "" {
 		body["name"] = opts.Name
 	}
-	if opts.Description != "" {
-		body["description"] = opts.Description
-	}
-
 	// Determine visibility
 	if opts.Public {
 		body["private"] = false
@@ -109,6 +108,12 @@ func runFork(f *cmdutil.Factory, opts *ForkOptions, repoArg string) error {
 		}
 	}
 
+	if opts.Description != "" {
+		if err := setAndVerifyForkDescription(client, currentUser, forkName, opts.Description); err != nil {
+			return err
+		}
+	}
+
 	fmt.Printf("✓ Forked %s/%s to %s/%s\n", owner, repoName, currentUser, forkName)
 	if result.HTMLURL != "" {
 		fmt.Printf("  URL: %s\n", result.HTMLURL)
@@ -121,5 +126,26 @@ func runFork(f *cmdutil.Factory, opts *ForkOptions, repoArg string) error {
 		fmt.Printf("  git clone %s\n", cloneURL)
 	}
 
+	return nil
+}
+
+func setAndVerifyForkDescription(client *api.Client, owner, repo, description string) error {
+	path := fmt.Sprintf("/repos/%s/%s", owner, repo)
+	body := map[string]interface{}{
+		"name":        repo,
+		"description": description,
+	}
+	var updated api.Repository
+	if err := client.Patch(path, body, &updated); err != nil {
+		return fmt.Errorf("failed to update fork description: %w", err)
+	}
+
+	var verified api.Repository
+	if err := client.Get(path, &verified); err != nil {
+		return fmt.Errorf("failed to verify fork description: %w", err)
+	}
+	if verified.Description != description {
+		return fmt.Errorf("fork description mismatch: requested %q, got %q", description, verified.Description)
+	}
 	return nil
 }

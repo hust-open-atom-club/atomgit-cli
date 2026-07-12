@@ -3,7 +3,6 @@ package repo
 import (
 	"fmt"
 
-	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -45,7 +44,10 @@ the confirmation prompt.`,
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 
 			// Confirm deletion unless --yes flag is used
 			if !force {

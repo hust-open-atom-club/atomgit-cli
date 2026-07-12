@@ -50,7 +50,10 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 			repos, err := listRepos(client, opts.Limit)
 			if err != nil {
 				return err
@@ -161,7 +164,10 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated. Please check your token file: %w", err)
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 
 			var owner, repo string
 			if len(args) == 0 {

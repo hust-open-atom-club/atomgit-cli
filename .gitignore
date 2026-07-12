@@ -7,7 +7,7 @@ dist/
 *.dll
 *.so
 *.dylib
-ag
+/ag
 
 # Test binary, built with `go test -c`
 *.test
