@@ -32,6 +32,7 @@ func newCmdAuthLogout() *cobra.Command {
 	return &cobra.Command{
 		Use:   "logout",
 		Short: "Remove stored token and user (delete credential files)",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			removed, err := config.ClearCredentials()
 			if err != nil {
@@ -51,10 +52,15 @@ func newCmdAuthLogout() *cobra.Command {
 }
 
 func newCmdAuthLogin(f *cmdutil.Factory) *cobra.Command {
+	return newCmdAuthLoginWithFunc(f, oauth.Login)
+}
+
+func newCmdAuthLoginWithFunc(f *cmdutil.Factory, login func(context.Context) (*oauth.LoginResult, error)) *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Log in with AtomGit OAuth (opens browser, saves token.json)",
+		Args:  cobra.NoArgs,
 		Long: `Opens a browser to authorize ag against atomgit.com, then writes
 access_token and user to the XDG config path (see README).
 If already logged in, skips the browser unless --force is set.`,
@@ -75,7 +81,7 @@ If already logged in, skips the browser unless --force is set.`,
 				defer cancel()
 			}
 
-			result, err := oauth.Login(ctx)
+			result, err := login(ctx)
 			if err != nil {
 				return err
 			}
@@ -107,6 +113,7 @@ func newCmdAuthRefresh() *cobra.Command {
 	return &cobra.Command{
 		Use:   "refresh",
 		Short: "Refresh the access token using the stored refresh_token",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
@@ -153,6 +160,7 @@ func newCmdAuthStatus(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "View authentication status",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
@@ -187,6 +195,7 @@ func newCmdAuthToken(f *cmdutil.Factory) *cobra.Command {
 		Use:   "token",
 		Short: "Print the authentication token",
 		Long:  `Display the authentication token used for AtomGit API requests.`,
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {

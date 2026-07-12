@@ -61,13 +61,9 @@ func runFork(f *cmdutil.Factory, opts *ForkOptions, repoArg string) error {
 		return fmt.Errorf("not authenticated: %w", err)
 	}
 
-	client := api.NewClient(token)
-	if f.HttpClient != nil {
-		httpClient, err := f.HttpClient()
-		if err != nil {
-			return fmt.Errorf("failed to create HTTP client: %w", err)
-		}
-		client = api.NewClientWithHTTPClient(token, httpClient)
+	client, err := newAPIClient(f, token)
+	if err != nil {
+		return err
 	}
 
 	// Parse owner/repo
