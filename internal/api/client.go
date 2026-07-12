@@ -21,12 +21,23 @@ type Client struct {
 }
 
 func NewClient(token string) *Client {
-	return &Client{
-		baseURL: BaseURL + APIVersion,
-		token:   token,
-		httpClient: &http.Client{
+	return NewClientWithHTTPClient(token, &http.Client{
+		Timeout: 30 * time.Second,
+	})
+}
+
+// NewClientWithHTTPClient creates an API client using the provided HTTP client.
+// A nil HTTP client uses the same default timeout as NewClient.
+func NewClientWithHTTPClient(token string, httpClient *http.Client) *Client {
+	if httpClient == nil {
+		httpClient = &http.Client{
 			Timeout: 30 * time.Second,
-		},
+		}
+	}
+	return &Client{
+		baseURL:    BaseURL + APIVersion,
+		token:      token,
+		httpClient: httpClient,
 	}
 }
 
