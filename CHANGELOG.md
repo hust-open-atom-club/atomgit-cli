@@ -1,3 +1,12 @@
+atomgit-cli (0.5) unstable; urgency=medium
+
+  * Add `ag version` and `ag version --json` commands for embedded build
+    provenance without credentials or network access.
+  * Embed release Git tag, source commit, and reproducible build date in
+    release binaries via linker flags.
+
+ -- xiaogang <xiaogang@csdn.net>  Sun, 12 Jul 2026 19:00:00 +0800
+
 atomgit-cli (0.4) unstable; urgency=medium
 
   * Add display of pull request review comments and nested replies.
