@@ -235,12 +235,20 @@ cp "$STAGING"/ag_windows_arm64.zip "$OUT/"
 cp "$STAGING"/checksums.txt "$OUT/"
 rm -rf "$STAGING"
 
-# 生成与本次 TAG 默认一致的 install.sh / install.ps1（避免 Release 附件里脚本仍指向旧版本）
+# 生成与本次 TAG 一致的 install.sh / install.ps1，包括默认版本和文件头用法示例。
 ESC_TAG=$(printf '%s\n' "$TAG" | sed 's/[\/&]/\\&/g')
-sed "s/^_BUNDLED_TAG=.*/_BUNDLED_TAG=\"${ESC_TAG}\"/" "$ROOT/install.sh" > "${OUT}/install.sh"
+sed \
+  -e "s@/releases/download/v[^/]*/install.sh@/releases/download/${ESC_TAG}/install.sh@" \
+  -e "s/^#   AG_VERSION=v[^ ]* sh install.sh$/#   AG_VERSION=${ESC_TAG} sh install.sh/" \
+  -e "s/^_BUNDLED_TAG=.*/_BUNDLED_TAG=\"${ESC_TAG}\"/" \
+  "$ROOT/install.sh" > "${OUT}/install.sh"
 chmod +x "${OUT}/install.sh"
 echo "已生成 ${OUT}/install.sh（默认 TAG=${TAG}）"
-sed "s/^\$BundledTag = '.*'/\$BundledTag = '${ESC_TAG}'/" "$ROOT/install.ps1" > "${OUT}/install.ps1"
+sed \
+  -e "s@/releases/download/v[^/]*/install.ps1@/releases/download/${ESC_TAG}/install.ps1@" \
+  -e "s@^#   \$env:AG_VERSION = .*@#   \$env:AG_VERSION = \"${ESC_TAG}\"; .\\\\install.ps1@" \
+  -e "s/^\$BundledTag = '.*'/\$BundledTag = '${ESC_TAG}'/" \
+  "$ROOT/install.ps1" > "${OUT}/install.ps1"
 echo "已生成 ${OUT}/install.ps1（默认 TAG=${TAG}）"
 
 # GoReleaser 的校验和只包含它生成的归档。安装脚本由本包装脚本

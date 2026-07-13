@@ -2,8 +2,8 @@
 # 仓库: https://atomgit.com/hust-open-atom-club/atomgit-cli
 #
 # 用法（在 PowerShell 中）:
-#   irm https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/v0.4/install.ps1 | iex
-#   $env:AG_VERSION = "v0.4"; .\install.ps1
+#   irm https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/v0.5.0/install.ps1 | iex
+#   $env:AG_VERSION = "v0.5.0"; .\install.ps1
 #
 # 若提示执行策略，可先: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
@@ -12,7 +12,7 @@
 $ErrorActionPreference = "Stop"
 
 # 随 Release 更新；或用 make release 生成到 dist/<tag>/install.ps1（已写入本次 TAG）
-$BundledTag = 'v0.4'
+$BundledTag = 'v0.5.0'
 
 function Die([string]$Msg) {
     $host.UI.WriteErrorLine("install.ps1: $Msg")
