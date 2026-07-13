@@ -12,6 +12,26 @@ go build ./cmd/ag
 go install ./cmd/ag
 ```
 
+### 使用 Nix 安装
+
+仓库提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake。安装到当前用户的 Nix profile：
+
+```bash
+nix profile install .#ag
+ag version
+```
+
+也可以在不安装的情况下直接运行，或只构建 package：
+
+```bash
+# 直接运行
+nix run .#ag -- version
+
+# 构建，产物位于 ./result/bin/ag
+nix build .#ag
+./result/bin/ag version --json
+```
+
 ## 配置
 
 首次使用本工具前，需要选择以下任一方式配置访问令牌：
@@ -222,6 +242,23 @@ JSON 输出包含固定的 `version`、`commit` 和 `buildDate` 字段：
 从源码构建或执行 `go install` 且未注入发布元数据时，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，`ag version` 会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
 
 发布版二进制文件通过 `scripts/build-release.sh` 构建，使用 `TAG` 环境变量（如项目既有格式 `TAG=v0.5`，也支持 `TAG=v0.5.0`）注入版本标签；未指定时使用 `git describe` 生成的版本。发布版构建还支持 `SOURCE_DATE_EPOCH`，以生成可复现的构建日期。
+
+### 维护 Nix package
+
+更新 Nix package 的版本和 `vendorHash` 时，推荐先进入 flake 提供的开发环境，以使用项目声明的工具版本：
+
+```bash
+nix develop
+./scripts/update-nix-package.sh v0.6.0
+```
+
+也可以直接运行更新脚本：
+
+```bash
+./scripts/update-nix-package.sh v0.6.0
+```
+
+直接运行需要预先安装 Nix 和 Git，并要求 `tar` 支持以 NUL 分隔的文件列表；Linux 上的 GNU tar 和 macOS 默认的 bsdtar 均受支持。脚本会更新 `flake.nix` 中的版本和 `vendorHash`，随后执行 `nix build .#ag` 和 `ag version --json` 验证。验证失败时会自动恢复原始 `flake.nix`，且脚本不会提交、打标签或推送。
 
 ## 项目结构
 
