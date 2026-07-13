@@ -5,11 +5,11 @@ AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 ## 安装
 
 ```bash
-# 从源码构建
-go build ./cmd/ag
+# 构建到 bin/ag（Windows 为 bin/ag.exe）
+make build
 
 # 安装到 $GOPATH/bin
-go install ./cmd/ag
+make install
 ```
 
 ## 配置
@@ -203,30 +203,46 @@ ag version
 ag version --json
 ```
 
-文本输出包含版本、源码提交和构建日期，例如：
+通过 `make build` 或 `make install` 从源码构建且未注入发布元数据时，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，`ag version` 会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
 
-```text
-ag version v0.5.0 (commit: abc1234, built: 2026-07-12T00:00:00Z)
+## 发布打包
+
+发布版使用 [GoReleaser](https://goreleaser.com/install/) 打包，tag 统一使用 `vX.Y.Z` 三段式 SemVer。正式发布前应先提交所有改动，并在当前 HEAD 创建版本 tag：
+
+```bash
+git tag v0.5.0
+make release VERSION=v0.5.0
 ```
 
-JSON 输出包含固定的 `version`、`commit` 和 `buildDate` 字段：
+`make release` 会检查工作区干净、tag 存在且指向当前 HEAD，然后在 `dist/v0.5.0/` 生成以下文件：
 
-```json
-{
-  "version": "v0.5.0",
-  "commit": "abc1234",
-  "buildDate": "2026-07-12T00:00:00Z"
-}
+- Linux 和 macOS 的 amd64/arm64 `.tar.gz` 归档。
+- Windows 的 amd64/arm64 `.zip` 归档。
+- 已绑定当前 tag 的 `install.sh` 和 `install.ps1`。
+- 覆盖上述六个归档和两个安装脚本的 `checksums.txt`。
+
+上传 Release 附件前可校验所有制品：
+
+```bash
+# Linux
+(cd dist/v0.5.0 && sha256sum -c checksums.txt)
+
+# macOS
+(cd dist/v0.5.0 && shasum -a 256 -c checksums.txt)
 ```
 
-从源码构建或执行 `go install` 且未注入发布元数据时，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，`ag version` 会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
+未创建 tag 时，可使用 `make release-snapshot VERSION=v0.5.0` 进行本地试打包。Snapshot 允许脏工作区，其制品仅用于验证，不应上传到正式 Release。
 
-发布版二进制文件通过 `scripts/build-release.sh` 构建，使用 `TAG` 环境变量（如项目既有格式 `TAG=v0.5`，也支持 `TAG=v0.5.0`）注入版本标签；未指定时使用 `git describe` 生成的版本。发布版构建还支持 `SOURCE_DATE_EPOCH`，以生成可复现的构建日期。
+底层 `scripts/build-release.sh` 也接受 `TAG`、`AG_RELEASE_SNAPSHOT=1` 和 `SOURCE_DATE_EPOCH` 环境变量。`SOURCE_DATE_EPOCH` 会同时固定二进制中的构建日期以及归档内文件的时间戳，用于生成可复现的发布制品；历史两段式 tag 仅保留给 snapshot 兼容。
 
 ## 项目结构
 
 ```
 atomgit-cli/
+├── .goreleaser.yaml            # GoReleaser 跨平台打包配置
+├── Makefile                    # 构建、测试、安装和发布入口
+├── install.sh                  # Linux/macOS 安装脚本
+├── install.ps1                 # Windows 安装脚本
 ├── cmd/ag/main.go              # 入口
 ├── internal/
 │   ├── agcmd/cmd.go            # 核心命令处理
@@ -257,6 +273,7 @@ atomgit-cli/
 │       │   └── check.go
 │       ├── ssh-key/ssh_key.go  # SSH key 命令
 │       └── version/version.go  # 版本命令
+├── scripts/build-release.sh    # GoReleaser 打包包装脚本
 └── go.mod
 ```
 

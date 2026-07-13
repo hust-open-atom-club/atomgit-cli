@@ -1,0 +1,63 @@
+version: 2
+
+project_name: ag
+dist: dist/.goreleaser
+
+builds:
+  - id: ag
+    main: ./cmd/ag
+    binary: ag
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    mod_timestamp: "{{ .Env.AG_BUILD_TIMESTAMP }}"
+    ldflags:
+      - -s -w
+      - -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Version={{ .Env.AG_VERSION }}
+      - -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Commit={{ .FullCommit }}
+      - -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.BuildDate={{ .Env.AG_BUILD_DATE }}
+
+archives:
+  - id: ag
+    ids:
+      - ag
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "ag_{{ .Os }}_{{ .Arch }}"
+    builds_info:
+      owner: root
+      group: root
+      mode: 0755
+      mtime: "{{ .Env.AG_BUILD_DATE }}"
+    files:
+      - src: LICENSE
+        info:
+          owner: root
+          group: root
+          mode: 0644
+          mtime: "{{ .Env.AG_BUILD_DATE }}"
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ .Env.AG_SNAPSHOT_VERSION }}"
+
+changelog:
+  disable: true
+
+release:
+  disable: true

@@ -1,4 +1,5 @@
 GO ?= go
+GORELEASER ?= goreleaser
 BINARY := ag
 COMMAND := ./cmd/ag
 BIN_DIR := bin
@@ -14,7 +15,7 @@ VERSION ?=
 
 .DEFAULT_GOAL := build
 
-.PHONY: all build install uninstall test test-race vet lint fmt fmt-check coverage release clean help
+.PHONY: all build install uninstall test test-race vet lint fmt fmt-check coverage release release-snapshot clean help
 
 all: lint test build
 
@@ -55,10 +56,17 @@ coverage:
 
 release:
 	@test -n "$(VERSION)" || { \
-		echo "VERSION is required (example: make release VERSION=v1.0)"; \
+		echo "VERSION is required (example: make release VERSION=v0.5.0)"; \
 		exit 1; \
 	}
-	TAG=$(VERSION) ./scripts/build-release.sh
+	GORELEASER=$(GORELEASER) TAG=$(VERSION) ./scripts/build-release.sh
+
+release-snapshot:
+	@test -n "$(VERSION)" || { \
+		echo "VERSION is required (example: make release-snapshot VERSION=v0.5.0)"; \
+		exit 1; \
+	}
+	AG_RELEASE_SNAPSHOT=1 GORELEASER=$(GORELEASER) TAG=$(VERSION) ./scripts/build-release.sh
 
 clean:
 	@rm -rf $(BIN_DIR) dist
@@ -80,5 +88,7 @@ help:
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make fmt                    Format Go source files in place"
-	@echo "  make release VERSION=vX.Y.Z Build cross-platform release archives"
+	@echo "  make release VERSION=vX.Y.Z Build a tagged release from a clean worktree"
+	@echo "  make release-snapshot VERSION=vX.Y.Z"
+	@echo "                              Build local test archives without tag validation"
 	@echo "  make clean                  Remove local build, release, and coverage files"

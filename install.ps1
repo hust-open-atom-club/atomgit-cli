@@ -11,7 +11,7 @@
 
 $ErrorActionPreference = "Stop"
 
-# 随 Release 更新；或用 scripts/build-release.sh 生成到 dist/<tag>/install.ps1（已写入本次 TAG）
+# 随 Release 更新；或用 make release 生成到 dist/<tag>/install.ps1（已写入本次 TAG）
 $BundledTag = 'v0.4'
 
 function Die([string]$Msg) {
