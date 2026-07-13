@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,8 +13,13 @@ import (
 	"time"
 )
 
-// ErrTokenNotFound is returned when no token file exists in any search path.
-var ErrTokenNotFound = errors.New("token file not found")
+var (
+	// ErrTokenNotFound is returned when no token file exists in any search path.
+	ErrTokenNotFound = errors.New("token file not found")
+
+	// ErrTokenFileSymlink is returned when a token file is a symlink
+	ErrTokenFileSymlink = errors.New("token file is a symlink")
+)
 
 const (
 	defaultHost     = "atomgit.com"
@@ -115,22 +121,41 @@ func LoadStoredCredentials() (*StoredCredentials, error) {
 
 	var failedPaths []string
 	for _, path := range paths {
-		info, err := os.Stat(path)
+		li, err := os.Lstat(path)
 		if err != nil {
 			if os.IsNotExist(err) {
 				failedPaths = append(failedPaths, path)
 				continue
 			}
+			return nil, fmt.Errorf("lstat token file info %s: %w", path, err)
+		}
+		if li.Mode()&os.ModeSymlink != 0 {
+			return nil, fmt.Errorf("%w: %s\n"+
+				"remove the symlink and place the token file directly", ErrTokenFileSymlink, path)
+		}
+
+		f, err := os.Open(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				failedPaths = append(failedPaths, path)
+				continue
+			}
+			return nil, fmt.Errorf("open token file %s: %w", path, err)
+		}
+		defer f.Close()
+
+		info, err := f.Stat()
+		if err != nil {
 			return nil, fmt.Errorf("stat token file info %s: %w", path, err)
 		}
 
-		if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
-			if err := os.Chmod(path, 0o600); err != nil {
+		if perm := info.Mode().Perm(); perm&0o077 != 0 && runtime.GOOS != "windows" {
+			if err := f.Chmod(perm & 0o700); err != nil {
 				return nil, fmt.Errorf("change token file mode %s: %w", path, err)
 			}
 		}
 
-		data, err := os.ReadFile(path)
+		data, err := io.ReadAll(f)
 		if err != nil {
 			return nil, fmt.Errorf("read token file %s: %w", path, err)
 		}

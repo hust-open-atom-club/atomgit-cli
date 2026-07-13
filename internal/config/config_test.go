@@ -32,20 +32,6 @@ func writeCredentialsFile(t *testing.T, path string, credentials StoredCredentia
 	}
 }
 
-func writeCredentialsFileWithBadMode(t *testing.T, path string, credentials StoredCredentials) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	data, err := json.Marshal(credentials)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestGetTokenFilePaths(t *testing.T) {
 	home := isolateConfig(t)
 
@@ -164,20 +150,30 @@ func TestLoadStoredCredentials(t *testing.T) {
 		}
 	})
 
-	t.Run("token file bad mode", func(t *testing.T) {
+	t.Run("fixes group/other readable permissions (0o644)", func(t *testing.T) {
 		if runtime.GOOS == "windows" {
-			t.Skip("windows doesn't use rwx")
+			t.Skip("permission bits are not enforced on Windows")
 		}
 
 		home := isolateConfig(t)
 		path := filepath.Join(home, ".config", appName, tokenFile)
-		writeCredentialsFileWithBadMode(t, path, StoredCredentials{AccessToken: "invalid", User: "alice"})
+		creds := StoredCredentials{AccessToken: "leaked", User: "alice"}
+		data, err := json.Marshal(creds)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
 
 		got, err := LoadStoredCredentials()
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got.AccessToken != "invalid" || got.User != "alice" {
+		if got.AccessToken != "leaked" || got.User != "alice" {
 			t.Fatalf("credentials = %#v", got)
 		}
 
@@ -186,7 +182,62 @@ func TestLoadStoredCredentials(t *testing.T) {
 			t.Fatal(err)
 		}
 		if perm := info.Mode().Perm(); perm != 0o600 {
-			t.Fatalf("perm = %#v", perm)
+			t.Fatalf("perm = %#o, want 0600", perm)
+		}
+	})
+
+	t.Run("preserves stricter owner-only permissions (0o400)", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("permission bits are not enforced on Windows")
+		}
+
+		home := isolateConfig(t)
+		path := filepath.Join(home, ".config", appName, tokenFile)
+		creds := StoredCredentials{AccessToken: "readonly", User: "alice"}
+		data, err := json.Marshal(creds)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, data, 0o400); err != nil {
+			t.Fatal(err)
+		}
+
+		got, err := LoadStoredCredentials()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.AccessToken != "readonly" || got.User != "alice" {
+			t.Fatalf("credentials = %#v", got)
+		}
+
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if perm := info.Mode().Perm(); perm != 0o400 {
+			t.Fatalf("perm = %#o, want 0400", perm)
+		}
+	})
+
+	t.Run("rejects symlink token file", func(t *testing.T) {
+		home := isolateConfig(t)
+		target := filepath.Join(home, "real-token.json")
+		writeCredentialsFile(t, target, StoredCredentials{AccessToken: "secret", User: "alice"})
+
+		linkPath := filepath.Join(home, ".config", appName, tokenFile)
+		if err := os.MkdirAll(filepath.Dir(linkPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(target, linkPath); err != nil {
+			t.Fatal(err)
+		}
+
+		_, err := LoadStoredCredentials()
+		if !errors.Is(err, ErrTokenFileSymlink) {
+			t.Fatalf("error = %v, want ErrTokenFileSymlink", err)
 		}
 	})
 }
