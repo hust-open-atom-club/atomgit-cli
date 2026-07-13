@@ -1,10 +1,10 @@
 package pr
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -360,10 +360,6 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 }
 
 func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
-	var opts struct {
-		JSON bool
-	}
-
 	cmd := &cobra.Command{
 		Use:   "diff [<owner>/]<repo> <number>",
 		Short: "Show diff of a pull request",
@@ -389,84 +385,27 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 
 			number = args[1]
 
-			client := &http.Client{}
-			url := fmt.Sprintf("%s%s/repos/%s/%s/pulls/%s/files.json", api.BaseURL, api.APIVersion, owner, repo, number)
-			req, err := http.NewRequest("GET", url, nil)
-			if err != nil {
-				return err
-			}
-			req.Header.Add("Authorization", "Bearer "+token)
-			req.Header.Add("Accept", "application/json")
-
-			res, err := client.Do(req)
-			if err != nil {
-				return err
-			}
-			defer res.Body.Close()
-
-			body, err := io.ReadAll(res.Body)
+			client, err := newAPIClient(f, token)
 			if err != nil {
 				return err
 			}
 
-			if opts.JSON {
-				fmt.Println(string(body))
-				return nil
+			path := fmt.Sprintf("/repos/%s/%s/pulls/%s/diff", owner, repo, number)
+			resp, err := client.DoRequestRaw("GET", path)
+			if err != nil {
+				return err
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				body, _ := io.ReadAll(resp.Body)
+				return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
 			}
 
-			// Parse and format as patch
-			var diffData struct {
-				Code  int `json:"code"`
-				Diffs []struct {
-					Statistic struct {
-						Path    string `json:"path"`
-						OldPath string `json:"old_path"`
-						NewPath string `json:"new_path"`
-					} `json:"statistic"`
-					AddedLines  int `json:"added_lines"`
-					RemoveLines int `json:"remove_lines"`
-					Content     struct {
-						Text []struct {
-							LineContent string `json:"line_content"`
-							Type        string `json:"type"`
-						} `json:"text"`
-					} `json:"content"`
-				} `json:"diffs"`
-			}
-
-			if err := json.Unmarshal(body, &diffData); err != nil {
-				return fmt.Errorf("failed to parse diff: %w", err)
-			}
-
-			for i, diff := range diffData.Diffs {
-				if i > 0 {
-					fmt.Println()
-				}
-
-				fmt.Printf("diff --git a/%s b/%s\n", diff.Statistic.OldPath, diff.Statistic.NewPath)
-				fmt.Printf("--- a/%s\n", diff.Statistic.OldPath)
-				fmt.Printf("+++ b/%s\n", diff.Statistic.NewPath)
-
-				// Output diff content with proper prefixes
-				for _, line := range diff.Content.Text {
-					switch line.Type {
-					case "match":
-						fmt.Printf(" %s\n", line.LineContent)
-					case "old":
-						fmt.Printf("-%s\n", line.LineContent)
-					case "new":
-						fmt.Printf("+%s\n", line.LineContent)
-					default:
-						fmt.Println(line.LineContent)
-					}
-				}
-			}
-
-			return nil
+			_, err = io.Copy(os.Stdout, resp.Body)
+			return err
 		},
 	}
-
-	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output raw JSON")
 
 	return cmd
 }

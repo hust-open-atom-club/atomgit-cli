@@ -190,3 +190,9 @@ func (c *Client) DeleteWithBody(path string, body interface{}) error {
 
 	return nil
 }
+
+// DoRequestRaw performs a request and returns the raw *http.Response.
+// The caller is responsible for closing resp.Body.
+func (c *Client) DoRequestRaw(method, path string) (*http.Response, error) {
+	return c.doRequest(method, path, nil)
+}
