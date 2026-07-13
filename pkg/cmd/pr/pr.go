@@ -24,6 +24,7 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdPRCreate(f))
 	cmd.AddCommand(newCmdPREdit(f))
 	cmd.AddCommand(newCmdPRClose(f))
+	cmd.AddCommand(newCmdPRReopen(f))
 	cmd.AddCommand(newCmdPRDiff(f))
 	cmd.AddCommand(newCmdViewIssues(f))
 	cmd.AddCommand(newCmdLinkIssues(f))
@@ -353,6 +354,48 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			fmt.Printf("Closed PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func newCmdPRReopen(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "reopen <owner>/<repo> <number>",
+		Short: "Reopen a pull request",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
+			}
+
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
+
+			parts := strings.Split(args[0], "/")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			}
+			owner, repo := parts[0], parts[1]
+			number := args[1]
+
+			body := map[string]string{
+				"state": "open",
+			}
+
+			var pr api.PullRequest
+			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
+			if err := client.Patch(path, body, &pr); err != nil {
+				return fmt.Errorf("failed to reopen PR: %w", err)
+			}
+
+			cmd.Printf("Reopened PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
 
 			return nil
 		},

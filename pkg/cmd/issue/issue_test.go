@@ -22,7 +22,7 @@ func (f issueRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error)
 
 func TestNewCmdIssueRegistersSubcommands(t *testing.T) {
 	cmd := NewCmdIssue(&cmdutil.Factory{})
-	want := map[string]bool{"close": false, "comment": false, "create": false, "edit": false, "label": false, "list": false, "view": false}
+	want := map[string]bool{"close": false, "comment": false, "create": false, "edit": false, "label": false, "list": false, "view": false, "reopen": false}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
 			want[child.Name()] = true
@@ -81,6 +81,46 @@ func TestIssueListHonorsLimit(t *testing.T) {
 	}
 	if requests != 1 {
 		t.Fatalf("requests = %d, want 1", requests)
+	}
+}
+
+func TestIssueReopenSendsStateEvent(t *testing.T) {
+	var gotMethod, gotPath, gotBody string
+	factory := &cmdutil.Factory{
+		Config: issueTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				gotMethod = req.Method
+				gotPath = req.URL.Path
+				b, _ := io.ReadAll(req.Body)
+				gotBody = string(b)
+				body := `{"number":"7","state":"open","title":"test","html_url":"https://atomgit.com/alice/demo/issues/7","user":{"login":"alice"},"created_at":""}`
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
+			})}, nil
+		},
+	}
+	cmd := newCmdIssueReopen(factory)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "7"}); err != nil {
+		t.Fatal(err)
+	}
+	if gotMethod != http.MethodPatch {
+		t.Errorf("method = %s, want PATCH", gotMethod)
+	}
+	if gotPath != "/api/v5/repos/alice/demo/issues/7" {
+		t.Errorf("path = %s, want /api/v5/repos/alice/demo/issues/7", gotPath)
+	}
+	if !strings.Contains(gotBody, `"state_event":"reopen"`) {
+		t.Errorf("body = %s, want state_event:reopen", gotBody)
+	}
+}
+
+func TestIssueReopenRejectsWrongArgCount(t *testing.T) {
+	cmd := newCmdIssueReopen(&cmdutil.Factory{Config: issueTestConfig{}})
+	if err := cmd.Args(cmd, []string{"alice/demo"}); err == nil {
+		t.Fatal("reopen accepted 1 arg, want error")
+	}
+	if err := cmd.Args(cmd, []string{"alice/demo", "7", "extra"}); err == nil {
+		t.Fatal("reopen accepted 3 args, want error")
 	}
 }
 

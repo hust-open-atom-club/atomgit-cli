@@ -23,6 +23,7 @@ func NewCmdIssue(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdIssueEdit(f))
 	cmd.AddCommand(newCmdIssueClose(f))
 	cmd.AddCommand(newCmdIssueLabel(f))
+	cmd.AddCommand(newCmdIssueReopen(f))
 	cmd.AddCommand(comment.NewCmdComment(f))
 
 	return cmd
@@ -84,6 +85,48 @@ func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			fmt.Fprintf(cmd.OutOrStdout(), "Closed issue #%s\n", number)
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func newCmdIssueReopen(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "reopen <owner>/<repo> <number>",
+		Short: "Reopen an issue",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
+			}
+
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
+
+			parts := strings.Split(args[0], "/")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			}
+			owner, repo := parts[0], parts[1]
+			number := args[1]
+
+			body := map[string]string{
+				"state_event": "reopen",
+			}
+
+			var issue api.Issue
+			path := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
+			if err := client.Patch(path, body, &issue); err != nil {
+				return fmt.Errorf("failed to reopen issue: %w", err)
+			}
+
+			cmd.Printf("Reopened issue #%s\n", number)
 
 			return nil
 		},
