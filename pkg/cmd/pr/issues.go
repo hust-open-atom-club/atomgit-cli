@@ -52,7 +52,7 @@ func newCmdViewIssues(f *cmdutil.Factory) *cobra.Command {
 
 			fmt.Printf("PR #%s linked issues:\n", prNumber)
 			for _, issue := range issues {
-				fmt.Printf("  #%s %s [%s]\n", issue.GetNumber(), issue.Title, issue.State)
+				fmt.Printf("  #%s %s [%s]\n", issue.GetNumber(), cmdutil.SanitizeTerminal(issue.Title), issue.State)
 			}
 
 			return nil

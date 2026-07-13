@@ -60,7 +60,7 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			for _, repo := range repos {
-				fmt.Println(repositoryListName(repo))
+				fmt.Println(cmdutil.SanitizeTerminal(repositoryListName(repo)))
 			}
 
 			return nil
@@ -196,20 +196,20 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Name: %s\n", repository.FullName)
-			fmt.Printf("Description: %s\n", repository.Description)
-			fmt.Printf("URL: %s\n", repository.HTMLURL)
+			fmt.Printf("Name: %s\n", cmdutil.SanitizeTerminal(repository.FullName))
+			fmt.Printf("Description: %s\n", cmdutil.SanitizeTerminal(repository.Description))
+			fmt.Printf("URL: %s\n", cmdutil.SanitizeTerminal(repository.HTMLURL))
 			if parent := repositoryParentName(repository); parent != "" {
-				fmt.Printf("Forked from: %s\n", parent)
+				fmt.Printf("Forked from: %s\n", cmdutil.SanitizeTerminal(parent))
 			}
-			fmt.Printf("Default Branch: %s\n", repository.DefaultBranch)
+			fmt.Printf("Default Branch: %s\n", cmdutil.SanitizeTerminal(repository.DefaultBranch))
 			fmt.Printf("Visibility: %s\n", repositoryVisibility(repository))
 			if repository.Language != "" {
-				fmt.Printf("Language: %s\n", repository.Language)
+				fmt.Printf("Language: %s\n", cmdutil.SanitizeTerminal(repository.Language))
 			}
 			license := strings.TrimSpace(repository.License)
 			if license != "" && !strings.EqualFold(license, "NOASSERTION") {
-				fmt.Printf("License: %s\n", license)
+				fmt.Printf("License: %s\n", cmdutil.SanitizeTerminal(license))
 			}
 			fmt.Printf("Stars: %d Forks: %d Watches: %d\n", repository.StarsCount, repository.ForksCount, repository.WatchersCount)
 			fmt.Printf("Open Issues: %d\n", repository.OpenIssuesCount)

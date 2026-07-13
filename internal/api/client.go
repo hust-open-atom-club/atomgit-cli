@@ -8,6 +8,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"time"
+
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
 const (
@@ -72,7 +74,7 @@ func (c *Client) Get(path string, result interface{}) error {
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+		return fmt.Errorf("API error: %s - %s", resp.Status, cmdutil.SanitizeTerminal(string(body)))
 	}
 
 	return json.NewDecoder(resp.Body).Decode(result)
@@ -96,7 +98,7 @@ func (c *Client) Post(path string, body, result interface{}) error {
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+		return fmt.Errorf("API error: %s - %s", resp.Status, cmdutil.SanitizeTerminal(string(body)))
 	}
 
 	if result != nil {
@@ -123,7 +125,7 @@ func (c *Client) Put(path string, body, result interface{}) error {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+		return fmt.Errorf("API error: %s - %s", resp.Status, cmdutil.SanitizeTerminal(string(body)))
 	}
 
 	if result != nil {
@@ -150,7 +152,7 @@ func (c *Client) Patch(path string, body, result interface{}) error {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+		return fmt.Errorf("API error: %s - %s", resp.Status, cmdutil.SanitizeTerminal(string(body)))
 	}
 
 	if result != nil {
@@ -198,7 +200,7 @@ func (c *Client) Delete(path string) error {
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+		return fmt.Errorf("API error: %s - %s", resp.Status, cmdutil.SanitizeTerminal(string(body)))
 	}
 
 	return nil
@@ -222,7 +224,7 @@ func (c *Client) DeleteWithBody(path string, body interface{}) error {
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+		return fmt.Errorf("API error: %s - %s", resp.Status, cmdutil.SanitizeTerminal(string(body)))
 	}
 
 	return nil

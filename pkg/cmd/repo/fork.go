@@ -116,14 +116,14 @@ func runFork(f *cmdutil.Factory, opts *ForkOptions, repoArg string) error {
 
 	fmt.Printf("✓ Forked %s/%s to %s/%s\n", owner, repoName, currentUser, forkName)
 	if result.HTMLURL != "" {
-		fmt.Printf("  URL: %s\n", result.HTMLURL)
+		fmt.Printf("  URL: %s\n", cmdutil.SanitizeTerminal(result.HTMLURL))
 	}
 
 	// Clone if requested
 	if opts.Clone {
 		cloneURL := fmt.Sprintf("https://atomgit.com/%s/%s.git", currentUser, forkName)
 		fmt.Printf("\nTo clone this repository, run:\n")
-		fmt.Printf("  git clone %s\n", cloneURL)
+		fmt.Printf("  git clone %s\n", cmdutil.SanitizeTerminal(cloneURL))
 	}
 
 	return nil

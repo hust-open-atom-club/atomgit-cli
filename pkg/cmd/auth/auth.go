@@ -100,7 +100,7 @@ If already logged in, skips the browser unless --force is set.`,
 			if err != nil {
 				return err
 			}
-			fmt.Printf("✓ Logged in to atomgit.com as %s\n", result.Login)
+			fmt.Printf("✓ Logged in to atomgit.com as %s\n", cmdutil.SanitizeTerminal(result.Login))
 			fmt.Printf("  Token saved to %s\n", path)
 			return nil
 		},
@@ -149,7 +149,7 @@ func newCmdAuthRefresh() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("✓ Token refreshed for %s\n", cred.User)
+			fmt.Printf("✓ Token refreshed for %s\n", cmdutil.SanitizeTerminal(cred.User))
 			fmt.Printf("  Saved to %s\n", path)
 			return nil
 		},
@@ -181,7 +181,7 @@ func newCmdAuthStatus(f *cmdutil.Factory) *cobra.Command {
 				maskedToken = token[:4] + "****" + token[len(token)-4:]
 			}
 
-			fmt.Printf("✓ Logged in to atomgit.com as %s\n", user)
+			fmt.Printf("✓ Logged in to atomgit.com as %s\n", cmdutil.SanitizeTerminal(user))
 			fmt.Printf("  Token: %s\n", maskedToken)
 			return nil
 		},

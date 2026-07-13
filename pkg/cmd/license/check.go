@@ -45,7 +45,7 @@ func newCmdCheck(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			// Print API response
-			fmt.Println(string(body))
+			fmt.Println(cmdutil.SanitizeTerminal(string(body)))
 			return nil
 		},
 	}

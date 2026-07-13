@@ -133,7 +133,7 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			for _, issue := range issues {
-				fmt.Printf("#%s %s [%s]\n", issue.GetNumber(), issue.Title, issue.State)
+				fmt.Printf("#%s %s [%s]\n", issue.GetNumber(), cmdutil.SanitizeTerminal(issue.Title), issue.State)
 			}
 
 			return nil
@@ -180,13 +180,13 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Title: %s\n", issue.Title)
+			fmt.Printf("Title: %s\n", cmdutil.SanitizeTerminal(issue.Title))
 			fmt.Printf("State: %s\n", issue.State)
-			fmt.Printf("Author: %s\n", issue.User.Login)
-			fmt.Printf("URL: %s\n", issue.HTMLURL)
+			fmt.Printf("Author: %s\n", cmdutil.SanitizeTerminal(issue.User.Login))
+			fmt.Printf("URL: %s\n", cmdutil.SanitizeTerminal(issue.HTMLURL))
 			fmt.Printf("Created: %s\n", issue.CreatedAt)
 			if issue.Body != "" {
-				fmt.Printf("\n%s\n", issue.Body)
+				fmt.Printf("\n%s\n", cmdutil.SanitizeTerminal(issue.Body))
 			}
 
 			return nil
@@ -240,7 +240,7 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Created issue #%s: %s\n", issue.GetNumber(), issue.HTMLURL)
+			fmt.Printf("Created issue #%s: %s\n", issue.GetNumber(), cmdutil.SanitizeTerminal(issue.HTMLURL))
 
 			return nil
 		},

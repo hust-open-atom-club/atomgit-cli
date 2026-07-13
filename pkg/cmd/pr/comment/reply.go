@@ -83,7 +83,7 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("failed to create reply: %w", err)
 			}
 
-			fmt.Printf("Created reply #%d in discussion %s\n", resp.NoteID, resp.DiscussionID)
+			fmt.Printf("Created reply #%d in discussion %s\n", resp.NoteID, cmdutil.SanitizeTerminal(resp.DiscussionID))
 			return nil
 		},
 	}

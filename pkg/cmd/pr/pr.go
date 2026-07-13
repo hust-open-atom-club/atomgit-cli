@@ -86,7 +86,7 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			for _, pr := range prs {
-				fmt.Printf("#%s %s [%s]\n", pr.GetNumber(), pr.Title, pr.State)
+				fmt.Printf("#%s %s [%s]\n", pr.GetNumber(), cmdutil.SanitizeTerminal(pr.Title), pr.State)
 			}
 
 			return nil
@@ -141,21 +141,21 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 				labels = nil
 			}
 
-			fmt.Printf("Title: %s\n", pr.Title)
+			fmt.Printf("Title: %s\n", cmdutil.SanitizeTerminal(pr.Title))
 			fmt.Printf("State: %s\n", pr.State)
-			fmt.Printf("Author: %s\n", pr.User.Login)
-			fmt.Printf("URL: %s\n", pr.HTMLURL)
-			fmt.Printf("Branch: %s -> %s\n", pr.Head.Ref, pr.Base.Ref)
+			fmt.Printf("Author: %s\n", cmdutil.SanitizeTerminal(pr.User.Login))
+			fmt.Printf("URL: %s\n", cmdutil.SanitizeTerminal(pr.HTMLURL))
+			fmt.Printf("Branch: %s -> %s\n", cmdutil.SanitizeTerminal(pr.Head.Ref), cmdutil.SanitizeTerminal(pr.Base.Ref))
 			if len(labels) > 0 {
 				labelNames := make([]string, len(labels))
 				for i, label := range labels {
-					labelNames[i] = label.Name
+					labelNames[i] = cmdutil.SanitizeTerminal(label.Name)
 				}
 				fmt.Printf("Labels: %s\n", strings.Join(labelNames, ", "))
 			}
 			fmt.Printf("Created: %s\n", pr.CreatedAt)
 			if pr.Body != "" {
-				fmt.Printf("\n%s\n", pr.Body)
+				fmt.Printf("\n%s\n", cmdutil.SanitizeTerminal(pr.Body))
 			}
 
 			return nil
@@ -302,7 +302,7 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Updated PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			fmt.Printf("Updated PR #%s: %s\n", pr.GetNumber(), cmdutil.SanitizeTerminal(pr.HTMLURL))
 
 			return nil
 		},
@@ -352,7 +352,7 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Closed PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			fmt.Printf("Closed PR #%s: %s\n", pr.GetNumber(), cmdutil.SanitizeTerminal(pr.HTMLURL))
 
 			return nil
 		},

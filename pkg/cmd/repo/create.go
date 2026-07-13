@@ -112,13 +112,13 @@ func runCreate(f *cmdutil.Factory, opts *CreateOptions) error {
 
 	repoURL := createdRepositoryURL(result, owner, repoName)
 	fmt.Printf("✓ Created repository %s/%s\n", owner, repoName)
-	fmt.Printf("  URL: %s\n", repoURL)
+	fmt.Printf("  URL: %s\n", cmdutil.SanitizeTerminal(repoURL))
 
 	// Clone if requested
 	if opts.Clone {
 		cloneURL := strings.TrimSuffix(repoURL, ".git") + ".git"
 		fmt.Printf("\nTo clone this repository, run:\n")
-		fmt.Printf("  git clone %s\n", cloneURL)
+		fmt.Printf("  git clone %s\n", cmdutil.SanitizeTerminal(cloneURL))
 	}
 
 	return nil

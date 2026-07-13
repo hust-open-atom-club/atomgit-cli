@@ -59,7 +59,7 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			for _, tag := range tags {
-				fmt.Printf("%s\n", tag.Name)
+				fmt.Printf("%s\n", cmdutil.SanitizeTerminal(tag.Name))
 			}
 
 			return nil
@@ -111,7 +111,7 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Created tag %s\n", tag.Name)
+			fmt.Printf("Created tag %s\n", cmdutil.SanitizeTerminal(tag.Name))
 
 			return nil
 		},

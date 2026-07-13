@@ -224,7 +224,7 @@ func youMarker(c *api.Comment, currentUser string) string {
 func printBody(body, indent string) {
 	body = convertHTMLToMarkdown(body)
 	for _, line := range strings.Split(body, "\n") {
-		fmt.Printf("%s%s\n", indent, line)
+		fmt.Printf("%s%s\n", indent, cmdutil.SanitizeTerminal(line))
 	}
 }
 
@@ -246,6 +246,8 @@ func diffLocation(c *api.Comment) string {
 			path = dp.OldPath
 		}
 	}
+
+	path = cmdutil.SanitizeTerminal(path)
 
 	var lines string
 	if dp != nil {
@@ -287,7 +289,7 @@ func printComment(comment *api.Comment, currentUser string) {
 
 	// discussion_id on its own line (required to reply to the thread).
 	if comment.DiscussionID != "" {
-		fmt.Printf("[%s]\n", comment.DiscussionID)
+		fmt.Printf("[%s]\n", cmdutil.SanitizeTerminal(comment.DiscussionID))
 	}
 
 	verb := "commented"
@@ -296,7 +298,7 @@ func printComment(comment *api.Comment, currentUser string) {
 	}
 
 	header := fmt.Sprintf("[%d] @%s %s %s%s",
-		comment.ID, comment.User.Login, verb,
+		comment.ID, cmdutil.SanitizeTerminal(comment.User.Login), verb,
 		formatTime(comment.CreatedAt, "2006-01-02 15:04"),
 		youMarker(comment, currentUser))
 
@@ -326,7 +328,7 @@ func printComment(comment *api.Comment, currentUser string) {
 // printReply renders a nested reply under a top-level comment.
 func printReply(comment *api.Comment, currentUser string) {
 	fmt.Printf("   └─[%d]  @%s reply %s%s\n",
-		comment.ID, comment.User.Login,
+		comment.ID, cmdutil.SanitizeTerminal(comment.User.Login),
 		formatTime(comment.CreatedAt, "2006-01-02 15:04"),
 		youMarker(comment, currentUser))
 	printBody(comment.Body, "      ")
