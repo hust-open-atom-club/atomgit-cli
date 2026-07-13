@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -391,7 +390,7 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			path := fmt.Sprintf("/repos/%s/%s/pulls/%s/diff", owner, repo, number)
-			resp, err := client.DoRequestRaw("GET", path)
+			resp, err := client.DoRequestRaw(http.MethodGet, path)
 			if err != nil {
 				return err
 			}
@@ -402,7 +401,7 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
 			}
 
-			_, err = io.Copy(os.Stdout, resp.Body)
+			_, err = io.Copy(cmd.OutOrStdout(), resp.Body)
 			return err
 		},
 	}

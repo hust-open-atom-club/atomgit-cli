@@ -88,3 +88,73 @@ func TestPRListRejectsInvalidLimit(t *testing.T) {
 		})
 	}
 }
+
+func TestPRDiff(t *testing.T) {
+	const patch = "diff --git a/old.txt b/new.txt\n-old\n+new\n"
+	tests := []struct {
+		name       string
+		statusCode int
+		status     string
+		body       string
+		wantOutput string
+		wantError  string
+	}{
+		{
+			name:       "outputs raw patch",
+			statusCode: http.StatusOK,
+			status:     "200 OK",
+			body:       patch,
+			wantOutput: patch,
+		},
+		{
+			name:       "reports API error",
+			statusCode: http.StatusNotFound,
+			status:     "404 Not Found",
+			body:       `{"message":"pull request not found"}`,
+			wantError:  `API error: 404 Not Found - {"message":"pull request not found"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := &cmdutil.Factory{
+				Config: prTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						if req.Method != http.MethodGet {
+							t.Errorf("request method = %s, want GET", req.Method)
+						}
+						if req.URL.Path != "/api/v5/repos/alice/demo/pulls/42/diff" {
+							t.Errorf("request URL = %s", req.URL.String())
+						}
+						if got := req.Header.Get("Authorization"); got != "Bearer token" {
+							t.Errorf("Authorization = %q", got)
+						}
+						return &http.Response{
+							StatusCode: tt.statusCode,
+							Status:     tt.status,
+							Body:       io.NopCloser(strings.NewReader(tt.body)),
+							Header:     make(http.Header),
+						}, nil
+					})}, nil
+				},
+			}
+
+			cmd := newCmdPRDiff(factory)
+			var output strings.Builder
+			cmd.SetOut(&output)
+			err := cmd.RunE(cmd, []string{"alice/demo", "42"})
+
+			if tt.wantError != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+					t.Fatalf("error = %v, want containing %q", err, tt.wantError)
+				}
+			} else if err != nil {
+				t.Fatalf("RunE() error = %v", err)
+			}
+			if output.String() != tt.wantOutput {
+				t.Fatalf("output = %q, want %q", output.String(), tt.wantOutput)
+			}
+		})
+	}
+}
