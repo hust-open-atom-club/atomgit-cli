@@ -1,4 +1,4 @@
-atomgit-cli (0.4) unstable; urgency=medium
+atomgit-cli (v0.4) unstable; urgency=medium
 
   * Add display of pull request review comments and nested replies.
   * Add replies to pull request review discussions.
@@ -7,7 +7,7 @@ atomgit-cli (0.4) unstable; urgency=medium
 
  -- xiaogang <xiaogang@csdn.net>  Sat, 11 Jul 2026 00:26:24 +0800
 
-atomgit-cli (0.3) unstable; urgency=medium
+atomgit-cli (v0.3) unstable; urgency=medium
 
   * Add browser-based AtomGit OAuth login, token refresh, status, and logout.
   * Add `pr diff` with optional JSON output.
@@ -19,7 +19,7 @@ atomgit-cli (0.3) unstable; urgency=medium
 
  -- xiaogang <xiaogang@csdn.net>  Sat, 11 Jul 2026 00:26:23 +0800
 
-atomgit-cli (0.2) unstable; urgency=medium
+atomgit-cli (v0.2) unstable; urgency=medium
 
   * Follow the XDG Base Directory specification when locating the token file,
     while retaining the legacy token path as a fallback.
@@ -27,7 +27,7 @@ atomgit-cli (0.2) unstable; urgency=medium
 
  -- Shinwell Hu <huxinwei@huawei.com>  Sat, 11 Jul 2026 00:25:46 +0800
 
-atomgit-cli (0.1) unstable; urgency=medium
+atomgit-cli (v0.1) unstable; urgency=medium
 
   * Add the initial AtomGit CLI with repository, pull request, issue,
     authentication, and SSH key commands.

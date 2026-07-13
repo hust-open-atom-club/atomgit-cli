@@ -19,7 +19,8 @@
 - `internal/oauth/`：OAuth 登录流程。
 - `pkg/cmdutil/`：注入到命令中的共享依赖（`Factory`）。
 - `pkg/cmd/<name>/`：各 Cobra 命令及子命令实现。
-- `scripts/build-release.sh`：跨平台发布包构建脚本，输出到被忽略的 `dist/`。
+- `.goreleaser.yaml`：Linux、macOS 和 Windows 的 amd64/arm64 发布打包配置。
+- `scripts/build-release.sh`：GoReleaser 打包包装脚本，负责版本元数据和安装脚本，输出到被忽略的 `dist/`。
 - `README.md`：用户安装、配置和命令用法；`CHANGELOG.md`：面向用户的变更记录。
 
 ## 开发约定
@@ -55,12 +56,13 @@ test -z "$(gofmt -l .)"
 - 纯解析、校验和格式化逻辑应拆成小函数做单元测试。
 - 测试不得依赖真实凭据、用户主目录、浏览器、固定端口或外部网络；使用 `t.TempDir`、环境变量隔离和 `httptest`。
 - 修改命令标志或输出时，除单元测试外，至少执行相应的 `go run ./cmd/ag <command> --help` 冒烟检查。
-- 只有发布流程发生变化时才运行 `scripts/build-release.sh`；它会生成多平台制品到 `dist/`，不要提交这些制品。
+- 发布流程发生变化时，使用 `make release-snapshot VERSION=vX.Y.Z` 验证 GoReleaser 的多平台制品。只有工作区干净、`vX.Y.Z` tag 存在且指向当前 HEAD 时，才运行 `make release VERSION=vX.Y.Z`。两个命令都会将制品生成到 `dist/`，不要提交这些制品。
 
 ## 文档与提交
 
 - 新增、删除或改变用户可见命令、参数、配置路径时，同步更新 `README.md`。
-- 用户可见的功能或修复应同步更新 `CHANGELOG.md`；发布构建变化还需检查 `install.sh`、`install.ps1` 和 `scripts/build-release.sh` 的一致性。
+- `CHANGELOG.md` 用于 Debian 打包。只在准备新的 Debian 包版本时，按 Debian changelog 格式新增对应版本条目；不要将日常功能提交或内部发布流程变化逐次记入。
+- 发布构建变化需检查 `install.sh`、`install.ps1` 和 `scripts/build-release.sh` 的一致性。
 - 提交信息遵循仓库已有的简洁约定，推荐 `feat:`、`fix:`、`docs:`、`refactor:`、`test:`、`chore:` 前缀。
 - 不要提交 `dist/`、本地 `ag` 二进制、覆盖率文件、IDE 文件、token 文件或任何密钥。
 
