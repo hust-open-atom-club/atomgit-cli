@@ -1,3 +1,24 @@
+atomgit-cli (v0.5.0) unstable; urgency=medium
+
+  * Move the Go module, documentation, API endpoints, and installers to the
+    AtomGit-hosted hust-open-atom-club/atomgit-cli repository.
+  * Add `ag version` with text and JSON output, including version, commit, and
+    build date metadata.
+  * Improve repository commands with paginated listing, richer view output,
+    explicit user and organization creation targets, and shared name parsing.
+  * Resolve short clone names against the authenticated user and preserve
+    requested descriptions when forking repositories.
+  * Make `issue list` and `pr list` enforce `--limit`, and default new pull
+    requests to the repository's default branch when `--base` is omitted.
+  * Fix browser-based OAuth login on Windows so authorization URLs are passed
+    to the browser without command-line truncation.
+  * Add Makefile and Nix development workflows and expand automated coverage
+    for commands, configuration, OAuth, API behavior, and release packaging.
+  * Package reproducible Linux, macOS, and Windows amd64/arm64 archives with
+    GoReleaser, validated release tags, snapshots, and complete checksums.
+
+ -- Dongliang Mu <dzm91@hust.edu.cn>  Mon, 13 Jul 2026 15:12:29 +0800
+
 atomgit-cli (v0.4) unstable; urgency=medium
 
   * Add display of pull request review comments and nested replies.
