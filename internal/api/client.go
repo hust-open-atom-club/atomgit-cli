@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"time"
 )
@@ -42,6 +43,10 @@ func NewClientWithHTTPClient(token string, httpClient *http.Client) *Client {
 }
 
 func (c *Client) doRequest(method, path string, body io.Reader) (*http.Response, error) {
+	return c.doRequestWithContentType(method, path, body, "application/json")
+}
+
+func (c *Client) doRequestWithContentType(method, path string, body io.Reader, contentType string) (*http.Response, error) {
 	url := c.baseURL + path
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
@@ -50,7 +55,9 @@ func (c *Client) doRequest(method, path string, body io.Reader) (*http.Response,
 
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("User-Agent", "AtomCode-CLI-v0.4")
-	req.Header.Set("Content-Type", "application/json")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
 	req.Header.Set("Accept", "application/json")
 
 	return c.httpClient.Do(req)
@@ -144,6 +151,36 @@ func (c *Client) Patch(path string, body, result interface{}) error {
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+	}
+
+	if result != nil {
+		return json.NewDecoder(resp.Body).Decode(result)
+	}
+	return nil
+}
+
+// PatchForm sends a multipart/form-data PATCH request.
+func (c *Client) PatchForm(path string, fields map[string]string, result interface{}) error {
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	for key, value := range fields {
+		if err := writer.WriteField(key, value); err != nil {
+			return fmt.Errorf("encode form field %s: %w", key, err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("close multipart form: %w", err)
+	}
+
+	resp, err := c.doRequestWithContentType(http.MethodPatch, path, &body, writer.FormDataContentType())
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		responseBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("API error: %s - %s", resp.Status, string(responseBody))
 	}
 
 	if result != nil {

@@ -37,8 +37,6 @@ func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
-
 			var owner, repo string
 			var number string
 
@@ -54,15 +52,36 @@ func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 
 			number = args[1]
 
-			// Close issue by adding "/close" comment
-			req := api.CommentRequest{Body: "/close"}
-			path := fmt.Sprintf("/repos/%s/%s/issues/%s/comments", owner, repo, number)
-			var comment api.Comment
-			if err := client.Post(path, req, &comment); err != nil {
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
+
+			issuePath := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
+			var current api.Issue
+			if err := client.Get(issuePath, &current); err != nil {
+				return fmt.Errorf("failed to get issue before closing: %w", err)
+			}
+
+			updatePath := fmt.Sprintf("/repos/%s/issues/%s", owner, number)
+			fields := map[string]string{
+				"repo":  repo,
+				"title": current.Title,
+				"state": "close",
+			}
+			if err := client.PatchForm(updatePath, fields, nil); err != nil {
 				return fmt.Errorf("failed to close issue: %w", err)
 			}
 
-			fmt.Printf("Closed issue #%s\n", number)
+			var verified api.Issue
+			if err := client.Get(issuePath, &verified); err != nil {
+				return fmt.Errorf("failed to verify issue state: %w", err)
+			}
+			if !strings.EqualFold(strings.TrimSpace(verified.State), "closed") {
+				return fmt.Errorf("issue #%s is still not closed after update (state: %q)", number, verified.State)
+			}
+
+			fmt.Fprintf(cmd.OutOrStdout(), "Closed issue #%s\n", number)
 
 			return nil
 		},
