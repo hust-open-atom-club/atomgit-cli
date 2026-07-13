@@ -357,3 +357,55 @@ func TestIsPermissionErr(t *testing.T) {
 		t.Fatal("unrelated error should not be recognized")
 	}
 }
+
+func TestValidateTokenFilePerm(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		perm    os.FileMode
+		want    os.FileMode
+		wantErr error
+	}{
+		{
+			name: "allows safe 0o600 permissions",
+			perm: 0o600,
+			want: 0o600,
+		},
+		{
+			name: "fixes group/other readable permissions",
+			perm: 0o644,
+			want: 0o600,
+		},
+		{
+			name: "preserves stricter owner-only permissions",
+			perm: 0o400,
+			want: 0o400,
+		},
+		{
+			name:    "returns error when the file is not owner readable",
+			perm:    0o044,
+			wantErr: ErrTokenFileUnreadable,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, gotErr := validateTokenFilePerm(tt.perm)
+			if gotErr != nil {
+				if tt.wantErr == nil {
+					t.Errorf("validateTokenFilePerm() failed: %v", gotErr)
+				}
+				if !errors.Is(gotErr, tt.wantErr) {
+					t.Errorf("validateTokenFilePerm() = %v, want %v", gotErr, tt.wantErr)
+				}
+				return
+			}
+			if tt.wantErr != nil {
+				t.Fatal("validateTokenFilePerm() succeeded unexpectedly")
+			}
+			if got != tt.want {
+				t.Errorf("validateTokenFilePerm() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

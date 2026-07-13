@@ -19,6 +19,12 @@ var (
 
 	// ErrTokenFileSymlink is returned when a token file is a symlink
 	ErrTokenFileSymlink = errors.New("token file is a symlink")
+
+	// ErrTokenFileChanged is returned when a token file was changed during open.
+	ErrTokenFileChanged = errors.New("token file was changed")
+
+	// ErrTokenFileUnreadable is returned when a token file is not owner-readable.
+	ErrTokenFileUnreadable = errors.New("token file is not owner-readable")
 )
 
 const (
@@ -130,8 +136,8 @@ func LoadStoredCredentials() (*StoredCredentials, error) {
 			return nil, fmt.Errorf("lstat token file info %s: %w", path, err)
 		}
 		if li.Mode()&os.ModeSymlink != 0 {
-			return nil, fmt.Errorf("%w: %s\n"+
-				"remove the symlink and place the token file directly", ErrTokenFileSymlink, path)
+			return nil, fmt.Errorf("cannot read %s: %w\n"+
+				"remove the symlink and place the token file directly", path, ErrTokenFileSymlink)
 		}
 
 		f, err := os.Open(path)
@@ -149,9 +155,27 @@ func LoadStoredCredentials() (*StoredCredentials, error) {
 			return nil, fmt.Errorf("stat token file info %s: %w", path, err)
 		}
 
-		if perm := info.Mode().Perm(); perm&0o077 != 0 && runtime.GOOS != "windows" {
-			if err := f.Chmod(perm & 0o700); err != nil {
-				return nil, fmt.Errorf("change token file mode %s: %w", path, err)
+		if !os.SameFile(li, info) {
+			return nil, fmt.Errorf("cannot read %s: %w", path, ErrTokenFileChanged)
+		}
+
+		if runtime.GOOS != "windows" {
+			perm := info.Mode().Perm()
+
+			fixed, err := validateTokenFilePerm(perm)
+			if err != nil {
+				if errors.Is(err, ErrTokenFileUnreadable) {
+					return nil, fmt.Errorf("cannot read %s: %w\n"+
+						"set the correct owner permissions, e.g.:\n"+
+						"  chmod 600 %s", path, err, path)
+				}
+
+				return nil, fmt.Errorf("cannot read %s: %w", path, err)
+			}
+			if fixed != perm {
+				if err := f.Chmod(fixed); err != nil {
+					return nil, fmt.Errorf("change token file mode %s: %w", path, err)
+				}
 			}
 		}
 
@@ -302,4 +326,22 @@ func ClearCredentials() ([]string, error) {
 		removed = append(removed, p)
 	}
 	return removed, nil
+}
+
+// validateTokenFilePerm validates file permission bits for a credential file.
+//
+// Returns:
+//   - os.FileMode: the corrected permissions with group and other bits stripped,
+//     or the original mode if already safe.
+//   - error: ErrTokenFileUnreadable if stripping group/other bits would leave
+//     the file unreadable by the owner.
+func validateTokenFilePerm(perm os.FileMode) (os.FileMode, error) {
+	if perm&0o077 == 0 {
+		return perm, nil
+	}
+	fixed := perm & 0o700
+	if fixed == 0 {
+		return 0, ErrTokenFileUnreadable
+	}
+	return fixed, nil
 }
