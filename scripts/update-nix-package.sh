@@ -117,7 +117,7 @@ printf '%s\n' "==> 在临时副本中验证现有 vendorHash..."
 if (cd "$TMPDIR" && nix build --offline --no-link .#ag); then
   printf '%s\n' "==> Go 依赖未变化，复用现有 vendorHash: $VENDOR_HASH"
 else
-  sed "s/^\([[:space:]]*vendorHash = \)\"[^\"]*\";/\1pkgs.lib.fakeHash;/" \
+  sed "s@^\([[:space:]]*vendorHash = \)\"[^\"]*\";@\1pkgs.lib.fakeHash;@" \
     "$TMP_FLAKE" > "${TMP_FLAKE}.tmp" && mv "${TMP_FLAKE}.tmp" "$TMP_FLAKE"
 
   printf '%s\n' "==> Go 依赖已变化，正在临时副本中重新计算 vendorHash..."
@@ -147,7 +147,7 @@ ROLLBACK=1
 TEMP_FLAKE="${FLAKE}.tmp.$$"
 sed "s/^\([[:space:]]*version = \)\"[^\"]*\";/\1\"${NIX_VERSION}\";/" \
   "$FLAKE" > "$TEMP_FLAKE"
-sed "s/^\([[:space:]]*vendorHash = \)\"[^\"]*\";/\1\"${VENDOR_HASH}\";/" \
+sed "s@^\([[:space:]]*vendorHash = \)\"[^\"]*\";@\1\"${VENDOR_HASH}\";@" \
   "$TEMP_FLAKE" > "${TEMP_FLAKE}.tmp" && mv "${TEMP_FLAKE}.tmp" "$TEMP_FLAKE"
 
 mv "$TEMP_FLAKE" "$FLAKE"
