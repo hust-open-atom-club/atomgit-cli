@@ -183,7 +183,10 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 
 			var owner, repo string
 			if len(args) == 0 {
@@ -234,7 +237,7 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			htmlURL := strings.Replace(pr.HTMLURL, "/pulls/", "/pull/", 1)
-			fmt.Printf("Created PR #%s: %s\n", pr.GetNumber(), htmlURL)
+			fmt.Fprintf(cmd.OutOrStdout(), "Created PR #%s: %s\n", pr.GetNumber(), htmlURL)
 
 			return nil
 		},

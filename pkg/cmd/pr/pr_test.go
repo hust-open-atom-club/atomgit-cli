@@ -1,6 +1,8 @@
 package pr
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -29,7 +31,9 @@ func TestResolveBaseBranch(t *testing.T) {
 		wantError  bool
 	}{
 		{name: "explicit branch", requested: " release ", repository: api.Repository{DefaultBranch: "main"}, want: "release"},
-		{name: "repository default", repository: api.Repository{DefaultBranch: " main "}, want: "main"},
+		{name: "main default", repository: api.Repository{DefaultBranch: " main "}, want: "main"},
+		{name: "master default", repository: api.Repository{DefaultBranch: "master"}, want: "master"},
+		{name: "custom default", repository: api.Repository{DefaultBranch: "stable/1.x"}, want: "stable/1.x"},
 		{name: "missing branch", wantError: true},
 	}
 
@@ -49,6 +53,93 @@ func TestResolveBaseBranch(t *testing.T) {
 				t.Fatalf("resolveBaseBranch() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestPRCreateUsesRequestedOrRepositoryDefaultBase(t *testing.T) {
+	tests := []struct {
+		name            string
+		requestedBase   string
+		defaultBranch   string
+		wantBase        string
+		wantRepoRequest bool
+	}{
+		{name: "main default", defaultBranch: "main", wantBase: "main", wantRepoRequest: true},
+		{name: "master default", defaultBranch: "master", wantBase: "master", wantRepoRequest: true},
+		{name: "custom default", defaultBranch: "stable/1.x", wantBase: "stable/1.x", wantRepoRequest: true},
+		{name: "explicit base", requestedBase: "release", defaultBranch: "main", wantBase: "release"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requests := 0
+			factory := &cmdutil.Factory{
+				Config: prTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						requests++
+						if got := req.Header.Get("Authorization"); got != "Bearer token" {
+							t.Fatalf("Authorization = %q", got)
+						}
+
+						if req.Method == http.MethodGet {
+							if !tt.wantRepoRequest {
+								t.Fatal("explicit --base unexpectedly requested repository metadata")
+							}
+							if req.URL.Path != "/api/v5/repos/alice/demo" {
+								t.Fatalf("repository request path = %s", req.URL.Path)
+							}
+							body := fmt.Sprintf(`{"default_branch":%q}`, tt.defaultBranch)
+							return prResponse(http.StatusOK, body), nil
+						}
+
+						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/pulls" {
+							t.Fatalf("pull request = %s %s", req.Method, req.URL.Path)
+						}
+						var body map[string]interface{}
+						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+							t.Fatal(err)
+						}
+						if got := body["base"]; got != tt.wantBase {
+							t.Fatalf("base = %q, want %q", got, tt.wantBase)
+						}
+						return prResponse(http.StatusCreated, `{"number":"7","html_url":"https://atomgit.com/alice/demo/pulls/7"}`), nil
+					})}, nil
+				},
+			}
+
+			cmd := newCmdPRCreate(factory)
+			_ = cmd.Flags().Set("title", "Test PR")
+			_ = cmd.Flags().Set("head", "feature")
+			if tt.requestedBase != "" {
+				_ = cmd.Flags().Set("base", tt.requestedBase)
+			}
+			var output strings.Builder
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+				t.Fatal(err)
+			}
+
+			wantRequests := 1
+			if tt.wantRepoRequest {
+				wantRequests = 2
+			}
+			if requests != wantRequests {
+				t.Fatalf("requests = %d, want %d", requests, wantRequests)
+			}
+			if got := output.String(); got != "Created PR #7: https://atomgit.com/alice/demo/pull/7\n" {
+				t.Fatalf("output = %q", got)
+			}
+		})
+	}
+}
+
+func prResponse(statusCode int, body string) *http.Response {
+	return &http.Response{
+		StatusCode: statusCode,
+		Status:     fmt.Sprintf("%d %s", statusCode, http.StatusText(statusCode)),
+		Body:       io.NopCloser(strings.NewReader(body)),
+		Header:     make(http.Header),
 	}
 }
 
