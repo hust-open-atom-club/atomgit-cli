@@ -53,7 +53,7 @@ count_assignments() {
 # ---- 复制 Git 已跟踪源码，与 Nix 的本地 Git flake 输入语义保持一致 ----
 copy_src() {
   (cd "$1" && git ls-files --cached -z \
-    | tar --null --verbatim-files-from -T - -cf - \
+    | tar --null -T - -cf - \
     | tar -xf - -C "$2")
 }
 
