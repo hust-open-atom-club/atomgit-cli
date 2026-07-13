@@ -114,6 +114,9 @@ ag pr list owner/repo --state closed
 # 查看 PR
 ag pr view owner/repo 123
 
+# 查看 PR diff
+ag pr diff owner/repo 123
+
 # 创建 PR
 ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch
 
