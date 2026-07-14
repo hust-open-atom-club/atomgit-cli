@@ -17,20 +17,53 @@ go install ./cmd/ag
 仓库提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake。安装到当前用户的 Nix profile：
 
 ```bash
-nix profile install .#ag
+nix profile install git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag
 ag version
 ```
 
-也可以在不安装的情况下直接运行，或只构建 package：
+也可以在不安装的情况下直接运行：
 
 ```bash
 # 直接运行
-nix run .#ag -- version
-
-# 构建，产物位于 ./result/bin/ag
-nix build .#ag
-./result/bin/ag version --json
+nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag -- version
 ```
+
+<details>
+<summary>使用 Home Manager 或 NixOS 安装</summary>
+
+以下是完整的 flake 配置示例。`pkgs` 由 `nixpkgs` 为目标系统实例化，并通过 `pkgs.stdenv.hostPlatform.system` 选择对应的 AtomGit CLI package：
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    atomgit-cli = {
+      url = "git+https://atomgit.com/hust-open-atom-club/atomgit-cli";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = { nixpkgs, atomgit-cli, ... }:
+    let
+      system = "x86_64-linux";
+      pkgs = import nixpkgs { inherit system; };
+      ag = atomgit-cli.packages.${pkgs.stdenv.hostPlatform.system}.ag;
+    in
+    {
+      # Home Manager 模块
+      homeManagerModules.default = {
+        home.packages = [ ag ];
+      };
+
+      # NixOS 模块
+      nixosModules.default = {
+        environment.systemPackages = [ ag ];
+      };
+    };
+}
+```
+
+</details>
 
 ## 配置
 
