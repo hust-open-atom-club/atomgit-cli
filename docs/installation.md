@@ -38,6 +38,55 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 脚本默认安装到 `%USERPROFILE%\.local\bin`，并将该目录加入当前用户的 `Path`。
 
+## 使用 Nix 安装
+
+仓库提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake。安装到当前用户的 Nix profile：
+
+```bash
+nix profile install git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag
+ag version
+```
+
+也可以在不安装的情况下直接运行：
+
+```bash
+nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag -- version
+```
+
+### 使用 Home Manager 或 NixOS 安装
+
+以下是完整的 flake 配置示例。`pkgs` 由 `nixpkgs` 为目标系统实例化，并通过 `pkgs.stdenv.hostPlatform.system` 选择对应的 AtomGit CLI package：
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    atomgit-cli = {
+      url = "git+https://atomgit.com/hust-open-atom-club/atomgit-cli";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = { nixpkgs, atomgit-cli, ... }:
+    let
+      system = "x86_64-linux";
+      pkgs = import nixpkgs { inherit system; };
+      ag = atomgit-cli.packages.${pkgs.stdenv.hostPlatform.system}.ag;
+    in
+    {
+      # Home Manager 模块
+      homeManagerModules.default = {
+        home.packages = [ ag ];
+      };
+
+      # NixOS 模块
+      nixosModules.default = {
+        environment.systemPackages = [ ag ];
+      };
+    };
+}
+```
+
 ## 手动安装
 
 从 [Release 页面](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)下载与操作系统和处理器架构匹配的文件：
