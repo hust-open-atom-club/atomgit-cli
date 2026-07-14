@@ -1,8 +1,9 @@
 # Release artifacts
 dist/
 
-# Local development build
-/bin/
+# Local development build; keep the npm command wrapper tracked.
+/bin/*
+!/bin/ag.js
 
 # Binaries for programs and plugins
 *.exe
@@ -19,6 +20,8 @@ dist/
 
 # Dependency directories
 vendor/
+node_modules/
+.ag-npm-test-*/
 
 # Go workspace file
 go.work
