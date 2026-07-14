@@ -126,6 +126,35 @@ func TestMethodsEncodeBodies(t *testing.T) {
 	}
 }
 
+func TestPatchFormEncodesMultipartBody(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch || r.URL.Path != "/resource" {
+			t.Fatalf("request = %s %s", r.Method, r.URL.Path)
+		}
+		if err := r.ParseMultipartForm(1 << 20); err != nil {
+			t.Fatal(err)
+		}
+		for key, want := range map[string]string{"repo": "demo", "state": "close", "title": "Issue title"} {
+			if got := r.FormValue(key); got != want {
+				t.Errorf("form field %s = %q, want %q", key, got, want)
+			}
+		}
+		_, _ = io.WriteString(w, `{"state":"closed"}`)
+	})
+
+	var result map[string]string
+	if err := client.PatchForm("/resource", map[string]string{
+		"repo":  "demo",
+		"state": "close",
+		"title": "Issue title",
+	}, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result["state"] != "closed" {
+		t.Fatalf("result = %#v", result)
+	}
+}
+
 func TestPostAllowsNilBodyAndResult(t *testing.T) {
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Body != nil {
@@ -184,6 +213,7 @@ func TestMethodsReturnAPIError(t *testing.T) {
 		{name: "post", call: func(c *Client) error { return c.Post("/fail", nil, nil) }},
 		{name: "put", call: func(c *Client) error { return c.Put("/fail", nil, nil) }},
 		{name: "patch", call: func(c *Client) error { return c.Patch("/fail", nil, nil) }},
+		{name: "patch form", call: func(c *Client) error { return c.PatchForm("/fail", map[string]string{"state": "close"}, nil) }},
 		{name: "delete", call: func(c *Client) error { return c.Delete("/fail") }},
 		{name: "delete with body", call: func(c *Client) error { return c.DeleteWithBody("/fail", nil) }},
 	}

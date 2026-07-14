@@ -37,8 +37,6 @@ func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
-
 			var owner, repo string
 			var number string
 
@@ -54,15 +52,36 @@ func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 
 			number = args[1]
 
-			// Close issue by adding "/close" comment
-			req := api.CommentRequest{Body: "/close"}
-			path := fmt.Sprintf("/repos/%s/%s/issues/%s/comments", owner, repo, number)
-			var comment api.Comment
-			if err := client.Post(path, req, &comment); err != nil {
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
+
+			issuePath := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
+			var current api.Issue
+			if err := client.Get(issuePath, &current); err != nil {
+				return fmt.Errorf("failed to get issue before closing: %w", err)
+			}
+
+			updatePath := fmt.Sprintf("/repos/%s/issues/%s", owner, number)
+			fields := map[string]string{
+				"repo":  repo,
+				"title": current.Title,
+				"state": "close",
+			}
+			if err := client.PatchForm(updatePath, fields, nil); err != nil {
 				return fmt.Errorf("failed to close issue: %w", err)
 			}
 
-			fmt.Printf("Closed issue #%s\n", number)
+			var verified api.Issue
+			if err := client.Get(issuePath, &verified); err != nil {
+				return fmt.Errorf("failed to verify issue state: %w", err)
+			}
+			if !strings.EqualFold(strings.TrimSpace(verified.State), "closed") {
+				return fmt.Errorf("issue #%s is still not closed after update (state: %q)", number, verified.State)
+			}
+
+			fmt.Fprintf(cmd.OutOrStdout(), "Closed issue #%s\n", number)
 
 			return nil
 		},
@@ -87,7 +106,9 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
+			if opts.Limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
+			}
 
 			var owner, repo string
 			if len(args) == 0 {
@@ -100,9 +121,14 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 			}
 			owner, repo = parts[0], parts[1]
 
-			var issues []api.Issue
-			path := fmt.Sprintf("/repos/%s/%s/issues?state=%s", owner, repo, opts.State)
-			if err := client.Get(path, &issues); err != nil {
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
+			issues, err := api.GetPaginated[api.Issue](client, opts.Limit, func(page, perPage int) string {
+				return fmt.Sprintf("/repos/%s/%s/issues?state=%s&page=%d&per_page=%d", owner, repo, opts.State, page, perPage)
+			})
+			if err != nil {
 				return err
 			}
 
