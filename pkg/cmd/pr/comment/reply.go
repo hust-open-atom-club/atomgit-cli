@@ -55,7 +55,7 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 			// Get body
 			body := opts.Body
 			if body == "" {
-				fmt.Printf("Enter reply to discussion %s (press Ctrl+D when done):\n", discussionID)
+				fmt.Fprintf(cmd.OutOrStdout(), "Enter reply to discussion %s (press Ctrl+D when done):\n", discussionID)
 				reader := bufio.NewReader(os.Stdin)
 				var lines []string
 				for {
@@ -83,7 +83,7 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("failed to create reply: %w", err)
 			}
 
-			fmt.Printf("Created reply #%d in discussion %s\n", resp.NoteID, cmdutil.SanitizeTerminal(resp.DiscussionID))
+			fmt.Fprintf(cmd.OutOrStdout(), "Created reply #%d in discussion %s\n", resp.NoteID, resp.DiscussionID)
 			return nil
 		},
 	}

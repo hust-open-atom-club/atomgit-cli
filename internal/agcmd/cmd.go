@@ -29,7 +29,9 @@ func Main() int {
 	}
 
 	if err := rootCmd.ExecuteContext(context.Background()); err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
+		// Error may contain raw API response body; write through the
+		// sanitizing stderr writer that root.NewCmdRoot configured.
+		fmt.Fprintf(rootCmd.ErrOrStderr(), "%s\n", err)
 		return 1
 	}
 

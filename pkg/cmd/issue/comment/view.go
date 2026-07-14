@@ -49,12 +49,13 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
+			out := cmd.OutOrStdout()
 			if len(comments) == 0 {
-				fmt.Println("No comments found.")
+				fmt.Fprintln(out, "No comments found.")
 				return nil
 			}
 
-			fmt.Printf("Issue #%d 的评论 (共 %d 条):\n\n", number, len(comments))
+			fmt.Fprintf(out, "Issue #%d 的评论 (共 %d 条):\n\n", number, len(comments))
 
 			// Sort comments by creation time
 			sort.Slice(comments, func(i, j int) bool {
@@ -76,14 +77,14 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 					userMarker = " (你)"
 				}
 
-				fmt.Printf("[%d] @%s %s%s\n", comment.ID, cmdutil.SanitizeTerminal(comment.User.Login), timeStr, userMarker)
+				fmt.Fprintf(out, "[%d] @%s %s%s\n", comment.ID, comment.User.Login, timeStr, userMarker)
 
 				// Print body
 				bodyLines := strings.Split(comment.Body, "\n")
 				for _, line := range bodyLines {
-					fmt.Printf("    %s\n", cmdutil.SanitizeTerminal(line))
+					fmt.Fprintf(out, "    %s\n", line)
 				}
-				fmt.Println()
+				fmt.Fprintln(out)
 			}
 
 			return nil

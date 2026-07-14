@@ -2,6 +2,7 @@ package repo
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -43,7 +44,7 @@ Pass --clone to clone the repository locally after creation.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.Name = args[0]
 
-			return runCreate(f, opts)
+			return runCreate(cmd.OutOrStdout(), f, opts)
 		},
 	}
 
@@ -62,7 +63,7 @@ func createdRepositoryURL(result api.Repository, owner, repo string) string {
 	return fmt.Sprintf("https://atomgit.com/%s/%s", owner, repo)
 }
 
-func runCreate(f *cmdutil.Factory, opts *CreateOptions) error {
+func runCreate(out io.Writer, f *cmdutil.Factory, opts *CreateOptions) error {
 	currentUser, err := f.Config.GetUser()
 	if err != nil {
 		return fmt.Errorf("failed to get current user: %w", err)
@@ -111,14 +112,14 @@ func runCreate(f *cmdutil.Factory, opts *CreateOptions) error {
 	}
 
 	repoURL := createdRepositoryURL(result, owner, repoName)
-	fmt.Printf("✓ Created repository %s/%s\n", owner, repoName)
-	fmt.Printf("  URL: %s\n", cmdutil.SanitizeTerminal(repoURL))
+	fmt.Fprintf(out, "✓ Created repository %s/%s\n", owner, repoName)
+	fmt.Fprintf(out, "  URL: %s\n", repoURL)
 
 	// Clone if requested
 	if opts.Clone {
 		cloneURL := strings.TrimSuffix(repoURL, ".git") + ".git"
-		fmt.Printf("\nTo clone this repository, run:\n")
-		fmt.Printf("  git clone %s\n", cmdutil.SanitizeTerminal(cloneURL))
+		fmt.Fprintf(out, "\nTo clone this repository, run:\n")
+		fmt.Fprintf(out, "  git clone %s\n", cloneURL)
 	}
 
 	return nil

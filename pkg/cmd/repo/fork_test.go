@@ -91,7 +91,7 @@ func TestRunForkUpdatesAndVerifiesDescription(t *testing.T) {
 		},
 	}
 	opts := &ForkOptions{Name: "kernel-audit", Description: description, Public: true}
-	if err := runFork(factory, opts, "openEuler/kernel"); err != nil {
+	if err := runFork(io.Discard, factory, opts, "openEuler/kernel"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -135,7 +135,7 @@ func TestRunForkWithoutDescriptionOnlyForks(t *testing.T) {
 		},
 	}
 
-	if err := runFork(factory, &ForkOptions{}, "openEuler/kernel"); err != nil {
+	if err := runFork(io.Discard, factory, &ForkOptions{}, "openEuler/kernel"); err != nil {
 		t.Fatal(err)
 	}
 	if requests != 1 {

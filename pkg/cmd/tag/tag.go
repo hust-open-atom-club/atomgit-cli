@@ -53,13 +53,14 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
+			out := cmd.OutOrStdout()
 			if len(tags) == 0 {
-				fmt.Println("No tags found")
+				fmt.Fprintln(out, "No tags found")
 				return nil
 			}
 
 			for _, tag := range tags {
-				fmt.Printf("%s\n", cmdutil.SanitizeTerminal(tag.Name))
+				fmt.Fprintln(out, tag.Name)
 			}
 
 			return nil
@@ -111,7 +112,7 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Created tag %s\n", cmdutil.SanitizeTerminal(tag.Name))
+			fmt.Fprintf(cmd.OutOrStdout(), "Created tag %s\n", tag.Name)
 
 			return nil
 		},
@@ -153,7 +154,7 @@ func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Deleted tag %s\n", tagName)
+			fmt.Fprintf(cmd.OutOrStdout(), "Deleted tag %s\n", tagName)
 
 			return nil
 		},

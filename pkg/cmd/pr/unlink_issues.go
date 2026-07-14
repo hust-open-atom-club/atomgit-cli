@@ -66,10 +66,11 @@ func newCmdUnlinkIssues(f *cmdutil.Factory) *cobra.Command {
 			unlinkedIssues := opts.Issues
 
 			// Output result
+			out := cmd.OutOrStdout()
 			if len(unlinkedIssues) == 1 {
-				fmt.Printf("Unlinked issue #%s from PR #%s\n", unlinkedIssues[0], prNumber)
+				fmt.Fprintf(out, "Unlinked issue #%s from PR #%s\n", unlinkedIssues[0], prNumber)
 			} else {
-				fmt.Printf("Unlinked issues #%s from PR #%s\n", strings.Join(unlinkedIssues, ", #"), prNumber)
+				fmt.Fprintf(out, "Unlinked issues #%s from PR #%s\n", strings.Join(unlinkedIssues, ", #"), prNumber)
 			}
 
 			return nil
