@@ -17,20 +17,17 @@ make install
 仓库提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake。安装到当前用户的 Nix profile：
 
 ```bash
-nix profile install .#ag
+nix profile install git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag
 ag version
 ```
 
-也可以在不安装的情况下直接运行，或只构建 package：
+也可以在不安装的情况下直接运行：
 
 ```bash
 # 直接运行
-nix run .#ag -- version
-
-# 构建，产物位于 ./result/bin/ag
-nix build .#ag
-./result/bin/ag version --json
+nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag -- version
 ```
+其他安装方式请参阅[完整安装指南](https://atomgit.com/hust-open-atom-club/atomgit-cli/blob/main/docs/installation.md)。
 
 ## 配置
 
