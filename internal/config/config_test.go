@@ -366,11 +366,7 @@ func TestValidateTokenFilePerm(t *testing.T) {
 		want    os.FileMode
 		wantErr error
 	}{
-		{
-			name: "allows safe 0o600 permissions",
-			perm: 0o600,
-			want: 0o600,
-		},
+		// Regression cases from issue requirements and review feedback.
 		{
 			name: "fixes group/other readable permissions",
 			perm: 0o644,
@@ -382,9 +378,56 @@ func TestValidateTokenFilePerm(t *testing.T) {
 			want: 0o400,
 		},
 		{
-			name:    "returns error when the file is not owner readable",
+			name:    "returns error when owner has no read permission",
 			perm:    0o044,
 			wantErr: ErrTokenFileUnreadable,
+		},
+		{
+			name:    "returns error when owner has no read permission but has write permission",
+			perm:    0o200,
+			wantErr: ErrTokenFileUnreadable,
+		},
+		// Pairwise-generated cases over Unix permission bits:
+		// owner/group/other read/write/execute bits.
+		{
+			name: "rwxrwxrwx",
+			perm: 0o777,
+			want: 0o700,
+		},
+		{
+			name:    "--------x",
+			perm:    0o001,
+			wantErr: ErrTokenFileUnreadable,
+		},
+		{
+			name:    "-w-rwx---",
+			perm:    0o270,
+			wantErr: ErrTokenFileUnreadable,
+		},
+		{
+			name: "r-x------",
+			perm: 0o500,
+			want: 0o500,
+		},
+		{
+			name: "r--rw----",
+			perm: 0o460,
+			want: 0o400,
+		},
+		{
+			name:    "-wx--xr--",
+			perm:    0o314,
+			wantErr: ErrTokenFileUnreadable,
+		},
+		{
+			name:    "-wx------",
+			perm:    0o300,
+			wantErr: ErrTokenFileUnreadable,
+		},
+		{
+			name: "r--rwx---",
+			perm: 0o470,
+			want: 0o400,
 		},
 	}
 	for _, tt := range tests {

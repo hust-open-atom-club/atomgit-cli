@@ -328,20 +328,18 @@ func ClearCredentials() ([]string, error) {
 	return removed, nil
 }
 
-// validateTokenFilePerm validates file permission bits for a credential file.
+// validateTokenFilePerm validates Unix permission bits for a credential file.
+//
+// It requires the owner read bit to be set and removes group and other
+// permission bits.
 //
 // Returns:
-//   - os.FileMode: the corrected permissions with group and other bits stripped,
-//     or the original mode if already safe.
-//   - error: ErrTokenFileUnreadable if stripping group/other bits would leave
-//     the file unreadable by the owner.
+//   - os.FileMode: the sanitized permissions containing only owner bits.
+//   - error: ErrTokenFileUnreadable if the file is not readable by the owner.
 func validateTokenFilePerm(perm os.FileMode) (os.FileMode, error) {
-	if perm&0o077 == 0 {
-		return perm, nil
-	}
-	fixed := perm & 0o700
-	if fixed == 0 {
+	if perm&0o400 == 0 {
 		return 0, ErrTokenFileUnreadable
 	}
-	return fixed, nil
+
+	return perm & 0o700, nil
 }
