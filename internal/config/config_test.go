@@ -149,6 +149,97 @@ func TestLoadStoredCredentials(t *testing.T) {
 			t.Fatalf("error = %v", err)
 		}
 	})
+
+	t.Run("fixes group/other readable permissions (0o644)", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("permission bits are not enforced on Windows")
+		}
+
+		home := isolateConfig(t)
+		path := filepath.Join(home, ".config", appName, tokenFile)
+		creds := StoredCredentials{AccessToken: "leaked", User: "alice"}
+		data, err := json.Marshal(creds)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		got, err := LoadStoredCredentials()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.AccessToken != "leaked" || got.User != "alice" {
+			t.Fatalf("credentials = %#v", got)
+		}
+
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if perm := info.Mode().Perm(); perm != 0o600 {
+			t.Fatalf("perm = %#o, want 0600", perm)
+		}
+	})
+
+	t.Run("preserves stricter owner-only permissions (0o400)", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("permission bits are not enforced on Windows")
+		}
+
+		home := isolateConfig(t)
+		path := filepath.Join(home, ".config", appName, tokenFile)
+		creds := StoredCredentials{AccessToken: "readonly", User: "alice"}
+		data, err := json.Marshal(creds)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, data, 0o400); err != nil {
+			t.Fatal(err)
+		}
+
+		got, err := LoadStoredCredentials()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.AccessToken != "readonly" || got.User != "alice" {
+			t.Fatalf("credentials = %#v", got)
+		}
+
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if perm := info.Mode().Perm(); perm != 0o400 {
+			t.Fatalf("perm = %#o, want 0400", perm)
+		}
+	})
+
+	t.Run("rejects symlink token file", func(t *testing.T) {
+		home := isolateConfig(t)
+		target := filepath.Join(home, "real-token.json")
+		writeCredentialsFile(t, target, StoredCredentials{AccessToken: "secret", User: "alice"})
+
+		linkPath := filepath.Join(home, ".config", appName, tokenFile)
+		if err := os.MkdirAll(filepath.Dir(linkPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(target, linkPath); err != nil {
+			t.Fatal(err)
+		}
+
+		_, err := LoadStoredCredentials()
+		if !errors.Is(err, ErrTokenFileSymlink) {
+			t.Fatalf("error = %v, want ErrTokenFileSymlink", err)
+		}
+	})
 }
 
 func TestSaveAndClearCredentials(t *testing.T) {
@@ -264,5 +355,100 @@ func TestIsPermissionErr(t *testing.T) {
 	}
 	if isPermissionErr(errors.New("other")) {
 		t.Fatal("unrelated error should not be recognized")
+	}
+}
+
+func TestValidateTokenFilePerm(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		perm    os.FileMode
+		want    os.FileMode
+		wantErr error
+	}{
+		// Regression cases from issue requirements and review feedback.
+		{
+			name: "fixes group/other readable permissions",
+			perm: 0o644,
+			want: 0o600,
+		},
+		{
+			name: "preserves stricter owner-only permissions",
+			perm: 0o400,
+			want: 0o400,
+		},
+		{
+			name:    "returns error when owner has no read permission",
+			perm:    0o044,
+			wantErr: ErrTokenFileUnreadable,
+		},
+		{
+			name:    "returns error when owner has no read permission but has write permission",
+			perm:    0o200,
+			wantErr: ErrTokenFileUnreadable,
+		},
+		// Pairwise-generated cases over Unix permission bits:
+		// owner/group/other read/write/execute bits.
+		{
+			name: "rwxrwxrwx",
+			perm: 0o777,
+			want: 0o700,
+		},
+		{
+			name:    "--------x",
+			perm:    0o001,
+			wantErr: ErrTokenFileUnreadable,
+		},
+		{
+			name:    "-w-rwx---",
+			perm:    0o270,
+			wantErr: ErrTokenFileUnreadable,
+		},
+		{
+			name: "r-x------",
+			perm: 0o500,
+			want: 0o500,
+		},
+		{
+			name: "r--rw----",
+			perm: 0o460,
+			want: 0o400,
+		},
+		{
+			name:    "-wx--xr--",
+			perm:    0o314,
+			wantErr: ErrTokenFileUnreadable,
+		},
+		{
+			name:    "-wx------",
+			perm:    0o300,
+			wantErr: ErrTokenFileUnreadable,
+		},
+		{
+			name: "r--rwx---",
+			perm: 0o470,
+			want: 0o400,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, gotErr := validateTokenFilePerm(tt.perm)
+			if gotErr != nil {
+				if tt.wantErr == nil {
+					t.Errorf("validateTokenFilePerm() failed: %v", gotErr)
+				}
+				if !errors.Is(gotErr, tt.wantErr) {
+					t.Errorf("validateTokenFilePerm() = %v, want %v", gotErr, tt.wantErr)
+				}
+				return
+			}
+			if tt.wantErr != nil {
+				t.Fatal("validateTokenFilePerm() succeeded unexpectedly")
+			}
+			if got != tt.want {
+				t.Errorf("validateTokenFilePerm() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

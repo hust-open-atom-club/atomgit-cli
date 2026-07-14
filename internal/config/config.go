@@ -4,15 +4,28 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
 )
 
-// ErrTokenNotFound is returned when no token file exists in any search path.
-var ErrTokenNotFound = errors.New("token file not found")
+var (
+	// ErrTokenNotFound is returned when no token file exists in any search path.
+	ErrTokenNotFound = errors.New("token file not found")
+
+	// ErrTokenFileSymlink is returned when a token file is a symlink
+	ErrTokenFileSymlink = errors.New("token file is a symlink")
+
+	// ErrTokenFileChanged is returned when a token file was changed during open.
+	ErrTokenFileChanged = errors.New("token file was changed")
+
+	// ErrTokenFileUnreadable is returned when a token file is not owner-readable.
+	ErrTokenFileUnreadable = errors.New("token file is not owner-readable")
+)
 
 const (
 	defaultHost     = "atomgit.com"
@@ -114,12 +127,60 @@ func LoadStoredCredentials() (*StoredCredentials, error) {
 
 	var failedPaths []string
 	for _, path := range paths {
-		data, err := os.ReadFile(path)
+		li, err := os.Lstat(path)
 		if err != nil {
 			if os.IsNotExist(err) {
 				failedPaths = append(failedPaths, path)
 				continue
 			}
+			return nil, fmt.Errorf("lstat token file info %s: %w", path, err)
+		}
+		if li.Mode()&os.ModeSymlink != 0 {
+			return nil, fmt.Errorf("cannot read %s: %w\n"+
+				"remove the symlink and place the token file directly", path, ErrTokenFileSymlink)
+		}
+
+		f, err := os.Open(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				failedPaths = append(failedPaths, path)
+				continue
+			}
+			return nil, fmt.Errorf("open token file %s: %w", path, err)
+		}
+		defer f.Close()
+
+		info, err := f.Stat()
+		if err != nil {
+			return nil, fmt.Errorf("stat token file info %s: %w", path, err)
+		}
+
+		if !os.SameFile(li, info) {
+			return nil, fmt.Errorf("cannot read %s: %w", path, ErrTokenFileChanged)
+		}
+
+		if runtime.GOOS != "windows" {
+			perm := info.Mode().Perm()
+
+			fixed, err := validateTokenFilePerm(perm)
+			if err != nil {
+				if errors.Is(err, ErrTokenFileUnreadable) {
+					return nil, fmt.Errorf("cannot read %s: %w\n"+
+						"set the correct owner permissions, e.g.:\n"+
+						"  chmod 600 %s", path, err, path)
+				}
+
+				return nil, fmt.Errorf("cannot read %s: %w", path, err)
+			}
+			if fixed != perm {
+				if err := f.Chmod(fixed); err != nil {
+					return nil, fmt.Errorf("change token file mode %s: %w", path, err)
+				}
+			}
+		}
+
+		data, err := io.ReadAll(f)
+		if err != nil {
 			return nil, fmt.Errorf("read token file %s: %w", path, err)
 		}
 
@@ -265,4 +326,20 @@ func ClearCredentials() ([]string, error) {
 		removed = append(removed, p)
 	}
 	return removed, nil
+}
+
+// validateTokenFilePerm validates Unix permission bits for a credential file.
+//
+// It requires the owner read bit to be set and removes group and other
+// permission bits.
+//
+// Returns:
+//   - os.FileMode: the sanitized permissions containing only owner bits.
+//   - error: ErrTokenFileUnreadable if the file is not readable by the owner.
+func validateTokenFilePerm(perm os.FileMode) (os.FileMode, error) {
+	if perm&0o400 == 0 {
+		return 0, ErrTokenFileUnreadable
+	}
+
+	return perm & 0o700, nil
 }
