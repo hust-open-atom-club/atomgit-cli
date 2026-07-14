@@ -12,6 +12,26 @@ make build
 make install
 ```
 
+### 使用 Nix 安装
+
+仓库提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake。安装到当前用户的 Nix profile：
+
+```bash
+nix profile install .#ag
+ag version
+```
+
+也可以在不安装的情况下直接运行，或只构建 package：
+
+```bash
+# 直接运行
+nix run .#ag -- version
+
+# 构建，产物位于 ./result/bin/ag
+nix build .#ag
+./result/bin/ag version --json
+```
+
 ## 配置
 
 首次使用本工具前，需要选择以下任一方式配置访问令牌：
@@ -237,6 +257,23 @@ make release VERSION=v0.5.0
 未创建 tag 时，可使用 `make release-snapshot VERSION=v0.5.0` 进行本地试打包。Snapshot 允许脏工作区，其制品仅用于验证，不应上传到正式 Release。
 
 底层 `scripts/build-release.sh` 也接受 `TAG`、`AG_RELEASE_SNAPSHOT=1` 和 `SOURCE_DATE_EPOCH` 环境变量。`SOURCE_DATE_EPOCH` 会同时固定二进制中的构建日期以及归档内文件的时间戳，用于生成可复现的发布制品；历史两段式 tag 仅保留给 snapshot 兼容。
+
+### 维护 Nix package
+
+更新 Nix package 的版本和 `vendorHash` 时，推荐先进入 flake 提供的开发环境，以使用项目声明的工具版本：
+
+```bash
+nix develop
+./scripts/update-nix-package.sh v0.6.0
+```
+
+也可以直接运行更新脚本：
+
+```bash
+./scripts/update-nix-package.sh v0.6.0
+```
+
+直接运行需要预先安装 Nix 和 Git，并要求 `tar` 支持以 NUL 分隔的文件列表；Linux 上的 GNU tar 和 macOS 默认的 bsdtar 均受支持。脚本会更新 `flake.nix` 中的版本和 `vendorHash`，随后执行 `nix build .#ag` 和 `ag version --json` 验证。验证失败时会自动恢复原始 `flake.nix`，且脚本不会提交、打标签或推送。
 
 ## 项目结构
 
