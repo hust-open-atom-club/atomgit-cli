@@ -1,0 +1,36 @@
+{
+  "name": "@hust-open-atom-club/atomgit-cli",
+  "version": "0.5.0",
+  "description": "AtomGit command-line interface",
+  "license": "MulanPSL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://atomgit.com/hust-open-atom-club/atomgit-cli.git"
+  },
+  "homepage": "https://atomgit.com/hust-open-atom-club/atomgit-cli",
+  "bugs": {
+    "url": "https://atomgit.com/hust-open-atom-club/atomgit-cli/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "ag": "bin/ag.js"
+  },
+  "files": [
+    "bin/ag.js",
+    "scripts/install.js",
+    "scripts/install-lib.js"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/install.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "tar": "^7.5.20"
+  }
+}
