@@ -116,13 +116,19 @@ func newCmdIssueReopen(f *cmdutil.Factory) *cobra.Command {
 			owner, repo := parts[0], parts[1]
 			number := args[1]
 
-			body := map[string]string{
-				"state_event": "reopen",
+			issuePath := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
+			var current api.Issue
+			if err := client.Get(issuePath, &current); err != nil {
+				return fmt.Errorf("failed to get issue: %w", err)
 			}
 
-			var issue api.Issue
-			path := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
-			if err := client.Patch(path, body, &issue); err != nil {
+			updatePath := fmt.Sprintf("/repos/%s/issues/%s", owner, number)
+			fields := map[string]string{
+				"repo":  repo,
+				"title": current.Title,
+				"state": "reopen",
+			}
+			if err := client.PatchForm(updatePath, fields, nil); err != nil {
 				return fmt.Errorf("failed to reopen issue: %w", err)
 			}
 
