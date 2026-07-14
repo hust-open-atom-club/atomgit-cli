@@ -389,13 +389,12 @@ func newCmdPRReopen(f *cmdutil.Factory) *cobra.Command {
 				"state": "open",
 			}
 
-			var pr api.PullRequest
 			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
-			if err := client.Patch(path, body, &pr); err != nil {
+			if err := client.Patch(path, body, nil); err != nil {
 				return fmt.Errorf("failed to reopen PR: %w", err)
 			}
 
-			cmd.Printf("Reopened PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			cmd.Printf("Reopened PR #%s\n", number)
 
 			return nil
 		},

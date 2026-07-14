@@ -260,8 +260,7 @@ func TestPRReopenSendsOpenState(t *testing.T) {
 				gotPath = req.URL.Path
 				b, _ := io.ReadAll(req.Body)
 				gotBody = string(b)
-				body := `{"number":"5","state":"open","title":"test","html_url":"https://atomgit.com/alice/demo/pulls/5","user":{"login":"alice"},"head":{"ref":"feat"},"base":{"ref":"main"},"created_at":""}`
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"state":"opened"}`)), Header: make(http.Header)}, nil
 			})}, nil
 		},
 	}
