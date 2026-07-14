@@ -4,6 +4,15 @@ AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 
 ## 安装
 
+### npm
+
+需要 Node.js 18 或更高版本：
+
+```bash
+npm install --global @hust-open-atom-club/atomgit-cli
+ag version
+```
+
 ### Nix / NixOS
 
 AtomGit CLI 已进入 `nixos-unstable`，包名为 `atomgit-cli`，安装后提供 `ag` 命令。
