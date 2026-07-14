@@ -155,6 +155,35 @@ func TestPatchFormEncodesMultipartBody(t *testing.T) {
 	}
 }
 
+func TestPatchAcceptsEmptySuccessResponse(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+	}{
+		{name: "200 empty body", statusCode: http.StatusOK},
+		{name: "204 empty body", statusCode: http.StatusNoContent},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPatch || r.URL.Path != "/resource" {
+					t.Fatalf("request = %s %s", r.Method, r.URL.Path)
+				}
+				w.WriteHeader(tt.statusCode)
+			})
+
+			result := map[string]bool{"existing": true}
+			if err := client.Patch("/resource", map[string]string{"value": "patch"}, &result); err != nil {
+				t.Fatalf("Patch() error = %v", err)
+			}
+			if !result["existing"] {
+				t.Fatalf("Patch() replaced the existing result: %#v", result)
+			}
+		})
+	}
+}
+
 func TestPostAllowsNilBodyAndResult(t *testing.T) {
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Body != nil {
