@@ -76,7 +76,7 @@ func newCmdIssueEdit(f *cmdutil.Factory) *cobra.Command {
 				title = current.Title
 			}
 
-			fields := map[string]interface{}{
+			fields := map[string]string{
 				"repo":  repo,
 				"title": title,
 			}
@@ -85,7 +85,7 @@ func newCmdIssueEdit(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			updatePath := fmt.Sprintf("/repos/%s/issues/%s", owner, number)
-			if err := client.Patch(updatePath, fields, nil); err != nil {
+			if err := client.PatchForm(updatePath, fields, nil); err != nil {
 				return fmt.Errorf("failed to edit issue: %w", err)
 			}
 
@@ -106,7 +106,6 @@ func newCmdIssueEdit(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "New issue title")
 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "New issue body")
 	cmd.Flags().StringVarP(&opts.BodyFile, "body-file", "F", "", "Read the new issue body from a file")
-	cmd.MarkFlagsMutuallyExclusive("body", "body-file")
 
 	return cmd
 }

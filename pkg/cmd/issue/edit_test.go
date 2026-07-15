@@ -2,13 +2,11 @@ package issue
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -19,14 +17,14 @@ func TestIssueEditUpdatesOnlyRequestedFields(t *testing.T) {
 	tests := []struct {
 		name         string
 		flags        map[string]string
-		wantFields   map[string]interface{}
+		wantFields   map[string]string
 		wantRequests int
 	}{
 		{
 			name:         "title only",
 			flags:        map[string]string{"title": "Updated title"},
 			wantRequests: 1,
-			wantFields: map[string]interface{}{
+			wantFields: map[string]string{
 				"repo": "demo", "title": "Updated title",
 			},
 		},
@@ -34,7 +32,7 @@ func TestIssueEditUpdatesOnlyRequestedFields(t *testing.T) {
 			name:         "body only",
 			flags:        map[string]string{"body": "Updated body"},
 			wantRequests: 2,
-			wantFields: map[string]interface{}{
+			wantFields: map[string]string{
 				"repo": "demo", "title": "Existing title", "body": "Updated body",
 			},
 		},
@@ -42,7 +40,7 @@ func TestIssueEditUpdatesOnlyRequestedFields(t *testing.T) {
 			name:         "clear body",
 			flags:        map[string]string{"body": ""},
 			wantRequests: 2,
-			wantFields: map[string]interface{}{
+			wantFields: map[string]string{
 				"repo": "demo", "title": "Existing title", "body": "",
 			},
 		},
@@ -50,7 +48,7 @@ func TestIssueEditUpdatesOnlyRequestedFields(t *testing.T) {
 			name:         "title and body",
 			flags:        map[string]string{"title": "Updated title", "body": "Updated body"},
 			wantRequests: 1,
-			wantFields: map[string]interface{}{
+			wantFields: map[string]string{
 				"repo": "demo", "title": "Updated title", "body": "Updated body",
 			},
 		},
@@ -87,7 +85,7 @@ func TestIssueEditReadsBodyFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wantFields := map[string]interface{}{
+	wantFields := map[string]string{
 		"repo": "demo", "title": "Existing title", "body": "Body from file\n",
 	}
 	factory, _ := issueEditTestFactory(t, wantFields, http.StatusOK, true)
@@ -126,12 +124,15 @@ func TestIssueEditRejectsInvalidOptions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := newCmdIssueEdit(&cmdutil.Factory{})
+			cmd.SilenceErrors = true
+			cmd.SilenceUsage = true
 			for name, value := range tt.flags {
 				if err := cmd.Flags().Set(name, value); err != nil {
 					t.Fatal(err)
 				}
 			}
-			err := cmd.RunE(cmd, []string{"alice/demo", "7"})
+			cmd.SetArgs([]string{"alice/demo", "7"})
+			err := cmd.Execute()
 			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
 				t.Fatalf("error = %v, want containing %q", err, tt.wantError)
 			}
@@ -234,7 +235,7 @@ func TestIssueEditReportsAPIErrors(t *testing.T) {
 	}
 }
 
-func issueEditTestFactory(t *testing.T, wantFields map[string]interface{}, patchStatus int, wantGet bool) (*cmdutil.Factory, *int) {
+func issueEditTestFactory(t *testing.T, wantFields map[string]string, patchStatus int, wantGet bool) (*cmdutil.Factory, *int) {
 	t.Helper()
 	requests := 0
 	factory := &cmdutil.Factory{
@@ -261,15 +262,21 @@ func issueEditTestFactory(t *testing.T, wantFields map[string]interface{}, patch
 				if requests != wantPatchRequest || req.Method != http.MethodPatch || req.URL.Path != "/api/v5/repos/alice/issues/7" {
 					t.Fatalf("unexpected request #%d: %s %s", requests, req.Method, req.URL.Path)
 				}
-				if contentType := req.Header.Get("Content-Type"); contentType != "application/json" {
-					t.Fatalf("Content-Type = %q", contentType)
-				}
-				var fields map[string]interface{}
-				if err := json.NewDecoder(req.Body).Decode(&fields); err != nil {
+				if err := req.ParseMultipartForm(1 << 20); err != nil {
 					t.Fatal(err)
 				}
-				if !reflect.DeepEqual(fields, wantFields) {
-					t.Fatalf("fields = %#v, want %#v", fields, wantFields)
+				if got := len(req.MultipartForm.Value); got != len(wantFields) {
+					t.Fatalf("form field count = %d, want %d: %#v", got, len(wantFields), req.MultipartForm.Value)
+				}
+				for key, want := range wantFields {
+					values, ok := req.MultipartForm.Value[key]
+					if !ok {
+						t.Errorf("form field %s is missing", key)
+						continue
+					}
+					if len(values) != 1 || values[0] != want {
+						t.Errorf("form field %s = %#v, want %q", key, values, want)
+					}
 				}
 				return &http.Response{
 					StatusCode: patchStatus,
