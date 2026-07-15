@@ -193,7 +193,10 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 
 			var issue api.Issue
 			path := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
@@ -201,13 +204,17 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Title: %s\n", issue.Title)
-			fmt.Printf("State: %s\n", issue.State)
-			fmt.Printf("Author: %s\n", issue.User.Login)
-			fmt.Printf("URL: %s\n", issue.HTMLURL)
-			fmt.Printf("Created: %s\n", issue.CreatedAt)
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "Title: %s\n", issue.Title)
+			fmt.Fprintf(out, "State: %s\n", issue.State)
+			if labels := formatIssueLabels(issue.Labels); labels != "" {
+				fmt.Fprintf(out, "Labels: %s\n", labels)
+			}
+			fmt.Fprintf(out, "Author: %s\n", issue.User.Login)
+			fmt.Fprintf(out, "URL: %s\n", issue.HTMLURL)
+			fmt.Fprintf(out, "Created: %s\n", issue.CreatedAt)
 			if issue.Body != "" {
-				fmt.Printf("\n%s\n", issue.Body)
+				fmt.Fprintf(out, "\n%s\n", issue.Body)
 			}
 
 			return nil
@@ -217,6 +224,16 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open an issue in the browser")
 
 	return cmd
+}
+
+func formatIssueLabels(labels []api.Label) string {
+	names := make([]string, 0, len(labels))
+	for _, label := range labels {
+		if name := strings.TrimSpace(label.Name); name != "" {
+			names = append(names, name)
+		}
+	}
+	return strings.Join(names, ", ")
 }
 
 func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
