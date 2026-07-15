@@ -134,6 +134,25 @@ func TestPRCreateUsesRequestedOrRepositoryDefaultBase(t *testing.T) {
 	}
 }
 
+func TestPRViewWebFlag(t *testing.T) {
+	var capturedURL string
+	f := &cmdutil.Factory{
+		Config: prTestConfig{},
+		BrowserOpener: func(rawURL string) error {
+			capturedURL = rawURL
+			return nil
+		},
+	}
+	cmd := newCmdPRView(f)
+	cmd.SetArgs([]string{"--web", "alice/demo", "7"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if capturedURL != "https://atomgit.com/alice/demo/pull/7" {
+		t.Fatalf("URL = %q", capturedURL)
+	}
+}
+
 func prResponse(statusCode int, body string) *http.Response {
 	return &http.Response{
 		StatusCode: statusCode,

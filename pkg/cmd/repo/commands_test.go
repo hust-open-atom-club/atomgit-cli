@@ -42,7 +42,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 		"delete": {"yes"},
 		"fork":   {"clone", "description", "name", "private", "public"},
 		"list":   {"limit"},
-		"view":   {},
+		"view":   {"web"},
 	}
 	for name, flags := range want {
 		child, _, err := cmd.Find([]string{name})
@@ -257,6 +257,25 @@ func TestRepoDeleteCommand(t *testing.T) {
 	}
 	if requests != 1 {
 		t.Fatalf("request count = %d", requests)
+	}
+}
+
+func TestRepoViewWebFlag(t *testing.T) {
+	var capturedURL string
+	f := &cmdutil.Factory{
+		Config: repoCommandConfig{token: "token", user: "alice"},
+		BrowserOpener: func(rawURL string) error {
+			capturedURL = rawURL
+			return nil
+		},
+	}
+	cmd := newCmdRepoView(f)
+	cmd.SetArgs([]string{"--web", "alice/demo"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if capturedURL != "https://atomgit.com/alice/demo" {
+		t.Fatalf("URL = %q", capturedURL)
 	}
 }
 

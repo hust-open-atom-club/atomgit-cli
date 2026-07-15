@@ -174,6 +174,25 @@ func assertIssueCloseRequest(t *testing.T, req *http.Request, method, path strin
 	}
 }
 
+func TestIssueViewWebFlag(t *testing.T) {
+	var capturedURL string
+	f := &cmdutil.Factory{
+		Config: issueTestConfig{},
+		BrowserOpener: func(rawURL string) error {
+			capturedURL = rawURL
+			return nil
+		},
+	}
+	cmd := newCmdIssueView(f)
+	cmd.SetArgs([]string{"--web", "alice/demo", "42"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if capturedURL != "https://atomgit.com/alice/demo/issues/42" {
+		t.Fatalf("URL = %q", capturedURL)
+	}
+}
+
 func issueResponse(statusCode int, body string) *http.Response {
 	return &http.Response{
 		StatusCode: statusCode,
