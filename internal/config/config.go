@@ -133,6 +133,9 @@ func LoadStoredCredentials() (*StoredCredentials, error) {
 				failedPaths = append(failedPaths, path)
 				continue
 			}
+			if isPermissionErr(err) {
+				return nil, tokenReadPermissionError(path, err)
+			}
 			return nil, fmt.Errorf("lstat token file info %s: %w", path, err)
 		}
 		if li.Mode()&os.ModeSymlink != 0 {
@@ -146,12 +149,18 @@ func LoadStoredCredentials() (*StoredCredentials, error) {
 				failedPaths = append(failedPaths, path)
 				continue
 			}
+			if isPermissionErr(err) {
+				return nil, tokenReadPermissionError(path, err)
+			}
 			return nil, fmt.Errorf("open token file %s: %w", path, err)
 		}
 		defer f.Close()
 
 		info, err := f.Stat()
 		if err != nil {
+			if isPermissionErr(err) {
+				return nil, tokenReadPermissionError(path, err)
+			}
 			return nil, fmt.Errorf("stat token file info %s: %w", path, err)
 		}
 
@@ -165,16 +174,14 @@ func LoadStoredCredentials() (*StoredCredentials, error) {
 			fixed, err := validateTokenFilePerm(perm)
 			if err != nil {
 				if errors.Is(err, ErrTokenFileUnreadable) {
-					return nil, fmt.Errorf("cannot read %s: %w\n"+
-						"set the correct owner permissions, e.g.:\n"+
-						"  chmod 600 %s", path, err, path)
+					return nil, tokenReadPermissionError(path, err)
 				}
 
 				return nil, fmt.Errorf("cannot read %s: %w", path, err)
 			}
 			if fixed != perm {
 				if err := f.Chmod(fixed); err != nil {
-					return nil, fmt.Errorf("change token file mode %s: %w", path, err)
+					return nil, tokenSecurePermissionError(path, err)
 				}
 			}
 		}
@@ -288,7 +295,14 @@ func SaveCredentials(c *StoredCredentials) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		if isPermissionErr(err) {
+			return permissionError(
+				"cannot create config directory", dir, err,
+				"check the directory ownership and owner write permission",
+			)
+		}
 		return fmt.Errorf("create config directory: %w", err)
 	}
 	b, err := json.MarshalIndent(&w, "", "  ")
@@ -297,10 +311,10 @@ func SaveCredentials(c *StoredCredentials) error {
 	}
 	if err := os.WriteFile(path, b, 0o600); err != nil {
 		if isPermissionErr(err) {
-			dir := filepath.Dir(path)
-			return fmt.Errorf("cannot write %s: %w\n"+
-				"often caused by this directory or file having been created with sudo; fix ownership, e.g.:\n"+
-				"  sudo chown -R $(whoami) %q", path, err, dir)
+			return permissionError(
+				"cannot write token file", path, err,
+				"check the file and parent directory ownership and owner write permission",
+			)
 		}
 		return err
 	}
@@ -309,6 +323,33 @@ func SaveCredentials(c *StoredCredentials) error {
 
 func isPermissionErr(err error) bool {
 	return errors.Is(err, os.ErrPermission) || errors.Is(err, syscall.EACCES) || errors.Is(err, syscall.EPERM)
+}
+
+func tokenReadPermissionError(path string, err error) error {
+	hint := "check ownership and file read permissions"
+	if runtime.GOOS != "windows" {
+		hint = fmt.Sprintf("check ownership and set permissions with `chmod 600 %q`", path)
+	}
+
+	return permissionError(
+		"cannot read token file", path, err, hint,
+	)
+}
+
+func tokenSecurePermissionError(path string, err error) error {
+	return permissionError(
+		"cannot secure token file", path, err,
+		"make sure the file is owned by the current user",
+	)
+}
+
+func permissionError(action, path string, err error, hint string) error {
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) {
+		err = pathErr.Err
+	}
+
+	return fmt.Errorf("%s %s: %w\nhint: %s", action, path, err, hint)
 }
 
 // ClearCredentials removes all known credential files (XDG token.json and legacy path).
@@ -320,6 +361,12 @@ func ClearCredentials() ([]string, error) {
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
+			}
+			if isPermissionErr(err) {
+				return removed, permissionError(
+					"cannot remove token file", p, err,
+					"check the file and parent directory ownership and permissions",
+				)
 			}
 			return removed, fmt.Errorf("remove %s: %w", p, err)
 		}
