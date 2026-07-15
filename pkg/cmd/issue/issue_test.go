@@ -83,6 +83,55 @@ func TestIssueListRejectsInvalidLimit(t *testing.T) {
 	}
 }
 
+func TestIssueViewOutputsLabels(t *testing.T) {
+	tests := []struct {
+		name       string
+		labelsJSON string
+		wantLine   string
+	}{
+		{name: "multiple labels", labelsJSON: `[{"name":"bug"},{"name":"priority/high"}]`, wantLine: "Labels: bug, priority/high\n"},
+		{name: "no labels", labelsJSON: `[]`},
+		{name: "empty label names", labelsJSON: `[{"name":"  "}]`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := &cmdutil.Factory{
+				Config: issueTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/issues/1" {
+							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+						}
+						if got := req.Header.Get("Authorization"); got != "Bearer token" {
+							t.Fatalf("Authorization = %q", got)
+						}
+						body := `{"title":"Issue title","state":"open","user":{"login":"alice"},` +
+							`"html_url":"https://atomgit.com/alice/demo/issues/1","created_at":"2026-07-15","labels":` + tt.labelsJSON + `}`
+						return issueResponse(http.StatusOK, body), nil
+					})}, nil
+				},
+			}
+
+			cmd := newCmdIssueView(factory)
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, []string{"alice/demo", "1"}); err != nil {
+				t.Fatal(err)
+			}
+			want := "Title: Issue title\n" +
+				"State: open\n" +
+				tt.wantLine +
+				"Author: alice\n" +
+				"URL: https://atomgit.com/alice/demo/issues/1\n" +
+				"Created: 2026-07-15\n"
+			if got := output.String(); got != want {
+				t.Fatalf("output = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestIssueCloseUpdatesAndVerifiesState(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
