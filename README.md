@@ -219,6 +219,9 @@ cat ~/.ssh/id_rsa.pub | ag ssh-key add --title "My Laptop"
 # 查看版本信息
 ag version
 
+# 等价的根级参数
+ag --version
+
 # 机器可读的 JSON 输出
 ag version --json
 ```
