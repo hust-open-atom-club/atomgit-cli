@@ -12,11 +12,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
+
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/browser"
 )
 
 // Defaults match AtomCode / AtomGit OAuth app (see project oauth reference); override with env.
@@ -148,7 +148,7 @@ func Login(ctx context.Context) (*LoginResult, error) {
 	fmt.Println()
 	fmt.Printf("Waiting for callback on %s …\n", redir)
 
-	if err := openBrowser(authURL); err != nil {
+	if err := browser.NewOpener()(authURL); err != nil {
 		fmt.Fprintf(os.Stderr, "Could not open browser: %v\n", err)
 	}
 
@@ -328,21 +328,6 @@ func fetchUser(ctx context.Context, accessToken string) (*userResponse, error) {
 		return nil, fmt.Errorf("parse user JSON: %w", err)
 	}
 	return &u, nil
-}
-
-func openBrowser(rawURL string) error {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("open", rawURL)
-	case "linux":
-		cmd = exec.Command("xdg-open", rawURL)
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", rawURL)
-	default:
-		return fmt.Errorf("unsupported GOOS: %s", runtime.GOOS)
-	}
-	return cmd.Start()
 }
 
 const successHTML = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>AtomGit Login</title>
