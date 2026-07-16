@@ -173,6 +173,9 @@ ag issue list owner/repo --state all
 # 查看 Issue
 ag issue view owner/repo 42
 
+# 添加 Issue 标签（使用逗号分隔多个标签）
+ag issue label owner/repo 42 "bug, help wanted,priority/high"
+
 # 修改 Issue 标题或正文
 ag issue edit owner/repo 42 --title "Updated title"
 ag issue edit owner/repo 42 --body "Updated description"
@@ -199,6 +202,14 @@ ag issue comment edit owner/repo 42 789 --body "Updated information"
 # 删除评论
 ag issue comment delete owner/repo 42 789
 ag issue comment delete owner/repo 42 789 --yes
+```
+
+### Label
+
+```bash
+# 列出仓库标签（默认显示 30 条）
+ag label list owner/repo
+ag label list owner/repo --limit 50
 ```
 
 ### License
@@ -313,6 +324,8 @@ atomgit-cli/
 │       ├── issue/              # Issue 命令
 │       │   ├── issue.go
 │       │   └── comment/        # Issue 评论命令
+│       ├── label/              # 标签命令
+│       │   └── label.go
 │       ├── license/            # License 命令
 │       │   ├── license.go
 │       │   └── check.go

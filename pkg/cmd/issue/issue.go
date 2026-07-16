@@ -22,6 +22,7 @@ func NewCmdIssue(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdIssueCreate(f))
 	cmd.AddCommand(newCmdIssueEdit(f))
 	cmd.AddCommand(newCmdIssueClose(f))
+	cmd.AddCommand(newCmdIssueLabel(f))
 	cmd.AddCommand(comment.NewCmdComment(f))
 
 	return cmd
