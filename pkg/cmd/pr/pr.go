@@ -29,6 +29,7 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdLinkIssues(f))
 	cmd.AddCommand(newCmdUnlinkIssues(f))
 	cmd.AddCommand(comment.NewCmdComment(f))
+	cmd.AddCommand(newCmdPRMerge(f))
 
 	return cmd
 }
@@ -408,6 +409,115 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 			return err
 		},
 	}
+
+	return cmd
+}
+
+func newCmdPRMerge(f *cmdutil.Factory) *cobra.Command {
+	var opts struct {
+		Merge        bool
+		Rebase       bool
+		Squash       bool
+		Admin        bool
+		Subject      string
+		Body         string
+		DeleteBranch bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "merge <owner>/<repo> <number>",
+		Short: "Merge a pull request",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.Merge && opts.Rebase {
+				return fmt.Errorf("--merge and --rebase are mutually exclusive")
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
+			}
+
+			parts := strings.Split(args[0], "/")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			}
+			owner, repo := parts[0], parts[1]
+			number := args[1]
+
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
+
+			var pr api.PullRequest
+			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
+			if err := client.Get(path, &pr); err != nil {
+				return fmt.Errorf("failed to get PR %s/%s #%s: %w", owner, repo, number, err)
+			}
+
+			if pr.Merged {
+				return fmt.Errorf("PR #%s is already merged", pr.GetNumber())
+			}
+			if pr.State != "open" {
+				return fmt.Errorf("PR #%s is closed, cannot merge", pr.GetNumber())
+			}
+
+			mergeMethod := "merge"
+			if opts.Rebase {
+				mergeMethod = "rebase"
+			}
+
+			reqBody := api.MergePRRequest{
+				MergeMethod: mergeMethod,
+				Title:       opts.Subject,
+				ForceMerge:  opts.Admin,
+				Squash:      opts.Squash,
+			}
+			if opts.Squash {
+				reqBody.SquashCommitMessage = opts.Body
+			} else {
+				reqBody.Description = opts.Body
+			}
+
+			mergePath := fmt.Sprintf("/repos/%s/%s/pulls/%s/merge", owner, repo, number)
+			var mergeResp api.MergePRResponse
+			if err := client.Put(mergePath, reqBody, &mergeResp); err != nil {
+				return fmt.Errorf("failed to merge PR #%s: %w", number, err)
+			}
+
+			switch {
+			case mergeMethod == "merge" && !opts.Squash:
+				fmt.Fprintf(cmd.OutOrStdout(), "Merged PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			case mergeMethod == "merge" && opts.Squash:
+				fmt.Fprintf(cmd.OutOrStdout(), "Squashed and merged PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			case mergeMethod == "rebase" && !opts.Squash:
+				fmt.Fprintf(cmd.OutOrStdout(), "Rebased and merged PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			case mergeMethod == "rebase" && opts.Squash:
+				fmt.Fprintf(cmd.OutOrStdout(), "Rebased and merged PR with squash #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			}
+
+			if opts.DeleteBranch {
+				branchName := pr.Head.Ref
+				delPath := fmt.Sprintf("/repos/%s/%s/branches/%s", owner, repo, branchName)
+				if err := client.Delete(delPath); err != nil {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to delete branch %s: %v\n", branchName, err)
+				} else {
+					fmt.Fprintf(cmd.OutOrStdout(), "Deleted remote branch %s\n", branchName)
+				}
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVarP(&opts.Merge, "merge", "m", false, "Merge the commits with the base branch")
+	cmd.Flags().BoolVarP(&opts.Rebase, "rebase", "r", false, "Rebase the commits onto the base branch")
+	cmd.Flags().BoolVarP(&opts.Squash, "squash", "s", false, "Squash the commits into one commit")
+	cmd.Flags().BoolVar(&opts.Admin, "admin", false, "Use administrator privileges to merge a pull request that does not meet requirements")
+	cmd.Flags().StringVarP(&opts.Subject, "subject", "t", "", "Subject text for the merge commit")
+	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "Body text for the merge commit")
+	cmd.Flags().BoolVarP(&opts.DeleteBranch, "delete-branch", "d", false, "Delete the source branch after merge")
 
 	return cmd
 }
