@@ -173,6 +173,9 @@ ag issue list owner/repo --state all
 # 查看 Issue
 ag issue view owner/repo 42
 
+# 添加 Issue 标签（使用逗号分隔多个标签）
+ag issue label owner/repo 42 "bug, help wanted,priority/high"
+
 # 创建 Issue
 ag issue create owner/repo --title "Bug report" --body "Description"
 ```
