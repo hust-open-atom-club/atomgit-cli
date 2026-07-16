@@ -199,6 +199,14 @@ ag issue comment delete owner/repo 42 789
 ag issue comment delete owner/repo 42 789 --yes
 ```
 
+### Label
+
+```bash
+# 列出仓库标签（默认显示 30 条）
+ag label list owner/repo
+ag label list owner/repo --limit 50
+```
+
 ### License
 
 ```bash
@@ -308,6 +316,8 @@ atomgit-cli/
 │       ├── issue/              # Issue 命令
 │       │   ├── issue.go
 │       │   └── comment/        # Issue 评论命令
+│       ├── label/              # 标签命令
+│       │   └── label.go
 │       ├── license/            # License 命令
 │       │   ├── license.go
 │       │   └── check.go

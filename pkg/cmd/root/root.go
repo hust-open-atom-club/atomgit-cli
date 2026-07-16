@@ -3,6 +3,7 @@ package root
 import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/auth"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/issue"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/label"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/license"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/pr"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/repo"
@@ -26,6 +27,7 @@ func NewCmdRoot(f *cmdutil.Factory) (*cobra.Command, error) {
 	cmd.AddCommand(repo.NewCmdRepo(f))
 	cmd.AddCommand(pr.NewCmdPR(f))
 	cmd.AddCommand(issue.NewCmdIssue(f))
+	cmd.AddCommand(label.NewCmdLabel(f))
 	cmd.AddCommand(tag.NewCmdTag(f))
 	cmd.AddCommand(auth.NewCmdAuth(f))
 	cmd.AddCommand(key.NewCmdSSHKey(f))
