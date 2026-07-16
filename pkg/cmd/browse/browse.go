@@ -86,11 +86,12 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 				}
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "Opening %s in your browser.\n", targetURL)
-
 			if opts.noBrowser {
+				fmt.Fprintln(cmd.OutOrStdout(), targetURL)
 				return nil
 			}
+
+			fmt.Fprintf(cmd.OutOrStdout(), "Opening %s in your browser.\n", targetURL)
 
 			if f.BrowserOpener == nil {
 				return nil
