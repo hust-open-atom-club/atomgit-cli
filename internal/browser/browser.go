@@ -37,7 +37,7 @@ func NewOpener() Opener {
 		default:
 			return fmt.Errorf("unsupported GOOS: %s", runtime.GOOS)
 		}
-		return cmd.Start()
+		return cmd.Run()
 	}
 }
 

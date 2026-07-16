@@ -136,6 +136,7 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 				if f.BrowserOpener != nil {
 					if err := f.BrowserOpener(u); err != nil {
 						fmt.Fprintf(cmd.ErrOrStderr(), "failed to open browser: %v\n", err)
+						return fmt.Errorf("failed to open browser: %w", err)
 					}
 				}
 				return nil

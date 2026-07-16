@@ -98,6 +98,7 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 
 			if err := f.BrowserOpener(targetURL); err != nil {
 				fmt.Fprintf(cmd.ErrOrStderr(), "failed to open browser: %v\n", err)
+				return fmt.Errorf("failed to open browser: %w", err)
 			}
 			return nil
 		},
