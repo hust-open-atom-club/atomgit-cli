@@ -176,6 +176,11 @@ ag issue view owner/repo 42
 # 添加 Issue 标签（使用逗号分隔多个标签）
 ag issue label owner/repo 42 "bug, help wanted,priority/high"
 
+# 修改 Issue 标题或正文
+ag issue edit owner/repo 42 --title "Updated title"
+ag issue edit owner/repo 42 --body "Updated description"
+ag issue edit owner/repo 42 --body-file details.md
+
 # 创建 Issue
 ag issue create owner/repo --title "Bug report" --body "Description"
 ```
@@ -229,6 +234,9 @@ cat ~/.ssh/id_rsa.pub | ag ssh-key add --title "My Laptop"
 ```bash
 # 查看版本信息
 ag version
+
+# 等价的根级参数
+ag --version
 
 # 机器可读的 JSON 输出
 ag version --json

@@ -8,6 +8,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func Text() string {
+	info := version.Get()
+	return fmt.Sprintf("ag version %s (commit: %s, built: %s)\n",
+		info.Version, info.Commit, info.BuildDate)
+}
+
 func NewCmdVersion() *cobra.Command {
 	var opts struct {
 		JSON bool
@@ -18,18 +24,15 @@ func NewCmdVersion() *cobra.Command {
 		Short: "Show version information",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			info := version.Get()
-
 			if opts.JSON {
+				info := version.Get()
 				enc := json.NewEncoder(cmd.OutOrStdout())
 				enc.SetIndent("", "  ")
 				return enc.Encode(info)
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(),
-				"ag version %s (commit: %s, built: %s)\n",
-				info.Version, info.Commit, info.BuildDate)
-			return nil
+			_, err := fmt.Fprint(cmd.OutOrStdout(), Text())
+			return err
 		},
 	}
 

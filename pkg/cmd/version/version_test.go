@@ -63,6 +63,23 @@ func TestNewCmdVersion_Text(t *testing.T) {
 	}
 }
 
+func TestText(t *testing.T) {
+	oldV, oldC, oldB := version.Version, version.Commit, version.BuildDate
+	version.Version = "v1.2.3"
+	version.Commit = "abc1234"
+	version.BuildDate = "2026-07-15T00:00:00Z"
+	defer func() {
+		version.Version = oldV
+		version.Commit = oldC
+		version.BuildDate = oldB
+	}()
+
+	want := "ag version v1.2.3 (commit: abc1234, built: 2026-07-15T00:00:00Z)\n"
+	if got := Text(); got != want {
+		t.Errorf("Text() = %q, want %q", got, want)
+	}
+}
+
 func TestNewCmdVersion_JSON(t *testing.T) {
 	oldV, oldC, oldB := version.Version, version.Commit, version.BuildDate
 	version.Version = "v2.0.0"

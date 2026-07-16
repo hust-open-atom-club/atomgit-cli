@@ -16,10 +16,13 @@ import (
 
 func NewCmdRoot(f *cmdutil.Factory) (*cobra.Command, error) {
 	cmd := &cobra.Command{
-		Use:   "ag <command> <subcommand> [flags]",
-		Short: "AtomGit CLI",
-		Long:  `Work seamlessly with AtomGit from the command line.`,
+		Use:     "ag <command> <subcommand> [flags]",
+		Short:   "AtomGit CLI",
+		Long:    `Work seamlessly with AtomGit from the command line.`,
+		Version: version.Text(),
 	}
+	cmd.SetVersionTemplate(`{{.Version}}`)
+	cmd.Flags().Bool("version", false, "Show version information")
 
 	cmd.PersistentFlags().Bool("help", false, "Show help for command")
 

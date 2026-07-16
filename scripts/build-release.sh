@@ -115,6 +115,15 @@ verify_injection() {
       ;;
   esac
 
+  flag_out=$("$tmpbin" --version 2>&1)
+  echo "    --version 输出: $flag_out"
+  if [ "$flag_out" != "$out" ]; then
+    echo "错误: --version 输出与 version 子命令不一致" >&2
+    echo "version 输出: $out" >&2
+    echo "--version 输出: $flag_out" >&2
+    exit 1
+  fi
+
   # JSON 输出 — 精确比对三个字段
   json_out=$("$tmpbin" version --json 2>&1)
   echo "    JSON 输出: $json_out"
