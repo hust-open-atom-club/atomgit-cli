@@ -199,19 +199,29 @@ func resolveDefaultBranch(f *cmdutil.Factory, owner, repo string) (string, error
 
 func resolveNumber(client *api.Client, owner, repo string, num int) (string, error) {
 	issuePath := fmt.Sprintf("/repos/%s/%s/issues/%d", owner, repo, num)
-	if resp, err := client.DoRequestRaw(http.MethodGet, issuePath); err == nil {
-		resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			return browser.BuildIssueURL(owner, repo, num), nil
-		}
+	resp, err := client.DoRequestRaw(http.MethodGet, issuePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to check issue #%d: %w", num, err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		return browser.BuildIssueURL(owner, repo, num), nil
+	}
+	if resp.StatusCode != http.StatusNotFound {
+		return "", fmt.Errorf("unexpected status checking issue #%d: %s", num, resp.Status)
 	}
 
 	prPath := fmt.Sprintf("/repos/%s/%s/pulls/%d", owner, repo, num)
-	if resp, err := client.DoRequestRaw(http.MethodGet, prPath); err == nil {
-		resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			return browser.BuildPRURL(owner, repo, num), nil
-		}
+	resp, err = client.DoRequestRaw(http.MethodGet, prPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to check PR #%d: %w", num, err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		return browser.BuildPRURL(owner, repo, num), nil
+	}
+	if resp.StatusCode != http.StatusNotFound {
+		return "", fmt.Errorf("unexpected status checking PR #%d: %s", num, resp.Status)
 	}
 
 	return "", fmt.Errorf("no issue or pull request with number %d found in %s/%s", num, owner, repo)

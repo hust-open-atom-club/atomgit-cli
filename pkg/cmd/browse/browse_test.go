@@ -117,6 +117,26 @@ func TestBrowseNonexistentNumber(t *testing.T) {
 	}
 }
 
+func TestBrowseNumberAPICallsReturnError(t *testing.T) {
+	f := &cmdutil.Factory{
+		Config: browseTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: browseRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.URL.Path == "/api/v5/repos/alice/demo/issues/42" {
+					return &http.Response{StatusCode: http.StatusBadGateway, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
+				}
+				return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
+			})}, nil
+		},
+	}
+	cmd := NewCmdBrowse(f)
+	cmd.SetArgs([]string{"-R", "alice/demo", "42"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "unexpected status checking issue #42") {
+		t.Fatalf("error = %v, want unexpected status error", err)
+	}
+}
+
 func TestBrowseFilePath(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
