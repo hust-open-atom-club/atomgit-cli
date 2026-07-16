@@ -174,6 +174,37 @@ func TestBrowseFileWithLineRange(t *testing.T) {
 	}
 }
 
+func TestBrowseNonMainDefaultBranch(t *testing.T) {
+	var capturedURL string
+	f := &cmdutil.Factory{
+		Config: browseTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: browseRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.URL.Path == "/api/v5/repos/alice/demo" {
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       io.NopCloser(strings.NewReader(`{"default_branch": "develop"}`)),
+						Header:     make(http.Header),
+					}, nil
+				}
+				return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
+			})}, nil
+		},
+		BrowserOpener: func(rawURL string) error {
+			capturedURL = rawURL
+			return nil
+		},
+	}
+	cmd := NewCmdBrowse(f)
+	cmd.SetArgs([]string{"-R", "alice/demo", "README.md"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if capturedURL != "https://atomgit.com/alice/demo/blob/develop/README.md" {
+		t.Fatalf("URL = %q, want https://atomgit.com/alice/demo/blob/develop/README.md", capturedURL)
+	}
+}
+
 func TestBrowseCommit(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{

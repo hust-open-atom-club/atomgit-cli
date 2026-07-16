@@ -33,9 +33,13 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			branch := "main"
+			branch := ""
 			if opts.branch != "" {
 				branch = opts.branch
+			} else if b, err := resolveDefaultBranch(f, owner, repo); err == nil {
+				branch = b
+			} else {
+				branch = "main"
 			}
 
 			var targetURL string
@@ -166,6 +170,29 @@ func resolveRepo(f *cmdutil.Factory, repoFlag string) (owner, repo string, err e
 	}
 
 	return browser.ParseRemoteURL(string(remote))
+}
+
+func resolveDefaultBranch(f *cmdutil.Factory, owner, repo string) (string, error) {
+	token, err := f.Config.GetToken()
+	if err != nil {
+		return "", err
+	}
+	var httpClient *http.Client
+	if f.HttpClient != nil {
+		httpClient, err = f.HttpClient()
+		if err != nil {
+			return "", err
+		}
+	}
+	client := api.NewClientWithHTTPClient(token, httpClient)
+	var repoInfo api.Repository
+	if err := client.Get(fmt.Sprintf("/repos/%s/%s", owner, repo), &repoInfo); err != nil {
+		return "", err
+	}
+	if repoInfo.DefaultBranch == "" {
+		return "", fmt.Errorf("empty default branch for %s/%s", owner, repo)
+	}
+	return repoInfo.DefaultBranch, nil
 }
 
 func resolveNumber(client *api.Client, owner, repo string, num int) (string, error) {
