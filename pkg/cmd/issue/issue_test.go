@@ -22,7 +22,7 @@ func (f issueRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error)
 
 func TestNewCmdIssueRegistersSubcommands(t *testing.T) {
 	cmd := NewCmdIssue(&cmdutil.Factory{})
-	want := map[string]bool{"close": false, "comment": false, "create": false, "list": false, "view": false}
+	want := map[string]bool{"close": false, "comment": false, "create": false, "edit": false, "label": false, "list": false, "view": false}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
 			want[child.Name()] = true
@@ -43,6 +43,19 @@ func TestNewCmdIssueRegistersSubcommands(t *testing.T) {
 	}
 	if err := list.Args(list, []string{"one", "two"}); err == nil {
 		t.Fatal("list accepted too many arguments")
+	}
+
+	edit, _, err := cmd.Find([]string{"edit"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"title", "body", "body-file"} {
+		if edit.Flags().Lookup(name) == nil {
+			t.Fatalf("edit flag %q was not registered", name)
+		}
+	}
+	if !strings.Contains(edit.Example, "ag issue edit") {
+		t.Fatalf("edit command example = %q", edit.Example)
 	}
 }
 
