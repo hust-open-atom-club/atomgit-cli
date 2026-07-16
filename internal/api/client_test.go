@@ -54,6 +54,16 @@ func TestNewClientWithHTTPClient(t *testing.T) {
 	}
 }
 
+func TestNewClientWithBaseURL(t *testing.T) {
+	client := NewClientWithBaseURL("secret", "https://example.test/api/v8/", nil)
+	if client.baseURL != "https://example.test/api/v8" {
+		t.Fatalf("baseURL = %q", client.baseURL)
+	}
+	if client.token != "secret" {
+		t.Fatalf("token = %q", client.token)
+	}
+}
+
 func TestGetSendsHeadersAndDecodesResponse(t *testing.T) {
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || r.URL.Path != "/resource" {
@@ -77,6 +87,42 @@ func TestGetSendsHeadersAndDecodesResponse(t *testing.T) {
 	}
 	if result["name"] != "demo" {
 		t.Fatalf("result = %#v", result)
+	}
+}
+
+func TestRawRequestSupportsCustomAcceptAndEmptyToken(t *testing.T) {
+	client := NewClientWithBaseURL("", "https://example.test/api/v8", &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if req.URL.Path != "/api/v8/download" {
+				t.Fatalf("path = %q", req.URL.Path)
+			}
+			if got := req.Header.Get("Accept"); got != "*/*" {
+				t.Fatalf("Accept = %q", got)
+			}
+			if got := req.Header.Get("Authorization"); got != "" {
+				t.Fatalf("Authorization = %q", got)
+			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Status:     "200 OK",
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader("content")),
+				Request:    req,
+			}, nil
+		}),
+	})
+
+	resp, err := client.DoRequestRawWithAccept(http.MethodGet, "/download", "*/*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != "content" {
+		t.Fatalf("body = %q", body)
 	}
 }
 

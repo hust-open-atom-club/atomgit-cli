@@ -212,6 +212,41 @@ ag label list owner/repo
 ag label list owner/repo --limit 50
 ```
 
+### Actions 运行记录 (run)
+
+`ag run` 目前只提供只读的运行检查能力，不会触发、重跑、取消或删除工作流运行。
+
+```bash
+# 列出运行记录（默认最多 30 条）
+ag run list owner/repo
+
+# 按分支、状态和触发事件过滤
+ag run list owner/repo --branch main --status failed --event push
+
+# 也可按触发人、PR、workflow 和毫秒时间戳过滤
+ag run list owner/repo --actor alice --pr 42 --workflow-name CI --limit 50
+ag run list owner/repo --start-time 1700000000000 --end-time 1700086400000
+
+# 查看 run、jobs、steps、URL 和 artifacts
+ag run view owner/repo <run-id>
+
+# 查看指定 job 及其步骤
+ag run view owner/repo <run-id> --job <job-id>
+
+# 解包 AtomGit 返回的日志归档，并将各步骤日志文本输出到 stdout
+ag run view owner/repo <run-id> --job <job-id> --log
+
+# 流式下载原始 job 日志 ZIP；默认不覆盖已有文件
+ag run view owner/repo <run-id> --job <job-id> --log-file job-logs.zip
+ag run view owner/repo <run-id> --job <job-id> --log-file job-logs.zip --overwrite
+
+# 下载指定 artifact。未指定文件名时使用 artifact 名称并添加 .zip
+ag run view owner/repo <run-id> --artifact <artifact-id>
+ag run view owner/repo <run-id> --artifact <artifact-id> --artifact-file build.zip --overwrite
+```
+
+`--log` 会先把 AtomGit 返回的日志 ZIP 流式写入临时文件，再逐项输出其中的日志文本；若服务端返回纯文本也会直接兼容。`--log-file` 保留服务端原始 ZIP。日志和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
+
 ### License
 
 ```bash
@@ -306,7 +341,8 @@ atomgit-cli/
 │   ├── version/version.go      # 版本元数据
 │   └── api/
 │       ├── client.go           # API 客户端
-│       └── types.go            # 数据类型
+│       ├── types.go            # API v5 数据类型
+│       └── actions/            # Actions API v8 客户端与类型
 ├── pkg/
 │   ├── cmdutil/factory.go      # 命令工厂
 │   └── cmd/
@@ -326,6 +362,7 @@ atomgit-cli/
 │       │   └── comment/        # Issue 评论命令
 │       ├── label/              # 标签命令
 │       │   └── label.go
+│       ├── run/                # Actions 运行、job、日志和 artifact 查看
 │       ├── license/            # License 命令
 │       │   ├── license.go
 │       │   └── check.go
@@ -337,7 +374,9 @@ atomgit-cli/
 
 ## API
 
-使用 AtomGit API v5: `https://api.atomgit.com/api/v5`
+常规仓库功能使用 AtomGit API v5：`https://api.atomgit.com/api/v5`。
+
+Actions 运行检查使用独立的 AtomGit API v8：`https://api.atomgit.com/api/v8`。
 
 ## 参考
 

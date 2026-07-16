@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -30,13 +31,20 @@ func NewClient(token string) *Client {
 // NewClientWithHTTPClient creates an API client using the provided HTTP client.
 // A nil HTTP client uses the same default timeout as NewClient.
 func NewClientWithHTTPClient(token string, httpClient *http.Client) *Client {
+	return NewClientWithBaseURL(token, BaseURL+APIVersion, httpClient)
+}
+
+// NewClientWithBaseURL creates a client for a specific AtomGit API base URL.
+// It is primarily used by clients for API versions other than v5 while keeping
+// authentication headers, timeouts, and raw response handling consistent.
+func NewClientWithBaseURL(token, baseURL string, httpClient *http.Client) *Client {
 	if httpClient == nil {
 		httpClient = &http.Client{
 			Timeout: 30 * time.Second,
 		}
 	}
 	return &Client{
-		baseURL:    BaseURL + APIVersion,
+		baseURL:    strings.TrimRight(baseURL, "/"),
 		token:      token,
 		httpClient: httpClient,
 	}
@@ -47,18 +55,26 @@ func (c *Client) doRequest(method, path string, body io.Reader) (*http.Response,
 }
 
 func (c *Client) doRequestWithContentType(method, path string, body io.Reader, contentType string) (*http.Response, error) {
+	return c.doRequestWithContentTypeAndAccept(method, path, body, contentType, "application/json")
+}
+
+func (c *Client) doRequestWithContentTypeAndAccept(method, path string, body io.Reader, contentType, accept string) (*http.Response, error) {
 	url := c.baseURL + path
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
 	req.Header.Set("User-Agent", "AtomCode-CLI-v0.4")
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
-	req.Header.Set("Accept", "application/json")
+	if accept != "" {
+		req.Header.Set("Accept", accept)
+	}
 
 	return c.httpClient.Do(req)
 }
@@ -232,4 +248,10 @@ func (c *Client) DeleteWithBody(path string, body interface{}) error {
 // The caller is responsible for closing resp.Body.
 func (c *Client) DoRequestRaw(method, path string) (*http.Response, error) {
 	return c.doRequest(method, path, nil)
+}
+
+// DoRequestRawWithAccept performs a request with a custom Accept header and
+// returns the raw response. The caller is responsible for closing resp.Body.
+func (c *Client) DoRequestRawWithAccept(method, path, accept string) (*http.Response, error) {
+	return c.doRequestWithContentTypeAndAccept(method, path, nil, "", accept)
 }
