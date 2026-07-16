@@ -1,6 +1,8 @@
 package root
 
 import (
+	"fmt"
+	"io"
 	"os"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/auth"
@@ -16,22 +18,38 @@ import (
 )
 
 func NewCmdRoot(f *cmdutil.Factory) (*cobra.Command, error) {
+	return newCmdRootWithWriters(f, os.Stdout, os.Stderr)
+}
+
+func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra.Command, error) {
 	cmd := &cobra.Command{
-		Use:   "ag <command> <subcommand> [flags]",
-		Short: "AtomGit CLI",
-		Long:  `Work seamlessly with AtomGit from the command line.`,
+		Use:     "ag <command> <subcommand> [flags]",
+		Short:   "AtomGit CLI",
+		Long:    `Work seamlessly with AtomGit from the command line.`,
+		Version: version.Text(),
 	}
+	cmd.SetVersionTemplate(`{{.Version}}`)
+	cmd.Flags().Bool("version", false, "Show version information")
 
 	cmd.PersistentFlags().Bool("help", false, "Show help for command")
 
-	// Sanitize terminal output at the boundary: when stdout/stderr is a TTY,
-	// wrap with SanitizingWriter so every subcommand is protected against
-	// terminal escape sequence injection (CWE-150) without explicit calls.
-	if cmdutil.IsTerminal(os.Stdout) {
-		cmd.SetOut(cmdutil.NewSanitizingWriter(os.Stdout))
-	}
-	if cmdutil.IsTerminal(os.Stderr) {
-		cmd.SetErr(cmdutil.NewSanitizingWriter(os.Stderr))
+	// Sanitize by default even when output is piped: a downstream program may
+	// forward bytes to a terminal. Machine consumers can explicitly opt into
+	// byte-for-byte output with --raw-output.
+	safeOut := cmdutil.NewSanitizingWriter(stdout)
+	safeErr := cmdutil.NewSanitizingWriter(stderr)
+	cmd.SetOut(safeOut)
+	cmd.SetErr(safeErr)
+	var rawOutput bool
+	cmd.PersistentFlags().BoolVar(&rawOutput, "raw-output", false, "Disable terminal output sanitization for machine processing")
+	cmd.PersistentPreRunE = func(*cobra.Command, []string) error {
+		if err := safeOut.SetRaw(rawOutput); err != nil {
+			return fmt.Errorf("configure stdout: %w", err)
+		}
+		if err := safeErr.SetRaw(rawOutput); err != nil {
+			return fmt.Errorf("configure stderr: %w", err)
+		}
+		return nil
 	}
 
 	// Add commands

@@ -59,9 +59,11 @@ func SanitizeTerminal(s string) string {
 // so that CJK and emoji characters are never corrupted by io.Copy's 32 KB
 // chunk boundary.
 type SanitizingWriter struct {
-	out    io.Writer
-	trail  [utf8.UTFMax]byte
-	nTrail int
+	out     io.Writer
+	trail   [utf8.UTFMax]byte
+	nTrail  int
+	pending []byte
+	raw     bool
 }
 
 func NewSanitizingWriter(out io.Writer) *SanitizingWriter {
@@ -72,6 +74,14 @@ func (w *SanitizingWriter) Write(p []byte) (int, error) {
 	n := len(p)
 	if n == 0 {
 		return 0, nil
+	}
+	if w.raw {
+		return w.out.Write(p)
+	}
+	if len(w.pending) > 0 {
+		if err := w.writePending(); err != nil {
+			return 0, err
+		}
 	}
 
 	var buf []byte
@@ -90,12 +100,70 @@ func (w *SanitizingWriter) Write(p []byte) (int, error) {
 	}
 
 	if len(buf) > 0 {
-		_, err := io.WriteString(w.out, SanitizeTerminal(string(buf)))
-		if err != nil {
-			return 0, err
+		w.pending = append(w.pending, SanitizeTerminal(string(buf))...)
+		if err := w.writePending(); err != nil {
+			// All input bytes have been accepted into pending/trail state. Report
+			// the full input count so callers do not retry an already-buffered
+			// prefix; Flush can retry the unwritten transformed bytes.
+			return n, err
 		}
 	}
 	return n, nil
+}
+
+func (w *SanitizingWriter) writePending() error {
+	for len(w.pending) > 0 {
+		n, err := w.out.Write(w.pending)
+		if n < 0 || n > len(w.pending) {
+			return fmt.Errorf("invalid write count %d", n)
+		}
+		w.pending = w.pending[n:]
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return io.ErrShortWrite
+		}
+	}
+	return nil
+}
+
+// SetRaw switches between sanitized output and explicit pass-through output.
+// Any buffered incomplete UTF-8 sequence is flushed before the mode changes.
+func (w *SanitizingWriter) SetRaw(raw bool) error {
+	if w.raw == raw {
+		return nil
+	}
+	if err := w.Flush(); err != nil {
+		return err
+	}
+	w.raw = raw
+	return nil
+}
+
+// Flush writes a trailing incomplete UTF-8 sequence as replacement characters
+// instead of silently dropping it at end of stream, then flushes the wrapped
+// writer when it exposes a Flush method.
+func (w *SanitizingWriter) Flush() error {
+	if w.nTrail > 0 {
+		w.pending = append(w.pending, SanitizeTerminal(string(w.trail[:w.nTrail]))...)
+		w.nTrail = 0
+	}
+	if err := w.writePending(); err != nil {
+		return err
+	}
+	if flusher, ok := w.out.(interface{ Flush() error }); ok {
+		return flusher.Flush()
+	}
+	return nil
+}
+
+// FlushWriter flushes w when it supports explicit end-of-stream flushing.
+func FlushWriter(w io.Writer) error {
+	if flusher, ok := w.(interface{ Flush() error }); ok {
+		return flusher.Flush()
+	}
+	return nil
 }
 
 // incompleteUTF8Tail returns the number of trailing bytes in p that begin

@@ -20,6 +20,7 @@ func NewCmdIssue(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdIssueList(f))
 	cmd.AddCommand(newCmdIssueView(f))
 	cmd.AddCommand(newCmdIssueCreate(f))
+	cmd.AddCommand(newCmdIssueEdit(f))
 	cmd.AddCommand(newCmdIssueClose(f))
 	cmd.AddCommand(comment.NewCmdComment(f))
 
@@ -158,7 +159,10 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 
 			var owner, repo string
 			var number string
@@ -184,6 +188,9 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 			out := cmd.OutOrStdout()
 			fmt.Fprintf(out, "Title: %s\n", issue.Title)
 			fmt.Fprintf(out, "State: %s\n", issue.State)
+			if labels := formatIssueLabels(issue.Labels); labels != "" {
+				fmt.Fprintf(out, "Labels: %s\n", labels)
+			}
 			fmt.Fprintf(out, "Author: %s\n", issue.User.Login)
 			fmt.Fprintf(out, "URL: %s\n", issue.HTMLURL)
 			fmt.Fprintf(out, "Created: %s\n", issue.CreatedAt)
@@ -196,6 +203,16 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	return cmd
+}
+
+func formatIssueLabels(labels []api.Label) string {
+	names := make([]string, 0, len(labels))
+	for _, label := range labels {
+		if name := strings.TrimSpace(label.Name); name != "" {
+			names = append(names, name)
+		}
+	}
+	return strings.Join(names, ", ")
 }
 
 func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {

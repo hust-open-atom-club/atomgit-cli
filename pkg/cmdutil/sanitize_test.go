@@ -2,8 +2,42 @@ package cmdutil
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 )
+
+var errTransientWrite = errors.New("transient write failure")
+
+type partialErrorWriter struct {
+	buf    bytes.Buffer
+	failed bool
+}
+
+func (w *partialErrorWriter) Write(p []byte) (int, error) {
+	if !w.failed {
+		w.failed = true
+		n := 2
+		if len(p) < n {
+			n = len(p)
+		}
+		_, _ = w.buf.Write(p[:n])
+		return n, errTransientWrite
+	}
+	return w.buf.Write(p)
+}
+
+type failOnceWriter struct {
+	buf    bytes.Buffer
+	failed bool
+}
+
+func (w *failOnceWriter) Write(p []byte) (int, error) {
+	if !w.failed {
+		w.failed = true
+		return 0, errTransientWrite
+	}
+	return w.buf.Write(p)
+}
 
 func TestSanitizeTerminal(t *testing.T) {
 	tests := []struct {
@@ -137,5 +171,76 @@ func TestSanitizingWriter_UTF8ChunkBoundary(t *testing.T) {
 				t.Errorf("got %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestSanitizingWriterFlushesIncompleteUTF8AtEOF(t *testing.T) {
+	var buf bytes.Buffer
+	w := NewSanitizingWriter(&buf)
+	if n, err := w.Write([]byte{0xe4}); err != nil || n != 1 {
+		t.Fatalf("Write() = (%d, %v), want (1, nil)", n, err)
+	}
+	if buf.Len() != 0 {
+		t.Fatalf("incomplete rune was written before Flush: %q", buf.String())
+	}
+	if err := w.Flush(); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := buf.String(), "�"; got != want {
+		t.Fatalf("Flush output = %q, want %q", got, want)
+	}
+	if err := w.Flush(); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := buf.String(), "�"; got != want {
+		t.Fatalf("second Flush output = %q, want %q", got, want)
+	}
+}
+
+func TestSanitizingWriterRawOutput(t *testing.T) {
+	var buf bytes.Buffer
+	w := NewSanitizingWriter(&buf)
+	if err := w.SetRaw(true); err != nil {
+		t.Fatal(err)
+	}
+	payload := []byte("raw \x1b[31mtext\x1b[0m")
+	if _, err := w.Write(payload); err != nil {
+		t.Fatal(err)
+	}
+	if got := buf.String(); got != string(payload) {
+		t.Fatalf("raw output = %q, want %q", got, payload)
+	}
+}
+
+func TestSanitizingWriterRetriesPartialWriteWithoutDuplication(t *testing.T) {
+	underlying := &partialErrorWriter{}
+	w := NewSanitizingWriter(underlying)
+	payload := []byte("x\x1b[31mred")
+	n, err := w.Write(payload)
+	if n != len(payload) || !errors.Is(err, errTransientWrite) {
+		t.Fatalf("Write() = (%d, %v), want (%d, transient error)", n, err, len(payload))
+	}
+	if err := w.Flush(); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := underlying.buf.String(), "x\\x1b[31mred"; got != want {
+		t.Fatalf("retried output = %q, want %q", got, want)
+	}
+}
+
+func TestSanitizingWriterRetriesFailedEOFFlush(t *testing.T) {
+	underlying := &failOnceWriter{}
+	w := NewSanitizingWriter(underlying)
+	if n, err := w.Write([]byte{0xe4}); n != 1 || err != nil {
+		t.Fatalf("Write() = (%d, %v), want (1, nil)", n, err)
+	}
+	if err := w.Flush(); !errors.Is(err, errTransientWrite) {
+		t.Fatalf("first Flush() error = %v, want transient error", err)
+	}
+	if err := w.Flush(); err != nil {
+		t.Fatalf("second Flush() error = %v", err)
+	}
+	if got, want := underlying.buf.String(), "�"; got != want {
+		t.Fatalf("retried Flush output = %q, want %q", got, want)
 	}
 }

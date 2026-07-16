@@ -22,7 +22,7 @@ func (f issueRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error)
 
 func TestNewCmdIssueRegistersSubcommands(t *testing.T) {
 	cmd := NewCmdIssue(&cmdutil.Factory{})
-	want := map[string]bool{"close": false, "comment": false, "create": false, "list": false, "view": false}
+	want := map[string]bool{"close": false, "comment": false, "create": false, "edit": false, "list": false, "view": false}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
 			want[child.Name()] = true
@@ -43,6 +43,19 @@ func TestNewCmdIssueRegistersSubcommands(t *testing.T) {
 	}
 	if err := list.Args(list, []string{"one", "two"}); err == nil {
 		t.Fatal("list accepted too many arguments")
+	}
+
+	edit, _, err := cmd.Find([]string{"edit"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"title", "body", "body-file"} {
+		if edit.Flags().Lookup(name) == nil {
+			t.Fatalf("edit flag %q was not registered", name)
+		}
+	}
+	if !strings.Contains(edit.Example, "ag issue edit") {
+		t.Fatalf("edit command example = %q", edit.Example)
 	}
 }
 
@@ -78,6 +91,55 @@ func TestIssueListRejectsInvalidLimit(t *testing.T) {
 			_ = cmd.Flags().Set("limit", limit)
 			if err := cmd.RunE(cmd, []string{"alice/demo"}); err == nil || !strings.Contains(err.Error(), "must be positive") {
 				t.Fatalf("error = %v", err)
+			}
+		})
+	}
+}
+
+func TestIssueViewOutputsLabels(t *testing.T) {
+	tests := []struct {
+		name       string
+		labelsJSON string
+		wantLine   string
+	}{
+		{name: "multiple labels", labelsJSON: `[{"name":"bug"},{"name":"priority/high"}]`, wantLine: "Labels: bug, priority/high\n"},
+		{name: "no labels", labelsJSON: `[]`},
+		{name: "empty label names", labelsJSON: `[{"name":"  "}]`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := &cmdutil.Factory{
+				Config: issueTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/issues/1" {
+							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+						}
+						if got := req.Header.Get("Authorization"); got != "Bearer token" {
+							t.Fatalf("Authorization = %q", got)
+						}
+						body := `{"title":"Issue title","state":"open","user":{"login":"alice"},` +
+							`"html_url":"https://atomgit.com/alice/demo/issues/1","created_at":"2026-07-15","labels":` + tt.labelsJSON + `}`
+						return issueResponse(http.StatusOK, body), nil
+					})}, nil
+				},
+			}
+
+			cmd := newCmdIssueView(factory)
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, []string{"alice/demo", "1"}); err != nil {
+				t.Fatal(err)
+			}
+			want := "Title: Issue title\n" +
+				"State: open\n" +
+				tt.wantLine +
+				"Author: alice\n" +
+				"URL: https://atomgit.com/alice/demo/issues/1\n" +
+				"Created: 2026-07-15\n"
+			if got := output.String(); got != want {
+				t.Fatalf("output = %q, want %q", got, want)
 			}
 		})
 	}

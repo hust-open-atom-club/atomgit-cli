@@ -66,6 +66,10 @@ nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag -- version
 
 `ag auth login` 会自动写入上述 OAuth 字段；手动使用 PAT 时不要自行编造 `refresh_token`、`expires_in` 或 `created_at`。请确保配置文件仅允许当前用户读取和写入令牌文件。
 
+### 输出安全
+
+`ag` 默认会将终端控制字符转换为可见转义文本，包括输出经管道转发时，以防止仓库、Issue、PR 或 Git 服务端返回的内容注入终端控制序列。确实需要为机器处理保留原始字节时，可显式使用全局参数 `--raw-output`，例如 `ag --raw-output pr diff owner/repo 123`；请勿将未经检查的原始输出直接转发到终端。
+
 ## 命令
 
 ### 认证
@@ -173,6 +177,11 @@ ag issue list owner/repo --state all
 # 查看 Issue
 ag issue view owner/repo 42
 
+# 修改 Issue 标题或正文
+ag issue edit owner/repo 42 --title "Updated title"
+ag issue edit owner/repo 42 --body "Updated description"
+ag issue edit owner/repo 42 --body-file details.md
+
 # 创建 Issue
 ag issue create owner/repo --title "Bug report" --body "Description"
 ```
@@ -218,6 +227,9 @@ cat ~/.ssh/id_rsa.pub | ag ssh-key add --title "My Laptop"
 ```bash
 # 查看版本信息
 ag version
+
+# 等价的根级参数
+ag --version
 
 # 机器可读的 JSON 输出
 ag version --json

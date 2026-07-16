@@ -85,7 +85,10 @@ func runFork(out io.Writer, f *cmdutil.Factory, opts *ForkOptions, repoArg strin
 
 	forkName := result.Name
 	if forkName == "" {
-		forkName = repoName
+		forkName = opts.Name
+		if forkName == "" {
+			forkName = repoName
+		}
 	}
 
 	if opts.Description != "" {
