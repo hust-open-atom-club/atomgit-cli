@@ -173,6 +173,11 @@ ag issue list owner/repo --state all
 # 查看 Issue
 ag issue view owner/repo 42
 
+# 修改 Issue 标题或正文
+ag issue edit owner/repo 42 --title "Updated title"
+ag issue edit owner/repo 42 --body "Updated description"
+ag issue edit owner/repo 42 --body-file details.md
+
 # 创建 Issue
 ag issue create owner/repo --title "Bug report" --body "Description"
 ```
