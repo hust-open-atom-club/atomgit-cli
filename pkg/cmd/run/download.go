@@ -13,6 +13,13 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api/actions"
 )
 
+func preflightDownloadDestination(destination string, overwrite bool) (string, error) {
+	// Check before requesting a potentially large remote body so invalid paths
+	// and existing destinations fail without network I/O. writeDownload repeats
+	// the validation because filesystem state can change before local writing.
+	return validateDownloadDestination(destination, overwrite)
+}
+
 func writeDownload(destination string, source io.Reader, overwrite bool) (string, error) {
 	destination, err := validateDownloadDestination(destination, overwrite)
 	if err != nil {

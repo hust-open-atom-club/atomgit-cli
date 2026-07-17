@@ -118,10 +118,7 @@ func displayRun(cmd *cobra.Command, f *cmdutil.Factory, client *actions.Client, 
 		if err != nil {
 			return err
 		}
-		jobs = response.Jobs
-		if len(jobs) == 0 {
-			jobs = jobsFromStages(workflowRun.Stages)
-		}
+		jobs = mergeJobs(response.Jobs, jobsFromStages(workflowRun.Stages))
 	}
 
 	artifacts := []actions.Artifact(nil)
@@ -167,7 +164,7 @@ func writeJobLog(out io.Writer, client *actions.Client, owner, repo, runID, jobI
 }
 
 func downloadJobLog(cmd *cobra.Command, client *actions.Client, owner, repo, runID, jobID, destination string, overwrite bool) error {
-	destination, err := validateDownloadDestination(destination, overwrite)
+	destination, err := preflightDownloadDestination(destination, overwrite)
 	if err != nil {
 		return fmt.Errorf("download job log: %w", err)
 	}
@@ -196,7 +193,7 @@ func downloadArtifact(cmd *cobra.Command, client *actions.Client, owner, repo, r
 	if destination == "" {
 		destination = artifactFilename(artifact)
 	}
-	destination, err = validateDownloadDestination(destination, overwrite)
+	destination, err = preflightDownloadDestination(destination, overwrite)
 	if err != nil {
 		return fmt.Errorf("download artifact: %w", err)
 	}
@@ -282,6 +279,26 @@ func jobsFromStages(stages []actions.Stage) []actions.Job {
 	var jobs []actions.Job
 	for _, stage := range stages {
 		jobs = append(jobs, stage.Jobs...)
+	}
+	return jobs
+}
+
+func mergeJobs(primary, fallback []actions.Job) []actions.Job {
+	jobs := append([]actions.Job(nil), primary...)
+	seen := make(map[string]struct{}, len(primary))
+	for _, job := range primary {
+		if job.ID != "" {
+			seen[job.ID] = struct{}{}
+		}
+	}
+	for _, job := range fallback {
+		if job.ID != "" {
+			if _, exists := seen[job.ID]; exists {
+				continue
+			}
+			seen[job.ID] = struct{}{}
+		}
+		jobs = append(jobs, job)
 	}
 	return jobs
 }

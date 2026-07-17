@@ -317,6 +317,37 @@ func TestRunViewSpecificJobUsesJobDetailEndpoint(t *testing.T) {
 	}
 }
 
+func TestRunViewMergesMissingJobsFromRunStages(t *testing.T) {
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		switch req.URL.Path {
+		case "/api/v8/repos/team/demo/actions/runs/run-1":
+			return runResponse(req, http.StatusOK, `{"workflow_run_id":"run-1","status":"FAILED","stages":[{"id":"stage-1","jobs":[{"id":"job-1","name":"stage build","status":"FAILED"},{"id":"job-2","name":"deploy","status":"FAILED"}]}]}`), nil
+		case "/api/v8/repos/team/demo/actions/runs/run-1/jobs":
+			return runResponse(req, http.StatusOK, `{"total_count":2,"jobs":[{"id":"job-1","name":"API build","status":"FAILED","steps":[{"name":"go test","status":"FAILED"}]}]}`), nil
+		case "/api/v8/repos/team/demo/actions/runs/run-1/artifacts":
+			return runResponse(req, http.StatusOK, `{"total_count":0,"artifacts":[]}`), nil
+		default:
+			t.Fatalf("unexpected path %s", req.URL.Path)
+			return nil, nil
+		}
+	})
+	factory := runFactory(runTestConfig{token: "secret"}, transport)
+	cmd := newCmdRunView(factory)
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+
+	if err := runView(cmd, factory, viewOptions{}, "team/demo", "run-1"); err != nil {
+		t.Fatal(err)
+	}
+	output := out.String()
+	if strings.Count(output, "(job-1)") != 1 || !strings.Contains(output, "[FAILED] API build (job-1)") {
+		t.Fatalf("primary job was not preserved exactly once: %s", output)
+	}
+	if strings.Count(output, "(job-2)") != 1 || !strings.Contains(output, "[FAILED] deploy (job-2)") {
+		t.Fatalf("stage job was not merged exactly once: %s", output)
+	}
+}
+
 func TestListRunArtifactsPaginates(t *testing.T) {
 	requests := 0
 	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -462,6 +493,31 @@ func TestRunViewDownloadsArtifactAndChecksRun(t *testing.T) {
 		if requests != 1 {
 			t.Fatalf("request count = %d", requests)
 		}
+	})
+
+	t.Run("existing destination skips archive request", func(t *testing.T) {
+		requests := 0
+		transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			requests++
+			if strings.HasSuffix(req.URL.Path, "/artifacts/artifact-1/zip") {
+				t.Fatal("artifact archive was requested for an existing destination")
+			}
+			return runResponse(req, http.StatusOK, `{"id":"artifact-1","name":"build","workflow_run_id":"run-1"}`), nil
+		})
+		factory := runFactory(runTestConfig{token: "secret"}, transport)
+		destination := filepath.Join(t.TempDir(), "build.zip")
+		if err := os.WriteFile(destination, []byte("existing"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		cmd := newCmdRunView(factory)
+		err := runView(cmd, factory, viewOptions{ArtifactID: "artifact-1", ArtifactFile: destination}, "team/demo", "run-1")
+		if err == nil || !strings.Contains(err.Error(), "--overwrite") {
+			t.Fatalf("error = %v", err)
+		}
+		if requests != 1 {
+			t.Fatalf("request count = %d, want metadata request only", requests)
+		}
+		assertFileContent(t, destination, "existing")
 	})
 }
 
