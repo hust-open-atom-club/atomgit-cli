@@ -11,7 +11,7 @@ AtomGit CLI 支持 macOS、Linux 和 Windows，可通过自动安装脚本、手
 请在终端执行：
 
 ```bash
-curl -fsSL "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/latest/download/install.sh" | sh
+curl -fsSL "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.sh" | sh
 ```
 
 脚本默认将 `ag` 安装到 `/usr/local/bin`；该目录不可写时，会改用 `~/.local/bin`。如果安装目录不在 `PATH` 中，脚本会输出相应的配置提示。
@@ -21,13 +21,13 @@ curl -fsSL "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/latest/
 请在 Windows PowerShell 5.1 或 PowerShell 7+ 中执行：
 
 ```powershell
-irm "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/latest/download/install.ps1" | iex
+irm "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1" | iex
 ```
 
 `irm` 是 `Invoke-RestMethod` 的别名。若当前环境不支持该别名，可执行：
 
 ```powershell
-Invoke-RestMethod -Uri "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/latest/download/install.ps1" | Invoke-Expression
+Invoke-RestMethod -Uri "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1" | Invoke-Expression
 ```
 
 如果系统禁止运行脚本，可先为当前用户设置执行策略（只需执行一次）：
