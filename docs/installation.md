@@ -21,13 +21,13 @@ curl -fsSL "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/latest/
 请在 Windows PowerShell 5.1 或 PowerShell 7+ 中执行：
 
 ```powershell
-irm "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/latest/download/install.ps1" | iex
+irm "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1" | iex
 ```
 
 `irm` 是 `Invoke-RestMethod` 的别名。若当前环境不支持该别名，可执行：
 
 ```powershell
-Invoke-RestMethod -Uri "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/latest/download/install.ps1" | Invoke-Expression
+Invoke-RestMethod -Uri "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1" | Invoke-Expression
 ```
 
 如果系统禁止运行脚本，可先为当前用户设置执行策略（只需执行一次）：
