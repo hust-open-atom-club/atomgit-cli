@@ -4,6 +4,33 @@ AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 
 ## 安装
 
+### Nix / NixOS
+
+AtomGit CLI 已进入 `nixos-unstable`，包名为 `atomgit-cli`，安装后提供 `ag` 命令。
+
+如果你的 Nix registry 或 flake input 已指向 `nixos-unstable`：
+
+```bash
+nix profile install nixpkgs#atomgit-cli
+ag version
+```
+
+如果你使用的是稳定版 nixpkgs，可以显式从 `nixos-unstable` 安装：
+
+```bash
+nix profile install github:NixOS/nixpkgs/nixos-unstable#atomgit-cli
+```
+
+临时运行：
+
+```bash
+nix run github:NixOS/nixpkgs/nixos-unstable#atomgit-cli -- version
+```
+
+其他安装方式请参阅[完整安装指南](https://atomgit.com/hust-open-atom-club/atomgit-cli/blob/main/docs/installation.md)。
+
+### 从源码构建
+
 ```bash
 # 构建到 bin/ag（Windows 为 bin/ag.exe）
 make build
@@ -11,23 +38,6 @@ make build
 # 安装到 $GOPATH/bin
 make install
 ```
-
-### 使用 Nix 安装
-
-仓库提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake。安装到当前用户的 Nix profile：
-
-```bash
-nix profile install git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag
-ag version
-```
-
-也可以在不安装的情况下直接运行：
-
-```bash
-# 直接运行
-nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag -- version
-```
-其他安装方式请参阅[完整安装指南](https://atomgit.com/hust-open-atom-club/atomgit-cli/blob/main/docs/installation.md)。
 
 ## 配置
 

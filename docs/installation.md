@@ -40,7 +40,80 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 ## 使用 Nix 安装
 
-仓库提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake。安装到当前用户的 Nix profile：
+AtomGit CLI 已进入 `nixos-unstable`，nixpkgs 包名为 `atomgit-cli`，安装后提供 `ag` 命令。
+
+如果你的 Nix registry 或 flake input 已指向 `nixos-unstable`，可以直接安装：
+
+```bash
+nix profile install nixpkgs#atomgit-cli
+ag version
+```
+
+如果你使用的是稳定版 nixpkgs，可以显式从 `nixos-unstable` 安装：
+
+```bash
+nix profile install github:NixOS/nixpkgs/nixos-unstable#atomgit-cli
+ag version
+```
+
+也可以在不安装的情况下临时运行：
+
+```bash
+nix run github:NixOS/nixpkgs/nixos-unstable#atomgit-cli -- version
+```
+
+### 使用 Home Manager 或 NixOS 安装
+
+如果系统本身已经使用 `nixos-unstable`，可以直接把 `pkgs.atomgit-cli` 加入系统或用户环境：
+
+```nix
+{
+  environment.systemPackages = [
+    pkgs.atomgit-cli
+  ];
+}
+```
+
+Home Manager：
+
+```nix
+{
+  home.packages = [
+    pkgs.atomgit-cli
+  ];
+}
+```
+
+如果系统使用稳定版 nixpkgs，可以额外引入 `nixos-unstable`，只从 unstable 安装 AtomGit CLI。先在 flake inputs 中加入：
+
+```nix
+{
+  inputs.nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+}
+```
+
+确保 NixOS 的 `specialArgs` 或 Home Manager 的 `extraSpecialArgs` 已传入 `inputs`，然后在 module 中使用：
+
+```nix
+{ pkgs, inputs, ... }:
+
+let
+  unstable = import inputs.nixpkgs-unstable {
+    system = pkgs.stdenv.hostPlatform.system;
+  };
+in
+{
+  environment.systemPackages = [
+    unstable.atomgit-cli
+  ];
+}
+```
+
+Home Manager 中同样可以将 `unstable.atomgit-cli` 加入 `home.packages`。
+
+### 使用本仓库 flake 安装开发版
+
+仓库仍提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake。需要跟随本仓库最新源码或指定 revision 时，可以直接使用仓库 flake：
 
 ```bash
 nix profile install git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag
@@ -53,9 +126,7 @@ ag version
 nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag -- version
 ```
 
-### 使用 Home Manager 或 NixOS 安装
-
-以下是完整的 flake 配置示例。`pkgs` 由 `nixpkgs` 为目标系统实例化，并通过 `pkgs.stdenv.hostPlatform.system` 选择对应的 AtomGit CLI package：
+以下是使用本仓库 flake 的完整配置示例。`pkgs` 由 `nixpkgs` 为目标系统实例化，并通过 `pkgs.stdenv.hostPlatform.system` 选择对应的 AtomGit CLI package：
 
 ```nix
 {
