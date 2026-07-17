@@ -11,7 +11,7 @@ AtomGit CLI 支持 macOS、Linux 和 Windows，可通过自动安装脚本、手
 请在终端执行：
 
 ```bash
-curl -fsSL "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/latest/download/install.sh" | sh
+curl -fsSL "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.sh" | sh
 ```
 
 脚本默认将 `ag` 安装到 `/usr/local/bin`；该目录不可写时，会改用 `~/.local/bin`。如果安装目录不在 `PATH` 中，脚本会输出相应的配置提示。
