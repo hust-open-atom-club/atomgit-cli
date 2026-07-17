@@ -18,6 +18,14 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
 }
 
+type errorReader struct {
+	err error
+}
+
+func (r errorReader) Read([]byte) (int, error) {
+	return 0, r.err
+}
+
 func response(req *http.Request, status int, body string) *http.Response {
 	return &http.Response{
 		StatusCode: status,
@@ -267,5 +275,35 @@ func TestActionsErrorsAreDeterministic(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestResponseErrorPreservesBodyReadFailure(t *testing.T) {
+	readErr := errors.New("connection reset")
+	resp := &http.Response{
+		StatusCode: http.StatusInternalServerError,
+		Status:     "500 Internal Server Error",
+		Header:     make(http.Header),
+		Body: io.NopCloser(io.MultiReader(
+			strings.NewReader(`{"message":"server failed"}`),
+			errorReader{err: readErr},
+		)),
+	}
+
+	err := responseError("get workflow run", resp)
+	var httpErr *HTTPError
+	if !errors.As(err, &httpErr) {
+		t.Fatalf("error type = %T (%v)", err, err)
+	}
+	if httpErr.Message != "server failed" {
+		t.Fatalf("message = %q", httpErr.Message)
+	}
+	if !errors.Is(err, readErr) {
+		t.Fatalf("error does not wrap read failure: %v", err)
+	}
+	for _, value := range []string{"server failed", "failed to read error response", "connection reset"} {
+		if !strings.Contains(err.Error(), value) {
+			t.Fatalf("error = %q, missing %q", err, value)
+		}
 	}
 }

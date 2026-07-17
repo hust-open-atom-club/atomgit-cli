@@ -50,6 +50,7 @@ type HTTPError struct {
 	Status     string
 	Message    string
 	RetryAfter string
+	ReadError  error
 }
 
 func (e *HTTPError) Error() string {
@@ -67,10 +68,22 @@ func (e *HTTPError) Error() string {
 	if e.Message != "" {
 		message += ": " + e.Message
 	}
+	if e.ReadError != nil {
+		readMessage := "failed to read error response: " + e.ReadError.Error()
+		if e.Message == "" {
+			message += ": " + readMessage
+		} else {
+			message += " (" + readMessage + ")"
+		}
+	}
 	if e.RetryAfter != "" {
 		message += " (retry after " + e.RetryAfter + ")"
 	}
 	return message
+}
+
+func (e *HTTPError) Unwrap() error {
+	return e.ReadError
 }
 
 func NewClient(token string) *Client {
@@ -224,7 +237,7 @@ func (c *Client) download(operation, path string) (*http.Response, error) {
 }
 
 func responseError(operation string, resp *http.Response) error {
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
+	body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
 	message := strings.TrimSpace(string(body))
 	if len(body) > 0 {
 		var details struct {
@@ -250,6 +263,7 @@ func responseError(operation string, resp *http.Response) error {
 		Status:     resp.Status,
 		Message:    message,
 		RetryAfter: resp.Header.Get("Retry-After"),
+		ReadError:  readErr,
 	}
 }
 
