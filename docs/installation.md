@@ -1,6 +1,6 @@
 # 安装指南
 
-AtomGit CLI 支持 macOS、Linux 和 Windows，可通过自动安装脚本、手动下载预编译文件或从源码构建进行安装。
+AtomGit CLI 支持 macOS、Linux 和 Windows，可通过自动安装脚本、npm、Nix、手动下载预编译文件或从源码构建进行安装。
 
 ## 自动化安装（推荐）
 
@@ -37,6 +37,30 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
 脚本默认安装到 `%USERPROFILE%\.local\bin`，并将该目录加入当前用户的 `Path`。
+
+## 使用 npm 安装
+
+npm 安装需要 Node.js 18 或更高版本。执行：
+
+```bash
+npm install --global @hust-open-atom-club/atomgit-cli
+```
+
+安装脚本会根据当前操作系统和 CPU 架构下载对应的 Release 归档，使用同一 Release 中的 `checksums.txt` 校验 SHA-256，然后安装 `ag` 可执行文件。
+
+| 操作系统 | 支持的处理器架构 |
+| --- | --- |
+| macOS | x64（Intel）、arm64（Apple Silicon） |
+| Linux | x64 / amd64、arm64 / aarch64 |
+| Windows | x64 / amd64、arm64 |
+
+npm 包版本与 AtomGit Release tag 一一对应：npm `X.Y.Z` 会下载 Release `vX.Y.Z`。例如，npm `0.5.0` 使用 `v0.5.0` 的归档和校验文件。因此维护者必须先上传同版本的六个平台归档和 `checksums.txt`，再发布 npm 包。
+
+安装完成后验证：
+
+```bash
+ag version
+```
 
 ## 使用 Nix 安装
 

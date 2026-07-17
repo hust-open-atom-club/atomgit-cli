@@ -14,6 +14,7 @@ const {
   resolveTarget,
   verifyChecksum,
 } = require("../scripts/install-lib");
+const { assertPackageVersions } = require("../scripts/check-npm-version");
 const { run } = require("../bin/ag");
 
 test("maps supported Node platforms and architectures to release assets", () => {
@@ -55,6 +56,29 @@ test("builds release URLs from the npm package version", () => {
       checksumsUrl:
         "https://atomgit.example/org/repo/releases/download/v1.2.3-beta.1/checksums.txt",
     },
+  );
+});
+
+test("accepts release metadata when all npm versions match", () => {
+  assert.equal(
+    assertPackageVersions(
+      "1.2.3",
+      { version: "1.2.3" },
+      { version: "1.2.3", packages: { "": { version: "1.2.3" } } },
+    ),
+    "1.2.3",
+  );
+});
+
+test("rejects release metadata when an npm version is stale", () => {
+  assert.throws(
+    () =>
+      assertPackageVersions(
+        "1.2.3",
+        { version: "1.2.3" },
+        { version: "1.2.2", packages: { "": { version: "1.2.2" } } },
+      ),
+    /npm version mismatch for release v1\.2\.3:.*package-lock\.json="1\.2\.2".*npm version 1\.2\.3/,
   );
 });
 
@@ -132,6 +156,39 @@ test("reports failed release downloads", async () => {
     );
   } finally {
     server.close();
+  }
+});
+
+test("times out when a release download stalls", async () => {
+  const sockets = new Set();
+  const server = createServer((_request, response) => {
+    response.writeHead(200, { "content-type": "text/plain" });
+    response.write("partial response");
+  });
+  server.on("connection", (socket) => {
+    sockets.add(socket);
+    socket.on("close", () => sockets.delete(socket));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+
+  try {
+    const { port } = server.address();
+    await assert.rejects(
+      installBinary({
+        baseUrl: `http://127.0.0.1:${port}`,
+        destination: path.join(tmpdir(), "unused-ag"),
+        platform: "linux",
+        arch: "x64",
+        version: "0.5.0",
+        downloadTimeoutMs: 50,
+      }),
+      /timed out downloading .*checksums\.txt after 50ms/,
+    );
+  } finally {
+    for (const socket of sockets) {
+      socket.destroy();
+    }
+    await new Promise((resolve) => server.close(resolve));
   }
 });
 

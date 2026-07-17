@@ -8,6 +8,8 @@ const { createHash } = require("node:crypto");
 const { chmod, mkdir, mkdtemp, rename, rm, writeFile } = require("node:fs/promises");
 const path = require("node:path");
 
+const DEFAULT_DOWNLOAD_TIMEOUT_MS = 30_000;
+
 const ARCH_NAMES = {
   arm64: "arm64",
   x64: "amd64",
@@ -54,12 +56,26 @@ function verifyChecksum(contents, expected) {
   }
 }
 
-async function download(url) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`failed to download ${url}: HTTP ${response.status}`);
+async function download(url, timeoutMs = DEFAULT_DOWNLOAD_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      throw new Error(`failed to download ${url}: HTTP ${response.status}`);
+    }
+    return Buffer.from(await response.arrayBuffer());
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error(`timed out downloading ${url} after ${timeoutMs}ms`, {
+        cause: error,
+      });
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
   }
-  return Buffer.from(await response.arrayBuffer());
 }
 
 async function extractArchive(archivePath, target, destination) {
@@ -89,16 +105,17 @@ async function installBinary({
   arch,
   version,
   extract = extractArchive,
+  downloadTimeoutMs = DEFAULT_DOWNLOAD_TIMEOUT_MS,
 }) {
   const target = resolveTarget(platform, arch);
   const urls = buildReleaseInfo({ baseUrl, version, asset: target.asset });
-  const checksumContents = await download(urls.checksumsUrl);
+  const checksumContents = await download(urls.checksumsUrl, downloadTimeoutMs);
   const expected = parseChecksums(checksumContents.toString("utf8")).get(target.asset);
   if (!expected) {
     throw new Error(`checksums.txt does not contain ${target.asset}`);
   }
 
-  const archive = await download(urls.assetUrl);
+  const archive = await download(urls.assetUrl, downloadTimeoutMs);
   verifyChecksum(archive, expected);
 
   const destinationDir = path.dirname(destination);

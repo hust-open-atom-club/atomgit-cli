@@ -62,6 +62,17 @@ if ! validate_version "$TAG"; then
   exit 1
 fi
 
+# 正式 SemVer tag 需要与 npm 元数据保持一致，避免发布旧包版本或
+# 让 npm 安装器下载错误的 Release。
+if validate_release_tag "$TAG"; then
+  if ! command -v node >/dev/null 2>&1; then
+    echo "错误: 校验 npm 包版本需要 Node.js 18 或更高版本。" >&2
+    exit 1
+  fi
+  echo "==> 校验 npm 包版本: ${TAG#v}"
+  node scripts/check-npm-version.js "${TAG#v}"
+fi
+
 # ---------------------------------------------------------------------------
 # 构建元数据
 # ---------------------------------------------------------------------------
