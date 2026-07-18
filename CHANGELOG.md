@@ -1,3 +1,18 @@
+atomgit-cli (v0.6.0) unstable; urgency=medium
+
+  * Add npm distribution through a launcher package and six platform-specific
+    binary packages, with local checksum generation and release validation.
+  * Add issue editing, issue label management, repository label listing, and
+    richer issue display output.
+  * Retry transient failures for idempotent API requests and accept successful
+    empty PATCH responses.
+  * Harden credential file permission and race checks, and sanitize untrusted
+    terminal output at the CLI boundary.
+  * Add the root --version flag and improve reproducible Nix and installer
+    release workflows.
+
+ -- Dongliang Mu <dzm91@hust.edu.cn>  Sun, 19 Jul 2026 00:37:42 +0800
+
 atomgit-cli (v0.5.0) unstable; urgency=medium
 
   * Move the Go module, documentation, API endpoints, and installers to the

@@ -274,12 +274,12 @@ ag version --json
 发布版使用 [GoReleaser](https://goreleaser.com/install/) 打包，tag 统一使用 `vX.Y.Z` 三段式 SemVer。正式发布前应先提交所有改动，并在当前 HEAD 创建版本 tag：
 
 ```bash
-npm run version:npm -- 0.5.0
-git tag v0.5.0
-make release VERSION=v0.5.0
+npm run version:npm -- 0.6.0
+git tag v0.6.0
+make release VERSION=v0.6.0
 ```
 
-`make release` 会检查工作区干净、tag 存在且指向当前 HEAD，然后在 `dist/v0.5.0/` 生成以下文件：
+`make release` 会检查工作区干净、tag 存在且指向当前 HEAD，然后在 `dist/v0.6.0/` 生成以下文件：
 
 - Linux 和 macOS 的 amd64/arm64 `.tar.gz` 归档。
 - Windows 的 amd64/arm64 `.zip` 归档。
@@ -293,19 +293,19 @@ make release VERSION=v0.5.0
 
 ```bash
 # Linux
-(cd dist/v0.5.0 && sha256sum -c checksums.txt)
+(cd dist/v0.6.0 && sha256sum -c checksums.txt)
 
 # macOS
-(cd dist/v0.5.0 && shasum -a 256 -c checksums.txt)
+(cd dist/v0.6.0 && shasum -a 256 -c checksums.txt)
 ```
 
 npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registry 前单独校验：
 
 ```bash
-(cd dist/v0.5.0/npm && shasum -a 256 -c checksums.txt)
+(cd dist/v0.6.0/npm && shasum -a 256 -c checksums.txt)
 ```
 
-未创建 tag 时，可使用 `make release-snapshot VERSION=v0.5.0` 进行本地试打包。Snapshot 允许脏工作区，其制品仅用于验证，不应上传到正式 Release。
+未创建 tag 时，可使用 `make release-snapshot VERSION=v0.6.0` 进行本地试打包。Snapshot 允许脏工作区，其制品仅用于验证，不应上传到正式 Release。
 
 底层 `scripts/build-release.sh` 也接受 `TAG`、`AG_RELEASE_SNAPSHOT=1` 和 `SOURCE_DATE_EPOCH` 环境变量。`SOURCE_DATE_EPOCH` 会同时固定二进制中的构建日期以及归档内文件的时间戳，用于生成可复现的发布制品；历史两段式 tag 仅保留给 snapshot 兼容。
 
