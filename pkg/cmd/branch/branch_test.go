@@ -484,4 +484,12 @@ func TestParseRepositoryArg(t *testing.T) {
 	if repository.Owner != "alice" || repository.Repo != "demo" {
 		t.Fatalf("repository = %#v", repository)
 	}
+
+	repository, err = parseRepositoryArg(" alice / demo ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repository.Owner != "alice" || repository.Repo != "demo" {
+		t.Fatalf("trimmed repository = %#v", repository)
+	}
 }
