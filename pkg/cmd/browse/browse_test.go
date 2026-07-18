@@ -20,6 +20,21 @@ type browseRoundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f browseRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
 
+func mockRepoHTTPClient(defaultBranch string) func() (*http.Client, error) {
+	return func() (*http.Client, error) {
+		return &http.Client{Transport: browseRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if req.URL.Path == "/api/v5/repos/alice/demo" {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"default_branch": "` + defaultBranch + `"}`)),
+					Header:     make(http.Header),
+				}, nil
+			}
+			return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
+		})}, nil
+	}
+}
+
 func TestBrowseExplicitRepoHome(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
@@ -140,7 +155,8 @@ func TestBrowseNumberAPICallsReturnError(t *testing.T) {
 func TestBrowseFilePath(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
-		Config: browseTestConfig{},
+		Config:       browseTestConfig{},
+		HttpClient:   mockRepoHTTPClient("main"),
 		BrowserOpener: func(rawURL string) error {
 			capturedURL = rawURL
 			return nil
@@ -159,7 +175,8 @@ func TestBrowseFilePath(t *testing.T) {
 func TestBrowseFileWithLine(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
-		Config: browseTestConfig{},
+		Config:       browseTestConfig{},
+		HttpClient:   mockRepoHTTPClient("main"),
 		BrowserOpener: func(rawURL string) error {
 			capturedURL = rawURL
 			return nil
@@ -178,7 +195,8 @@ func TestBrowseFileWithLine(t *testing.T) {
 func TestBrowseFileWithLineRange(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
-		Config: browseTestConfig{},
+		Config:       browseTestConfig{},
+		HttpClient:   mockRepoHTTPClient("main"),
 		BrowserOpener: func(rawURL string) error {
 			capturedURL = rawURL
 			return nil
@@ -197,19 +215,8 @@ func TestBrowseFileWithLineRange(t *testing.T) {
 func TestBrowseNonMainDefaultBranch(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
-		Config: browseTestConfig{},
-		HttpClient: func() (*http.Client, error) {
-			return &http.Client{Transport: browseRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-				if req.URL.Path == "/api/v5/repos/alice/demo" {
-					return &http.Response{
-						StatusCode: http.StatusOK,
-						Body:       io.NopCloser(strings.NewReader(`{"default_branch": "develop"}`)),
-						Header:     make(http.Header),
-					}, nil
-				}
-				return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
-			})}, nil
-		},
+		Config:       browseTestConfig{},
+		HttpClient:   mockRepoHTTPClient("develop"),
 		BrowserOpener: func(rawURL string) error {
 			capturedURL = rawURL
 			return nil

@@ -33,15 +33,6 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			branch := ""
-			if opts.branch != "" {
-				branch = opts.branch
-			} else if b, err := resolveDefaultBranch(f, owner, repo); err == nil {
-				branch = b
-			} else {
-				branch = "main"
-			}
-
 			var targetURL string
 
 			if opts.releases {
@@ -78,7 +69,16 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 					targetURL = browser.BuildCommitURL(owner, repo, arg)
 				default:
 					filePath, lineStart, lineEnd := parseFilePathArg(arg)
-					commitRef := branch
+
+					// Resolve branch lazily — only needed for file path without -c
+					commitRef := opts.branch
+					if commitRef == "" && opts.commit == "" {
+						if b, err := resolveDefaultBranch(f, owner, repo); err == nil {
+							commitRef = b
+						} else {
+							commitRef = "main"
+						}
+					}
 					if opts.commit != "" {
 						commitRef = opts.commit
 					}
