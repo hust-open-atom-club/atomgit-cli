@@ -15,7 +15,7 @@ const {
   verifyChecksum,
 } = require("../scripts/install-lib");
 const { assertPackageVersions } = require("../scripts/check-npm-version");
-const { run } = require("../bin/ag");
+const { run } = require("../bin/ag.js");
 
 test("maps supported Node platforms and architectures to release assets", () => {
   assert.deepEqual(resolveTarget("linux", "x64"), {
