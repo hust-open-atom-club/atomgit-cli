@@ -409,7 +409,7 @@ func TestPRMergeDeleteBranch(t *testing.T) {
 		HttpClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
-					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
+					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{"full_name":"alice/demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
 				}
 				if req.Method == http.MethodPut && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/merge" {
 					return prResponse(http.StatusOK, `{"sha":"sha","merged":true,"message":"ok"}`), nil
@@ -448,7 +448,7 @@ func TestPRMergeDeleteBranchFails(t *testing.T) {
 		HttpClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
-					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
+					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{"full_name":"alice/demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
 				}
 				if req.Method == http.MethodPut && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/merge" {
 					return prResponse(http.StatusOK, `{"sha":"sha","merged":true,"message":"ok"}`), nil
@@ -478,6 +478,86 @@ func TestPRMergeDeleteBranchFails(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "Warning: failed to delete branch") {
 		t.Fatalf("stderr = %q, want containing 'Warning: failed to delete branch'", stderr.String())
+	}
+}
+
+func TestPRMergeDeleteBranchFork(t *testing.T) {
+	branchDeleted := false
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
+					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{"full_name":"alice/fork-demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
+				}
+				if req.Method == http.MethodPut && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/merge" {
+					return prResponse(http.StatusOK, `{"sha":"sha","merged":true,"message":"ok"}`), nil
+				}
+				if req.Method == http.MethodDelete && req.URL.Path == "/api/v5/repos/alice/fork-demo/branches/feature-x" {
+					branchDeleted = true
+					return prResponse(http.StatusNoContent, ""), nil
+				}
+				t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+				return nil, nil
+			})}, nil
+		},
+	}
+
+	cmd := newCmdPRMerge(factory)
+	_ = cmd.Flags().Set("delete-branch", "true")
+	var output strings.Builder
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if !branchDeleted {
+		t.Fatal("branch was not deleted from fork repo")
+	}
+
+	wantOutput := "Merged PR #42: https://atomgit.com/alice/demo/pulls/42\nDeleted remote branch feature-x\n"
+	if output.String() != wantOutput {
+		t.Fatalf("output = %q, want %q", output.String(), wantOutput)
+	}
+}
+
+func TestPRMergeDeleteBranchWithSlash(t *testing.T) {
+	branchDeleted := false
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
+					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature/x","sha":"abc","repo":{"full_name":"alice/demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
+				}
+				if req.Method == http.MethodPut && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/merge" {
+					return prResponse(http.StatusOK, `{"sha":"sha","merged":true,"message":"ok"}`), nil
+				}
+				if req.Method == http.MethodDelete && req.URL.EscapedPath() == "/api/v5/repos/alice/demo/branches/feature%2Fx" {
+					branchDeleted = true
+					return prResponse(http.StatusNoContent, ""), nil
+				}
+				t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+				return nil, nil
+			})}, nil
+		},
+	}
+
+	cmd := newCmdPRMerge(factory)
+	_ = cmd.Flags().Set("delete-branch", "true")
+	var output strings.Builder
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if !branchDeleted {
+		t.Fatal("branch with slash was not deleted")
+	}
+
+	wantOutput := "Merged PR #42: https://atomgit.com/alice/demo/pulls/42\nDeleted remote branch feature/x\n"
+	if output.String() != wantOutput {
+		t.Fatalf("output = %q, want %q", output.String(), wantOutput)
 	}
 }
 

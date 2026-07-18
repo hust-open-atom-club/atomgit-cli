@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -504,12 +505,17 @@ By default, ag creates a merge commit. Use --rebase to rebase the commits onto t
 			}
 
 			if opts.DeleteBranch {
-				branchName := pr.Head.Ref
-				delPath := fmt.Sprintf("/repos/%s/%s/branches/%s", owner, repo, branchName)
-				if err := client.Delete(delPath); err != nil {
-					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to delete branch %s: %v\n", branchName, err)
+				sourceRepo := pr.Head.Repo.FullName
+				if sourceRepo == "" {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: cannot determine source repository, skipping branch deletion\n")
 				} else {
-					fmt.Fprintf(cmd.OutOrStdout(), "Deleted remote branch %s\n", branchName)
+					branchName := url.PathEscape(pr.Head.Ref)
+					delPath := fmt.Sprintf("/repos/%s/branches/%s", sourceRepo, branchName)
+					if err := client.Delete(delPath); err != nil {
+						fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to delete branch %s: %v\n", pr.Head.Ref, err)
+					} else {
+						fmt.Fprintf(cmd.OutOrStdout(), "Deleted remote branch %s\n", pr.Head.Ref)
+					}
 				}
 			}
 
