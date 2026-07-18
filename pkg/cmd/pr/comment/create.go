@@ -58,7 +58,7 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 
 			// Interactive mode if no body provided
 			if body == "" {
-				fmt.Println("Enter comment body (press Ctrl+D when done):")
+				fmt.Fprintln(cmd.OutOrStdout(), "Enter comment body (press Ctrl+D when done):")
 				reader := bufio.NewReader(os.Stdin)
 				var lines []string
 				for {
@@ -84,7 +84,7 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Created comment #%s on PR #%d: %s\n", comment.ID, number, comment.HTMLURL)
+			fmt.Fprintf(cmd.OutOrStdout(), "Created comment #%s on PR #%d: %s\n", comment.ID, number, comment.HTMLURL)
 			return nil
 		},
 	}

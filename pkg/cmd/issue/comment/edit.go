@@ -68,14 +68,16 @@ func newCmdEdit(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("只能编辑自己的评论")
 			}
 
+			out := cmd.OutOrStdout()
+
 			// Get new body
 			body := opts.Body
 			if body == "" {
 				// Interactive mode with existing content
-				fmt.Printf("Editing comment #%s (press Ctrl+D when done):\n", args[2])
-				fmt.Println("Current content:")
-				fmt.Println(comment.Body)
-				fmt.Println("\n--- Enter new content below ---")
+				fmt.Fprintf(out, "Editing comment #%s (press Ctrl+D when done):\n", args[2])
+				fmt.Fprintln(out, "Current content:")
+				fmt.Fprintln(out, comment.Body)
+				fmt.Fprintln(out, "\n--- Enter new content below ---")
 
 				reader := bufio.NewReader(os.Stdin)
 				var lines []string
@@ -99,7 +101,7 @@ func newCmdEdit(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("failed to update comment: %w", err)
 			}
 
-			fmt.Printf("Updated comment #%d: %s\n", comment.ID, comment.HTMLURL)
+			fmt.Fprintf(out, "Updated comment #%d: %s\n", comment.ID, comment.HTMLURL)
 			return nil
 		},
 	}

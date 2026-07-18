@@ -87,6 +87,10 @@ make install
 
 `ag auth login` 会自动写入上述 OAuth 字段；手动使用 PAT 时不要自行编造 `refresh_token`、`expires_in` 或 `created_at`。请确保配置文件仅允许当前用户读取和写入令牌文件。
 
+### 输出安全
+
+`ag` 默认会将终端控制字符转换为可见转义文本，包括输出经管道转发时，以防止仓库、Issue、PR 或 Git 服务端返回的内容注入终端控制序列。确实需要为机器处理保留原始字节时，可显式使用全局参数 `--raw-output`，例如 `ag --raw-output pr diff owner/repo 123`；请勿将未经检查的原始输出直接转发到终端。
+
 ## 命令
 
 ### 认证

@@ -49,13 +49,15 @@ the confirmation prompt.`,
 				return err
 			}
 
+			out := cmd.OutOrStdout()
+
 			// Confirm deletion unless --yes flag is used
 			if !force {
-				fmt.Printf("Are you sure you want to delete %s/%s? This action cannot be undone. [y/N] ", owner, repoName)
+				fmt.Fprintf(out, "Are you sure you want to delete %s/%s? This action cannot be undone. [y/N] ", owner, repoName)
 				var response string
 				fmt.Scanln(&response)
 				if response != "y" && response != "Y" {
-					fmt.Println("Deletion cancelled.")
+					fmt.Fprintln(out, "Deletion cancelled.")
 					return nil
 				}
 			}
@@ -66,7 +68,7 @@ the confirmation prompt.`,
 				return fmt.Errorf("failed to delete repository: %w", err)
 			}
 
-			fmt.Printf("✓ Deleted repository %s/%s\n", owner, repoName)
+			fmt.Fprintf(out, "✓ Deleted repository %s/%s\n", owner, repoName)
 			return nil
 		},
 	}

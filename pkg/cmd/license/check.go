@@ -40,12 +40,12 @@ func newCmdCheck(f *cmdutil.Factory) *cobra.Command {
 
 			// Check if body is empty
 			if len(body) == 0 {
-				fmt.Println("未知")
+				fmt.Fprintln(cmd.OutOrStdout(), "未知")
 				return nil
 			}
 
 			// Print API response
-			fmt.Println(string(body))
+			fmt.Fprintln(cmd.OutOrStdout(), string(body))
 			return nil
 		},
 	}

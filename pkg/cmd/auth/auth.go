@@ -38,13 +38,14 @@ func newCmdAuthLogout() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			out := cmd.OutOrStdout()
 			if len(removed) == 0 {
-				fmt.Println("✗ No credential files found (already logged out)")
+				fmt.Fprintln(out, "✗ No credential files found (already logged out)")
 				return nil
 			}
-			fmt.Println("✓ Logged out. Removed:")
+			fmt.Fprintln(out, "✓ Logged out. Removed:")
 			for _, p := range removed {
-				fmt.Printf("  %s\n", p)
+				fmt.Fprintf(out, "  %s\n", p)
 			}
 			return nil
 		},
@@ -65,11 +66,12 @@ func newCmdAuthLoginWithFunc(f *cmdutil.Factory, login func(context.Context) (*o
 access_token and user to the XDG config path (see README).
 If already logged in, skips the browser unless --force is set.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			out := cmd.OutOrStdout()
 			if !force {
 				if _, err := f.Config.GetToken(); err == nil {
 					user, _ := f.Config.GetUser()
-					fmt.Printf("✓ Already logged in as %s — skipping browser login.\n", user)
-					fmt.Println("  Use `ag auth refresh` to refresh the access token, `ag auth logout` to sign out, or `ag auth login --force` to use the browser again.")
+					fmt.Fprintf(out, "✓ Already logged in as %s — skipping browser login.\n", user)
+					fmt.Fprintln(out, "  Use `ag auth refresh` to refresh the access token, `ag auth logout` to sign out, or `ag auth login --force` to use the browser again.")
 					return nil
 				}
 			}
@@ -100,8 +102,8 @@ If already logged in, skips the browser unless --force is set.`,
 			if err != nil {
 				return err
 			}
-			fmt.Printf("✓ Logged in to atomgit.com as %s\n", result.Login)
-			fmt.Printf("  Token saved to %s\n", path)
+			fmt.Fprintf(out, "✓ Logged in to atomgit.com as %s\n", result.Login)
+			fmt.Fprintf(out, "  Token saved to %s\n", path)
 			return nil
 		},
 	}
@@ -149,8 +151,9 @@ func newCmdAuthRefresh() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("✓ Token refreshed for %s\n", cred.User)
-			fmt.Printf("  Saved to %s\n", path)
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "✓ Token refreshed for %s\n", cred.User)
+			fmt.Fprintf(out, "  Saved to %s\n", path)
 			return nil
 		},
 	}
@@ -164,14 +167,15 @@ func newCmdAuthStatus(f *cmdutil.Factory) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
-				fmt.Println("✗ Not authenticated")
-				fmt.Printf("  Token file error: %s\n", err)
+				out := cmd.OutOrStdout()
+				fmt.Fprintln(out, "✗ Not authenticated")
+				fmt.Fprintf(out, "  Token file error: %s\n", err)
 				return nil
 			}
 
 			user, err := f.Config.GetUser()
 			if err != nil {
-				fmt.Println("✗ Token found but user not configured")
+				fmt.Fprintln(cmd.OutOrStdout(), "✗ Token found but user not configured")
 				return nil
 			}
 
@@ -181,8 +185,9 @@ func newCmdAuthStatus(f *cmdutil.Factory) *cobra.Command {
 				maskedToken = token[:4] + "****" + token[len(token)-4:]
 			}
 
-			fmt.Printf("✓ Logged in to atomgit.com as %s\n", user)
-			fmt.Printf("  Token: %s\n", maskedToken)
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "✓ Logged in to atomgit.com as %s\n", user)
+			fmt.Fprintf(out, "  Token: %s\n", maskedToken)
 			return nil
 		},
 	}
@@ -202,7 +207,7 @@ func newCmdAuthToken(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			fmt.Println(token)
+			fmt.Fprintln(cmd.OutOrStdout(), token)
 			return nil
 		},
 	}

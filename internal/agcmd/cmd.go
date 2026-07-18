@@ -28,8 +28,23 @@ func Main() int {
 		return 1
 	}
 
-	if err := rootCmd.ExecuteContext(context.Background()); err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
+	executeErr := rootCmd.ExecuteContext(context.Background())
+	stdoutFlushErr := cmdutil.FlushWriter(rootCmd.OutOrStdout())
+	stderrFlushErr := cmdutil.FlushWriter(rootCmd.ErrOrStderr())
+	if executeErr != nil {
+		// Error may contain raw API response body; write through the
+		// sanitizing stderr writer that root.NewCmdRoot configured.
+		fmt.Fprintf(rootCmd.ErrOrStderr(), "%s\n", executeErr)
+		_ = cmdutil.FlushWriter(rootCmd.ErrOrStderr())
+		return 1
+	}
+	if stdoutFlushErr != nil {
+		fmt.Fprintf(rootCmd.ErrOrStderr(), "failed to flush stdout: %s\n", stdoutFlushErr)
+		_ = cmdutil.FlushWriter(rootCmd.ErrOrStderr())
+		return 1
+	}
+	if stderrFlushErr != nil {
+		fmt.Fprintf(os.Stderr, "failed to flush stderr: %s\n", stderrFlushErr)
 		return 1
 	}
 
