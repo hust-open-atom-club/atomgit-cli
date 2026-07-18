@@ -554,15 +554,9 @@ func TestPRMergeAPIError(t *testing.T) {
 
 func TestPRMergeValidation(t *testing.T) {
 	cmd := newCmdPRMerge(&cmdutil.Factory{Config: prTestConfig{}})
-	_ = cmd.Flags().Set("merge", "true")
-	_ = cmd.Flags().Set("rebase", "true")
-	err := cmd.RunE(cmd, []string{"alice/demo", "42"})
-	if err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
-		t.Fatalf("error = %v, want containing 'mutually exclusive'", err)
-	}
 
 	cmd = newCmdPRMerge(&cmdutil.Factory{Config: prTestConfig{}})
-	err = cmd.RunE(cmd, []string{"invalid", "42"})
+	err := cmd.RunE(cmd, []string{"invalid", "42"})
 	if err == nil || !strings.Contains(err.Error(), "invalid repository format") {
 		t.Fatalf("error = %v, want containing 'invalid repository format'", err)
 	}

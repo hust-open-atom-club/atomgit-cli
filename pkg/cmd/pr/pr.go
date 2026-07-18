@@ -415,7 +415,6 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdPRMerge(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
-		Merge        bool
 		Rebase       bool
 		Squash       bool
 		Admin        bool
@@ -427,12 +426,12 @@ func newCmdPRMerge(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "merge <owner>/<repo> <number>",
 		Short: "Merge a pull request",
-		Args:  cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if opts.Merge && opts.Rebase {
-				return fmt.Errorf("--merge and --rebase are mutually exclusive")
-			}
+		Long: `Merge a pull request.
 
+By default, ag creates a merge commit. Use --rebase to rebase the commits onto the base branch.
+`,
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return fmt.Errorf("not authenticated: %w", err)
@@ -511,7 +510,6 @@ func newCmdPRMerge(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVarP(&opts.Merge, "merge", "m", false, "Merge the commits with the base branch")
 	cmd.Flags().BoolVarP(&opts.Rebase, "rebase", "r", false, "Rebase the commits onto the base branch")
 	cmd.Flags().BoolVarP(&opts.Squash, "squash", "s", false, "Squash the commits into one commit")
 	cmd.Flags().BoolVar(&opts.Admin, "admin", false, "Use administrator privileges to merge a pull request that does not meet requirements")
