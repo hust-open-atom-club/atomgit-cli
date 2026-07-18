@@ -184,7 +184,6 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 				fmt.Fprintf(cmd.OutOrStdout(), "Opening %s in your browser.\n", u)
 				if f.BrowserOpener != nil {
 					if err := f.BrowserOpener(u); err != nil {
-						fmt.Fprintf(cmd.ErrOrStderr(), "failed to open browser: %v\n", err)
 						return fmt.Errorf("failed to open browser: %w", err)
 					}
 				}
