@@ -22,6 +22,7 @@ dist/
 vendor/
 node_modules/
 .ag-npm-test-*/
+openspec/
 
 # Go workspace file
 go.work
