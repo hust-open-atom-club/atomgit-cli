@@ -487,6 +487,11 @@ By default, ag creates a merge commit. Use --rebase to rebase the commits onto t
 				return fmt.Errorf("failed to merge PR #%s: %w", number, err)
 			}
 
+			if !mergeResp.Merged {
+				msg := mergeResp.Message
+				return fmt.Errorf("failed to merge PR #%s: %s", number, msg)
+			}
+
 			switch {
 			case mergeMethod == "merge" && !opts.Squash:
 				fmt.Fprintf(cmd.OutOrStdout(), "Merged PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
