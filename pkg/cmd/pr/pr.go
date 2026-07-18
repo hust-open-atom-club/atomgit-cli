@@ -462,6 +462,8 @@ By default, ag creates a merge commit. Use --rebase to rebase the commits onto t
 				return fmt.Errorf("PR #%s is closed, cannot merge", pr.GetNumber())
 			}
 
+			// Note: Work as intended.
+			// AtomGit supports squash under rebase, see PR #32.
 			mergeMethod := "merge"
 			if opts.Rebase {
 				mergeMethod = "rebase"
