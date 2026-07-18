@@ -554,8 +554,6 @@ func TestPRMergeAPIError(t *testing.T) {
 
 func TestPRMergeValidation(t *testing.T) {
 	cmd := newCmdPRMerge(&cmdutil.Factory{Config: prTestConfig{}})
-
-	cmd = newCmdPRMerge(&cmdutil.Factory{Config: prTestConfig{}})
 	err := cmd.RunE(cmd, []string{"invalid", "42"})
 	if err == nil || !strings.Contains(err.Error(), "invalid repository format") {
 		t.Fatalf("error = %v, want containing 'invalid repository format'", err)
