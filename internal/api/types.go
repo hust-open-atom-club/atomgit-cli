@@ -1,6 +1,11 @@
 package api
 
-import "fmt"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"strconv"
+)
 
 // Repository represents an AtomGit repository
 type Repository struct {
@@ -101,11 +106,103 @@ type User struct {
 	Type    string `json:"type"`
 }
 
+// FlexibleBool decodes AtomGit boolean metadata that may be returned as
+// JSON booleans, integers, or strings depending on the endpoint.
+type FlexibleBool bool
+
+func (b *FlexibleBool) UnmarshalJSON(data []byte) error {
+	data = bytes.TrimSpace(data)
+	if bytes.Equal(data, []byte("null")) || len(data) == 0 {
+		*b = false
+		return nil
+	}
+
+	var boolValue bool
+	if err := json.Unmarshal(data, &boolValue); err == nil {
+		*b = FlexibleBool(boolValue)
+		return nil
+	}
+
+	var numberValue int
+	if err := json.Unmarshal(data, &numberValue); err == nil {
+		*b = FlexibleBool(numberValue != 0)
+		return nil
+	}
+
+	var stringValue string
+	if err := json.Unmarshal(data, &stringValue); err == nil {
+		parsed, err := strconv.ParseBool(stringValue)
+		if err == nil {
+			*b = FlexibleBool(parsed)
+			return nil
+		}
+		if numeric, err := strconv.Atoi(stringValue); err == nil {
+			*b = FlexibleBool(numeric != 0)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("invalid boolean value %q", string(data))
+}
+
+func (b FlexibleBool) Bool() bool {
+	return bool(b)
+}
+
 // Branch represents a git branch
 type Branch struct {
-	Ref  string     `json:"ref"`
-	SHA  string     `json:"sha"`
-	Repo Repository `json:"repo"`
+	Ref                string       `json:"ref"`
+	SHA                string       `json:"sha"`
+	Repo               Repository   `json:"repo"`
+	Name               string       `json:"name"`
+	Commit             BranchCommit `json:"commit"`
+	Protected          FlexibleBool `json:"protected"`
+	Default            FlexibleBool `json:"default"`
+	Merged             FlexibleBool `json:"merged"`
+	DevelopersCanPush  FlexibleBool `json:"developers_can_push"`
+	DevelopersCanMerge FlexibleBool `json:"developers_can_merge"`
+	CanPush            FlexibleBool `json:"can_push"`
+	CreatedAt          string       `json:"created_at"`
+	Creator            User         `json:"creator"`
+}
+
+// BranchCommit represents the latest commit summary attached to a branch.
+type BranchCommit struct {
+	ID                 string   `json:"id"`
+	SHA                string   `json:"sha"`
+	ShortID            string   `json:"short_id"`
+	URL                string   `json:"url"`
+	Message            string   `json:"message"`
+	Title              string   `json:"title"`
+	ParentIDs          []string `json:"parent_ids"`
+	AuthoredDate       string   `json:"authored_date"`
+	CommittedDate      string   `json:"committed_date"`
+	CreatedAt          string   `json:"created_at"`
+	AuthorName         string   `json:"author_name"`
+	AuthorEmail        string   `json:"author_email"`
+	AuthorAvatarURL    string   `json:"author_avatar_url"`
+	CommitterName      string   `json:"committer_name"`
+	CommitterEmail     string   `json:"committer_email"`
+	CommitterAvatarURL string   `json:"committer_avatar_url"`
+	Commit             struct {
+		Author struct {
+			Name  string `json:"name"`
+			Date  string `json:"date"`
+			Email string `json:"email"`
+		} `json:"author"`
+		Committer struct {
+			Name  string `json:"name"`
+			Date  string `json:"date"`
+			Email string `json:"email"`
+		} `json:"committer"`
+		Message string `json:"message"`
+	} `json:"commit"`
+}
+
+// BranchRequest represents the request body for creating a branch.
+type BranchRequest struct {
+	BranchName string `json:"branch_name"`
+	Refs       string `json:"refs"`
 }
 
 // Label represents an issue/PR label
