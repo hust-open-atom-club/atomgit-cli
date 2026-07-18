@@ -46,7 +46,9 @@ npm 安装需要 Node.js 18 或更高版本。执行：
 npm install --global @hust-open-atom-club/atomgit-cli
 ```
 
-安装脚本会根据当前操作系统和 CPU 架构下载对应的 Release 归档，使用同一 Release 中的 `checksums.txt` 校验 SHA-256，然后安装 `ag` 可执行文件。
+npm 主包通过 `optionalDependencies` 声明六个平台二进制包。npm 根据当前操作系统和 CPU 架构只安装匹配的包，整个过程不使用 `postinstall`，运行 `ag` 时也不会额外联网下载或写入包目录。
+
+请勿使用 `--omit=optional` 安装；该选项会跳过平台二进制包，使 `ag` 无法启动。
 
 | 操作系统 | 支持的处理器架构 |
 | --- | --- |
@@ -54,7 +56,13 @@ npm install --global @hust-open-atom-club/atomgit-cli
 | Linux | x64 / amd64、arm64 / aarch64 |
 | Windows | x64 / amd64、arm64 |
 
-npm 包版本与 AtomGit Release tag 一一对应：npm `X.Y.Z` 会下载 Release `vX.Y.Z`。例如，npm `0.5.0` 使用 `v0.5.0` 的归档和校验文件。因此维护者必须先上传同版本的六个平台归档和 `checksums.txt`，再发布 npm 包。
+npm 主包、六个平台包与 AtomGit Release tag 一一对应，版本必须完全一致。执行 `make release VERSION=vX.Y.Z` 会在 `dist/vX.Y.Z/npm/` 生成七个 npm tarball 和独立的 `checksums.txt`，供发布前本地校验；这些 npm 文件不作为 AtomGit Release 附件上传。发布时必须先发布六个平台包，确认它们可从 npm registry 获取后，再发布主包。
+
+准备新版本时，先同步所有 npm 版本字段：
+
+```bash
+npm run version:npm -- X.Y.Z
+```
 
 安装完成后验证：
 

@@ -13,6 +13,8 @@ npm install --global @hust-open-atom-club/atomgit-cli
 ag version
 ```
 
+npm 会通过当前操作系统和 CPU 对应的可选依赖安装预编译二进制，不需要运行 `postinstall` 脚本。
+
 ### Nix / NixOS
 
 AtomGit CLI 已进入 `nixos-unstable`，包名为 `atomgit-cli`，安装后提供 `ag` 命令。
@@ -268,6 +270,7 @@ ag version --json
 发布版使用 [GoReleaser](https://goreleaser.com/install/) 打包，tag 统一使用 `vX.Y.Z` 三段式 SemVer。正式发布前应先提交所有改动，并在当前 HEAD 创建版本 tag：
 
 ```bash
+npm run version:npm -- 0.5.0
 git tag v0.5.0
 make release VERSION=v0.5.0
 ```
@@ -277,7 +280,10 @@ make release VERSION=v0.5.0
 - Linux 和 macOS 的 amd64/arm64 `.tar.gz` 归档。
 - Windows 的 amd64/arm64 `.zip` 归档。
 - 已绑定当前 tag 的 `install.sh` 和 `install.ps1`。
-- 覆盖上述六个归档和两个安装脚本的 `checksums.txt`。
+- `npm/` 下的六个平台二进制包、一个主启动包和独立的 `npm/checksums.txt`。
+- 仅覆盖 AtomGit Release 附件（六个归档和两个安装脚本）的根 `checksums.txt`。
+
+发布 npm 制品时，先发布 `npm/` 下六个名称带平台和架构的包；确认它们可用后，再发布 `atomgit-cli` 主包。主包和平台包必须使用相同版本。
 
 上传 Release 附件前可校验所有制品：
 
@@ -287,6 +293,12 @@ make release VERSION=v0.5.0
 
 # macOS
 (cd dist/v0.5.0 && shasum -a 256 -c checksums.txt)
+```
+
+npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registry 前单独校验：
+
+```bash
+(cd dist/v0.5.0/npm && shasum -a 256 -c checksums.txt)
 ```
 
 未创建 tag 时，可使用 `make release-snapshot VERSION=v0.5.0` 进行本地试打包。Snapshot 允许脏工作区，其制品仅用于验证，不应上传到正式 Release。
@@ -318,6 +330,8 @@ atomgit-cli/
 ├── Makefile                    # 构建、测试、安装和发布入口
 ├── install.sh                  # Linux/macOS 安装脚本
 ├── install.ps1                 # Windows 安装脚本
+├── bin/ag.js                   # npm 主包的平台二进制启动器
+├── scripts/build-npm-packages.js # 从 Release 归档生成七个 npm 包
 ├── cmd/ag/main.go              # 入口
 ├── internal/
 │   ├── agcmd/cmd.go            # 核心命令处理

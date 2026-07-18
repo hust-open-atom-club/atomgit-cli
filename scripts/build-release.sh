@@ -2,7 +2,8 @@
 # 使用 GoReleaser 生成预编译包到 dist/<版本>/：
 #   - Linux/macOS: ag_<os>_<arch>.tar.gz（包内可执行文件名为 ag）
 #   - Windows:     ag_windows_<arch>.zip（包内为 ag.exe）
-#   - SHA-256:     checksums.txt（覆盖六个归档和两个安装脚本）
+#   - npm:         六个平台二进制子包和一个主启动包，以及独立的 npm/checksums.txt
+#   - SHA-256:     checksums.txt（仅覆盖上传到 AtomGit Release 的六个归档和两个安装脚本）
 #
 # 用法:
 #   ./scripts/build-release.sh              # 版本来自 git describe，或环境变量 TAG
@@ -271,22 +272,31 @@ sed \
   "$ROOT/install.ps1" > "${OUT}/install.ps1"
 echo "已生成 ${OUT}/install.ps1（默认 TAG=${TAG}）"
 
-# GoReleaser 的校验和只包含它生成的归档。安装脚本由本包装脚本
-# 在打包后生成，因此将它们的 SHA-256 追加到最终 checksums.txt。
+echo "==> 生成 npm 平台包 ..."
+node scripts/build-npm-packages.js "$OUT" "${TAG#v}"
+echo ""
+
+# GoReleaser 的校验和只包含它生成的归档。安装脚本会作为 AtomGit
+# Release 附件上传，因此将它们追加到根 checksums.txt。npm 包发布到
+# npm registry，使用 npm/checksums.txt 单独进行本地校验。
 if command -v sha256sum >/dev/null 2>&1; then
   (cd "$OUT" && sha256sum install.sh install.ps1) >> "${OUT}/checksums.txt"
+  (cd "$OUT/npm" && sha256sum ./*.tgz) > "${OUT}/npm/checksums.txt"
 elif command -v shasum >/dev/null 2>&1; then
   (cd "$OUT" && shasum -a 256 install.sh install.ps1) >> "${OUT}/checksums.txt"
+  (cd "$OUT/npm" && shasum -a 256 ./*.tgz) > "${OUT}/npm/checksums.txt"
 else
-  echo "错误: 生成安装脚本校验和需要 sha256sum 或 shasum。" >&2
+  echo "错误: 生成安装脚本和 npm 包校验和需要 sha256sum 或 shasum。" >&2
   exit 1
 fi
 echo "已将 install.sh 和 install.ps1 加入 ${OUT}/checksums.txt"
+echo "已生成 npm 包本地校验文件 ${OUT}/npm/checksums.txt"
 echo ""
 
 if [ "$RELEASE_MODE" = "snapshot" ]; then
   echo "试打包完成。制品位于 ${OUT}/，请勿将未校验的快照制品用于正式发布。"
 else
   echo "完成。将 ${OUT}/ 下各 .tar.gz / .zip、checksums.txt、install.sh 与 install.ps1 作为 AtomGit Release「${TAG}」的附件上传即可。"
+  echo "npm 包位于 ${OUT}/npm/；发布时先发布六个平台包，再发布 atomgit-cli 主包。"
 fi
 echo "（Windows 也可：PowerShell 执行 install.ps1，或下载 ag_windows_*.zip 手动解压并加入 PATH。）"
