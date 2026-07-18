@@ -305,9 +305,8 @@ func newRetryTestClient(t *testing.T, failFirst int) (*Client, *int32) {
 func TestClientRetryIdempotent(t *testing.T) {
 	// 幂等方法：首次网络错误，第二次成功 → 应触发重试
 	cases := []struct {
-		name    string
-		caller  func(*Client) error
-		wantErr bool
+		name   string
+		caller func(*Client) error
 	}{
 		{
 			name:   "GET retries on network error",
