@@ -64,6 +64,15 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	if err := clone.Args(clone, []string{"owner/repo", "target", "extra"}); err == nil {
 		t.Fatal("clone accepted too many arguments")
 	}
+	for _, name := range []string{"view", "fork", "delete"} {
+		child, _, _ := cmd.Find([]string{name})
+		if !strings.Contains(child.Long, cmdutil.RepositoryContextHelp) {
+			t.Errorf("%s help does not explain repository inference", name)
+		}
+		if err := child.Args(child, nil); err != nil {
+			t.Errorf("%s rejected repository inference: %v", name, err)
+		}
+	}
 }
 
 func TestNewAPIClient(t *testing.T) {
@@ -168,8 +177,11 @@ func TestRepoViewCommandReadsRepository(t *testing.T) {
 		return forkResponse(http.StatusOK, `{"full_name":"alice/demo","description":"demo repository","web_url":"https://atomgit.com/alice/demo","default_branch":"main","private":false}`), nil
 	})
 	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+	}
 	cmd := newCmdRepoView(factory)
-	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+	if err := cmd.RunE(cmd, nil); err != nil {
 		t.Fatal(err)
 	}
 	if requests != 1 {
@@ -258,6 +270,24 @@ func TestRepoDeleteCommand(t *testing.T) {
 	}
 	if requests != 1 {
 		t.Fatalf("request count = %d", requests)
+	}
+}
+
+func TestRepoDeleteCommandInfersRepository(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodDelete || req.URL.Path != "/api/v5/repos/team/inferred" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		return forkResponse(http.StatusNoContent, ""), nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "team", Name: "inferred"}, nil
+	}
+	cmd := newCmdRepoDelete(factory)
+	_ = cmd.Flags().Set("yes", "true")
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
 	}
 }
 

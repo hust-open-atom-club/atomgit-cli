@@ -30,6 +30,7 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdLinkIssues(f))
 	cmd.AddCommand(newCmdUnlinkIssues(f))
 	cmd.AddCommand(comment.NewCmdComment(f))
+	cmdutil.AddRepositoryContextHelp(cmd)
 
 	return cmd
 }
@@ -51,7 +52,7 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "list [<owner>/]<repo>",
+		Use:   "list [<owner>/<repo>]",
 		Short: "List pull requests",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -64,16 +65,11 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
 
-			var owner, repo string
-			if len(args) == 0 {
-				return fmt.Errorf("repository required")
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
 			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
+			owner, repo := repository.Owner, repository.Name
 
 			client, err := newAPIClient(f, token)
 			if err != nil {
@@ -103,7 +99,7 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "view [<owner>/]<repo> <number>",
+		Use:   "view [<owner>/<repo>] <number>",
 		Short: "View a pull request",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -117,20 +113,12 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			var owner, repo string
-			var number string
-
-			if len(args) == 1 {
-				return fmt.Errorf("repository and PR number required")
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
 			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number = args[1]
+			owner, repo := repository.Owner, repository.Name
+			number := remaining[0]
 
 			var pr api.PullRequest
 			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
@@ -180,7 +168,7 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "create [<owner>/]<repo>",
+		Use:   "create [<owner>/<repo>]",
 		Short: "Create a pull request",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -194,16 +182,11 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			var owner, repo string
-			if len(args) == 0 {
-				return fmt.Errorf("repository required")
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
 			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
+			owner, repo := repository.Owner, repository.Name
 
 			if opts.Title == "" {
 				return fmt.Errorf("title is required")
@@ -264,7 +247,7 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "edit [<owner>/]<repo> <number>",
+		Use:   "edit [<owner>/<repo>] <number>",
 		Short: "Edit a pull request",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -278,20 +261,12 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			var owner, repo string
-			var number string
-
-			if len(args) == 1 {
-				return fmt.Errorf("repository and PR number required")
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
 			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number = args[1]
+			owner, repo := repository.Owner, repository.Name
+			number := remaining[0]
 
 			body := map[string]interface{}{}
 			if opts.Title != "" {
@@ -325,7 +300,7 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "close [<owner>/]<repo> <number>",
+		Use:   "close [<owner>/<repo>] <number>",
 		Short: "Close a pull request",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -339,20 +314,12 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			var owner, repo string
-			var number string
-
-			if len(args) == 1 {
-				return fmt.Errorf("repository and PR number required")
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
 			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number = args[1]
+			owner, repo := repository.Owner, repository.Name
+			number := remaining[0]
 
 			body := map[string]string{
 				"state": "closed",
@@ -375,9 +342,9 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdPRReopen(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "reopen <owner>/<repo> <number>",
+		Use:   "reopen [<owner>/<repo>] <number>",
 		Short: "Reopen a pull request",
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
@@ -389,12 +356,12 @@ func newCmdPRReopen(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
 			}
-			owner, repo := parts[0], parts[1]
-			number := args[1]
+			owner, repo := repository.Owner, repository.Name
+			number := remaining[0]
 
 			body := map[string]string{
 				"state": "open",
@@ -416,7 +383,7 @@ func newCmdPRReopen(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "diff [<owner>/]<repo> <number>",
+		Use:   "diff [<owner>/<repo>] <number>",
 		Short: "Show diff of a pull request",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -425,20 +392,12 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			var owner, repo string
-			var number string
-
-			if len(args) == 1 {
-				return fmt.Errorf("repository and PR number required")
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
 			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number = args[1]
+			owner, repo := repository.Owner, repository.Name
+			number := remaining[0]
 
 			client, err := newAPIClient(f, token)
 			if err != nil {
