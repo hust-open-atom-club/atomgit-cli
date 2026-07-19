@@ -155,8 +155,8 @@ func TestBrowseNumberAPICallsReturnError(t *testing.T) {
 func TestBrowseFilePath(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
-		Config:       browseTestConfig{},
-		HttpClient:   mockRepoHTTPClient("main"),
+		Config:     browseTestConfig{},
+		HttpClient: mockRepoHTTPClient("main"),
 		BrowserOpener: func(rawURL string) error {
 			capturedURL = rawURL
 			return nil
@@ -175,8 +175,8 @@ func TestBrowseFilePath(t *testing.T) {
 func TestBrowseFileWithLine(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
-		Config:       browseTestConfig{},
-		HttpClient:   mockRepoHTTPClient("main"),
+		Config:     browseTestConfig{},
+		HttpClient: mockRepoHTTPClient("main"),
 		BrowserOpener: func(rawURL string) error {
 			capturedURL = rawURL
 			return nil
@@ -195,8 +195,8 @@ func TestBrowseFileWithLine(t *testing.T) {
 func TestBrowseFileWithLineRange(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
-		Config:       browseTestConfig{},
-		HttpClient:   mockRepoHTTPClient("main"),
+		Config:     browseTestConfig{},
+		HttpClient: mockRepoHTTPClient("main"),
 		BrowserOpener: func(rawURL string) error {
 			capturedURL = rawURL
 			return nil
@@ -215,8 +215,8 @@ func TestBrowseFileWithLineRange(t *testing.T) {
 func TestBrowseNonMainDefaultBranch(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
-		Config:       browseTestConfig{},
-		HttpClient:   mockRepoHTTPClient("develop"),
+		Config:     browseTestConfig{},
+		HttpClient: mockRepoHTTPClient("develop"),
 		BrowserOpener: func(rawURL string) error {
 			capturedURL = rawURL
 			return nil
