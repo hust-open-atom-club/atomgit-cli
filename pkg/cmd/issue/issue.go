@@ -289,7 +289,10 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 
 			var owner, repo string
 			if len(args) == 0 {
