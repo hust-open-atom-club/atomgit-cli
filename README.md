@@ -146,6 +146,25 @@ ag repo fork owner/repo --name my-fork --public
 ag repo delete owner/repo --yes
 ```
 
+### Branch
+
+```bash
+# 列出远程分支（默认显示 30 条）
+ag branch list owner/repo
+ag branch list owner/repo --limit 100
+
+# 查看远程分支详情
+ag branch view owner/repo main
+ag branch view owner/repo feature/foo
+
+# 从指定 ref 创建远程分支
+ag branch create owner/repo feature/foo --ref main
+
+# 删除远程分支（默认需要确认；不会删除本地 Git 分支）
+ag branch delete owner/repo feature/foo
+ag branch delete owner/repo feature/foo --yes
+```
+
 ### Pull Request (pr)
 
 ```bash
