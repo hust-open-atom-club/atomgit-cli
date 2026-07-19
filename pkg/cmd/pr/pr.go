@@ -112,7 +112,10 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 
 			var owner, repo string
 			var number string
@@ -270,7 +273,10 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 
 			var owner, repo string
 			var number string
@@ -328,7 +334,10 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 
 			var owner, repo string
 			var number string
