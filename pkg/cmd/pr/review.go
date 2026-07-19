@@ -36,7 +36,10 @@ func newCmdPRReviewWithEditor(f *cmdutil.Factory, editor reviewEditor) *cobra.Co
 		Use:   "review <owner>/<repo> <number>",
 		Short: "Submit a pull request review",
 		Long: `Submit a formal review that approves a pull request, requests
-changes, or leaves a review comment. This is separate from ag pr comment.`,
+changes, or leaves a review comment. This is separate from ag pr comment.
+
+Approval bodies are optional. Request-changes and comment reviews require a
+non-empty body from --body, --body-file, or --editor.`,
 		Example: `  ag pr review owner/repo 42 --approve
   ag pr review owner/repo 42 --request-changes --body "Please add tests."
   ag pr review owner/repo 42 --comment --body-file review.md

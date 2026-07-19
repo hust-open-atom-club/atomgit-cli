@@ -211,6 +211,30 @@ ag pr close owner/repo 123
 ag pr reopen owner/repo 123
 ```
 
+#### PR 评审
+
+`ag pr review` 提交正式评审，与 `ag pr comment` 的普通评论相互独立。每次必须且只能选择 `--approve`、`--request-changes` 或 `--comment` 之一；请求修改和评审评论必须提供非空正文。
+
+```bash
+# 批准 PR（正文可选）
+ag pr review owner/repo 123 --approve
+ag pr review owner/repo 123 --approve --body "LGTM"
+
+# 请求修改
+ag pr review owner/repo 123 --request-changes --body "Please add tests."
+
+# 提交不改变批准状态的评审评论
+ag pr review owner/repo 123 --comment --body-file review.md
+
+# 使用 VISUAL 或 EDITOR 编写正文
+ag pr review owner/repo 123 --comment --editor
+
+# 从标准输入读取正文
+printf 'Please clarify this behavior.\n' | ag pr review owner/repo 123 --comment --body-file -
+```
+
+`--body`、`--body-file` 和 `--editor` 互斥。命令会在提交前确认 PR 仍处于打开状态，并阻止当前用户误评审自己创建的 PR。
+
 #### PR 评论
 
 ```bash
