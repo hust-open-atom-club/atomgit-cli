@@ -23,6 +23,18 @@ func NewCmdTag(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
+func newAPIClient(f *cmdutil.Factory, token string) (*api.Client, error) {
+	if f.HttpClient == nil {
+		return api.NewClient(token), nil
+	}
+
+	httpClient, err := f.HttpClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
+	}
+	return api.NewClientWithHTTPClient(token, httpClient), nil
+}
+
 func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list [<owner>/]<repo>",
@@ -34,7 +46,10 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 
 			var owner, repo string
 			if len(args) == 0 {
@@ -86,7 +101,10 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 
 			var owner, repo, tagName string
 			if len(args) == 2 {
@@ -135,7 +153,10 @@ func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 
 			var owner, repo, tagName string
 			if len(args) == 2 {

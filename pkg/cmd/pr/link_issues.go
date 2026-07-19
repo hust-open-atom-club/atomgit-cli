@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -45,7 +44,10 @@ func newCmdLinkIssues(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("at least one issue number is required (--issue)")
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 
 			// Convert issue numbers to integers
 			issueNumbers := []int{}
