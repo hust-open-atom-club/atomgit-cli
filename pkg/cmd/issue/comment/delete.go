@@ -66,13 +66,15 @@ func newCmdDelete(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("只能删除自己的评论")
 			}
 
+			out := cmd.OutOrStdout()
+
 			// Confirm deletion
 			if !opts.Yes {
-				fmt.Printf("确定要删除评论 #%d 吗? [y/N]: ", commentID)
+				fmt.Fprintf(out, "确定要删除评论 #%d 吗? [y/N]: ", commentID)
 				var response string
 				fmt.Scanln(&response)
 				if strings.ToLower(response) != "y" && strings.ToLower(response) != "yes" {
-					fmt.Println("取消删除")
+					fmt.Fprintln(out, "取消删除")
 					return nil
 				}
 			}
@@ -82,7 +84,7 @@ func newCmdDelete(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("failed to delete comment: %w", err)
 			}
 
-			fmt.Printf("Deleted comment #%d\n", commentID)
+			fmt.Fprintf(out, "Deleted comment #%d\n", commentID)
 			return nil
 		},
 	}

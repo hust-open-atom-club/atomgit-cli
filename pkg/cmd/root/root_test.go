@@ -2,12 +2,14 @@ package root
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 
 	internalversion "atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 	versioncmd "atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/version"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
+	"github.com/spf13/cobra"
 )
 
 func setVersionMetadata(t *testing.T) {
@@ -30,8 +32,8 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 	}
 
 	want := map[string]bool{
-		"auth": false, "issue": false, "label": false, "license": false, "pr": false,
-		"repo": false, "run": false, "ssh-key": false, "tag": false, "version": false,
+		"auth": false, "branch": false, "issue": false, "label": false, "license": false,
+		"pr": false, "repo": false, "run": false, "ssh-key": false, "tag": false, "version": false,
 	}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
@@ -98,5 +100,57 @@ func TestNewCmdRootVersionHelp(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "--version") {
 		t.Errorf("help output does not mention --version: %s", out.String())
+	}
+	if !strings.Contains(out.String(), "--raw-output") {
+		t.Errorf("help output does not mention --raw-output: %s", out.String())
+	}
+}
+
+func TestRootSanitizesPipedOutputByDefault(t *testing.T) {
+	payload := "unsafe \x1b]52;c;attack\x07\n"
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "emit",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprint(cmd.OutOrStdout(), payload)
+			return err
+		},
+	})
+	cmd.SetArgs([]string{"emit"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := stdout.String(), "unsafe \\x1b]52;c;attack\\x07\n"; got != want {
+		t.Fatalf("stdout = %q, want %q", got, want)
+	}
+}
+
+func TestRootRawOutputIsExplicitOptOut(t *testing.T) {
+	payload := "raw \x1b[31mtext\x1b[0m\n"
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "emit",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprint(cmd.OutOrStdout(), payload)
+			return err
+		},
+	})
+	cmd.SetArgs([]string{"--raw-output", "emit"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if got := stdout.String(); got != payload {
+		t.Fatalf("stdout = %q, want raw %q", got, payload)
 	}
 }

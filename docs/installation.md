@@ -1,6 +1,6 @@
 # 安装指南
 
-AtomGit CLI 支持 macOS、Linux 和 Windows，可通过自动安装脚本、手动下载预编译文件或从源码构建进行安装。
+AtomGit CLI 支持 macOS、Linux 和 Windows，可通过自动安装脚本、npm、Nix、手动下载预编译文件或从源码构建进行安装。
 
 ## 自动化安装（推荐）
 
@@ -11,7 +11,7 @@ AtomGit CLI 支持 macOS、Linux 和 Windows，可通过自动安装脚本、手
 请在终端执行：
 
 ```bash
-curl -fsSL "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/latest/download/install.sh" | sh
+curl -fsSL "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.sh" | sh
 ```
 
 脚本默认将 `ag` 安装到 `/usr/local/bin`；该目录不可写时，会改用 `~/.local/bin`。如果安装目录不在 `PATH` 中，脚本会输出相应的配置提示。
@@ -21,13 +21,13 @@ curl -fsSL "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/latest/
 请在 Windows PowerShell 5.1 或 PowerShell 7+ 中执行：
 
 ```powershell
-irm "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/latest/download/install.ps1" | iex
+irm "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1" | iex
 ```
 
 `irm` 是 `Invoke-RestMethod` 的别名。若当前环境不支持该别名，可执行：
 
 ```powershell
-Invoke-RestMethod -Uri "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/latest/download/install.ps1" | Invoke-Expression
+Invoke-RestMethod -Uri "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1" | Invoke-Expression
 ```
 
 如果系统禁止运行脚本，可先为当前用户设置执行策略（只需执行一次）：
@@ -38,9 +38,114 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 脚本默认安装到 `%USERPROFILE%\.local\bin`，并将该目录加入当前用户的 `Path`。
 
+## 使用 npm 安装
+
+npm 安装需要 Node.js 18 或更高版本。执行：
+
+```bash
+npm install --global @hust-open-atom-club/atomgit-cli
+```
+
+npm 主包通过 `optionalDependencies` 声明六个平台二进制包。npm 根据当前操作系统和 CPU 架构只安装匹配的包，整个过程不使用 `postinstall`，运行 `ag` 时也不会额外联网下载或写入包目录。
+
+请勿使用 `--omit=optional` 安装；该选项会跳过平台二进制包，使 `ag` 无法启动。
+
+| 操作系统 | 支持的处理器架构 |
+| --- | --- |
+| macOS | x64（Intel）、arm64（Apple Silicon） |
+| Linux | x64 / amd64、arm64 / aarch64 |
+| Windows | x64 / amd64、arm64 |
+
+npm 主包、六个平台包与 AtomGit Release tag 一一对应，版本必须完全一致。执行 `make release VERSION=vX.Y.Z` 会在 `dist/vX.Y.Z/npm/` 生成七个 npm tarball 和独立的 `checksums.txt`，供发布前本地校验；这些 npm 文件不作为 AtomGit Release 附件上传。发布时必须先发布六个平台包，确认它们可从 npm registry 获取后，再发布主包。
+
+准备新版本时，先同步所有 npm 版本字段：
+
+```bash
+npm run version:npm -- X.Y.Z
+```
+
+安装完成后验证：
+
+```bash
+ag version
+```
+
 ## 使用 Nix 安装
 
-仓库提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake。安装到当前用户的 Nix profile：
+AtomGit CLI 已进入 `nixos-unstable`，nixpkgs 包名为 `atomgit-cli`，安装后提供 `ag` 命令。
+
+如果你的 Nix registry 或 flake input 已指向 `nixos-unstable`，可以直接安装：
+
+```bash
+nix profile install nixpkgs#atomgit-cli
+ag version
+```
+
+如果你使用的是稳定版 nixpkgs，可以显式从 `nixos-unstable` 安装：
+
+```bash
+nix profile install github:NixOS/nixpkgs/nixos-unstable#atomgit-cli
+ag version
+```
+
+也可以在不安装的情况下临时运行：
+
+```bash
+nix run github:NixOS/nixpkgs/nixos-unstable#atomgit-cli -- version
+```
+
+### 使用 Home Manager 或 NixOS 安装
+
+如果系统本身已经使用 `nixos-unstable`，可以直接把 `pkgs.atomgit-cli` 加入系统或用户环境：
+
+```nix
+{
+  environment.systemPackages = [
+    pkgs.atomgit-cli
+  ];
+}
+```
+
+Home Manager：
+
+```nix
+{
+  home.packages = [
+    pkgs.atomgit-cli
+  ];
+}
+```
+
+如果系统使用稳定版 nixpkgs，可以额外引入 `nixos-unstable`，只从 unstable 安装 AtomGit CLI。先在 flake inputs 中加入：
+
+```nix
+{
+  inputs.nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+}
+```
+
+确保 NixOS 的 `specialArgs` 或 Home Manager 的 `extraSpecialArgs` 已传入 `inputs`，然后在 module 中使用：
+
+```nix
+{ pkgs, inputs, ... }:
+
+let
+  unstable = import inputs.nixpkgs-unstable {
+    system = pkgs.stdenv.hostPlatform.system;
+  };
+in
+{
+  environment.systemPackages = [
+    unstable.atomgit-cli
+  ];
+}
+```
+
+Home Manager 中同样可以将 `unstable.atomgit-cli` 加入 `home.packages`。
+
+### 使用本仓库 flake 安装开发版
+
+仓库仍提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake。需要跟随本仓库最新源码或指定 revision 时，可以直接使用仓库 flake：
 
 ```bash
 nix profile install git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag
@@ -53,9 +158,7 @@ ag version
 nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag -- version
 ```
 
-### 使用 Home Manager 或 NixOS 安装
-
-以下是完整的 flake 配置示例。`pkgs` 由 `nixpkgs` 为目标系统实例化，并通过 `pkgs.stdenv.hostPlatform.system` 选择对应的 AtomGit CLI package：
+以下是使用本仓库 flake 的完整配置示例。`pkgs` 由 `nixpkgs` 为目标系统实例化，并通过 `pkgs.stdenv.hostPlatform.system` 选择对应的 AtomGit CLI package：
 
 ```nix
 {

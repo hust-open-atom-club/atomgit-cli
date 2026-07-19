@@ -249,3 +249,58 @@ func TestPRDiff(t *testing.T) {
 		})
 	}
 }
+
+func TestPRReopenSendsOpenState(t *testing.T) {
+	var gotMethod, gotPath, gotBody string
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				gotMethod = req.Method
+				gotPath = req.URL.Path
+				b, _ := io.ReadAll(req.Body)
+				gotBody = string(b)
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"state":"opened"}`)), Header: make(http.Header)}, nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRReopen(factory)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "5"}); err != nil {
+		t.Fatal(err)
+	}
+	if gotMethod != http.MethodPatch {
+		t.Errorf("method = %s, want PATCH", gotMethod)
+	}
+	if gotPath != "/api/v5/repos/alice/demo/pulls/5" {
+		t.Errorf("path = %s, want /api/v5/repos/alice/demo/pulls/5", gotPath)
+	}
+	if !strings.Contains(gotBody, `"state":"open"`) {
+		t.Errorf("body = %s, want state:open", gotBody)
+	}
+}
+
+func TestPRReopenRejectsWrongArgCount(t *testing.T) {
+	cmd := newCmdPRReopen(&cmdutil.Factory{Config: prTestConfig{}})
+	if err := cmd.Args(cmd, []string{"alice/demo"}); err == nil {
+		t.Fatal("reopen accepted 1 arg, want error")
+	}
+	if err := cmd.Args(cmd, []string{"alice/demo", "5", "extra"}); err == nil {
+		t.Fatal("reopen accepted 3 args, want error")
+	}
+}
+
+func TestPRReopenWrapsAPIError(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader(`{"message":"not found"}`)), Header: make(http.Header)}, nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRReopen(factory)
+	err := cmd.RunE(cmd, []string{"alice/demo", "5"})
+	if err == nil || !strings.Contains(err.Error(), "failed to reopen PR") {
+		t.Fatalf("error = %v, want 'failed to reopen PR'", err)
+	}
+}

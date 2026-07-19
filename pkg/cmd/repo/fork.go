@@ -2,6 +2,7 @@ package repo
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -28,21 +29,10 @@ func newCmdRepoFork(f *cmdutil.Factory) *cobra.Command {
 Creates a fork of the specified repository under your account or an organization.
 
 By default, the fork will have the same visibility as the original repository.
-Use --public or --private to override this.`,
-		Example: `  # Fork a repository to your account
-  ag repo fork shinwell_hu/my-project
-
-  # Fork and rename
-  ag repo fork shinwell_hu/my-project --name my-fork
-
-  # Fork as public repository
-  ag repo fork shinwell_hu/my-project --public
-
-  # Fork and clone locally
-  ag repo fork shinwell_hu/my-project --clone`,
+Use --private or --public to override.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runFork(f, opts, args[0])
+			return runFork(cmd.OutOrStdout(), f, opts, args[0])
 		},
 	}
 
@@ -55,7 +45,7 @@ Use --public or --private to override this.`,
 	return cmd
 }
 
-func runFork(f *cmdutil.Factory, opts *ForkOptions, repoArg string) error {
+func runFork(out io.Writer, f *cmdutil.Factory, opts *ForkOptions, repoArg string) error {
 	token, err := f.Config.GetToken()
 	if err != nil {
 		return fmt.Errorf("not authenticated: %w", err)
@@ -66,34 +56,27 @@ func runFork(f *cmdutil.Factory, opts *ForkOptions, repoArg string) error {
 		return err
 	}
 
-	// Parse owner/repo
-	var owner, repoName string
 	parts := strings.Split(repoArg, "/")
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid repository format: %s (expected owner/repo)", repoArg)
 	}
-	owner, repoName = parts[0], parts[1]
+	owner, repoName := parts[0], parts[1]
 
-	// Get current user
 	currentUser, err := f.Config.GetUser()
 	if err != nil {
 		return fmt.Errorf("failed to get current user: %w", err)
 	}
 
-	// Build request body
 	body := map[string]interface{}{}
-
 	if opts.Name != "" {
 		body["name"] = opts.Name
 	}
-	// Determine visibility
 	if opts.Public {
 		body["private"] = false
 	} else if opts.Private {
 		body["private"] = true
 	}
 
-	// Fork the repository
 	var result api.Repository
 	path := fmt.Sprintf("/repos/%s/%s/forks", owner, repoName)
 	if err := client.Post(path, body, &result); err != nil {
@@ -114,16 +97,16 @@ func runFork(f *cmdutil.Factory, opts *ForkOptions, repoArg string) error {
 		}
 	}
 
-	fmt.Printf("✓ Forked %s/%s to %s/%s\n", owner, repoName, currentUser, forkName)
+	fmt.Fprintf(out, "✓ Forked %s/%s to %s/%s\n", owner, repoName, currentUser, forkName)
 	if result.HTMLURL != "" {
-		fmt.Printf("  URL: %s\n", result.HTMLURL)
+		fmt.Fprintf(out, "  URL: %s\n", result.HTMLURL)
 	}
 
 	// Clone if requested
 	if opts.Clone {
 		cloneURL := fmt.Sprintf("https://atomgit.com/%s/%s.git", currentUser, forkName)
-		fmt.Printf("\nTo clone this repository, run:\n")
-		fmt.Printf("  git clone %s\n", cloneURL)
+		fmt.Fprintf(out, "\nTo clone this repository, run:\n")
+		fmt.Fprintf(out, "  git clone %s\n", cloneURL)
 	}
 
 	return nil

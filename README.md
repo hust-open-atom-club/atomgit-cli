@@ -4,6 +4,44 @@ AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 
 ## 安装
 
+### npm
+
+需要 Node.js 18 或更高版本：
+
+```bash
+npm install --global @hust-open-atom-club/atomgit-cli
+ag version
+```
+
+npm 会通过当前操作系统和 CPU 对应的可选依赖安装预编译二进制，不需要运行 `postinstall` 脚本。
+
+### Nix / NixOS
+
+AtomGit CLI 已进入 `nixos-unstable`，包名为 `atomgit-cli`，安装后提供 `ag` 命令。
+
+如果你的 Nix registry 或 flake input 已指向 `nixos-unstable`：
+
+```bash
+nix profile install nixpkgs#atomgit-cli
+ag version
+```
+
+如果你使用的是稳定版 nixpkgs，可以显式从 `nixos-unstable` 安装：
+
+```bash
+nix profile install github:NixOS/nixpkgs/nixos-unstable#atomgit-cli
+```
+
+临时运行：
+
+```bash
+nix run github:NixOS/nixpkgs/nixos-unstable#atomgit-cli -- version
+```
+
+其他安装方式请参阅[完整安装指南](https://atomgit.com/hust-open-atom-club/atomgit-cli/blob/main/docs/installation.md)。
+
+### 从源码构建
+
 ```bash
 # 构建到 bin/ag（Windows 为 bin/ag.exe）
 make build
@@ -11,23 +49,6 @@ make build
 # 安装到 $GOPATH/bin
 make install
 ```
-
-### 使用 Nix 安装
-
-仓库提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake。安装到当前用户的 Nix profile：
-
-```bash
-nix profile install git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag
-ag version
-```
-
-也可以在不安装的情况下直接运行：
-
-```bash
-# 直接运行
-nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag -- version
-```
-其他安装方式请参阅[完整安装指南](https://atomgit.com/hust-open-atom-club/atomgit-cli/blob/main/docs/installation.md)。
 
 ## 配置
 
@@ -65,6 +86,10 @@ nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag -- version
 | `token_type` | 是 | 令牌认证类型。当前 PAT 和 OAuth 访问令牌均使用 `Bearer`。 |
 
 `ag auth login` 会自动写入上述 OAuth 字段；手动使用 PAT 时不要自行编造 `refresh_token`、`expires_in` 或 `created_at`。请确保配置文件仅允许当前用户读取和写入令牌文件。
+
+### 输出安全
+
+`ag` 默认会将终端控制字符转换为可见转义文本，包括输出经管道转发时，以防止仓库、Issue、PR 或 Git 服务端返回的内容注入终端控制序列。确实需要为机器处理保留原始字节时，可显式使用全局参数 `--raw-output`，例如 `ag --raw-output pr diff owner/repo 123`；请勿将未经检查的原始输出直接转发到终端。
 
 ## 命令
 
@@ -121,6 +146,25 @@ ag repo fork owner/repo --name my-fork --public
 ag repo delete owner/repo --yes
 ```
 
+### Branch
+
+```bash
+# 列出远程分支（默认显示 30 条）
+ag branch list owner/repo
+ag branch list owner/repo --limit 100
+
+# 查看远程分支详情
+ag branch view owner/repo main
+ag branch view owner/repo feature/foo
+
+# 从指定 ref 创建远程分支
+ag branch create owner/repo feature/foo --ref main
+
+# 删除远程分支（默认需要确认；不会删除本地 Git 分支）
+ag branch delete owner/repo feature/foo
+ag branch delete owner/repo feature/foo --yes
+```
+
 ### Pull Request (pr)
 
 ```bash
@@ -139,6 +183,9 @@ ag pr create owner/repo --title "Fix bug" --body "Description" --base main --hea
 
 # 关闭 PR
 ag pr close owner/repo 123
+
+# 重新打开 PR
+ag pr reopen owner/repo 123
 ```
 
 #### PR 评论
@@ -183,6 +230,9 @@ ag issue edit owner/repo 42 --body-file details.md
 
 # 创建 Issue
 ag issue create owner/repo --title "Bug report" --body "Description"
+
+# 重新打开 Issue
+ag issue reopen owner/repo 42
 ```
 
 #### Issue 评论
@@ -284,28 +334,38 @@ ag version --json
 发布版使用 [GoReleaser](https://goreleaser.com/install/) 打包，tag 统一使用 `vX.Y.Z` 三段式 SemVer。正式发布前应先提交所有改动，并在当前 HEAD 创建版本 tag：
 
 ```bash
-git tag v0.5.0
-make release VERSION=v0.5.0
+npm run version:npm -- 0.6.0
+git tag v0.6.0
+make release VERSION=v0.6.0
 ```
 
-`make release` 会检查工作区干净、tag 存在且指向当前 HEAD，然后在 `dist/v0.5.0/` 生成以下文件：
+`make release` 会检查工作区干净、tag 存在且指向当前 HEAD，然后在 `dist/v0.6.0/` 生成以下文件：
 
 - Linux 和 macOS 的 amd64/arm64 `.tar.gz` 归档。
 - Windows 的 amd64/arm64 `.zip` 归档。
 - 已绑定当前 tag 的 `install.sh` 和 `install.ps1`。
-- 覆盖上述六个归档和两个安装脚本的 `checksums.txt`。
+- `npm/` 下的六个平台二进制包、一个主启动包和独立的 `npm/checksums.txt`。
+- 仅覆盖 AtomGit Release 附件（六个归档和两个安装脚本）的根 `checksums.txt`。
+
+发布 npm 制品时，先发布 `npm/` 下六个名称带平台和架构的包；确认它们可用后，再发布 `atomgit-cli` 主包。主包和平台包必须使用相同版本。
 
 上传 Release 附件前可校验所有制品：
 
 ```bash
 # Linux
-(cd dist/v0.5.0 && sha256sum -c checksums.txt)
+(cd dist/v0.6.0 && sha256sum -c checksums.txt)
 
 # macOS
-(cd dist/v0.5.0 && shasum -a 256 -c checksums.txt)
+(cd dist/v0.6.0 && shasum -a 256 -c checksums.txt)
 ```
 
-未创建 tag 时，可使用 `make release-snapshot VERSION=v0.5.0` 进行本地试打包。Snapshot 允许脏工作区，其制品仅用于验证，不应上传到正式 Release。
+npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registry 前单独校验：
+
+```bash
+(cd dist/v0.6.0/npm && shasum -a 256 -c checksums.txt)
+```
+
+未创建 tag 时，可使用 `make release-snapshot VERSION=v0.6.0` 进行本地试打包。Snapshot 允许脏工作区，其制品仅用于验证，不应上传到正式 Release。
 
 底层 `scripts/build-release.sh` 也接受 `TAG`、`AG_RELEASE_SNAPSHOT=1` 和 `SOURCE_DATE_EPOCH` 环境变量。`SOURCE_DATE_EPOCH` 会同时固定二进制中的构建日期以及归档内文件的时间戳，用于生成可复现的发布制品；历史两段式 tag 仅保留给 snapshot 兼容。
 
@@ -334,6 +394,8 @@ atomgit-cli/
 ├── Makefile                    # 构建、测试、安装和发布入口
 ├── install.sh                  # Linux/macOS 安装脚本
 ├── install.ps1                 # Windows 安装脚本
+├── bin/ag.js                   # npm 主包的平台二进制启动器
+├── scripts/build-npm-packages.js # 从 Release 归档生成七个 npm 包
 ├── cmd/ag/main.go              # 入口
 ├── internal/
 │   ├── agcmd/cmd.go            # 核心命令处理

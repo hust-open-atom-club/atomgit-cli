@@ -3,8 +3,8 @@
 # 仓库: https://atomgit.com/hust-open-atom-club/atomgit-cli
 #
 # 用法:
-#   curl -fsSL https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/v0.5.0/install.sh | sh
-#   AG_VERSION=v0.5.0 sh install.sh
+#   curl -fsSL https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/v0.6.0/install.sh | sh
+#   AG_VERSION=v0.6.0 sh install.sh
 #   AG_FROM_SOURCE=1 sh install.sh    # 从本仓库源码构建（需 git、Go）
 
 set -eu
@@ -13,7 +13,7 @@ REPO_OWNER="${AG_REPO_OWNER:-hust-open-atom-club}"
 REPO_NAME="${AG_REPO_NAME:-atomgit-cli}"
 BASE_URL="https://atomgit.com/${REPO_OWNER}/${REPO_NAME}"
 # 默认下载该 tag 下的预编译包。仓库内请随最新 Release 更新；也可用 make release 生成 dist/<tag>/install.sh（已写入本次 TAG）再上传。
-_BUNDLED_TAG="v0.5.0"
+_BUNDLED_TAG="v0.6.0"
 DEFAULT_VERSION="${AG_DEFAULT_VERSION:-${_BUNDLED_TAG}}"
 VERSION="${AG_VERSION:-$DEFAULT_VERSION}"
 
