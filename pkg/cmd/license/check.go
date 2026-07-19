@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
@@ -25,8 +26,9 @@ func newCmdCheck(f *cmdutil.Factory) *cobra.Command {
 			params.Add("license", license)
 			fullURL := baseURL + "?" + params.Encode()
 
-			// Make HTTP GET request
-			resp, err := http.Get(fullURL)
+			// Make HTTP GET request with timeout
+			client := &http.Client{Timeout: 30 * time.Second}
+			resp, err := client.Get(fullURL)
 			if err != nil {
 				return fmt.Errorf("failed to check license: %w", err)
 			}
