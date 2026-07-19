@@ -183,6 +183,9 @@ ag pr create owner/repo --title "Fix bug" --body "Description" --base main --hea
 
 # 关闭 PR
 ag pr close owner/repo 123
+
+# 重新打开 PR
+ag pr reopen owner/repo 123
 ```
 
 #### PR 评论
@@ -227,6 +230,9 @@ ag issue edit owner/repo 42 --body-file details.md
 
 # 创建 Issue
 ag issue create owner/repo --title "Bug report" --body "Description"
+
+# 重新打开 Issue
+ag issue reopen owner/repo 42
 ```
 
 #### Issue 评论

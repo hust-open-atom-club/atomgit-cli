@@ -23,6 +23,7 @@ func NewCmdIssue(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdIssueEdit(f))
 	cmd.AddCommand(newCmdIssueClose(f))
 	cmd.AddCommand(newCmdIssueLabel(f))
+	cmd.AddCommand(newCmdIssueReopen(f))
 	cmd.AddCommand(comment.NewCmdComment(f))
 
 	return cmd
@@ -84,6 +85,62 @@ func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			fmt.Fprintf(cmd.OutOrStdout(), "Closed issue #%s\n", number)
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func newCmdIssueReopen(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "reopen <owner>/<repo> <number>",
+		Short: "Reopen an issue",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
+			}
+
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
+
+			parts := strings.Split(args[0], "/")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			}
+			owner, repo := parts[0], parts[1]
+			number := args[1]
+
+			issuePath := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
+			var current api.Issue
+			if err := client.Get(issuePath, &current); err != nil {
+				return fmt.Errorf("failed to get issue: %w", err)
+			}
+
+			updatePath := fmt.Sprintf("/repos/%s/issues/%s", owner, number)
+			fields := map[string]string{
+				"repo":  repo,
+				"title": current.Title,
+				"state": "reopen",
+			}
+			if err := client.PatchForm(updatePath, fields, nil); err != nil {
+				return fmt.Errorf("failed to reopen issue: %w", err)
+			}
+
+			var verified api.Issue
+			if err := client.Get(issuePath, &verified); err != nil {
+				return fmt.Errorf("failed to verify issue state: %w", err)
+			}
+			if !strings.EqualFold(strings.TrimSpace(verified.State), "open") {
+				return fmt.Errorf("issue #%s is still not open after update (state: %q)", number, verified.State)
+			}
+
+			cmd.Printf("Reopened issue #%s\n", number)
 
 			return nil
 		},
