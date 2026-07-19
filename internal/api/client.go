@@ -152,9 +152,7 @@ func (c *Client) Post(path string, body, result interface{}) error {
 	}
 
 	if result != nil {
-		if err := json.NewDecoder(resp.Body).Decode(result); err != nil && err != io.EOF {
-			return err
-		}
+		return json.NewDecoder(resp.Body).Decode(result)
 	}
 	return nil
 }
