@@ -151,10 +151,10 @@ func (c *Client) Post(path string, body, result interface{}) error {
 		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
 	}
 
-	if result != nil {
-		return json.NewDecoder(resp.Body).Decode(result)
+	if result == nil || resp.StatusCode == http.StatusNoContent {
+		return nil
 	}
-	return nil
+	return json.NewDecoder(resp.Body).Decode(result)
 }
 
 func (c *Client) Put(path string, body, result interface{}) error {

@@ -282,7 +282,7 @@ func TestPostReturnsEOFWhenResultIsExpected(t *testing.T) {
 		statusCode int
 	}{
 		{name: "200 empty body", statusCode: http.StatusOK},
-		{name: "204 empty body", statusCode: http.StatusNoContent},
+		{name: "201 empty body", statusCode: http.StatusCreated},
 	}
 
 	for _, tt := range tests {
@@ -297,6 +297,20 @@ func TestPostReturnsEOFWhenResultIsExpected(t *testing.T) {
 				t.Fatalf("Post() error = %v, want io.EOF", err)
 			}
 		})
+	}
+}
+
+func TestPostAcceptsNoContentWithResult(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	result := map[string]bool{"existing": true}
+	if err := client.Post("/resource", nil, &result); err != nil {
+		t.Fatalf("Post() error = %v", err)
+	}
+	if !result["existing"] {
+		t.Fatalf("Post() replaced the existing result: %#v", result)
 	}
 }
 
