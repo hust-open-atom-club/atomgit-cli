@@ -353,20 +353,53 @@ func TestBrowseInvalidRepoFlag(t *testing.T) {
 
 func TestClassifyArg(t *testing.T) {
 	tests := []struct {
+		name string
 		arg  string
 		want argType
 	}{
-		{"42", argTypeNumber},
-		{"abc123def456", argTypeCommit},
-		{"abc123", argTypeCommit},
-		{"abcdefabcdefabcdefabcdefabcdefabcdefabcd", argTypeCommit},
-		{"main.go", argTypePath},
-		{"pkg/cmd/main.go", argTypePath},
-		{"abc", argTypePath},
-		{"abc12", argTypePath},
+		{
+			name: "number",
+			arg:  "42",
+			want: argTypeNumber,
+		},
+		{
+			name: "commit-with-hex-letters",
+			arg:  "abc123def456",
+			want: argTypeCommit,
+		},
+		{
+			name: "short-commit",
+			arg:  "abc123",
+			want: argTypeCommit,
+		},
+		{
+			name: "long-commit",
+			arg:  "abcdefabcdefabcdefabcdefabcdefabcdefabcd",
+			want: argTypeCommit,
+		},
+		{
+			name: "single-file",
+			arg:  "main.go",
+			want: argTypePath,
+		},
+		{
+			name: "nested-file",
+			arg:  "pkg/cmd/main.go",
+			want: argTypePath,
+		},
+		{
+			name: "plain-text",
+			arg:  "abc",
+			want: argTypePath,
+		},
+		{
+			name: "short-non-commit",
+			arg:  "abc12",
+			want: argTypePath,
+		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.arg, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			if got := classifyArg(tt.arg); got != tt.want {
 				t.Errorf("classifyArg(%q) = %d, want %d", tt.arg, got, tt.want)
 			}
@@ -376,18 +409,70 @@ func TestClassifyArg(t *testing.T) {
 
 func TestParseFilePathArg(t *testing.T) {
 	tests := []struct {
+		name               string
 		arg                string
 		wantPath           string
 		wantStart, wantEnd int
 	}{
-		{"main.go", "main.go", 0, 0},
-		{"main.go:312", "main.go", 312, 0},
-		{"main.go:312-320", "main.go", 312, 320},
-		{"main.go:312..320", "main.go", 312, 320},
-		{"pkg/cmd/main.go:42", "pkg/cmd/main.go", 42, 0},
+		{
+			name:      "plain-path",
+			arg:       "main.go",
+			wantPath:  "main.go",
+			wantStart: 0,
+			wantEnd:   0,
+		},
+		{
+			name:      "single-line",
+			arg:       "main.go:312",
+			wantPath:  "main.go",
+			wantStart: 312,
+			wantEnd:   0,
+		},
+		{
+			name:      "line-range-dash",
+			arg:       "main.go:312-320",
+			wantPath:  "main.go",
+			wantStart: 312,
+			wantEnd:   320,
+		},
+		{
+			name:      "line-range-dots",
+			arg:       "main.go:312..320",
+			wantPath:  "main.go",
+			wantStart: 312,
+			wantEnd:   320,
+		},
+		{
+			name:      "nested-file-line",
+			arg:       "pkg/cmd/main.go:42",
+			wantPath:  "pkg/cmd/main.go",
+			wantStart: 42,
+			wantEnd:   0,
+		},
+		{
+			name:      "colon-in-file-name",
+			arg:       "docs/chapter:notes.md",
+			wantPath:  "docs/chapter:notes.md",
+			wantStart: 0,
+			wantEnd:   0,
+		},
+		{
+			name:      "invalid-line-suffix-letters",
+			arg:       "main.go:abc",
+			wantPath:  "main.go:abc",
+			wantStart: 0,
+			wantEnd:   0,
+		},
+		{
+			name:      "invalid-line-suffix-mixed",
+			arg:       "main.go:12x",
+			wantPath:  "main.go:12x",
+			wantStart: 0,
+			wantEnd:   0,
+		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.arg, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			path, start, end := parseFilePathArg(tt.arg)
 			if path != tt.wantPath || start != tt.wantStart || end != tt.wantEnd {
 				t.Errorf("parseFilePathArg(%q) = (%q, %d, %d), want (%q, %d, %d)",

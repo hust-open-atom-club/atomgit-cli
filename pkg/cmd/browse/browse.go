@@ -123,6 +123,7 @@ const (
 
 var digitsRe = regexp.MustCompile(`^\d+$`)
 var hexHashRe = regexp.MustCompile(`^[0-9a-fA-F]{6,40}$`)
+var fileLineRe = regexp.MustCompile(`^(\d+)(?:-(\d+)|\.\.(\d+))?$`)
 
 func classifyArg(arg string) argType {
 	if digitsRe.MatchString(arg) {
@@ -139,19 +140,18 @@ func parseFilePathArg(arg string) (path string, lineStart, lineEnd int) {
 	if idx < 0 {
 		return arg, 0, 0
 	}
-	path = arg[:idx]
 	linePart := arg[idx+1:]
-
-	linePart = strings.Replace(linePart, "..", "-", 1)
-	parts := strings.SplitN(linePart, "-", 2)
-
-	if start, err := strconv.Atoi(parts[0]); err == nil {
-		lineStart = start
+	matches := fileLineRe.FindStringSubmatch(linePart)
+	if matches == nil {
+		return arg, 0, 0
 	}
-	if len(parts) == 2 {
-		if end, err := strconv.Atoi(parts[1]); err == nil {
-			lineEnd = end
-		}
+
+	path = arg[:idx]
+	lineStart, _ = strconv.Atoi(matches[1])
+	if matches[2] != "" {
+		lineEnd, _ = strconv.Atoi(matches[2])
+	} else if matches[3] != "" {
+		lineEnd, _ = strconv.Atoi(matches[3])
 	}
 	return path, lineStart, lineEnd
 }
