@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -219,7 +220,7 @@ func TestRunCreateSelectsNamespaceAndBody(t *testing.T) {
 				return forkResponse(http.StatusCreated, `{"name":"demo","web_url":"https://atomgit.com/alice/demo"}`), nil
 			})
 			factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
-			err := runCreate(factory, &CreateOptions{Name: tt.repository, Description: "description", Public: tt.public})
+			err := runCreate(io.Discard, factory, &CreateOptions{Name: tt.repository, Description: "description", Public: tt.public})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -232,7 +233,7 @@ func TestRunCreateReportsAPIError(t *testing.T) {
 		return forkResponse(http.StatusForbidden, `{"message":"denied"}`), nil
 	})
 	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
-	err := runCreate(factory, &CreateOptions{Name: "demo"})
+	err := runCreate(io.Discard, factory, &CreateOptions{Name: "demo"})
 	if err == nil || !strings.Contains(err.Error(), "failed to create repository") || !strings.Contains(err.Error(), "403") {
 		t.Fatalf("error = %v", err)
 	}
@@ -288,8 +289,8 @@ func TestRepoCommandsReportAuthenticationErrors(t *testing.T) {
 	}{
 		{name: "list", call: func() error { cmd := newCmdRepoList(factory); return cmd.RunE(cmd, nil) }},
 		{name: "view", call: func() error { cmd := newCmdRepoView(factory); return cmd.RunE(cmd, []string{"alice/demo"}) }},
-		{name: "create", call: func() error { return runCreate(factory, &CreateOptions{Name: "demo"}) }},
-		{name: "fork", call: func() error { return runFork(factory, &ForkOptions{}, "alice/demo") }},
+		{name: "create", call: func() error { return runCreate(io.Discard, factory, &CreateOptions{Name: "demo"}) }},
+		{name: "fork", call: func() error { return runFork(io.Discard, factory, &ForkOptions{}, "alice/demo") }},
 		{name: "delete", call: func() error {
 			cmd := newCmdRepoDelete(factory)
 			_ = cmd.Flags().Set("yes", "true")

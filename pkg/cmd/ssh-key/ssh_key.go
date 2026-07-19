@@ -42,7 +42,7 @@ func newCmdSSHKeyAdd(f *cmdutil.Factory) *cobra.Command {
 				opts.KeyFile = args[0]
 			}
 
-			return runAdd(f, opts)
+			return runAdd(cmd.OutOrStdout(), f, opts)
 		},
 	}
 
@@ -51,7 +51,7 @@ func newCmdSSHKeyAdd(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
-func runAdd(f *cmdutil.Factory, opts *AddOptions) error {
+func runAdd(out io.Writer, f *cmdutil.Factory, opts *AddOptions) error {
 	token, err := f.Config.GetToken()
 	if err != nil {
 		return fmt.Errorf("not authenticated: %w", err)
@@ -89,6 +89,6 @@ func runAdd(f *cmdutil.Factory, opts *AddOptions) error {
 		return fmt.Errorf("failed to add SSH key: %w", err)
 	}
 
-	fmt.Println("✓ SSH key added to your account")
+	fmt.Fprintln(out, "✓ SSH key added to your account")
 	return nil
 }

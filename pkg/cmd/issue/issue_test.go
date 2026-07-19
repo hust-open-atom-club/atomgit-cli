@@ -3,6 +3,8 @@ package issue
 import (
 	"bytes"
 	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
 	"strings"
 	"testing"
@@ -22,7 +24,7 @@ func (f issueRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error)
 
 func TestNewCmdIssueRegistersSubcommands(t *testing.T) {
 	cmd := NewCmdIssue(&cmdutil.Factory{})
-	want := map[string]bool{"close": false, "comment": false, "create": false, "edit": false, "label": false, "list": false, "view": false}
+	want := map[string]bool{"close": false, "comment": false, "create": false, "edit": false, "label": false, "list": false, "view": false, "reopen": false}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
 			want[child.Name()] = true
@@ -81,6 +83,129 @@ func TestIssueListHonorsLimit(t *testing.T) {
 	}
 	if requests != 1 {
 		t.Fatalf("requests = %d, want 1", requests)
+	}
+}
+
+// TestIssueReopenUsesOwnerPathWithFormData verifies that reopen:
+//  1. GETs the issue via /repos/{owner}/{repo}/issues/{number} to retrieve the title
+//  2. PATCHes via /repos/{owner}/issues/{number} (owner-only path) with
+//     multipart form fields repo, title, and state=reopen
+func TestIssueReopenUsesOwnerPathWithFormData(t *testing.T) {
+	var patchPath string
+	var formFields map[string]string
+	call := 0
+
+	issueJSON := `{"number":"7","state":"open","title":"my issue","html_url":"https://atomgit.com/alice/demo/issues/7","user":{"login":"alice"},"created_at":""}`
+
+	factory := &cmdutil.Factory{
+		Config: issueTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				call++
+				switch call {
+				case 1:
+					// GET /repos/alice/demo/issues/7
+					if req.Method != http.MethodGet {
+						t.Fatalf("call 1: method = %s, want GET", req.Method)
+					}
+					if req.URL.Path != "/api/v5/repos/alice/demo/issues/7" {
+						t.Fatalf("call 1: path = %s", req.URL.Path)
+					}
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(issueJSON)), Header: make(http.Header)}, nil
+				case 2:
+					// PATCH /repos/alice/issues/7 with multipart form
+					if req.Method != http.MethodPatch {
+						t.Fatalf("call 2: method = %s, want PATCH", req.Method)
+					}
+					patchPath = req.URL.Path
+					ct := req.Header.Get("Content-Type")
+					mediaType, params, _ := mime.ParseMediaType(ct)
+					if mediaType != "multipart/form-data" {
+						t.Fatalf("call 2: content-type = %q, want multipart/form-data", ct)
+					}
+					mr := multipart.NewReader(req.Body, params["boundary"])
+					formFields = make(map[string]string)
+					for {
+						p, err := mr.NextPart()
+						if err != nil {
+							break
+						}
+						b, _ := io.ReadAll(p)
+						formFields[p.FormName()] = string(b)
+					}
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{}`)), Header: make(http.Header)}, nil
+				case 3:
+					// GET /repos/alice/demo/issues/7 — verify state is open
+					if req.Method != http.MethodGet {
+						t.Fatalf("call 3: method = %s, want GET", req.Method)
+					}
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(issueJSON)), Header: make(http.Header)}, nil
+				default:
+					t.Fatalf("unexpected call %d", call)
+					return nil, nil
+				}
+			})}, nil
+		},
+	}
+
+	cmd := newCmdIssueReopen(factory)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "7"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if patchPath != "/api/v5/repos/alice/issues/7" {
+		t.Errorf("PATCH path = %s, want /api/v5/repos/alice/issues/7", patchPath)
+	}
+	if formFields["state"] != "reopen" {
+		t.Errorf("form field state = %q, want reopen", formFields["state"])
+	}
+	if formFields["repo"] != "demo" {
+		t.Errorf("form field repo = %q, want demo", formFields["repo"])
+	}
+	if formFields["title"] != "my issue" {
+		t.Errorf("form field title = %q, want 'my issue'", formFields["title"])
+	}
+}
+
+func TestIssueReopenFailsWhenStateRemainsClosedAfterUpdate(t *testing.T) {
+	call := 0
+	issueJSON := `{"number":"7","state":"open","title":"my issue","html_url":"https://atomgit.com/alice/demo/issues/7","user":{"login":"alice"},"created_at":""}`
+	closedJSON := `{"number":"7","state":"closed","title":"my issue","html_url":"https://atomgit.com/alice/demo/issues/7","user":{"login":"alice"},"created_at":""}`
+
+	factory := &cmdutil.Factory{
+		Config: issueTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				call++
+				switch call {
+				case 1:
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(issueJSON)), Header: make(http.Header)}, nil
+				case 2:
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{}`)), Header: make(http.Header)}, nil
+				case 3:
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(closedJSON)), Header: make(http.Header)}, nil
+				default:
+					t.Fatalf("unexpected call %d", call)
+					return nil, nil
+				}
+			})}, nil
+		},
+	}
+
+	cmd := newCmdIssueReopen(factory)
+	err := cmd.RunE(cmd, []string{"alice/demo", "7"})
+	if err == nil || !strings.Contains(err.Error(), "still not open") {
+		t.Fatalf("error = %v, want 'still not open'", err)
+	}
+}
+
+func TestIssueReopenRejectsWrongArgCount(t *testing.T) {
+	cmd := newCmdIssueReopen(&cmdutil.Factory{Config: issueTestConfig{}})
+	if err := cmd.Args(cmd, []string{"alice/demo"}); err == nil {
+		t.Fatal("reopen accepted 1 arg, want error")
+	}
+	if err := cmd.Args(cmd, []string{"alice/demo", "7", "extra"}); err == nil {
+		t.Fatal("reopen accepted 3 args, want error")
 	}
 }
 

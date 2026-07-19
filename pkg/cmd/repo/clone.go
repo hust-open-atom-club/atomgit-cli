@@ -2,7 +2,7 @@ package repo
 
 import (
 	"fmt"
-	"os"
+	"io"
 	"os/exec"
 	"strings"
 
@@ -55,7 +55,7 @@ The repository argument can be:
 			}
 			opts.Directory = targetDir
 
-			return runClone(cloneURL, opts)
+			return runClone(cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr(), cloneURL, opts)
 		},
 	}
 
@@ -122,34 +122,37 @@ func parseRepoArg(arg, defaultOwner string) (cloneURL, repoName string, err erro
 	return cloneURL, repoName, nil
 }
 
-func runClone(cloneURL string, opts *CloneOptions) error {
-	return runCloneWithCommand(cloneURL, opts, exec.Command)
+func runClone(in io.Reader, out, errOut io.Writer, cloneURL string, opts *CloneOptions) error {
+	return runCloneWithCommand(in, out, errOut, cloneURL, opts, exec.Command)
 }
 
-func runCloneWithCommand(cloneURL string, opts *CloneOptions, command func(string, ...string) *exec.Cmd) error {
+func runCloneWithCommand(in io.Reader, out, errOut io.Writer, cloneURL string, opts *CloneOptions, command func(string, ...string) *exec.Cmd) error {
 	args := []string{"clone"}
 
 	if opts.Branch != "" {
 		args = append(args, "--branch", opts.Branch)
 	}
 
-	args = append(args, cloneURL)
+	// Terminate option parsing before user-controlled positional arguments.
+	// Without this separator, a target directory such as --config=... can be
+	// interpreted by Git as an option and lead to local command execution.
+	args = append(args, "--", cloneURL)
 
 	if opts.Directory != "" {
 		args = append(args, opts.Directory)
 	}
 
 	cmd := command("git", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
+	cmd.Stdout = out
+	cmd.Stderr = errOut
+	cmd.Stdin = in
 
-	fmt.Printf("Cloning into '%s'...\n", opts.Directory)
+	fmt.Fprintf(out, "Cloning into '%s'...\n", opts.Directory)
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to clone repository: %w", err)
 	}
 
-	fmt.Printf("✓ Cloned repository to %s\n", opts.Directory)
+	fmt.Fprintf(out, "✓ Cloned repository to %s\n", opts.Directory)
 	return nil
 }

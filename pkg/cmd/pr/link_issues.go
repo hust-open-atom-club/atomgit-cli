@@ -66,10 +66,11 @@ func newCmdLinkIssues(f *cmdutil.Factory) *cobra.Command {
 			linkedIssues := opts.Issues
 
 			// Output result
+			out := cmd.OutOrStdout()
 			if len(linkedIssues) == 1 {
-				fmt.Printf("Linked issue #%s to PR #%s\n", linkedIssues[0], prNumber)
+				fmt.Fprintf(out, "Linked issue #%s to PR #%s\n", linkedIssues[0], prNumber)
 			} else {
-				fmt.Printf("Linked issues #%s to PR #%s\n", strings.Join(linkedIssues, ", #"), prNumber)
+				fmt.Fprintf(out, "Linked issues #%s to PR #%s\n", strings.Join(linkedIssues, ", #"), prNumber)
 			}
 
 			return nil
