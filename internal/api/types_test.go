@@ -34,18 +34,16 @@ func TestNumberFormatting(t *testing.T) {
 func TestPullRequestReviewRequestJSON(t *testing.T) {
 	tests := []struct {
 		name  string
-		event PullRequestReviewEvent
-		body  string
+		force bool
 		want  string
 	}{
-		{name: "approve without body", event: PullRequestReviewApprove, want: `{"event":"APPROVE"}`},
-		{name: "request changes", event: PullRequestReviewRequestChanges, body: "Please add tests.", want: `{"body":"Please add tests.","event":"REQUEST_CHANGES"}`},
-		{name: "comment", event: PullRequestReviewComment, body: "A few notes.", want: `{"body":"A few notes.","event":"COMMENT"}`},
+		{name: "normal approval", want: `{"force":false}`},
+		{name: "forced approval", force: true, want: `{"force":true}`},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := json.Marshal(PullRequestReviewRequest{Body: tt.body, Event: tt.event})
+			got, err := json.Marshal(PullRequestReviewRequest{Force: tt.force})
 			if err != nil {
 				t.Fatal(err)
 			}

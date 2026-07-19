@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -14,17 +12,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func TestPRReviewModeMapping(t *testing.T) {
+func TestPRReviewUsesAtomGitRequestModel(t *testing.T) {
 	tests := []struct {
 		name       string
-		modeFlag   string
-		body       string
-		wantEvent  api.PullRequestReviewEvent
+		force      bool
 		wantOutput string
 	}{
-		{name: "approve", modeFlag: "approve", wantEvent: api.PullRequestReviewApprove, wantOutput: "Approved PR #42: https://atomgit.com/alice/demo/reviews/9\n"},
-		{name: "request changes", modeFlag: "request-changes", body: "Please add tests.", wantEvent: api.PullRequestReviewRequestChanges, wantOutput: "Requested changes on PR #42: https://atomgit.com/alice/demo/reviews/9\n"},
-		{name: "comment", modeFlag: "comment", body: "A few notes.", wantEvent: api.PullRequestReviewComment, wantOutput: "Submitted review comment on PR #42: https://atomgit.com/alice/demo/reviews/9\n"},
+		{name: "approve", wantOutput: "Approved PR #42: https://atomgit.com/alice/demo/pulls/42\n"},
+		{name: "force approve", force: true, wantOutput: "Force-approved PR #42: https://atomgit.com/alice/demo/pulls/42\n"},
 	}
 
 	for _, tt := range tests {
@@ -42,10 +37,10 @@ func TestPRReviewModeMapping(t *testing.T) {
 					if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 						t.Fatal(err)
 					}
-					if body.Event != tt.wantEvent || body.Body != tt.body {
-						t.Fatalf("review body = %#v, want event %q and body %q", body, tt.wantEvent, tt.body)
+					if body.Force != tt.force {
+						t.Fatalf("force = %v, want %v", body.Force, tt.force)
 					}
-					return prResponse(http.StatusOK, `{"id":"9","html_url":"https://atomgit.com/alice/demo/reviews/9"}`), nil
+					return prResponse(http.StatusNoContent, ""), nil
 				default:
 					t.Fatalf("unexpected request %d", requests)
 					return nil, nil
@@ -53,17 +48,14 @@ func TestPRReviewModeMapping(t *testing.T) {
 			})
 
 			cmd := newCmdPRReview(factory)
-			setFlag(t, cmd, tt.modeFlag, "true")
-			if tt.body != "" {
-				setFlag(t, cmd, "body", tt.body)
+			setFlag(t, cmd, "approve", "true")
+			if tt.force {
+				setFlag(t, cmd, "force", "true")
 			}
 			var output strings.Builder
 			cmd.SetOut(&output)
 			if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
 				t.Fatal(err)
-			}
-			if requests != 2 {
-				t.Fatalf("requests = %d, want 2", requests)
 			}
 			if output.String() != tt.wantOutput {
 				t.Fatalf("output = %q, want %q", output.String(), tt.wantOutput)
@@ -72,142 +64,15 @@ func TestPRReviewModeMapping(t *testing.T) {
 	}
 }
 
-func TestPRReviewBodySources(t *testing.T) {
-	tempDir := t.TempDir()
-	bodyPath := filepath.Join(tempDir, "review.md")
-	if err := os.WriteFile(bodyPath, []byte("body from file\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	tests := []struct {
-		name      string
-		configure func(*cobra.Command)
-		editor    reviewEditor
-		wantBody  string
-	}{
-		{
-			name: "file",
-			configure: func(cmd *cobra.Command) {
-				setFlag(t, cmd, "body-file", bodyPath)
-			},
-			wantBody: "body from file\n",
-		},
-		{
-			name: "standard input",
-			configure: func(cmd *cobra.Command) {
-				setFlag(t, cmd, "body-file", "-")
-				cmd.SetIn(strings.NewReader("body from stdin\n"))
-			},
-			wantBody: "body from stdin\n",
-		},
-		{
-			name: "editor",
-			configure: func(cmd *cobra.Command) {
-				setFlag(t, cmd, "editor", "true")
-			},
-			editor: func(*cobra.Command) (string, error) {
-				return "body from editor\n", nil
-			},
-			wantBody: "body from editor\n",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			factory := reviewTestFactory(t, reviewSuccessTransport(t, api.PullRequestReviewComment, tt.wantBody))
-			cmd := newCmdPRReviewWithEditor(factory, tt.editor)
-			setFlag(t, cmd, "comment", "true")
-			tt.configure(cmd)
-			if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
-func TestPRReviewRejectsFlagConflictsBeforeRequest(t *testing.T) {
-	tests := []struct {
-		name      string
-		flags     map[string]string
-		wantError string
-	}{
-		{name: "missing mode", flags: map[string]string{}, wantError: "exactly one"},
-		{name: "conflicting modes", flags: map[string]string{"approve": "true", "comment": "true"}, wantError: "exactly one"},
-		{name: "body and file", flags: map[string]string{"comment": "true", "body": "text", "body-file": "review.md"}, wantError: "only one of --body"},
-		{name: "body and editor", flags: map[string]string{"comment": "true", "body": "text", "editor": "true"}, wantError: "only one of --body"},
-		{name: "request changes without body", flags: map[string]string{"request-changes": "true"}, wantError: "body is required"},
-		{name: "comment without body", flags: map[string]string{"comment": "true"}, wantError: "body is required"},
-		{name: "empty request changes body", flags: map[string]string{"request-changes": "true", "body": "  \n"}, wantError: "body is required"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			factory := reviewTestFactory(t, func(*http.Request) (*http.Response, error) {
-				t.Fatal("validation error made an HTTP request")
-				return nil, nil
-			})
-			cmd := newCmdPRReview(factory)
-			for name, value := range tt.flags {
-				setFlag(t, cmd, name, value)
-			}
-			err := cmd.RunE(cmd, []string{"alice/demo", "42"})
-			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
-				t.Fatalf("error = %v, want containing %q", err, tt.wantError)
-			}
-		})
-	}
-}
-
-func TestPRReviewRejectsInvalidBodySourcesBeforeRequest(t *testing.T) {
-	tests := []struct {
-		name      string
-		configure func(*cobra.Command)
-		editor    reviewEditor
-		wantError string
-	}{
-		{
-			name: "missing file",
-			configure: func(cmd *cobra.Command) {
-				setFlag(t, cmd, "body-file", filepath.Join(t.TempDir(), "missing.md"))
-			},
-			wantError: "failed to read review body file",
-		},
-		{
-			name: "empty editor body",
-			configure: func(cmd *cobra.Command) {
-				setFlag(t, cmd, "editor", "true")
-			},
-			editor: func(*cobra.Command) (string, error) {
-				return " \n", nil
-			},
-			wantError: "body is required",
-		},
-		{
-			name: "editor failure",
-			configure: func(cmd *cobra.Command) {
-				setFlag(t, cmd, "editor", "true")
-			},
-			editor: func(*cobra.Command) (string, error) {
-				return "", fmt.Errorf("editor failed")
-			},
-			wantError: "editor failed",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			factory := reviewTestFactory(t, func(*http.Request) (*http.Response, error) {
-				t.Fatal("invalid body source made an HTTP request")
-				return nil, nil
-			})
-			cmd := newCmdPRReviewWithEditor(factory, tt.editor)
-			setFlag(t, cmd, "comment", "true")
-			tt.configure(cmd)
-			err := cmd.RunE(cmd, []string{"alice/demo", "42"})
-			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
-				t.Fatalf("error = %v, want containing %q", err, tt.wantError)
-			}
-		})
+func TestPRReviewRequiresSupportedModeBeforeRequest(t *testing.T) {
+	factory := reviewTestFactory(t, func(*http.Request) (*http.Response, error) {
+		t.Fatal("missing review mode made an HTTP request")
+		return nil, nil
+	})
+	cmd := newCmdPRReview(factory)
+	err := cmd.RunE(cmd, []string{"alice/demo", "42"})
+	if err == nil || !strings.Contains(err.Error(), "--approve is required") {
+		t.Fatalf("error = %v", err)
 	}
 }
 
@@ -226,7 +91,7 @@ func TestPRReviewValidatesPullRequestBeforeSubmission(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			requests := 0
-			factory := reviewTestFactory(t, func(req *http.Request) (*http.Response, error) {
+			factory := reviewTestFactory(t, func(*http.Request) (*http.Response, error) {
 				requests++
 				if requests > 1 {
 					t.Fatal("preflight failure submitted a review")
@@ -287,13 +152,18 @@ func TestPRReviewCommandHelp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"approve", "request-changes", "comment", "body", "body-file", "editor"} {
+	for _, name := range []string{"approve", "force"} {
 		if review.Flags().Lookup(name) == nil {
 			t.Fatalf("review flag %q was not registered", name)
 		}
 	}
-	if !strings.Contains(review.Example, "ag pr review") {
-		t.Fatalf("review examples = %q", review.Example)
+	for _, name := range []string{"request-changes", "comment", "body", "body-file", "editor"} {
+		if review.Flags().Lookup(name) != nil {
+			t.Fatalf("unsupported review flag %q was registered", name)
+		}
+	}
+	if !strings.Contains(review.Long, "not supported") || !strings.Contains(review.Example, "ag pr review") {
+		t.Fatalf("review help is missing API limitations or examples")
 	}
 }
 
@@ -324,28 +194,6 @@ func reviewTestFactory(t *testing.T, transport prRoundTripFunc) *cmdutil.Factory
 		HttpClient: func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		},
-	}
-}
-
-func reviewSuccessTransport(t *testing.T, wantEvent api.PullRequestReviewEvent, wantBody string) prRoundTripFunc {
-	t.Helper()
-	requests := 0
-	return func(req *http.Request) (*http.Response, error) {
-		requests++
-		if requests == 1 {
-			return prResponse(http.StatusOK, `{"number":42,"state":"open","user":{"login":"bob"}}`), nil
-		}
-		if requests != 2 {
-			t.Fatalf("unexpected request %d", requests)
-		}
-		var body api.PullRequestReviewRequest
-		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-			t.Fatal(err)
-		}
-		if body.Event != wantEvent || body.Body != wantBody {
-			t.Fatalf("review body = %#v, want event %q and body %q", body, wantEvent, wantBody)
-		}
-		return prResponse(http.StatusNoContent, ""), nil
 	}
 }
 

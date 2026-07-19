@@ -50,29 +50,10 @@ type PullRequest struct {
 	Mergeable bool        `json:"mergeable"`
 }
 
-// PullRequestReviewEvent is an action submitted as a formal pull request review.
-type PullRequestReviewEvent string
-
-const (
-	PullRequestReviewApprove        PullRequestReviewEvent = "APPROVE"
-	PullRequestReviewRequestChanges PullRequestReviewEvent = "REQUEST_CHANGES"
-	PullRequestReviewComment        PullRequestReviewEvent = "COMMENT"
-)
-
-// PullRequestReviewRequest represents a formal pull request review submission.
+// PullRequestReviewRequest represents AtomGit's formal review request.
+// Force only takes effect for repository administrators.
 type PullRequestReviewRequest struct {
-	Body  string                 `json:"body,omitempty"`
-	Event PullRequestReviewEvent `json:"event"`
-}
-
-// PullRequestReview represents the response from a formal review submission.
-// AtomGit may return an empty success response, so all fields are optional.
-type PullRequestReview struct {
-	ID      string                 `json:"id,omitempty"`
-	Body    string                 `json:"body,omitempty"`
-	Event   PullRequestReviewEvent `json:"event,omitempty"`
-	State   string                 `json:"state,omitempty"`
-	HTMLURL string                 `json:"html_url,omitempty"`
+	Force bool `json:"force"`
 }
 
 // GetNumber returns the PR number as a string
