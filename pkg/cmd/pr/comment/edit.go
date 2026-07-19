@@ -101,7 +101,8 @@ func newCmdEdit(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("failed to update comment: %w", err)
 			}
 
-			fmt.Fprintf(out, "Updated comment #%d: %s\n", comment.ID, comment.HTMLURL)
+			summary := fmt.Sprintf("Updated comment #%d", comment.ID)
+			cmdutil.PrintResultWithOptionalURL(out, summary, comment.HTMLURL)
 			return nil
 		},
 	}
