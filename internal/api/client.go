@@ -146,13 +146,15 @@ func (c *Client) Post(path string, body, result interface{}) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
 	}
 
 	if result != nil {
-		return json.NewDecoder(resp.Body).Decode(result)
+		if err := json.NewDecoder(resp.Body).Decode(result); err != nil && err != io.EOF {
+			return err
+		}
 	}
 	return nil
 }

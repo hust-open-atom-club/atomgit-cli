@@ -1,6 +1,9 @@
 package api
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestNumberFormatting(t *testing.T) {
 	tests := []struct {
@@ -23,6 +26,31 @@ func TestNumberFormatting(t *testing.T) {
 			}
 			if got := (&Issue{Number: tt.value}).GetNumber(); got != tt.want {
 				t.Fatalf("Issue.GetNumber() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPullRequestReviewRequestJSON(t *testing.T) {
+	tests := []struct {
+		name  string
+		event PullRequestReviewEvent
+		body  string
+		want  string
+	}{
+		{name: "approve without body", event: PullRequestReviewApprove, want: `{"event":"APPROVE"}`},
+		{name: "request changes", event: PullRequestReviewRequestChanges, body: "Please add tests.", want: `{"body":"Please add tests.","event":"REQUEST_CHANGES"}`},
+		{name: "comment", event: PullRequestReviewComment, body: "A few notes.", want: `{"body":"A few notes.","event":"COMMENT"}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := json.Marshal(PullRequestReviewRequest{Body: tt.body, Event: tt.event})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tt.want {
+				t.Fatalf("JSON = %s, want %s", got, tt.want)
 			}
 		})
 	}
