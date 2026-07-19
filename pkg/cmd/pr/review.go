@@ -47,6 +47,10 @@ by the public API.`,
 			if err != nil {
 				return fmt.Errorf("failed to determine current user: %w", err)
 			}
+			currentUser = strings.TrimSpace(currentUser)
+			if currentUser == "" {
+				return fmt.Errorf("current user is empty in stored credentials")
+			}
 
 			client, err := newAPIClient(f, token)
 			if err != nil {
@@ -65,7 +69,7 @@ by the public API.`,
 				}
 				return fmt.Errorf("cannot review PR #%d because it is %s", number, state)
 			}
-			if author := strings.TrimSpace(pullRequest.User.Login); author != "" && strings.EqualFold(strings.TrimSpace(currentUser), author) {
+			if author := strings.TrimSpace(pullRequest.User.Login); author != "" && strings.EqualFold(currentUser, author) {
 				return fmt.Errorf("cannot review your own pull request")
 			}
 

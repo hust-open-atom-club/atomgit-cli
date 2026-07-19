@@ -76,6 +76,26 @@ func TestPRReviewRequiresSupportedModeBeforeRequest(t *testing.T) {
 	}
 }
 
+func TestPRReviewRequiresCurrentUserBeforeRequest(t *testing.T) {
+	for _, user := range []string{"", " \n\t"} {
+		t.Run(fmt.Sprintf("user_%q", user), func(t *testing.T) {
+			factory := &cmdutil.Factory{
+				Config: reviewIdentityConfig{user: user},
+				HttpClient: func() (*http.Client, error) {
+					t.Fatal("empty current user created an HTTP client")
+					return nil, nil
+				},
+			}
+			cmd := newCmdPRReview(factory)
+			setFlag(t, cmd, "approve", "true")
+			err := cmd.RunE(cmd, []string{"alice/demo", "42"})
+			if err == nil || !strings.Contains(err.Error(), "current user is empty") {
+				t.Fatalf("error = %v, want current user validation error", err)
+			}
+		})
+	}
+}
+
 func TestPRReviewValidatesPullRequestBeforeSubmission(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -195,6 +215,22 @@ func reviewTestFactory(t *testing.T, transport prRoundTripFunc) *cmdutil.Factory
 			return &http.Client{Transport: transport}, nil
 		},
 	}
+}
+
+type reviewIdentityConfig struct {
+	user string
+}
+
+func (c reviewIdentityConfig) GetToken() (string, error) {
+	return "token", nil
+}
+
+func (c reviewIdentityConfig) GetUser() (string, error) {
+	return c.user, nil
+}
+
+func (reviewIdentityConfig) GetHost() string {
+	return "atomgit.com"
 }
 
 func assertReviewRequest(t *testing.T, req *http.Request, method, path string) {
