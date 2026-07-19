@@ -672,10 +672,75 @@ func TestPRMergeAPIError(t *testing.T) {
 }
 
 func TestPRMergeValidation(t *testing.T) {
-	cmd := newCmdPRMerge(&cmdutil.Factory{Config: prTestConfig{}})
-	err := cmd.RunE(cmd, []string{"invalid", "42"})
-	if err == nil || !strings.Contains(err.Error(), "invalid repository format") {
-		t.Fatalf("error = %v, want containing 'invalid repository format'", err)
+	tests := []struct {
+		name      string
+		args      []string
+		wantError string
+	}{
+		{
+			name: "invalid repository format",
+			args: []string{
+				"invalid",
+				"42",
+			},
+			wantError: "invalid repository format",
+		},
+		{
+			name: "empty owner",
+			args: []string{
+				"/repo",
+				"42",
+			},
+			wantError: "invalid repository format",
+		},
+		{
+			name: "empty repo",
+			args: []string{
+				"owner/",
+				"42",
+			},
+			wantError: "invalid repository format",
+		},
+		{
+			name: "zero PR number",
+			args: []string{
+				"owner/repo",
+				"0",
+			},
+			wantError: "invalid PR number",
+		},
+		{
+			name: "negative PR number",
+			args: []string{
+				"owner/repo",
+				"-1",
+			},
+			wantError: "invalid PR number",
+		},
+		{
+			name: "non-numeric PR number",
+			args: []string{
+				"owner/repo",
+				"abc",
+			},
+			wantError: "invalid PR number",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := newCmdPRMerge(&cmdutil.Factory{
+				Config: prTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					t.Fatal("HTTP client should not be created for invalid merge input")
+					return nil, nil
+				},
+			})
+			err := cmd.RunE(cmd, tt.args)
+			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+				t.Fatalf("error = %v, want containing %q", err, tt.wantError)
+			}
+		})
 	}
 }
 

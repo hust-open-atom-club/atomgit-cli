@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -44,6 +45,27 @@ func resolveBaseBranch(requested string, repository api.Repository) (string, err
 		return base, nil
 	}
 	return "", fmt.Errorf("repository default branch is empty; specify --base")
+}
+
+func parsePRTarget(repositoryArg, numberArg string) (string, string, string, error) {
+	parts := strings.Split(repositoryArg, "/")
+	if len(parts) != 2 {
+		return "", "", "", fmt.Errorf("invalid repository format: %s (expected owner/repo)", repositoryArg)
+	}
+
+	owner := strings.TrimSpace(parts[0])
+	repo := strings.TrimSpace(parts[1])
+	if owner == "" || repo == "" {
+		return "", "", "", fmt.Errorf("invalid repository format: %s (expected owner/repo)", repositoryArg)
+	}
+
+	numberText := strings.TrimSpace(numberArg)
+	number, err := strconv.Atoi(numberText)
+	if err != nil || number <= 0 {
+		return "", "", "", fmt.Errorf("invalid PR number: %s (expected positive integer)", numberArg)
+	}
+
+	return owner, repo, strconv.Itoa(number), nil
 }
 
 func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
@@ -482,12 +504,10 @@ By default, ag creates a merge commit. Use --rebase to rebase the commits onto t
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			owner, repo, number, err := parsePRTarget(args[0], args[1])
+			if err != nil {
+				return err
 			}
-			owner, repo := parts[0], parts[1]
-			number := args[1]
 
 			client, err := newAPIClient(f, token)
 			if err != nil {
