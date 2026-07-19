@@ -25,6 +25,7 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdPRCreate(f))
 	cmd.AddCommand(newCmdPREdit(f))
 	cmd.AddCommand(newCmdPRClose(f))
+	cmd.AddCommand(newCmdPRReopen(f))
 	cmd.AddCommand(newCmdPRDiff(f))
 	cmd.AddCommand(newCmdViewIssues(f))
 	cmd.AddCommand(newCmdLinkIssues(f))
@@ -87,8 +88,9 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
+			out := cmd.OutOrStdout()
 			for _, pr := range prs {
-				fmt.Printf("#%s %s [%s]\n", pr.GetNumber(), pr.Title, pr.State)
+				fmt.Fprintf(out, "#%s %s [%s]\n", pr.GetNumber(), pr.Title, pr.State)
 			}
 
 			return nil
@@ -143,21 +145,22 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 				labels = nil
 			}
 
-			fmt.Printf("Title: %s\n", pr.Title)
-			fmt.Printf("State: %s\n", pr.State)
-			fmt.Printf("Author: %s\n", pr.User.Login)
-			fmt.Printf("URL: %s\n", pr.HTMLURL)
-			fmt.Printf("Branch: %s -> %s\n", pr.Head.Ref, pr.Base.Ref)
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "Title: %s\n", pr.Title)
+			fmt.Fprintf(out, "State: %s\n", pr.State)
+			fmt.Fprintf(out, "Author: %s\n", pr.User.Login)
+			fmt.Fprintf(out, "URL: %s\n", pr.HTMLURL)
+			fmt.Fprintf(out, "Branch: %s -> %s\n", pr.Head.Ref, pr.Base.Ref)
 			if len(labels) > 0 {
 				labelNames := make([]string, len(labels))
 				for i, label := range labels {
 					labelNames[i] = label.Name
 				}
-				fmt.Printf("Labels: %s\n", strings.Join(labelNames, ", "))
+				fmt.Fprintf(out, "Labels: %s\n", strings.Join(labelNames, ", "))
 			}
-			fmt.Printf("Created: %s\n", pr.CreatedAt)
+			fmt.Fprintf(out, "Created: %s\n", pr.CreatedAt)
 			if pr.Body != "" {
-				fmt.Printf("\n%s\n", pr.Body)
+				fmt.Fprintf(out, "\n%s\n", pr.Body)
 			}
 
 			return nil
@@ -304,7 +307,7 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Updated PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			fmt.Fprintf(cmd.OutOrStdout(), "Updated PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
 
 			return nil
 		},
@@ -354,7 +357,48 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Closed PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			fmt.Fprintf(cmd.OutOrStdout(), "Closed PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func newCmdPRReopen(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "reopen <owner>/<repo> <number>",
+		Short: "Reopen a pull request",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
+			}
+
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
+
+			parts := strings.Split(args[0], "/")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			}
+			owner, repo := parts[0], parts[1]
+			number := args[1]
+
+			body := map[string]string{
+				"state": "open",
+			}
+
+			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
+			if err := client.Patch(path, body, nil); err != nil {
+				return fmt.Errorf("failed to reopen PR: %w", err)
+			}
+
+			cmd.Printf("Reopened PR #%s\n", number)
 
 			return nil
 		},

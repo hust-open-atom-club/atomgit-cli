@@ -2,10 +2,12 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -54,6 +56,16 @@ func TestNewClientWithHTTPClient(t *testing.T) {
 	}
 }
 
+func TestNewClientWithBaseURL(t *testing.T) {
+	client := NewClientWithBaseURL("secret", "https://example.test/api/v8/", nil)
+	if client.baseURL != "https://example.test/api/v8" {
+		t.Fatalf("baseURL = %q", client.baseURL)
+	}
+	if client.token != "secret" {
+		t.Fatalf("token = %q", client.token)
+	}
+}
+
 func TestGetSendsHeadersAndDecodesResponse(t *testing.T) {
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || r.URL.Path != "/resource" {
@@ -77,6 +89,42 @@ func TestGetSendsHeadersAndDecodesResponse(t *testing.T) {
 	}
 	if result["name"] != "demo" {
 		t.Fatalf("result = %#v", result)
+	}
+}
+
+func TestRawRequestSupportsCustomAcceptAndEmptyToken(t *testing.T) {
+	client := NewClientWithBaseURL("", "https://example.test/api/v8", &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if req.URL.Path != "/api/v8/download" {
+				t.Fatalf("path = %q", req.URL.Path)
+			}
+			if got := req.Header.Get("Accept"); got != "*/*" {
+				t.Fatalf("Accept = %q", got)
+			}
+			if got := req.Header.Get("Authorization"); got != "" {
+				t.Fatalf("Authorization = %q", got)
+			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Status:     "200 OK",
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader("content")),
+				Request:    req,
+			}, nil
+		}),
+	})
+
+	resp, err := client.DoRequestRawWithAccept(http.MethodGet, "/download", "*/*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != "content" {
+		t.Fatalf("body = %q", body)
 	}
 }
 
@@ -152,6 +200,35 @@ func TestPatchFormEncodesMultipartBody(t *testing.T) {
 	}
 	if result["state"] != "closed" {
 		t.Fatalf("result = %#v", result)
+	}
+}
+
+func TestPatchAcceptsEmptySuccessResponse(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+	}{
+		{name: "200 empty body", statusCode: http.StatusOK},
+		{name: "204 empty body", statusCode: http.StatusNoContent},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPatch || r.URL.Path != "/resource" {
+					t.Fatalf("request = %s %s", r.Method, r.URL.Path)
+				}
+				w.WriteHeader(tt.statusCode)
+			})
+
+			result := map[string]bool{"existing": true}
+			if err := client.Patch("/resource", map[string]string{"value": "patch"}, &result); err != nil {
+				t.Fatalf("Patch() error = %v", err)
+			}
+			if !result["existing"] {
+				t.Fatalf("Patch() replaced the existing result: %#v", result)
+			}
+		})
 	}
 }
 
@@ -247,4 +324,94 @@ func TestMethodsRejectUnencodableBody(t *testing.T) {
 			}
 		})
 	}
+}
+
+// newRetryTestClient 构造一个 client，其 transport 前 `failFirst` 次返回网络错误，
+// 之后的请求返回 200 + 空 JSON body。用于验证幂等重试逻辑。
+func newRetryTestClient(t *testing.T, failFirst int) (*Client, *int32) {
+	t.Helper()
+	var calls int32
+	client := NewClient("test-token")
+	client.baseURL = "https://example.test"
+	client.httpClient = &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			n := atomic.AddInt32(&calls, 1)
+			if int(n) <= failFirst {
+				return nil, errors.New("connection reset by peer")
+			}
+			recorder := httptest.NewRecorder()
+			recorder.Header().Set("Content-Type", "application/json")
+			_, _ = recorder.WriteString("{}")
+			return recorder.Result(), nil
+		}),
+	}
+	return client, &calls
+}
+
+func TestClientRetryIdempotent(t *testing.T) {
+	// 幂等方法：首次网络错误，第二次成功 → 应触发重试
+	cases := []struct {
+		name   string
+		caller func(*Client) error
+	}{
+		{
+			name:   "GET retries on network error",
+			caller: func(c *Client) error { var v map[string]any; return c.Get("/", &v) },
+		},
+		{
+			name:   "PUT retries on network error",
+			caller: func(c *Client) error { return c.Put("/", map[string]string{"k": "v"}, nil) },
+		},
+		{
+			name:   "DELETE retries on network error",
+			caller: func(c *Client) error { return c.Delete("/") },
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			client, calls := newRetryTestClient(t, 1)
+			if err := tc.caller(client); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if n := atomic.LoadInt32(calls); n != 2 {
+				t.Fatalf("expected 2 calls (1 fail + 1 retry), got %d", n)
+			}
+		})
+	}
+
+	// 非幂等方法 POST/PATCH：首次失败不重试
+	t.Run("POST does not retry", func(t *testing.T) {
+		client, calls := newRetryTestClient(t, 1)
+		err := client.Post("/", map[string]string{"k": "v"}, nil)
+		if err == nil {
+			t.Fatal("expected error from POST, got nil")
+		}
+		if n := atomic.LoadInt32(calls); n != 1 {
+			t.Fatalf("expected 1 call (no retry for POST), got %d", n)
+		}
+	})
+
+	t.Run("PATCH does not retry", func(t *testing.T) {
+		client, calls := newRetryTestClient(t, 1)
+		err := client.Patch("/", map[string]string{"k": "v"}, nil)
+		if err == nil {
+			t.Fatal("expected error from PATCH, got nil")
+		}
+		if n := atomic.LoadInt32(calls); n != 1 {
+			t.Fatalf("expected 1 call (no retry for PATCH), got %d", n)
+		}
+	})
+
+	// 幂等方法连续 2 次都失败：重试一次后返回错误
+	t.Run("GET gives up after retry", func(t *testing.T) {
+		client, calls := newRetryTestClient(t, 2)
+		var v map[string]any
+		err := client.Get("/", &v)
+		if err == nil {
+			t.Fatal("expected error after retry exhaustion, got nil")
+		}
+		if n := atomic.LoadInt32(calls); n != 2 {
+			t.Fatalf("expected 2 calls (1 fail + 1 retry fail), got %d", n)
+		}
+	})
 }

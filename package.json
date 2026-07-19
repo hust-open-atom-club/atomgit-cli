@@ -1,0 +1,42 @@
+{
+  "name": "@hust-open-atom-club/atomgit-cli",
+  "version": "0.6.0",
+  "description": "AtomGit command-line interface",
+  "license": "MulanPSL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://atomgit.com/hust-open-atom-club/atomgit-cli.git"
+  },
+  "homepage": "https://atomgit.com/hust-open-atom-club/atomgit-cli",
+  "bugs": {
+    "url": "https://atomgit.com/hust-open-atom-club/atomgit-cli/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "ag": "bin/ag.js"
+  },
+  "files": [
+    "bin/ag.js"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "version:npm": "node scripts/set-npm-version.js"
+  },
+  "optionalDependencies": {
+    "@hust-open-atom-club/atomgit-cli-darwin-arm64": "0.6.0",
+    "@hust-open-atom-club/atomgit-cli-darwin-x64": "0.6.0",
+    "@hust-open-atom-club/atomgit-cli-linux-arm64": "0.6.0",
+    "@hust-open-atom-club/atomgit-cli-linux-x64": "0.6.0",
+    "@hust-open-atom-club/atomgit-cli-win32-arm64": "0.6.0",
+    "@hust-open-atom-club/atomgit-cli-win32-x64": "0.6.0"
+  },
+  "devDependencies": {
+    "adm-zip": "^0.6.0",
+    "tar": "^7.5.20"
+  }
+}

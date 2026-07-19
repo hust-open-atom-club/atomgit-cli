@@ -257,10 +257,49 @@ func TestPRMergeSuccess(t *testing.T) {
 		flags      map[string]string
 		wantOutput string
 	}{
-		{name: "default merge", args: []string{"alice/demo", "42"}, flags: map[string]string{}, wantOutput: "Merged PR #42: https://atomgit.com/alice/demo/pulls/42\n"},
-		{name: "rebase merge", args: []string{"alice/demo", "42"}, flags: map[string]string{"rebase": "true"}, wantOutput: "Rebased and merged PR #42: https://atomgit.com/alice/demo/pulls/42\n"},
-		{name: "squash merge", args: []string{"alice/demo", "42"}, flags: map[string]string{"squash": "true"}, wantOutput: "Squashed and merged PR #42: https://atomgit.com/alice/demo/pulls/42\n"},
-		{name: "rebase with squash", args: []string{"alice/demo", "42"}, flags: map[string]string{"rebase": "true", "squash": "true"}, wantOutput: "Rebased and merged PR with squash #42: https://atomgit.com/alice/demo/pulls/42\n"},
+		{
+			name: "default merge",
+			args: []string{
+				"alice/demo",
+				"42",
+			},
+			flags:      map[string]string{},
+			wantOutput: "Merged PR #42: https://atomgit.com/alice/demo/pulls/42\n",
+		},
+		{
+			name: "rebase merge",
+			args: []string{
+				"alice/demo",
+				"42",
+			},
+			flags: map[string]string{
+				"rebase": "true",
+			},
+			wantOutput: "Rebased and merged PR #42: https://atomgit.com/alice/demo/pulls/42\n",
+		},
+		{
+			name: "squash merge",
+			args: []string{
+				"alice/demo",
+				"42",
+			},
+			flags: map[string]string{
+				"squash": "true",
+			},
+			wantOutput: "Squashed and merged PR #42: https://atomgit.com/alice/demo/pulls/42\n",
+		},
+		{
+			name: "rebase with squash",
+			args: []string{
+				"alice/demo",
+				"42",
+			},
+			flags: map[string]string{
+				"rebase": "true",
+				"squash": "true",
+			},
+			wantOutput: "Rebased and merged PR with squash #42: https://atomgit.com/alice/demo/pulls/42\n",
+		},
 	}
 
 	for _, tt := range tests {
@@ -298,7 +337,7 @@ func TestPRMergeSuccess(t *testing.T) {
 				t.Fatalf("output = %q, want %q", output.String(), tt.wantOutput)
 			}
 
-			var body map[string]interface{}
+			var body map[string]any
 			if err := json.Unmarshal(mergeBody, &body); err != nil {
 				t.Fatal(err)
 			}
@@ -313,19 +352,19 @@ func TestPRMergeFlagsInBody(t *testing.T) {
 	tests := []struct {
 		name     string
 		flags    map[string]string
-		wantBody map[string]interface{}
+		wantBody map[string]any
 	}{
 		{
 			name:  "rebase",
 			flags: map[string]string{"rebase": "true"},
-			wantBody: map[string]interface{}{
+			wantBody: map[string]any{
 				"merge_method": "rebase",
 			},
 		},
 		{
 			name:  "squash",
 			flags: map[string]string{"squash": "true"},
-			wantBody: map[string]interface{}{
+			wantBody: map[string]any{
 				"merge_method": "merge",
 				"squash":       true,
 			},
@@ -333,7 +372,7 @@ func TestPRMergeFlagsInBody(t *testing.T) {
 		{
 			name:  "admin",
 			flags: map[string]string{"admin": "true"},
-			wantBody: map[string]interface{}{
+			wantBody: map[string]any{
 				"merge_method": "merge",
 				"force_merge":  true,
 			},
@@ -341,7 +380,7 @@ func TestPRMergeFlagsInBody(t *testing.T) {
 		{
 			name:  "subject and body without squash",
 			flags: map[string]string{"subject": "my title", "body": "my desc"},
-			wantBody: map[string]interface{}{
+			wantBody: map[string]any{
 				"merge_method": "merge",
 				"title":        "my title",
 				"description":  "my desc",
@@ -350,7 +389,7 @@ func TestPRMergeFlagsInBody(t *testing.T) {
 		{
 			name:  "body with squash",
 			flags: map[string]string{"squash": "true", "body": "squash msg"},
-			wantBody: map[string]interface{}{
+			wantBody: map[string]any{
 				"merge_method":          "merge",
 				"squash":                true,
 				"squash_commit_message": "squash msg",
@@ -389,7 +428,7 @@ func TestPRMergeFlagsInBody(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			var got map[string]interface{}
+			var got map[string]any
 			if err := json.Unmarshal(mergeBody, &got); err != nil {
 				t.Fatal(err)
 			}
@@ -637,5 +676,60 @@ func TestPRMergeValidation(t *testing.T) {
 	err := cmd.RunE(cmd, []string{"invalid", "42"})
 	if err == nil || !strings.Contains(err.Error(), "invalid repository format") {
 		t.Fatalf("error = %v, want containing 'invalid repository format'", err)
+	}
+}
+
+func TestPRReopenSendsOpenState(t *testing.T) {
+	var gotMethod, gotPath, gotBody string
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				gotMethod = req.Method
+				gotPath = req.URL.Path
+				b, _ := io.ReadAll(req.Body)
+				gotBody = string(b)
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"state":"opened"}`)), Header: make(http.Header)}, nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRReopen(factory)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "5"}); err != nil {
+		t.Fatal(err)
+	}
+	if gotMethod != http.MethodPatch {
+		t.Errorf("method = %s, want PATCH", gotMethod)
+	}
+	if gotPath != "/api/v5/repos/alice/demo/pulls/5" {
+		t.Errorf("path = %s, want /api/v5/repos/alice/demo/pulls/5", gotPath)
+	}
+	if !strings.Contains(gotBody, `"state":"open"`) {
+		t.Errorf("body = %s, want state:open", gotBody)
+	}
+}
+
+func TestPRReopenRejectsWrongArgCount(t *testing.T) {
+	cmd := newCmdPRReopen(&cmdutil.Factory{Config: prTestConfig{}})
+	if err := cmd.Args(cmd, []string{"alice/demo"}); err == nil {
+		t.Fatal("reopen accepted 1 arg, want error")
+	}
+	if err := cmd.Args(cmd, []string{"alice/demo", "5", "extra"}); err == nil {
+		t.Fatal("reopen accepted 3 args, want error")
+	}
+}
+
+func TestPRReopenWrapsAPIError(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader(`{"message":"not found"}`)), Header: make(http.Header)}, nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRReopen(factory)
+	err := cmd.RunE(cmd, []string{"alice/demo", "5"})
+	if err == nil || !strings.Contains(err.Error(), "failed to reopen PR") {
+		t.Fatalf("error = %v, want 'failed to reopen PR'", err)
 	}
 }

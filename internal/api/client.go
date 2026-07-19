@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -30,13 +31,20 @@ func NewClient(token string) *Client {
 // NewClientWithHTTPClient creates an API client using the provided HTTP client.
 // A nil HTTP client uses the same default timeout as NewClient.
 func NewClientWithHTTPClient(token string, httpClient *http.Client) *Client {
+	return NewClientWithBaseURL(token, BaseURL+APIVersion, httpClient)
+}
+
+// NewClientWithBaseURL creates a client for a specific AtomGit API base URL.
+// It is primarily used by clients for API versions other than v5 while keeping
+// authentication headers, timeouts, and raw response handling consistent.
+func NewClientWithBaseURL(token, baseURL string, httpClient *http.Client) *Client {
 	if httpClient == nil {
 		httpClient = &http.Client{
 			Timeout: 30 * time.Second,
 		}
 	}
 	return &Client{
-		baseURL:    BaseURL + APIVersion,
+		baseURL:    strings.TrimRight(baseURL, "/"),
 		token:      token,
 		httpClient: httpClient,
 	}
@@ -46,21 +54,65 @@ func (c *Client) doRequest(method, path string, body io.Reader) (*http.Response,
 	return c.doRequestWithContentType(method, path, body, "application/json")
 }
 
+// isIdempotent reports whether the HTTP method is safe to retry on network errors.
+func isIdempotent(method string) bool {
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodDelete, http.MethodPut:
+		return true
+	}
+	return false
+}
+
 func (c *Client) doRequestWithContentType(method, path string, body io.Reader, contentType string) (*http.Response, error) {
+	return c.doRequestWithContentTypeAndAccept(method, path, body, contentType, "application/json")
+}
+
+func (c *Client) doRequestWithContentTypeAndAccept(method, path string, body io.Reader, contentType, accept string) (*http.Response, error) {
+	// body 必须能被重读：io.Reader 读完一次就空了，重试时需重建 reader。
+	// 把 body 读成 []byte 缓存，重试时用 bytes.NewReader 重建。GET/HEAD 无 body 不受影响。
+	var bodyBytes []byte
+	if body != nil {
+		var err error
+		bodyBytes, err = io.ReadAll(body)
+		if err != nil {
+			return nil, fmt.Errorf("read request body: %w", err)
+		}
+	}
+
 	url := c.baseURL + path
-	req, err := http.NewRequest(method, url, body)
-	if err != nil {
-		return nil, err
-	}
+	canRetry := isIdempotent(method)
+	const retryDelay = 200 * time.Millisecond
 
-	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("User-Agent", "AtomCode-CLI-v0.4")
-	if contentType != "" {
-		req.Header.Set("Content-Type", contentType)
-	}
-	req.Header.Set("Accept", "application/json")
+	for attempt := 1; ; attempt++ {
+		var bodyReader io.Reader
+		if bodyBytes != nil {
+			bodyReader = bytes.NewReader(bodyBytes)
+		}
 
-	return c.httpClient.Do(req)
+		req, err := http.NewRequest(method, url, bodyReader)
+		if err != nil {
+			return nil, err
+		}
+
+		if c.token != "" {
+			req.Header.Set("Authorization", "Bearer "+c.token)
+		}
+		req.Header.Set("User-Agent", "AtomCode-CLI-v0.4")
+		if contentType != "" {
+			req.Header.Set("Content-Type", contentType)
+		}
+		if accept != "" {
+			req.Header.Set("Accept", accept)
+		}
+
+		resp, err := c.httpClient.Do(req)
+		// 首次失败 + 幂等方法 + 网络错误 → 短睡后重试一次
+		if err != nil && canRetry && attempt == 1 {
+			time.Sleep(retryDelay)
+			continue
+		}
+		return resp, err
+	}
 }
 
 func (c *Client) Get(path string, result interface{}) error {
@@ -148,13 +200,15 @@ func (c *Client) Patch(path string, body, result interface{}) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
 	}
 
 	if result != nil {
-		return json.NewDecoder(resp.Body).Decode(result)
+		if err := json.NewDecoder(resp.Body).Decode(result); err != nil && err != io.EOF {
+			return err
+		}
 	}
 	return nil
 }
@@ -232,4 +286,10 @@ func (c *Client) DeleteWithBody(path string, body interface{}) error {
 // The caller is responsible for closing resp.Body.
 func (c *Client) DoRequestRaw(method, path string) (*http.Response, error) {
 	return c.doRequest(method, path, nil)
+}
+
+// DoRequestRawWithAccept performs a request with a custom Accept header and
+// returns the raw response. The caller is responsible for closing resp.Body.
+func (c *Client) DoRequestRawWithAccept(method, path, accept string) (*http.Response, error) {
+	return c.doRequestWithContentTypeAndAccept(method, path, nil, "", accept)
 }

@@ -4,6 +4,67 @@ AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 
 ## 安装
 
+### npm
+
+需要 Node.js 18 或更高版本：
+
+```bash
+npm install --global @hust-open-atom-club/atomgit-cli
+ag version
+```
+
+npm 会通过当前操作系统和 CPU 对应的可选依赖安装预编译二进制，不需要运行 `postinstall` 脚本。
+
+### Homebrew
+
+macOS 或 Linux 用户可以通过项目维护的 Homebrew tap 安装：
+
+```bash
+brew tap hust-open-atom-club/tap
+brew install atomgit-cli
+ag version
+```
+
+也可以使用一条命令直接安装：
+
+```bash
+brew install hust-open-atom-club/tap/atomgit-cli
+```
+
+升级已安装的 AtomGit CLI：
+
+```bash
+brew update
+brew upgrade atomgit-cli
+```
+
+### Nix / NixOS
+
+AtomGit CLI 已进入 `nixos-unstable`，包名为 `atomgit-cli`，安装后提供 `ag` 命令。
+
+如果你的 Nix registry 或 flake input 已指向 `nixos-unstable`：
+
+```bash
+nix profile install nixpkgs#atomgit-cli
+ag version
+```
+
+如果你使用的是稳定版 nixpkgs，可以显式从 `nixos-unstable` 安装：
+
+```bash
+nix profile install github:NixOS/nixpkgs/nixos-unstable#atomgit-cli
+```
+
+临时运行：
+
+```bash
+nix run github:NixOS/nixpkgs/nixos-unstable#atomgit-cli -- version
+```
+
+其他安装方式请参阅[完整安装指南](https://atomgit.com/hust-open-atom-club/atomgit-cli/blob/main/docs/installation.md)。
+
+### 从源码构建
+
 ```bash
 # 构建到 bin/ag（Windows 为 bin/ag.exe）
 make build
@@ -11,23 +72,6 @@ make build
 # 安装到 $GOPATH/bin
 make install
 ```
-
-### 使用 Nix 安装
-
-仓库提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake。安装到当前用户的 Nix profile：
-
-```bash
-nix profile install git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag
-ag version
-```
-
-也可以在不安装的情况下直接运行：
-
-```bash
-# 直接运行
-nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag -- version
-```
-其他安装方式请参阅[完整安装指南](https://atomgit.com/hust-open-atom-club/atomgit-cli/blob/main/docs/installation.md)。
 
 ## 配置
 
@@ -65,6 +109,10 @@ nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag -- version
 | `token_type` | 是 | 令牌认证类型。当前 PAT 和 OAuth 访问令牌均使用 `Bearer`。 |
 
 `ag auth login` 会自动写入上述 OAuth 字段；手动使用 PAT 时不要自行编造 `refresh_token`、`expires_in` 或 `created_at`。请确保配置文件仅允许当前用户读取和写入令牌文件。
+
+### 输出安全
+
+`ag` 默认会将终端控制字符转换为可见转义文本，包括输出经管道转发时，以防止仓库、Issue、PR 或 Git 服务端返回的内容注入终端控制序列。确实需要为机器处理保留原始字节时，可显式使用全局参数 `--raw-output`，例如 `ag --raw-output pr diff owner/repo 123`；请勿将未经检查的原始输出直接转发到终端。
 
 ## 命令
 
@@ -121,6 +169,25 @@ ag repo fork owner/repo --name my-fork --public
 ag repo delete owner/repo --yes
 ```
 
+### Branch
+
+```bash
+# 列出远程分支（默认显示 30 条）
+ag branch list owner/repo
+ag branch list owner/repo --limit 100
+
+# 查看远程分支详情
+ag branch view owner/repo main
+ag branch view owner/repo feature/foo
+
+# 从指定 ref 创建远程分支
+ag branch create owner/repo feature/foo --ref main
+
+# 删除远程分支（默认需要确认；不会删除本地 Git 分支）
+ag branch delete owner/repo feature/foo
+ag branch delete owner/repo feature/foo --yes
+```
+
 ### Pull Request (pr)
 
 ```bash
@@ -139,6 +206,9 @@ ag pr create owner/repo --title "Fix bug" --body "Description" --base main --hea
 
 # 关闭 PR
 ag pr close owner/repo 123
+
+# 重新打开 PR
+ag pr reopen owner/repo 123
 ```
 
 #### PR 评论
@@ -183,6 +253,9 @@ ag issue edit owner/repo 42 --body-file details.md
 
 # 创建 Issue
 ag issue create owner/repo --title "Bug report" --body "Description"
+
+# 重新打开 Issue
+ag issue reopen owner/repo 42
 ```
 
 #### Issue 评论
@@ -211,6 +284,41 @@ ag issue comment delete owner/repo 42 789 --yes
 ag label list owner/repo
 ag label list owner/repo --limit 50
 ```
+
+### Actions 运行记录 (run)
+
+`ag run` 目前只提供只读的运行检查能力，不会触发、重跑、取消或删除工作流运行。
+
+```bash
+# 列出运行记录（默认最多 30 条）
+ag run list owner/repo
+
+# 按分支、状态和触发事件过滤
+ag run list owner/repo --branch main --status failed --event push
+
+# 也可按触发人、PR、workflow 和毫秒时间戳过滤
+ag run list owner/repo --actor alice --pr 42 --workflow-name CI --limit 50
+ag run list owner/repo --start-time 1700000000000 --end-time 1700086400000
+
+# 查看 run、jobs、steps、URL 和 artifacts
+ag run view owner/repo <run-id>
+
+# 查看指定 job 及其步骤
+ag run view owner/repo <run-id> --job <job-id>
+
+# 解包 AtomGit 返回的日志归档，并将各步骤日志文本输出到 stdout
+ag run view owner/repo <run-id> --job <job-id> --log
+
+# 流式下载原始 job 日志 ZIP；默认不覆盖已有文件
+ag run view owner/repo <run-id> --job <job-id> --log-file job-logs.zip
+ag run view owner/repo <run-id> --job <job-id> --log-file job-logs.zip --overwrite
+
+# 下载指定 artifact。未指定文件名时使用 artifact 名称并添加 .zip
+ag run view owner/repo <run-id> --artifact <artifact-id>
+ag run view owner/repo <run-id> --artifact <artifact-id> --artifact-file build.zip --overwrite
+```
+
+`--log` 会先把 AtomGit 返回的日志 ZIP 流式写入临时文件，再逐项输出其中的日志文本；若服务端返回纯文本也会直接兼容。`--log-file` 保留服务端原始 ZIP。日志和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
 
 ### License
 
@@ -249,28 +357,38 @@ ag version --json
 发布版使用 [GoReleaser](https://goreleaser.com/install/) 打包，tag 统一使用 `vX.Y.Z` 三段式 SemVer。正式发布前应先提交所有改动，并在当前 HEAD 创建版本 tag：
 
 ```bash
-git tag v0.5.0
-make release VERSION=v0.5.0
+npm run version:npm -- 0.6.0
+git tag v0.6.0
+make release VERSION=v0.6.0
 ```
 
-`make release` 会检查工作区干净、tag 存在且指向当前 HEAD，然后在 `dist/v0.5.0/` 生成以下文件：
+`make release` 会检查工作区干净、tag 存在且指向当前 HEAD，然后在 `dist/v0.6.0/` 生成以下文件：
 
 - Linux 和 macOS 的 amd64/arm64 `.tar.gz` 归档。
 - Windows 的 amd64/arm64 `.zip` 归档。
 - 已绑定当前 tag 的 `install.sh` 和 `install.ps1`。
-- 覆盖上述六个归档和两个安装脚本的 `checksums.txt`。
+- `npm/` 下的六个平台二进制包、一个主启动包和独立的 `npm/checksums.txt`。
+- 仅覆盖 AtomGit Release 附件（六个归档和两个安装脚本）的根 `checksums.txt`。
+
+发布 npm 制品时，先发布 `npm/` 下六个名称带平台和架构的包；确认它们可用后，再发布 `atomgit-cli` 主包。主包和平台包必须使用相同版本。
 
 上传 Release 附件前可校验所有制品：
 
 ```bash
 # Linux
-(cd dist/v0.5.0 && sha256sum -c checksums.txt)
+(cd dist/v0.6.0 && sha256sum -c checksums.txt)
 
 # macOS
-(cd dist/v0.5.0 && shasum -a 256 -c checksums.txt)
+(cd dist/v0.6.0 && shasum -a 256 -c checksums.txt)
 ```
 
-未创建 tag 时，可使用 `make release-snapshot VERSION=v0.5.0` 进行本地试打包。Snapshot 允许脏工作区，其制品仅用于验证，不应上传到正式 Release。
+npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registry 前单独校验：
+
+```bash
+(cd dist/v0.6.0/npm && shasum -a 256 -c checksums.txt)
+```
+
+未创建 tag 时，可使用 `make release-snapshot VERSION=v0.6.0` 进行本地试打包。Snapshot 允许脏工作区，其制品仅用于验证，不应上传到正式 Release。
 
 底层 `scripts/build-release.sh` 也接受 `TAG`、`AG_RELEASE_SNAPSHOT=1` 和 `SOURCE_DATE_EPOCH` 环境变量。`SOURCE_DATE_EPOCH` 会同时固定二进制中的构建日期以及归档内文件的时间戳，用于生成可复现的发布制品；历史两段式 tag 仅保留给 snapshot 兼容。
 
@@ -299,6 +417,8 @@ atomgit-cli/
 ├── Makefile                    # 构建、测试、安装和发布入口
 ├── install.sh                  # Linux/macOS 安装脚本
 ├── install.ps1                 # Windows 安装脚本
+├── bin/ag.js                   # npm 主包的平台二进制启动器
+├── scripts/build-npm-packages.js # 从 Release 归档生成七个 npm 包
 ├── cmd/ag/main.go              # 入口
 ├── internal/
 │   ├── agcmd/cmd.go            # 核心命令处理
@@ -306,7 +426,8 @@ atomgit-cli/
 │   ├── version/version.go      # 版本元数据
 │   └── api/
 │       ├── client.go           # API 客户端
-│       └── types.go            # 数据类型
+│       ├── types.go            # API v5 数据类型
+│       └── actions/            # Actions API v8 客户端与类型
 ├── pkg/
 │   ├── cmdutil/factory.go      # 命令工厂
 │   └── cmd/
@@ -326,6 +447,7 @@ atomgit-cli/
 │       │   └── comment/        # Issue 评论命令
 │       ├── label/              # 标签命令
 │       │   └── label.go
+│       ├── run/                # Actions 运行、job、日志和 artifact 查看
 │       ├── license/            # License 命令
 │       │   ├── license.go
 │       │   └── check.go
@@ -337,7 +459,9 @@ atomgit-cli/
 
 ## API
 
-使用 AtomGit API v5: `https://api.atomgit.com/api/v5`
+常规仓库功能使用 AtomGit API v5：`https://api.atomgit.com/api/v5`。
+
+Actions 运行检查使用独立的 AtomGit API v8：`https://api.atomgit.com/api/v8`。
 
 ## 参考
 

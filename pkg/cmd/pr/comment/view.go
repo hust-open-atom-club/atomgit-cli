@@ -2,6 +2,7 @@ package comment
 
 import (
 	"fmt"
+	"io"
 	"regexp"
 	"sort"
 	"strconv"
@@ -52,19 +53,20 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
+			out := cmd.OutOrStdout()
 			if len(comments) == 0 {
-				fmt.Println("No comments found.")
+				fmt.Fprintln(out, "No comments found.")
 				return nil
 			}
 
-			fmt.Printf("PR #%d 的评论 (共 %d 条):\n\n", number, len(comments))
+			fmt.Fprintf(out, "PR #%d 的评论 (共 %d 条):\n\n", number, len(comments))
 
 			// Sort top-level comments by creation time.
 			sortCommentsByTime(comments)
 
 			currentUser, _ := f.Config.GetUser()
 			for i := range comments {
-				printComment(&comments[i], currentUser)
+				printComment(out, &comments[i], currentUser)
 			}
 
 			return nil
@@ -221,10 +223,10 @@ func youMarker(c *api.Comment, currentUser string) string {
 
 // printBody prints a comment body (HTML tables converted to Markdown), prefixing
 // every line with indent.
-func printBody(body, indent string) {
+func printBody(w io.Writer, body, indent string) {
 	body = convertHTMLToMarkdown(body)
 	for _, line := range strings.Split(body, "\n") {
-		fmt.Printf("%s%s\n", indent, line)
+		fmt.Fprintf(w, "%s%s\n", indent, line)
 	}
 }
 
@@ -280,14 +282,14 @@ func diffLocation(c *api.Comment) string {
 //	   body
 //	   └─[id]  @user reply 2026-06-26 14:55 (你)
 //	      body
-func printComment(comment *api.Comment, currentUser string) {
+func printComment(w io.Writer, comment *api.Comment, currentUser string) {
 	if comment == nil {
 		return
 	}
 
 	// discussion_id on its own line (required to reply to the thread).
 	if comment.DiscussionID != "" {
-		fmt.Printf("[%s]\n", comment.DiscussionID)
+		fmt.Fprintf(w, "[%s]\n", comment.DiscussionID)
 	}
 
 	verb := "commented"
@@ -311,29 +313,29 @@ func printComment(comment *api.Comment, currentUser string) {
 			header += "  [" + loc + "]"
 		}
 	}
-	fmt.Println(header)
+	fmt.Fprintln(w, header)
 
-	printBody(comment.Body, "   ")
+	printBody(w, comment.Body, "   ")
 
 	sortCommentsByTime(comment.Reply)
 	for i := range comment.Reply {
-		printReply(&comment.Reply[i], currentUser)
+		printReply(w, &comment.Reply[i], currentUser)
 	}
 
-	fmt.Println()
+	fmt.Fprintln(w)
 }
 
 // printReply renders a nested reply under a top-level comment.
-func printReply(comment *api.Comment, currentUser string) {
-	fmt.Printf("   └─[%d]  @%s reply %s%s\n",
+func printReply(w io.Writer, comment *api.Comment, currentUser string) {
+	fmt.Fprintf(w, "   └─[%d]  @%s reply %s%s\n",
 		comment.ID, comment.User.Login,
 		formatTime(comment.CreatedAt, "2006-01-02 15:04"),
 		youMarker(comment, currentUser))
-	printBody(comment.Body, "      ")
+	printBody(w, comment.Body, "      ")
 
 	// Flatten any further-nested replies at the same level.
 	sortCommentsByTime(comment.Reply)
 	for i := range comment.Reply {
-		printReply(&comment.Reply[i], currentUser)
+		printReply(w, &comment.Reply[i], currentUser)
 	}
 }
