@@ -36,7 +36,10 @@ func newCmdViewIssues(f *cmdutil.Factory) *cobra.Command {
 
 			prNumber = args[1]
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 
 			// Get linked issues using GET method
 			var issues []api.Issue
