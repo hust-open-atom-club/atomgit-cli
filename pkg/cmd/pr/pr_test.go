@@ -600,6 +600,49 @@ func TestPRMergeDeleteBranchWithSlash(t *testing.T) {
 	}
 }
 
+func TestPRMergeDeleteBranchSkipsEmptySourceBranch(t *testing.T) {
+	branchDeleted := false
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
+					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"","sha":"abc","repo":{"full_name":"alice/demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
+				}
+				if req.Method == http.MethodPut && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/merge" {
+					return prResponse(http.StatusOK, `{"sha":"sha","merged":true,"message":"ok"}`), nil
+				}
+				if req.Method == http.MethodDelete {
+					branchDeleted = true
+					t.Fatalf("unexpected delete request: %s", req.URL.Path)
+				}
+				t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+				return nil, nil
+			})}, nil
+		},
+	}
+
+	cmd := newCmdPRMerge(factory)
+	_ = cmd.Flags().Set("delete-branch", "true")
+	var output strings.Builder
+	var stderr strings.Builder
+	cmd.SetOut(&output)
+	cmd.SetErr(&stderr)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if branchDeleted {
+		t.Fatal("branch deletion was attempted for an empty source branch")
+	}
+	if !strings.Contains(stderr.String(), "cannot determine source repository or branch") {
+		t.Fatalf("stderr = %q, want warning about missing source repository or branch", stderr.String())
+	}
+	if got := output.String(); got != "Merged PR #42: https://atomgit.com/alice/demo/pulls/42\n" {
+		t.Fatalf("output = %q, want merged message only", got)
+	}
+}
+
 func TestPRMergeErrors(t *testing.T) {
 	tests := []struct {
 		name      string

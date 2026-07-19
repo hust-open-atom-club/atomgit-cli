@@ -569,16 +569,17 @@ By default, ag creates a merge commit. Use --rebase to rebase the commits onto t
 			}
 
 			if opts.DeleteBranch {
-				sourceRepo := pr.Head.Repo.FullName
-				if sourceRepo == "" {
-					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: cannot determine source repository, skipping branch deletion\n")
+				sourceRepo := strings.TrimSpace(pr.Head.Repo.FullName)
+				sourceBranch := strings.TrimSpace(pr.Head.Ref)
+				if sourceRepo == "" || sourceBranch == "" {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: cannot determine source repository or branch, skipping branch deletion\n")
 				} else {
-					branchName := url.PathEscape(pr.Head.Ref)
+					branchName := url.PathEscape(sourceBranch)
 					delPath := fmt.Sprintf("/repos/%s/branches/%s", sourceRepo, branchName)
 					if err := client.Delete(delPath); err != nil {
-						fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to delete branch %s: %v\n", pr.Head.Ref, err)
+						fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to delete branch %s: %v\n", sourceBranch, err)
 					} else {
-						fmt.Fprintf(cmd.OutOrStdout(), "Deleted remote branch %s\n", pr.Head.Ref)
+						fmt.Fprintf(cmd.OutOrStdout(), "Deleted remote branch %s\n", sourceBranch)
 					}
 				}
 			}
