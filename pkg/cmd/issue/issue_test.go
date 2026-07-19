@@ -134,6 +134,12 @@ func TestIssueReopenUsesOwnerPathWithFormData(t *testing.T) {
 						formFields[p.FormName()] = string(b)
 					}
 					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{}`)), Header: make(http.Header)}, nil
+				case 3:
+					// GET /repos/alice/demo/issues/7 — verify state is open
+					if req.Method != http.MethodGet {
+						t.Fatalf("call 3: method = %s, want GET", req.Method)
+					}
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(issueJSON)), Header: make(http.Header)}, nil
 				default:
 					t.Fatalf("unexpected call %d", call)
 					return nil, nil
@@ -158,6 +164,38 @@ func TestIssueReopenUsesOwnerPathWithFormData(t *testing.T) {
 	}
 	if formFields["title"] != "my issue" {
 		t.Errorf("form field title = %q, want 'my issue'", formFields["title"])
+	}
+}
+
+func TestIssueReopenFailsWhenStateRemainsClosedAfterUpdate(t *testing.T) {
+	call := 0
+	issueJSON := `{"number":"7","state":"open","title":"my issue","html_url":"https://atomgit.com/alice/demo/issues/7","user":{"login":"alice"},"created_at":""}`
+	closedJSON := `{"number":"7","state":"closed","title":"my issue","html_url":"https://atomgit.com/alice/demo/issues/7","user":{"login":"alice"},"created_at":""}`
+
+	factory := &cmdutil.Factory{
+		Config: issueTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				call++
+				switch call {
+				case 1:
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(issueJSON)), Header: make(http.Header)}, nil
+				case 2:
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{}`)), Header: make(http.Header)}, nil
+				case 3:
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(closedJSON)), Header: make(http.Header)}, nil
+				default:
+					t.Fatalf("unexpected call %d", call)
+					return nil, nil
+				}
+			})}, nil
+		},
+	}
+
+	cmd := newCmdIssueReopen(factory)
+	err := cmd.RunE(cmd, []string{"alice/demo", "7"})
+	if err == nil || !strings.Contains(err.Error(), "still not open") {
+		t.Fatalf("error = %v, want 'still not open'", err)
 	}
 }
 

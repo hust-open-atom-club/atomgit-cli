@@ -132,6 +132,14 @@ func newCmdIssueReopen(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("failed to reopen issue: %w", err)
 			}
 
+			var verified api.Issue
+			if err := client.Get(issuePath, &verified); err != nil {
+				return fmt.Errorf("failed to verify issue state: %w", err)
+			}
+			if !strings.EqualFold(strings.TrimSpace(verified.State), "open") {
+				return fmt.Errorf("issue #%s is still not open after update (state: %q)", number, verified.State)
+			}
+
 			cmd.Printf("Reopened issue #%s\n", number)
 
 			return nil
