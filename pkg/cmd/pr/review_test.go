@@ -207,6 +207,16 @@ func TestParseReviewArgs(t *testing.T) {
 	}
 }
 
+func TestParseReviewArgsTrimsRepository(t *testing.T) {
+	owner, repo, number, err := parseReviewArgs([]string{" alice / demo ", "42"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if owner != "alice" || repo != "demo" || number != 42 {
+		t.Fatalf("parseReviewArgs() = %q, %q, %d", owner, repo, number)
+	}
+}
+
 func reviewTestFactory(t *testing.T, transport prRoundTripFunc) *cmdutil.Factory {
 	t.Helper()
 	return &cmdutil.Factory{

@@ -95,7 +95,12 @@ by the public API.`,
 
 func parseReviewArgs(args []string) (string, string, int, error) {
 	parts := strings.Split(args[0], "/")
-	if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" || strings.TrimSpace(parts[1]) == "" {
+	if len(parts) != 2 {
+		return "", "", 0, fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+	}
+	owner := strings.TrimSpace(parts[0])
+	repo := strings.TrimSpace(parts[1])
+	if owner == "" || repo == "" {
 		return "", "", 0, fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
 	}
 
@@ -103,5 +108,5 @@ func parseReviewArgs(args []string) (string, string, int, error) {
 	if err != nil || number <= 0 {
 		return "", "", 0, fmt.Errorf("invalid PR number: %s (must be positive)", args[1])
 	}
-	return parts[0], parts[1], number, nil
+	return owner, repo, number, nil
 }
