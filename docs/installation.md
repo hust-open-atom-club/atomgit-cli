@@ -1,6 +1,61 @@
 # 安装指南
 
-AtomGit CLI 支持 macOS、Linux 和 Windows，可通过自动安装脚本、npm、Nix、手动下载预编译文件或从源码构建进行安装。
+AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、自动安装脚本、Nix、手动下载预编译文件或从源码构建进行安装。
+
+## 使用 npm 安装
+
+npm 安装需要 Node.js 18 或更高版本。执行：
+
+```bash
+npm install --global @hust-open-atom-club/atomgit-cli
+```
+
+npm 主包通过 `optionalDependencies` 声明六个平台二进制包。npm 根据当前操作系统和 CPU 架构只安装匹配的包，整个过程不使用 `postinstall`，运行 `ag` 时也不会额外联网下载或写入包目录。
+
+请勿使用 `--omit=optional` 安装；该选项会跳过平台二进制包，使 `ag` 无法启动。
+
+| 操作系统 | 支持的处理器架构 |
+| --- | --- |
+| macOS | x64（Intel）、arm64（Apple Silicon） |
+| Linux | x64 / amd64、arm64 / aarch64 |
+| Windows | x64 / amd64、arm64 |
+
+npm 主包、六个平台包与 AtomGit Release tag 一一对应，版本必须完全一致。执行 `make release VERSION=vX.Y.Z` 会在 `dist/vX.Y.Z/npm/` 生成七个 npm tarball 和独立的 `checksums.txt`，供发布前本地校验；这些 npm 文件不作为 AtomGit Release 附件上传。发布时必须先发布六个平台包，确认它们可从 npm registry 获取后，再发布主包。
+
+准备新版本时，先同步所有 npm 版本字段：
+
+```bash
+npm run version:npm -- X.Y.Z
+```
+
+安装完成后验证：
+
+```bash
+ag version
+```
+
+## 使用 Homebrew 安装
+
+macOS 或 Linux 用户可以通过项目维护的 Homebrew tap 安装：
+
+```bash
+brew tap hust-open-atom-club/tap
+brew install atomgit-cli
+ag version
+```
+
+也可以使用一条命令直接安装：
+
+```bash
+brew install hust-open-atom-club/tap/atomgit-cli
+```
+
+升级已安装的 AtomGit CLI：
+
+```bash
+brew update
+brew upgrade atomgit-cli
+```
 
 ## 自动化安装（推荐）
 
@@ -37,38 +92,6 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
 脚本默认安装到 `%USERPROFILE%\.local\bin`，并将该目录加入当前用户的 `Path`。
-
-## 使用 npm 安装
-
-npm 安装需要 Node.js 18 或更高版本。执行：
-
-```bash
-npm install --global @hust-open-atom-club/atomgit-cli
-```
-
-npm 主包通过 `optionalDependencies` 声明六个平台二进制包。npm 根据当前操作系统和 CPU 架构只安装匹配的包，整个过程不使用 `postinstall`，运行 `ag` 时也不会额外联网下载或写入包目录。
-
-请勿使用 `--omit=optional` 安装；该选项会跳过平台二进制包，使 `ag` 无法启动。
-
-| 操作系统 | 支持的处理器架构 |
-| --- | --- |
-| macOS | x64（Intel）、arm64（Apple Silicon） |
-| Linux | x64 / amd64、arm64 / aarch64 |
-| Windows | x64 / amd64、arm64 |
-
-npm 主包、六个平台包与 AtomGit Release tag 一一对应，版本必须完全一致。执行 `make release VERSION=vX.Y.Z` 会在 `dist/vX.Y.Z/npm/` 生成七个 npm tarball 和独立的 `checksums.txt`，供发布前本地校验；这些 npm 文件不作为 AtomGit Release 附件上传。发布时必须先发布六个平台包，确认它们可从 npm registry 获取后，再发布主包。
-
-准备新版本时，先同步所有 npm 版本字段：
-
-```bash
-npm run version:npm -- X.Y.Z
-```
-
-安装完成后验证：
-
-```bash
-ag version
-```
 
 ## 使用 Nix 安装
 

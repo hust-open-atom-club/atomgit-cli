@@ -15,6 +15,29 @@ ag version
 
 npm 会通过当前操作系统和 CPU 对应的可选依赖安装预编译二进制，不需要运行 `postinstall` 脚本。
 
+### Homebrew
+
+macOS 或 Linux 用户可以通过项目维护的 Homebrew tap 安装：
+
+```bash
+brew tap hust-open-atom-club/tap
+brew install atomgit-cli
+ag version
+```
+
+也可以使用一条命令直接安装：
+
+```bash
+brew install hust-open-atom-club/tap/atomgit-cli
+```
+
+升级已安装的 AtomGit CLI：
+
+```bash
+brew update
+brew upgrade atomgit-cli
+```
+
 ### Nix / NixOS
 
 AtomGit CLI 已进入 `nixos-unstable`，包名为 `atomgit-cli`，安装后提供 `ag` 命令。
