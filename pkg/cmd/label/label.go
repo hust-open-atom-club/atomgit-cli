@@ -17,6 +17,9 @@ func NewCmdLabel(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.AddCommand(newCmdLabelList(f))
+	cmd.AddCommand(newCmdLabelCreate(f))
+	cmd.AddCommand(newCmdLabelEdit(f))
+	cmdutil.AddRepositoryContextHelp(cmd)
 	return cmd
 }
 
@@ -24,7 +27,7 @@ func newCmdLabelList(f *cmdutil.Factory) *cobra.Command {
 	var limit int
 
 	cmd := &cobra.Command{
-		Use:     "list <owner>/<repo>",
+		Use:     "list [<owner>/<repo>]",
 		Short:   "List repository labels",
 		Example: `  ag label list owner/repo --limit 50`,
 		Args:    cobra.MaximumNArgs(1),
@@ -37,15 +40,11 @@ func newCmdLabelList(f *cmdutil.Factory) *cobra.Command {
 			if limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", limit)
 			}
-			if len(args) == 0 {
-				return fmt.Errorf("repository required")
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
 			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo := parts[0], parts[1]
+			owner, repo := repository.Owner, repository.Name
 
 			client, err := newAPIClient(f, token)
 			if err != nil {

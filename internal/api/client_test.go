@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -203,6 +204,35 @@ func TestPatchFormEncodesMultipartBody(t *testing.T) {
 	}
 }
 
+func TestPostFormEncodesURLBody(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/resource" {
+			t.Fatalf("request = %s %s", r.Method, r.URL.Path)
+		}
+		if got := r.Header.Get("Content-Type"); got != "application/x-www-form-urlencoded" {
+			t.Fatalf("Content-Type = %q", got)
+		}
+		if err := r.ParseForm(); err != nil {
+			t.Fatal(err)
+		}
+		if r.Form.Get("name") != "bug" || r.Form.Get("color") != "#ff0000" {
+			t.Fatalf("form = %#v", r.Form)
+		}
+		_, _ = io.WriteString(w, `{"name":"bug","color":"#ff0000"}`)
+	})
+
+	var result Label
+	if err := client.PostForm("/resource", url.Values{
+		"name":  {"bug"},
+		"color": {"#ff0000"},
+	}, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Name != "bug" || result.Color != "#ff0000" {
+		t.Fatalf("result = %#v", result)
+	}
+}
+
 func TestPatchAcceptsEmptySuccessResponse(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -351,6 +381,7 @@ func TestMethodsReturnAPIError(t *testing.T) {
 	}{
 		{name: "get", call: func(c *Client) error { return c.Get("/fail", &map[string]string{}) }},
 		{name: "post", call: func(c *Client) error { return c.Post("/fail", nil, nil) }},
+		{name: "post form", call: func(c *Client) error { return c.PostForm("/fail", url.Values{"name": {"bug"}}, nil) }},
 		{name: "put", call: func(c *Client) error { return c.Put("/fail", nil, nil) }},
 		{name: "patch", call: func(c *Client) error { return c.Patch("/fail", nil, nil) }},
 		{name: "patch form", call: func(c *Client) error { return c.PatchForm("/fail", map[string]string{"state": "close"}, nil) }},
