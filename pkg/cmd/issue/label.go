@@ -2,10 +2,10 @@ package issue
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
-	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -46,25 +46,21 @@ backward compatibility. Use --add or --remove to make the operation explicit.`,
 				return err
 			}
 
-			issuePath := fmt.Sprintf("/repos/%s/%s/issues/%s", repository.Owner, repository.Name, number)
-			var current api.Issue
-			if err := client.Get(issuePath, &current); err != nil {
-				return fmt.Errorf("failed to get issue labels: %w", err)
-			}
-
-			currentLabels := issueLabelNames(current.Labels)
-			updatedLabels, changedLabels, err := updateIssueLabels(currentLabels, labels, operation)
-			if err != nil {
-				return err
-			}
-			if len(changedLabels) == 0 {
-				fmt.Fprintf(cmd.OutOrStdout(), "Issue #%s already has labels: %s\n", number, strings.Join(labels, ", "))
-				return nil
-			}
-
-			labelsPath := issuePath + "/labels"
-			if err := client.Put(labelsPath, updatedLabels, nil); err != nil {
-				return fmt.Errorf("failed to %s labels on issue: %w", operation, err)
+			labelsPath := fmt.Sprintf("/repos/%s/%s/issues/%s/labels", repository.Owner, repository.Name, number)
+			switch operation {
+			case issueLabelAdd:
+				if err := client.Post(labelsPath, labels, nil); err != nil {
+					return fmt.Errorf("failed to add labels to issue: %w", err)
+				}
+			case issueLabelRemove:
+				for _, label := range labels {
+					path := labelsPath + "/" + url.PathEscape(label)
+					if err := client.Delete(path); err != nil {
+						return fmt.Errorf("failed to remove label %q from issue: %w", label, err)
+					}
+				}
+			default:
+				return fmt.Errorf("unsupported issue label operation: %s", operation)
 			}
 
 			verb := "Added"
@@ -73,7 +69,7 @@ backward compatibility. Use --add or --remove to make the operation explicit.`,
 				verb = "Removed"
 				preposition = "from"
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "%s labels %s issue #%s: %s\n", verb, preposition, number, strings.Join(changedLabels, ", "))
+			fmt.Fprintf(cmd.OutOrStdout(), "%s labels %s issue #%s: %s\n", verb, preposition, number, strings.Join(labels, ", "))
 			return nil
 		},
 	}
@@ -143,61 +139,4 @@ func parseIssueLabels(value string) ([]string, error) {
 		labels = append(labels, label)
 	}
 	return labels, nil
-}
-
-func issueLabelNames(labels []api.Label) []string {
-	names := make([]string, 0, len(labels))
-	for _, label := range labels {
-		if name := strings.TrimSpace(label.Name); name != "" {
-			names = append(names, name)
-		}
-	}
-	return names
-}
-
-func updateIssueLabels(current, requested []string, operation issueLabelOperation) ([]string, []string, error) {
-	present := make(map[string]struct{}, len(current))
-	for _, label := range current {
-		present[label] = struct{}{}
-	}
-
-	switch operation {
-	case issueLabelAdd:
-		updated := append([]string(nil), current...)
-		changed := make([]string, 0, len(requested))
-		for _, label := range requested {
-			if _, exists := present[label]; exists {
-				continue
-			}
-			present[label] = struct{}{}
-			updated = append(updated, label)
-			changed = append(changed, label)
-		}
-		return updated, changed, nil
-
-	case issueLabelRemove:
-		missing := make([]string, 0)
-		remove := make(map[string]struct{}, len(requested))
-		for _, label := range requested {
-			if _, exists := present[label]; !exists {
-				missing = append(missing, label)
-				continue
-			}
-			remove[label] = struct{}{}
-		}
-		if len(missing) > 0 {
-			return nil, nil, fmt.Errorf("labels not found on issue: %s", strings.Join(missing, ", "))
-		}
-
-		updated := make([]string, 0, len(current)-len(remove))
-		for _, label := range current {
-			if _, removeLabel := remove[label]; !removeLabel {
-				updated = append(updated, label)
-			}
-		}
-		return updated, append([]string(nil), requested...), nil
-
-	default:
-		return nil, nil, fmt.Errorf("unsupported issue label operation: %s", operation)
-	}
 }
