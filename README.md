@@ -220,6 +220,20 @@ ag pr close owner/repo 123
 ag pr reopen owner/repo 123
 ```
 
+#### PR 评审
+
+AtomGit 当前公开的 review API 仅支持批准操作，不支持 request-changes 或带正文的正式评审评论。普通评论请使用 `ag pr comment create`。
+
+```bash
+# 批准 PR
+ag pr review owner/repo 123 --approve
+
+# 仓库管理员强制通过审查
+ag pr review owner/repo 123 --approve --force
+```
+
+命令会在提交前确认 PR 仍处于打开状态，并阻止当前用户误评审自己创建的 PR。
+
 #### PR 评论
 
 ```bash

@@ -50,6 +50,12 @@ type PullRequest struct {
 	Mergeable bool        `json:"mergeable"`
 }
 
+// PullRequestReviewRequest represents AtomGit's formal review request.
+// Force only takes effect for repository administrators.
+type PullRequestReviewRequest struct {
+	Force bool `json:"force"`
+}
+
 // GetNumber returns the PR number as a string
 func (pr *PullRequest) GetNumber() string {
 	switch v := pr.Number.(type) {
