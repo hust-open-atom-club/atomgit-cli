@@ -89,14 +89,17 @@ func ResolveRepositoryFromArgs(f *Factory, args []string, trailingArgs int) (Rep
 		return Repository{}, nil, fmt.Errorf("expected %d or %d arguments, got %d", trailingArgs, trailingArgs+1, len(args))
 	}
 
-	explicit := ""
 	remaining := args
 	if len(args) == trailingArgs+1 {
-		explicit = args[0]
 		remaining = args[1:]
+		repository, err := ParseRepository(args[0])
+		if err != nil {
+			return Repository{}, nil, err
+		}
+		return repository, remaining, nil
 	}
 
-	repository, err := ResolveRepository(f, explicit)
+	repository, err := ResolveRepository(f, "")
 	if err != nil {
 		return Repository{}, nil, err
 	}

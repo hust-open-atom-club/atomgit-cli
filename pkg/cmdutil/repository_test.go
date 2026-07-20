@@ -79,6 +79,8 @@ func TestResolveRepositoryFromArgs(t *testing.T) {
 	}{
 		{name: "inferred list", wantRepo: "inferred/repo"},
 		{name: "explicit list", args: []string{"owner/repo"}, wantRepo: "owner/repo"},
+		{name: "explicit empty", args: []string{""}, wantError: true},
+		{name: "explicit short name", args: []string{"repo"}, wantError: true},
 		{name: "inferred resource", args: []string{"42"}, trailing: 1, wantRepo: "inferred/repo", wantArgs: []string{"42"}},
 		{name: "explicit resource", args: []string{"owner/repo", "42"}, trailing: 1, wantRepo: "owner/repo", wantArgs: []string{"42"}},
 		{name: "too few", trailing: 1, wantError: true},
