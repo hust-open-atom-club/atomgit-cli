@@ -250,6 +250,543 @@ func TestPRDiff(t *testing.T) {
 	}
 }
 
+func TestPRMergeSuccess(t *testing.T) {
+	tests := []struct {
+		name       string
+		args       []string
+		flags      map[string]string
+		wantOutput string
+	}{
+		{
+			name: "default merge",
+			args: []string{
+				"alice/demo",
+				"42",
+			},
+			flags:      map[string]string{},
+			wantOutput: "Merged PR #42: https://atomgit.com/alice/demo/pulls/42\n",
+		},
+		{
+			name: "rebase merge",
+			args: []string{
+				"alice/demo",
+				"42",
+			},
+			flags: map[string]string{
+				"rebase": "true",
+			},
+			wantOutput: "Rebased and merged PR #42: https://atomgit.com/alice/demo/pulls/42\n",
+		},
+		{
+			name: "squash merge",
+			args: []string{
+				"alice/demo",
+				"42",
+			},
+			flags: map[string]string{
+				"squash": "true",
+			},
+			wantOutput: "Squashed and merged PR #42: https://atomgit.com/alice/demo/pulls/42\n",
+		},
+		{
+			name: "rebase with squash",
+			args: []string{
+				"alice/demo",
+				"42",
+			},
+			flags: map[string]string{
+				"rebase": "true",
+				"squash": "true",
+			},
+			wantOutput: "Rebased and merged PR with squash #42: https://atomgit.com/alice/demo/pulls/42\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var mergeBody json.RawMessage
+			factory := &cmdutil.Factory{
+				Config: prTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
+							return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
+						}
+						if req.Method == http.MethodPut && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/merge" {
+							body, _ := io.ReadAll(req.Body)
+							mergeBody = json.RawMessage(body)
+							return prResponse(http.StatusOK, `{"sha":"c20ac962","merged":true,"message":"Pull Request已成功合并"}`), nil
+						}
+						t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+						return nil, nil
+					})}, nil
+				},
+			}
+
+			cmd := newCmdPRMerge(factory)
+			for k, v := range tt.flags {
+				_ = cmd.Flags().Set(k, v)
+			}
+			var output strings.Builder
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, tt.args); err != nil {
+				t.Fatal(err)
+			}
+
+			if output.String() != tt.wantOutput {
+				t.Fatalf("output = %q, want %q", output.String(), tt.wantOutput)
+			}
+
+			var body map[string]any
+			if err := json.Unmarshal(mergeBody, &body); err != nil {
+				t.Fatal(err)
+			}
+			if _, ok := body["merge_method"]; !ok {
+				t.Fatal("merge_method not found in request body")
+			}
+		})
+	}
+}
+
+func TestPRMergeFlagsInBody(t *testing.T) {
+	tests := []struct {
+		name     string
+		flags    map[string]string
+		wantBody map[string]any
+	}{
+		{
+			name:  "rebase",
+			flags: map[string]string{"rebase": "true"},
+			wantBody: map[string]any{
+				"merge_method": "rebase",
+			},
+		},
+		{
+			name:  "squash",
+			flags: map[string]string{"squash": "true"},
+			wantBody: map[string]any{
+				"merge_method": "merge",
+				"squash":       true,
+			},
+		},
+		{
+			name:  "admin",
+			flags: map[string]string{"admin": "true"},
+			wantBody: map[string]any{
+				"merge_method": "merge",
+				"force_merge":  true,
+			},
+		},
+		{
+			name:  "subject and body without squash",
+			flags: map[string]string{"subject": "my title", "body": "my desc"},
+			wantBody: map[string]any{
+				"merge_method": "merge",
+				"title":        "my title",
+				"description":  "my desc",
+			},
+		},
+		{
+			name:  "body with squash",
+			flags: map[string]string{"squash": "true", "body": "squash msg"},
+			wantBody: map[string]any{
+				"merge_method":          "merge",
+				"squash":                true,
+				"squash_commit_message": "squash msg",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var mergeBody json.RawMessage
+			factory := &cmdutil.Factory{
+				Config: prTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
+							return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
+						}
+						if req.Method == http.MethodPut && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/merge" {
+							body, _ := io.ReadAll(req.Body)
+							mergeBody = json.RawMessage(body)
+							return prResponse(http.StatusOK, `{"sha":"sha","merged":true,"message":"ok"}`), nil
+						}
+						t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+						return nil, nil
+					})}, nil
+				},
+			}
+
+			cmd := newCmdPRMerge(factory)
+			for k, v := range tt.flags {
+				_ = cmd.Flags().Set(k, v)
+			}
+			var output strings.Builder
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+				t.Fatal(err)
+			}
+
+			var got map[string]any
+			if err := json.Unmarshal(mergeBody, &got); err != nil {
+				t.Fatal(err)
+			}
+			for field, want := range tt.wantBody {
+				if got[field] != want {
+					t.Fatalf("body[%q] = %v, want %v", field, got[field], want)
+				}
+			}
+		})
+	}
+}
+
+func TestPRMergeDeleteBranch(t *testing.T) {
+	branchDeleted := false
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
+					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{"full_name":"alice/demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
+				}
+				if req.Method == http.MethodPut && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/merge" {
+					return prResponse(http.StatusOK, `{"sha":"sha","merged":true,"message":"ok"}`), nil
+				}
+				if req.Method == http.MethodDelete && req.URL.Path == "/api/v5/repos/alice/demo/branches/feature-x" {
+					branchDeleted = true
+					return prResponse(http.StatusNoContent, ""), nil
+				}
+				t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+				return nil, nil
+			})}, nil
+		},
+	}
+
+	cmd := newCmdPRMerge(factory)
+	_ = cmd.Flags().Set("delete-branch", "true")
+	var output strings.Builder
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if !branchDeleted {
+		t.Fatal("branch was not deleted")
+	}
+
+	wantOutput := "Merged PR #42: https://atomgit.com/alice/demo/pulls/42\nDeleted remote branch feature-x\n"
+	if output.String() != wantOutput {
+		t.Fatalf("output = %q, want %q", output.String(), wantOutput)
+	}
+}
+
+func TestPRMergeDeleteBranchFails(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
+					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{"full_name":"alice/demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
+				}
+				if req.Method == http.MethodPut && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/merge" {
+					return prResponse(http.StatusOK, `{"sha":"sha","merged":true,"message":"ok"}`), nil
+				}
+				if req.Method == http.MethodDelete && req.URL.Path == "/api/v5/repos/alice/demo/branches/feature-x" {
+					return prResponse(http.StatusNotFound, `{"message":"branch not found"}`), nil
+				}
+				t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+				return nil, nil
+			})}, nil
+		},
+	}
+
+	cmd := newCmdPRMerge(factory)
+	_ = cmd.Flags().Set("delete-branch", "true")
+	var stderr strings.Builder
+	var stdout strings.Builder
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stderr)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+
+	wantStdout := "Merged PR #42: https://atomgit.com/alice/demo/pulls/42\n"
+	if stdout.String() != wantStdout {
+		t.Fatalf("stdout = %q, want %q", stdout.String(), wantStdout)
+	}
+	if !strings.Contains(stderr.String(), "Warning: failed to delete branch") {
+		t.Fatalf("stderr = %q, want containing 'Warning: failed to delete branch'", stderr.String())
+	}
+}
+
+func TestPRMergeDeleteBranchFork(t *testing.T) {
+	branchDeleted := false
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
+					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{"full_name":"alice/fork-demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
+				}
+				if req.Method == http.MethodPut && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/merge" {
+					return prResponse(http.StatusOK, `{"sha":"sha","merged":true,"message":"ok"}`), nil
+				}
+				if req.Method == http.MethodDelete && req.URL.Path == "/api/v5/repos/alice/fork-demo/branches/feature-x" {
+					branchDeleted = true
+					return prResponse(http.StatusNoContent, ""), nil
+				}
+				t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+				return nil, nil
+			})}, nil
+		},
+	}
+
+	cmd := newCmdPRMerge(factory)
+	_ = cmd.Flags().Set("delete-branch", "true")
+	var output strings.Builder
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if !branchDeleted {
+		t.Fatal("branch was not deleted from fork repo")
+	}
+
+	wantOutput := "Merged PR #42: https://atomgit.com/alice/demo/pulls/42\nDeleted remote branch feature-x\n"
+	if output.String() != wantOutput {
+		t.Fatalf("output = %q, want %q", output.String(), wantOutput)
+	}
+}
+
+func TestPRMergeDeleteBranchWithSlash(t *testing.T) {
+	branchDeleted := false
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
+					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature/x","sha":"abc","repo":{"full_name":"alice/demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
+				}
+				if req.Method == http.MethodPut && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/merge" {
+					return prResponse(http.StatusOK, `{"sha":"sha","merged":true,"message":"ok"}`), nil
+				}
+				if req.Method == http.MethodDelete && req.URL.EscapedPath() == "/api/v5/repos/alice/demo/branches/feature%2Fx" {
+					branchDeleted = true
+					return prResponse(http.StatusNoContent, ""), nil
+				}
+				t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+				return nil, nil
+			})}, nil
+		},
+	}
+
+	cmd := newCmdPRMerge(factory)
+	_ = cmd.Flags().Set("delete-branch", "true")
+	var output strings.Builder
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if !branchDeleted {
+		t.Fatal("branch with slash was not deleted")
+	}
+
+	wantOutput := "Merged PR #42: https://atomgit.com/alice/demo/pulls/42\nDeleted remote branch feature/x\n"
+	if output.String() != wantOutput {
+		t.Fatalf("output = %q, want %q", output.String(), wantOutput)
+	}
+}
+
+func TestPRMergeDeleteBranchSkipsEmptySourceBranch(t *testing.T) {
+	branchDeleted := false
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
+					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"","sha":"abc","repo":{"full_name":"alice/demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
+				}
+				if req.Method == http.MethodPut && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/merge" {
+					return prResponse(http.StatusOK, `{"sha":"sha","merged":true,"message":"ok"}`), nil
+				}
+				if req.Method == http.MethodDelete {
+					branchDeleted = true
+					t.Fatalf("unexpected delete request: %s", req.URL.Path)
+				}
+				t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+				return nil, nil
+			})}, nil
+		},
+	}
+
+	cmd := newCmdPRMerge(factory)
+	_ = cmd.Flags().Set("delete-branch", "true")
+	var output strings.Builder
+	var stderr strings.Builder
+	cmd.SetOut(&output)
+	cmd.SetErr(&stderr)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if branchDeleted {
+		t.Fatal("branch deletion was attempted for an empty source branch")
+	}
+	if !strings.Contains(stderr.String(), "cannot determine source repository or branch") {
+		t.Fatalf("stderr = %q, want warning about missing source repository or branch", stderr.String())
+	}
+	if got := output.String(); got != "Merged PR #42: https://atomgit.com/alice/demo/pulls/42\n" {
+		t.Fatalf("output = %q, want merged message only", got)
+	}
+}
+
+func TestPRMergeErrors(t *testing.T) {
+	tests := []struct {
+		name      string
+		getStatus int
+		getBody   string
+		wantError string
+	}{
+		{
+			name:      "PR not found",
+			getStatus: http.StatusNotFound,
+			getBody:   `{"message":"not found"}`,
+			wantError: "failed to get PR alice/demo #42",
+		},
+		{
+			name:      "PR already merged",
+			getStatus: http.StatusOK,
+			getBody:   `{"id":1,"number":"42","state":"open","merged":true}`,
+			wantError: "PR #42 is already merged",
+		},
+		{
+			name:      "PR is closed",
+			getStatus: http.StatusOK,
+			getBody:   `{"id":1,"number":"42","state":"closed","merged":false}`,
+			wantError: "PR #42 is closed, cannot merge",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := &cmdutil.Factory{
+				Config: prTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						return prResponse(tt.getStatus, tt.getBody), nil
+					})}, nil
+				},
+			}
+
+			cmd := newCmdPRMerge(factory)
+			err := cmd.RunE(cmd, []string{"alice/demo", "42"})
+			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+				t.Fatalf("error = %v, want containing %q", err, tt.wantError)
+			}
+		})
+	}
+}
+
+func TestPRMergeAPIError(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
+					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
+				}
+				if req.Method == http.MethodPut {
+					return prResponse(http.StatusUnprocessableEntity, `{"message":"merge conflict"}`), nil
+				}
+				t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+				return nil, nil
+			})}, nil
+		},
+	}
+
+	cmd := newCmdPRMerge(factory)
+	err := cmd.RunE(cmd, []string{"alice/demo", "42"})
+	if err == nil || !strings.Contains(err.Error(), "failed to merge PR #42") {
+		t.Fatalf("error = %v, want containing 'failed to merge PR #42'", err)
+	}
+}
+
+func TestPRMergeValidation(t *testing.T) {
+	tests := []struct {
+		name      string
+		args      []string
+		wantError string
+	}{
+		{
+			name: "invalid repository format",
+			args: []string{
+				"invalid",
+				"42",
+			},
+			wantError: "invalid repository format",
+		},
+		{
+			name: "empty owner",
+			args: []string{
+				"/repo",
+				"42",
+			},
+			wantError: "invalid repository format",
+		},
+		{
+			name: "empty repo",
+			args: []string{
+				"owner/",
+				"42",
+			},
+			wantError: "invalid repository format",
+		},
+		{
+			name: "zero PR number",
+			args: []string{
+				"owner/repo",
+				"0",
+			},
+			wantError: "invalid PR number",
+		},
+		{
+			name: "negative PR number",
+			args: []string{
+				"owner/repo",
+				"-1",
+			},
+			wantError: "invalid PR number",
+		},
+		{
+			name: "non-numeric PR number",
+			args: []string{
+				"owner/repo",
+				"abc",
+			},
+			wantError: "invalid PR number",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := newCmdPRMerge(&cmdutil.Factory{
+				Config: prTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					t.Fatal("HTTP client should not be created for invalid merge input")
+					return nil, nil
+				},
+			})
+			err := cmd.RunE(cmd, tt.args)
+			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+				t.Fatalf("error = %v, want containing %q", err, tt.wantError)
+			}
+		})
+	}
+}
+
 func TestPRReopenSendsOpenState(t *testing.T) {
 	var gotMethod, gotPath, gotBody string
 	factory := &cmdutil.Factory{

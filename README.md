@@ -201,6 +201,15 @@ ag pr view owner/repo 123
 # 查看 PR diff
 ag pr diff owner/repo 123
 
+# 合并 PR
+ag pr merge owner/repo 123
+ag pr merge owner/repo 123 --rebase
+ag pr merge owner/repo 123 --squash
+ag pr merge owner/repo 123 --admin
+ag pr merge owner/repo 123 --subject "Merge PR #123" --body "Merge details"
+ag pr merge owner/repo 123 --delete-branch
+ag pr merge owner/repo 123 --rebase --squash --admin --subject "Merge PR #123" --body "Merge details" --delete-branch
+
 # 创建 PR
 ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch
 
