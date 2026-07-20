@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -53,11 +54,8 @@ backward compatibility. Use --add or --remove to make the operation explicit.`,
 					return fmt.Errorf("failed to add labels to issue: %w", err)
 				}
 			case issueLabelRemove:
-				for _, label := range labels {
-					path := labelsPath + "/" + url.PathEscape(label)
-					if err := client.Delete(path); err != nil {
-						return fmt.Errorf("failed to remove label %q from issue: %w", label, err)
-					}
+				if err := removeIssueLabels(client, labelsPath, labels); err != nil {
+					return fmt.Errorf("failed to remove labels from issue: %w", err)
 				}
 			default:
 				return fmt.Errorf("unsupported issue label operation: %s", operation)
@@ -139,4 +137,29 @@ func parseIssueLabels(value string) ([]string, error) {
 		labels = append(labels, label)
 	}
 	return labels, nil
+}
+
+func removeIssueLabels(client *api.Client, labelsPath string, labels []string) error {
+	removed := make([]string, 0, len(labels))
+	for _, label := range labels {
+		path := labelsPath + "/" + url.PathEscape(label)
+		if err := client.Delete(path); err != nil {
+			if len(removed) == 0 {
+				return fmt.Errorf("failed to remove label %q: %w", label, err)
+			}
+
+			if rollbackErr := client.Post(labelsPath, removed, nil); rollbackErr != nil {
+				return fmt.Errorf(
+					"failed to remove label %q after removing %s; failed to restore previously removed labels: %v: %w",
+					label, strings.Join(removed, ", "), rollbackErr, err,
+				)
+			}
+			return fmt.Errorf(
+				"failed to remove label %q; restored previously removed labels: %s: %w",
+				label, strings.Join(removed, ", "), err,
+			)
+		}
+		removed = append(removed, label)
+	}
+	return nil
 }

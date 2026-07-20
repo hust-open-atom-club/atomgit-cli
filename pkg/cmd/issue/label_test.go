@@ -158,24 +158,77 @@ func TestIssueLabelReportsAPIErrors(t *testing.T) {
 			HttpClient: func() (*http.Client, error) {
 				return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					requests++
-					if req.Method != http.MethodDelete {
-						t.Fatalf("method = %s, want DELETE", req.Method)
-					}
-					if requests == 2 {
+					switch requests {
+					case 1:
+						if req.Method != http.MethodDelete {
+							t.Fatalf("method = %s, want DELETE", req.Method)
+						}
+						return issueResponse(http.StatusOK, `{}`), nil
+					case 2:
+						if req.Method != http.MethodDelete {
+							t.Fatalf("method = %s, want DELETE", req.Method)
+						}
 						return issueLabelErrorResponse(http.StatusNotFound, `{"message":"label not found"}`), nil
+					case 3:
+						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/issues/7/labels" {
+							t.Fatalf("rollback request = %s %s", req.Method, req.URL.Path)
+						}
+						var labels []string
+						if err := json.NewDecoder(req.Body).Decode(&labels); err != nil {
+							t.Fatal(err)
+						}
+						assertStringSlice(t, labels, []string{"bug"})
+						return issueResponse(http.StatusOK, `{}`), nil
+					default:
+						t.Fatalf("unexpected request %d", requests)
+						return nil, nil
 					}
-					return issueResponse(http.StatusOK, `{}`), nil
 				})}, nil
 			},
 		}
 		cmd := newCmdIssueLabel(factory)
 		_ = cmd.Flags().Set("remove", "bug,missing")
 		err := cmd.RunE(cmd, []string{"alice/demo", "7"})
-		if err == nil || !strings.Contains(err.Error(), `failed to remove label "missing" from issue`) {
+		if err == nil || !strings.Contains(err.Error(), `failed to remove label "missing"`) || !strings.Contains(err.Error(), "restored previously removed labels: bug") {
 			t.Fatalf("error = %v", err)
 		}
-		if requests != 2 {
-			t.Fatalf("requests = %d, want 2", requests)
+		if requests != 3 {
+			t.Fatalf("requests = %d, want 3", requests)
+		}
+	})
+
+	t.Run("remove rollback failure", func(t *testing.T) {
+		requests := 0
+		factory := &cmdutil.Factory{
+			Config: issueTestConfig{},
+			HttpClient: func() (*http.Client, error) {
+				return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+					requests++
+					switch requests {
+					case 1:
+						return issueResponse(http.StatusOK, `{}`), nil
+					case 2:
+						return issueLabelErrorResponse(http.StatusNotFound, `{"message":"label not found"}`), nil
+					case 3:
+						if req.Method != http.MethodPost {
+							t.Fatalf("method = %s, want POST", req.Method)
+						}
+						return issueLabelErrorResponse(http.StatusInternalServerError, `{"message":"rollback failed"}`), nil
+					default:
+						t.Fatalf("unexpected request %d", requests)
+						return nil, nil
+					}
+				})}, nil
+			},
+		}
+		cmd := newCmdIssueLabel(factory)
+		_ = cmd.Flags().Set("remove", "bug,missing")
+		err := cmd.RunE(cmd, []string{"alice/demo", "7"})
+		if err == nil || !strings.Contains(err.Error(), "failed to restore previously removed labels") || !strings.Contains(err.Error(), "rollback failed") {
+			t.Fatalf("error = %v", err)
+		}
+		if requests != 3 {
+			t.Fatalf("requests = %d, want 3", requests)
 		}
 	})
 }
