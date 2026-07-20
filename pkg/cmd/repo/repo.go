@@ -18,12 +18,13 @@ func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "repo",
 		Short: "Manage repositories",
-		Long:  `Create, clone, fork, and view repositories.`,
+		Long:  `Create, clone, edit, fork, and view repositories.`,
 	}
 
 	cmd.AddCommand(newCmdRepoList(f))
 	cmd.AddCommand(newCmdRepoView(f))
 	cmd.AddCommand(newCmdRepoCreate(f))
+	cmd.AddCommand(newCmdRepoEdit(f))
 	cmd.AddCommand(newCmdRepoClone(f))
 	cmd.AddCommand(newCmdRepoDelete(f))
 	cmd.AddCommand(newCmdRepoFork(f))

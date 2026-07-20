@@ -9,24 +9,26 @@ import (
 
 // Repository represents an AtomGit repository
 type Repository struct {
-	ID              int64  `json:"id"`
-	Name            string `json:"name"`
-	FullName        string `json:"full_name"`
-	Description     string `json:"description"`
-	HTMLURL         string `json:"web_url"`
-	Private         bool   `json:"private"`
-	Internal        bool   `json:"internal"`
-	DefaultBranch   string `json:"default_branch"`
-	Language        string `json:"language"`
-	License         string `json:"license"`
-	Fork            bool   `json:"fork"`
-	ParentFullName  string `json:"parentfull_name"`
-	UpdatedAt       string `json:"updated_at"`
-	StarsCount      int    `json:"stargazers_count"`
-	ForksCount      int    `json:"forks_count"`
-	WatchersCount   int    `json:"watchers_count"`
-	OpenIssuesCount int    `json:"open_issues_count"`
-	Owner           struct {
+	ID               int64  `json:"id"`
+	Name             string `json:"name"`
+	Path             string `json:"path"`
+	FullName         string `json:"full_name"`
+	Description      string `json:"description"`
+	HTMLURL          string `json:"web_url"`
+	AlternateHTMLURL string `json:"html_url"`
+	Private          bool   `json:"private"`
+	Internal         bool   `json:"internal"`
+	DefaultBranch    string `json:"default_branch"`
+	Language         string `json:"language"`
+	License          string `json:"license"`
+	Fork             bool   `json:"fork"`
+	ParentFullName   string `json:"parentfull_name"`
+	UpdatedAt        string `json:"updated_at"`
+	StarsCount       int    `json:"stargazers_count"`
+	ForksCount       int    `json:"forks_count"`
+	WatchersCount    int    `json:"watchers_count"`
+	OpenIssuesCount  int    `json:"open_issues_count"`
+	Owner            struct {
 		Login string `json:"login"`
 		Type  string `json:"type"`
 	} `json:"owner"`

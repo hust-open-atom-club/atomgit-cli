@@ -157,6 +157,22 @@ ag repo create my-project --public
 # 在指定个人或组织账号下创建
 ag repo create owner/my-project --public --description "My project"
 
+# 只更新描述；未指定的仓库设置保持不变
+ag repo edit owner/my-project --description "Updated description"
+
+# 显式清空描述
+ag repo edit owner/my-project --description ""
+
+# 更新默认分支
+ag repo edit owner/my-project --default-branch main
+
+# 同时更新名称和可见性（名称、可见性变更默认需要确认）
+ag repo edit owner/my-project --name "My Project" --visibility private
+
+# 非交互式修改可见性
+ag repo edit owner/my-project --public --yes
+ag repo edit owner/my-project --private --yes
+
 # 克隆仓库
 ag repo clone owner/repo
 ag repo clone owner/repo --branch dev
@@ -168,6 +184,10 @@ ag repo fork owner/repo --name my-fork --public
 # 删除仓库
 ag repo delete owner/repo --yes
 ```
+
+`ag repo edit` 仅发送命令行中明确指定的字段，支持 `--name`、`--description`、`--default-branch` 和 `--visibility public|private`。`--public`、`--private` 是可见性的便利选项；它们与 `--visibility` 三者互斥。名称或可见性修改需要交互确认，可使用 `--yes` 跳过确认。成功后命令会显示更新后的仓库名称和浏览器 URL。
+
+该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。
 
 ### Branch
 

@@ -41,6 +41,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 		"clone":  {"branch"},
 		"create": {"clone", "description", "private", "public"},
 		"delete": {"yes"},
+		"edit":   {"default-branch", "description", "name", "private", "public", "visibility", "yes"},
 		"fork":   {"clone", "description", "name", "private", "public"},
 		"list":   {"limit"},
 		"view":   {},
@@ -63,6 +64,14 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	}
 	if err := clone.Args(clone, []string{"owner/repo", "target", "extra"}); err == nil {
 		t.Fatal("clone accepted too many arguments")
+	}
+
+	edit, _, _ := cmd.Find([]string{"edit"})
+	if err := edit.Args(edit, nil); err == nil {
+		t.Fatal("edit accepted no repository")
+	}
+	if err := edit.Args(edit, []string{"owner/repo", "extra"}); err == nil {
+		t.Fatal("edit accepted too many repositories")
 	}
 }
 
@@ -272,6 +281,11 @@ func TestRepoCommandsReportAuthenticationErrors(t *testing.T) {
 		{name: "view", call: func() error { cmd := newCmdRepoView(factory); return cmd.RunE(cmd, []string{"alice/demo"}) }},
 		{name: "create", call: func() error { return runCreate(io.Discard, factory, &CreateOptions{Name: "demo"}) }},
 		{name: "fork", call: func() error { return runFork(io.Discard, factory, &ForkOptions{}, "alice/demo") }},
+		{name: "edit", call: func() error {
+			cmd := newCmdRepoEdit(factory)
+			_ = cmd.Flags().Set("description", "updated")
+			return cmd.RunE(cmd, []string{"alice/demo"})
+		}},
 		{name: "delete", call: func() error {
 			cmd := newCmdRepoDelete(factory)
 			_ = cmd.Flags().Set("yes", "true")
