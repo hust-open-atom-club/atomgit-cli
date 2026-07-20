@@ -19,6 +19,7 @@ func NewCmdLabel(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdLabelList(f))
 	cmd.AddCommand(newCmdLabelCreate(f))
 	cmd.AddCommand(newCmdLabelEdit(f))
+	cmd.AddCommand(newCmdLabelDelete(f))
 	cmdutil.AddRepositoryContextHelp(cmd)
 	return cmd
 }

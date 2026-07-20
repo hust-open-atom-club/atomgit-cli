@@ -28,6 +28,7 @@ func TestNewCmdLabelRegistersCommands(t *testing.T) {
 		"list":   {"limit"},
 		"create": {"name", "color"},
 		"edit":   {"name", "color"},
+		"delete": {"yes"},
 	}
 	for name, flags := range want {
 		child, _, err := cmd.Find([]string{name})
@@ -237,6 +238,94 @@ func TestLabelMutationsReportAPIErrors(t *testing.T) {
 				t.Fatalf("error = %v", err)
 			}
 		})
+	}
+}
+
+func TestLabelDelete(t *testing.T) {
+	requests := 0
+	factory := &cmdutil.Factory{
+		Config: labelTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: labelRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				requests++
+				if req.Method != http.MethodDelete || req.URL.EscapedPath() != "/api/v5/repos/alice/demo/labels/help%20wanted" {
+					t.Fatalf("request = %s %s", req.Method, req.URL.EscapedPath())
+				}
+				return labelResponse(http.StatusOK, `{}`), nil
+			})}, nil
+		},
+	}
+
+	cmd := newCmdLabelDelete(factory)
+	_ = cmd.Flags().Set("yes", "true")
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "help wanted"}); err != nil {
+		t.Fatal(err)
+	}
+	if requests != 1 {
+		t.Fatalf("requests = %d", requests)
+	}
+	if got := output.String(); got != "Deleted label \"help wanted\"\n" {
+		t.Fatalf("output = %q", got)
+	}
+}
+
+func TestLabelDeleteConfirmation(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		wantRequests int
+		wantOutput   string
+	}{
+		{name: "accept", input: "yes\n", wantRequests: 1, wantOutput: "Deleted label \"obsolete\"\n"},
+		{name: "cancel", input: "n\n", wantOutput: "Deletion cancelled.\n"},
+		{name: "empty input", wantOutput: "Deletion cancelled.\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requests := 0
+			factory := &cmdutil.Factory{
+				Config: labelTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: labelRoundTripFunc(func(*http.Request) (*http.Response, error) {
+						requests++
+						return labelResponse(http.StatusOK, `{}`), nil
+					})}, nil
+				},
+			}
+			cmd := newCmdLabelDelete(factory)
+			cmd.SetIn(strings.NewReader(tt.input))
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, []string{"alice/demo", "obsolete"}); err != nil {
+				t.Fatal(err)
+			}
+			if requests != tt.wantRequests {
+				t.Fatalf("requests = %d, want %d", requests, tt.wantRequests)
+			}
+			if got := output.String(); !strings.HasSuffix(got, tt.wantOutput) {
+				t.Fatalf("output = %q, want suffix %q", got, tt.wantOutput)
+			}
+		})
+	}
+}
+
+func TestLabelDeleteReportsAPIError(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: labelTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: labelRoundTripFunc(func(*http.Request) (*http.Response, error) {
+				return labelResponse(http.StatusForbidden, `{"message":"denied"}`), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdLabelDelete(factory)
+	_ = cmd.Flags().Set("yes", "true")
+	err := cmd.RunE(cmd, []string{"alice/demo", "protected"})
+	if err == nil || !strings.Contains(err.Error(), "failed to delete label") || !strings.Contains(err.Error(), "Forbidden") {
+		t.Fatalf("error = %v", err)
 	}
 }
 
