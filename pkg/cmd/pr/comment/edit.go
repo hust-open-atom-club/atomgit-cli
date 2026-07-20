@@ -18,7 +18,7 @@ func newCmdEdit(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "edit [<owner>/]<repo> <number> <comment-id>",
+		Use:   "edit [<owner>/<repo>] <number> <comment-id>",
 		Short: "Edit a comment on a pull request",
 		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -27,27 +27,20 @@ func newCmdEdit(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			var owner, repo string
-			var number, commentID int
-
-			if len(args) < 3 {
-				return fmt.Errorf("repository, PR number, and comment ID required")
-			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number, err = strconv.Atoi(args[1])
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 2)
 			if err != nil {
-				return fmt.Errorf("invalid PR number: %s", args[1])
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+
+			number, err := strconv.Atoi(remaining[0])
+			if err != nil {
+				return fmt.Errorf("invalid PR number: %s", remaining[0])
 			}
 
-			commentID, err = strconv.Atoi(args[2])
+			commentID, err := strconv.Atoi(remaining[1])
 			if err != nil {
-				return fmt.Errorf("invalid comment ID: %s", args[2])
+				return fmt.Errorf("invalid comment ID: %s", remaining[1])
 			}
 
 			client := api.NewClient(token)
@@ -74,7 +67,7 @@ func newCmdEdit(f *cmdutil.Factory) *cobra.Command {
 			body := opts.Body
 			if body == "" {
 				// Interactive mode with existing content
-				fmt.Fprintf(out, "Editing comment #%s (press Ctrl+D when done):\n", args[2])
+				fmt.Fprintf(out, "Editing comment #%s (press Ctrl+D when done):\n", remaining[1])
 				fmt.Fprintln(out, "Current content:")
 				fmt.Fprintln(out, comment.Body)
 				fmt.Fprintln(out, "\n--- Enter new content below ---")

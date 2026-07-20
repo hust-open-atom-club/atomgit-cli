@@ -16,7 +16,7 @@ func newCmdDelete(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete [<owner>/]<repo> <number> <comment-id>",
+		Use:   "delete [<owner>/<repo>] <number> <comment-id>",
 		Short: "Delete a comment on an issue",
 		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -25,27 +25,20 @@ func newCmdDelete(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			var owner, repo string
-			var number, commentID int
-
-			if len(args) < 3 {
-				return fmt.Errorf("repository, issue number, and comment ID required")
-			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number, err = strconv.Atoi(args[1])
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 2)
 			if err != nil {
-				return fmt.Errorf("invalid issue number: %s", args[1])
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+
+			number, err := strconv.Atoi(remaining[0])
+			if err != nil {
+				return fmt.Errorf("invalid issue number: %s", remaining[0])
 			}
 
-			commentID, err = strconv.Atoi(args[2])
+			commentID, err := strconv.Atoi(remaining[1])
 			if err != nil {
-				return fmt.Errorf("invalid comment ID: %s", args[2])
+				return fmt.Errorf("invalid comment ID: %s", remaining[1])
 			}
 
 			client := api.NewClient(token)

@@ -18,7 +18,7 @@ func newCmdIssueEdit(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "edit [<owner>/]<repo> <number>",
+		Use:   "edit [<owner>/<repo>] <number>",
 		Short: "Edit an issue",
 		Example: `  ag issue edit owner/repo 42 --title "new title" --body "new body"
   ag issue edit owner/repo 42 --body-file description.md`,
@@ -47,15 +47,12 @@ func newCmdIssueEdit(f *cmdutil.Factory) *cobra.Command {
 				body = string(content)
 			}
 
-			if len(args) == 1 {
-				return fmt.Errorf("repository and issue number required")
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
 			}
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo := parts[0], parts[1]
-			number := args[1]
+			owner, repo := repository.Owner, repository.Name
+			number := remaining[0]
 
 			token, err := f.Config.GetToken()
 			if err != nil {

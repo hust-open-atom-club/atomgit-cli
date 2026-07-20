@@ -10,18 +10,18 @@ import (
 
 func newCmdIssueLabel(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "label <owner>/<repo> <number> <labels>",
+		Use:     "label [<owner>/<repo>] <number> <labels>",
 		Short:   "Add labels to an issue",
 		Example: `  ag issue label owner/repo 42 "bug, help wanted,priority/high"`,
-		Args:    cobra.ExactArgs(3),
+		Args:    cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 2)
+			if err != nil {
+				return err
 			}
-			owner, repo := parts[0], parts[1]
-			number := args[1]
-			labels, err := parseIssueLabels(args[2])
+			owner, repo := repository.Owner, repository.Name
+			number := remaining[0]
+			labels, err := parseIssueLabels(remaining[1])
 			if err != nil {
 				return err
 			}

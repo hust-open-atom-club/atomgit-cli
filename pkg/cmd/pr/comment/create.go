@@ -19,7 +19,7 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "create [<owner>/]<repo> <number>",
+		Use:   "create [<owner>/<repo>] <number>",
 		Short: "Create a comment on a pull request",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -28,22 +28,15 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			var owner, repo string
-			var number int
-
-			if len(args) == 1 {
-				return fmt.Errorf("repository and PR number required")
-			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number, err = strconv.Atoi(args[1])
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
-				return fmt.Errorf("invalid PR number: %s", args[1])
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+
+			number, err := strconv.Atoi(remaining[0])
+			if err != nil {
+				return fmt.Errorf("invalid PR number: %s", remaining[0])
 			}
 
 			// Get body from file if specified

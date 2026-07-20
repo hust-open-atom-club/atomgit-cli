@@ -19,7 +19,8 @@ func Main() int {
 	}
 
 	factory := &cmdutil.Factory{
-		Config: cfg,
+		Config:             cfg,
+		RepositoryResolver: cmdutil.NewGitRepositoryResolver(""),
 	}
 
 	rootCmd, err := root.NewCmdRoot(factory)

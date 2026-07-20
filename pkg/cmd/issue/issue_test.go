@@ -43,6 +43,9 @@ func TestNewCmdIssueRegistersSubcommands(t *testing.T) {
 	if list.Flags().Lookup("state") == nil || list.Flags().Lookup("limit") == nil {
 		t.Fatal("list flags were not registered")
 	}
+	if !strings.Contains(list.Long, cmdutil.RepositoryContextHelp) {
+		t.Fatal("list help does not explain repository inference")
+	}
 	if err := list.Args(list, []string{"one", "two"}); err == nil {
 		t.Fatal("list accepted too many arguments")
 	}
@@ -61,10 +64,13 @@ func TestNewCmdIssueRegistersSubcommands(t *testing.T) {
 	}
 }
 
-func TestIssueListHonorsLimit(t *testing.T) {
+func TestIssueListInfersRepositoryAndHonorsLimit(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
+		RepositoryResolver: func() (cmdutil.Repository, error) {
+			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+		},
 		HttpClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
@@ -78,7 +84,7 @@ func TestIssueListHonorsLimit(t *testing.T) {
 	cmd := newCmdIssueList(factory)
 	_ = cmd.Flags().Set("state", "closed")
 	_ = cmd.Flags().Set("limit", "1")
-	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+	if err := cmd.RunE(cmd, nil); err != nil {
 		t.Fatal(err)
 	}
 	if requests != 1 {
@@ -201,8 +207,11 @@ func TestIssueReopenFailsWhenStateRemainsClosedAfterUpdate(t *testing.T) {
 
 func TestIssueReopenRejectsWrongArgCount(t *testing.T) {
 	cmd := newCmdIssueReopen(&cmdutil.Factory{Config: issueTestConfig{}})
-	if err := cmd.Args(cmd, []string{"alice/demo"}); err == nil {
-		t.Fatal("reopen accepted 1 arg, want error")
+	if err := cmd.Args(cmd, nil); err == nil {
+		t.Fatal("reopen accepted no issue number")
+	}
+	if err := cmd.Args(cmd, []string{"7"}); err != nil {
+		t.Fatalf("reopen rejected an inferred-repository invocation: %v", err)
 	}
 	if err := cmd.Args(cmd, []string{"alice/demo", "7", "extra"}); err == nil {
 		t.Fatal("reopen accepted 3 args, want error")

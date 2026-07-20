@@ -15,7 +15,7 @@ func newCmdLinkIssues(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "link-issues [<owner>/]<repo> <pr_number>",
+		Use:   "link-issues [<owner>/<repo>] <pr_number>",
 		Short: "Link issues to a pull request",
 		Long:  `Link one or more issues to a pull request.`,
 		Args:  cobra.RangeArgs(1, 2),
@@ -25,20 +25,12 @@ func newCmdLinkIssues(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			var owner, repo string
-			var prNumber string
-
-			if len(args) == 1 {
-				return fmt.Errorf("repository and PR number required")
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
 			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			prNumber = args[1]
+			owner, repo := repository.Owner, repository.Name
+			prNumber := remaining[0]
 
 			if len(opts.Issues) == 0 {
 				return fmt.Errorf("at least one issue number is required (--issue)")
