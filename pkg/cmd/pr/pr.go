@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -30,6 +32,7 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdLinkIssues(f))
 	cmd.AddCommand(newCmdUnlinkIssues(f))
 	cmd.AddCommand(comment.NewCmdComment(f))
+	cmd.AddCommand(newCmdPRMerge(f))
 	cmdutil.AddRepositoryContextHelp(cmd)
 
 	return cmd
@@ -43,6 +46,16 @@ func resolveBaseBranch(requested string, repository api.Repository) (string, err
 		return base, nil
 	}
 	return "", fmt.Errorf("repository default branch is empty; specify --base")
+}
+
+func parsePRNumber(numberArg string) (string, error) {
+	numberText := strings.TrimSpace(numberArg)
+	number, err := strconv.Atoi(numberText)
+	if err != nil || number <= 0 {
+		return "", fmt.Errorf("invalid PR number: %s (expected positive integer)", numberArg)
+	}
+
+	return strconv.Itoa(number), nil
 }
 
 func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
@@ -420,6 +433,129 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 			return err
 		},
 	}
+
+	return cmd
+}
+
+func newCmdPRMerge(f *cmdutil.Factory) *cobra.Command {
+	var opts struct {
+		Rebase       bool
+		Squash       bool
+		Admin        bool
+		Subject      string
+		Body         string
+		DeleteBranch bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "merge [<owner>/<repo>] <number>",
+		Short: "Merge a pull request",
+		Long: `Merge a pull request.
+
+By default, ag creates a merge commit. Use --rebase to rebase the commits onto the base branch.
+`,
+		Args: cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
+			}
+
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			number, err := parsePRNumber(remaining[0])
+			if err != nil {
+				return err
+			}
+
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
+
+			var pr api.PullRequest
+			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
+			if err := client.Get(path, &pr); err != nil {
+				return fmt.Errorf("failed to get PR %s/%s #%s: %w", owner, repo, number, err)
+			}
+
+			if pr.Merged {
+				return fmt.Errorf("PR #%s is already merged", pr.GetNumber())
+			}
+			if pr.State != "open" {
+				return fmt.Errorf("PR #%s is closed, cannot merge", pr.GetNumber())
+			}
+
+			// Note: Work as intended.
+			// AtomGit supports squash under rebase, see PR #32.
+			mergeMethod := "merge"
+			if opts.Rebase {
+				mergeMethod = "rebase"
+			}
+
+			reqBody := api.MergePRRequest{
+				MergeMethod: mergeMethod,
+				Title:       opts.Subject,
+				ForceMerge:  opts.Admin,
+				Squash:      opts.Squash,
+			}
+			if opts.Squash {
+				reqBody.SquashCommitMessage = opts.Body
+			} else {
+				reqBody.Description = opts.Body
+			}
+
+			mergePath := fmt.Sprintf("/repos/%s/%s/pulls/%s/merge", owner, repo, number)
+			var mergeResp api.MergePRResponse
+			if err := client.Put(mergePath, reqBody, &mergeResp); err != nil {
+				return fmt.Errorf("failed to merge PR #%s: %w", number, err)
+			}
+
+			if !mergeResp.Merged {
+				msg := mergeResp.Message
+				return fmt.Errorf("failed to merge PR #%s: %s", number, msg)
+			}
+
+			switch {
+			case mergeMethod == "merge" && !opts.Squash:
+				fmt.Fprintf(cmd.OutOrStdout(), "Merged PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			case mergeMethod == "merge" && opts.Squash:
+				fmt.Fprintf(cmd.OutOrStdout(), "Squashed and merged PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			case mergeMethod == "rebase" && !opts.Squash:
+				fmt.Fprintf(cmd.OutOrStdout(), "Rebased and merged PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			case mergeMethod == "rebase" && opts.Squash:
+				fmt.Fprintf(cmd.OutOrStdout(), "Rebased and merged PR with squash #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			}
+
+			if opts.DeleteBranch {
+				sourceRepo := strings.TrimSpace(pr.Head.Repo.FullName)
+				sourceBranch := strings.TrimSpace(pr.Head.Ref)
+				if sourceRepo == "" || sourceBranch == "" {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: cannot determine source repository or branch, skipping branch deletion\n")
+				} else {
+					branchName := url.PathEscape(sourceBranch)
+					delPath := fmt.Sprintf("/repos/%s/branches/%s", sourceRepo, branchName)
+					if err := client.Delete(delPath); err != nil {
+						fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to delete branch %s: %v\n", sourceBranch, err)
+					} else {
+						fmt.Fprintf(cmd.OutOrStdout(), "Deleted remote branch %s\n", sourceBranch)
+					}
+				}
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVarP(&opts.Rebase, "rebase", "r", false, "Rebase the commits onto the base branch")
+	cmd.Flags().BoolVarP(&opts.Squash, "squash", "s", false, "Squash the commits into one commit")
+	cmd.Flags().BoolVar(&opts.Admin, "admin", false, "Use administrator privileges to merge a pull request that does not meet requirements")
+	cmd.Flags().StringVarP(&opts.Subject, "subject", "t", "", "Subject text for the merge commit")
+	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "Body text for the merge commit")
+	cmd.Flags().BoolVarP(&opts.DeleteBranch, "delete-branch", "d", false, "Delete the source branch after merge")
 
 	return cmd
 }

@@ -301,3 +301,20 @@ type TagRequest struct {
 	Message string `json:"message"`
 	Refs    string `json:"refs"`
 }
+
+// MergePRRequest represents the request body for merging a pull request
+type MergePRRequest struct {
+	MergeMethod         string `json:"merge_method"`
+	Title               string `json:"title,omitempty"`
+	Description         string `json:"description,omitempty"`
+	ForceMerge          bool   `json:"force_merge,omitempty"`
+	Squash              bool   `json:"squash,omitempty"`
+	SquashCommitMessage string `json:"squash_commit_message,omitempty"`
+}
+
+// MergePRResponse represents the response from merging a pull request
+type MergePRResponse struct {
+	SHA     string `json:"sha"`
+	Merged  bool   `json:"merged"`
+	Message string `json:"message"`
+}
