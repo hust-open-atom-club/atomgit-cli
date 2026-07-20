@@ -114,6 +114,12 @@ make install
 
 `ag` 默认会将终端控制字符转换为可见转义文本，包括输出经管道转发时，以防止仓库、Issue、PR 或 Git 服务端返回的内容注入终端控制序列。确实需要为机器处理保留原始字节时，可显式使用全局参数 `--raw-output`，例如 `ag --raw-output pr diff owner/repo 123`；请勿将未经检查的原始输出直接转发到终端。
 
+### 当前仓库推断
+
+`issue`、`pr`、`tag` 命令以及 `repo view`、`repo edit`、`repo fork`、`repo delete` 可以省略 `owner/repo`。省略时，`ag` 会从当前 Git 仓库的 AtomGit remote 推断目标仓库；显式传入的 `owner/repo` 始终优先。
+
+支持 `git@atomgit.com:owner/repo.git`、`ssh://git@atomgit.com/owner/repo.git` 和 `https://atomgit.com/owner/repo.git`。存在多个 remote 时，依次选择 `remote.pushDefault`、当前分支的 upstream remote、AtomGit `origin` 或唯一的 AtomGit remote。GitHub、GitLab 等其他服务的 remote 不会被识别为 AtomGit 仓库；无法唯一确定时，请显式传入 `owner/repo`。
+
 ## 命令
 
 ### 认证
@@ -148,6 +154,7 @@ ag repo list
 ag repo list --limit 100
 
 # 查看仓库详情
+ag repo view
 ag repo view owner/repo
 
 # 创建仓库
@@ -158,6 +165,7 @@ ag repo create my-project --public
 ag repo create owner/my-project --public --description "My project"
 
 # 只更新描述；未指定的仓库设置保持不变
+ag repo edit --description "Updated description"
 ag repo edit owner/my-project --description "Updated description"
 
 # 显式清空描述
@@ -178,10 +186,12 @@ ag repo clone owner/repo
 ag repo clone owner/repo --branch dev
 
 # Fork 仓库
+ag repo fork
 ag repo fork owner/repo
 ag repo fork owner/repo --name my-fork --public
 
 # 删除仓库
+ag repo delete --yes
 ag repo delete owner/repo --yes
 ```
 
@@ -212,10 +222,12 @@ ag branch delete owner/repo feature/foo --yes
 
 ```bash
 # 列出 PR
+ag pr list
 ag pr list owner/repo
 ag pr list owner/repo --state closed
 
 # 查看 PR
+ag pr view 123
 ag pr view owner/repo 123
 
 # 查看 PR diff
@@ -280,10 +292,12 @@ ag pr comment reply owner/repo 123 456 --body "Thanks for the feedback!"
 
 ```bash
 # 列出 Issue
+ag issue list
 ag issue list owner/repo
 ag issue list owner/repo --state all
 
 # 查看 Issue
+ag issue view 42
 ag issue view owner/repo 42
 
 # 添加 Issue 标签（使用逗号分隔多个标签）
@@ -318,6 +332,20 @@ ag issue comment edit owner/repo 42 789 --body "Updated information"
 # 删除评论
 ag issue comment delete owner/repo 42 789
 ag issue comment delete owner/repo 42 789 --yes
+```
+
+### Tag
+
+```bash
+# 在当前 Git 仓库中列出标签
+ag tag list
+
+# 显式指定仓库
+ag tag list owner/repo
+
+# 创建或删除标签
+ag tag create v1.0.0 --ref main
+ag tag delete v1.0.0
 ```
 
 ### Label

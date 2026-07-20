@@ -7,6 +7,7 @@ import (
 )
 
 type Factory struct {
-	Config     config.Config
-	HttpClient func() (*http.Client, error)
+	Config             config.Config
+	HttpClient         func() (*http.Client, error)
+	RepositoryResolver RepositoryResolver
 }

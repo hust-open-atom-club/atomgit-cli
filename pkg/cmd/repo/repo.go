@@ -18,7 +18,7 @@ func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "repo",
 		Short: "Manage repositories",
-		Long:  `Create, clone, edit, fork, and view repositories.`,
+		Long:  "Create, clone, edit, fork, and view repositories.\n\nFor view, edit, fork, and delete, OWNER/REPO may be omitted and inferred from the current Git repository.",
 	}
 
 	cmd.AddCommand(newCmdRepoList(f))
@@ -157,7 +157,7 @@ func formatRepositoryTime(value string) string {
 
 func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "view [<owner>/]<repo>",
+		Use:   "view [<owner>/<repo>]",
 		Short: "View a repository",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -171,26 +171,11 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			var owner, repo string
-			if len(args) == 0 {
-				user, err := f.Config.GetUser()
-				if err != nil {
-					return err
-				}
-				owner = user
-				repo = ""
-			} else {
-				// Parse owner/repo format
-				parts := strings.Split(args[0], "/")
-				if len(parts) != 2 {
-					return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-				}
-				owner, repo = parts[0], parts[1]
+			contextRepository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
 			}
-
-			if repo == "" {
-				return fmt.Errorf("repository name required")
-			}
+			owner, repo := contextRepository.Owner, contextRepository.Name
 
 			var repository api.Repository
 			path := fmt.Sprintf("/repos/%s/%s", owner, repo)
@@ -223,6 +208,7 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 			return nil
 		},
 	}
+	cmdutil.AddRepositoryContextHelp(cmd)
 
 	return cmd
 }

@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
 type panicReader struct{}
@@ -48,7 +50,7 @@ func TestRepoEditBuildsExactPartialRequests(t *testing.T) {
 	}{
 		{
 			name:     "description only",
-			args:     []string{"demo"},
+			args:     []string{"alice/demo"},
 			flags:    map[string]string{"description": "updated"},
 			wantBody: map[string]interface{}{"description": "updated"},
 		},
@@ -133,6 +135,7 @@ func TestRepoEditValidatesBeforeRequest(t *testing.T) {
 	}{
 		{name: "no updates", args: []string{"alice/demo"}, wantError: "at least one"},
 		{name: "empty repository", args: []string{""}, flags: map[string]string{"description": "x"}, wantError: "invalid repository format"},
+		{name: "short repository", args: []string{"demo"}, flags: map[string]string{"description": "x"}, wantError: "invalid repository format"},
 		{name: "missing owner", args: []string{"/demo"}, flags: map[string]string{"description": "x"}, wantError: "invalid repository format"},
 		{name: "missing repo", args: []string{"alice/"}, flags: map[string]string{"description": "x"}, wantError: "invalid repository format"},
 		{name: "too many components", args: []string{"alice/demo/extra"}, flags: map[string]string{"description": "x"}, wantError: "invalid repository format"},
@@ -167,6 +170,26 @@ func TestRepoEditValidatesBeforeRequest(t *testing.T) {
 				t.Fatalf("requests = %d", requests)
 			}
 		})
+	}
+}
+
+func TestRepoEditInfersRepository(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodPatch || req.URL.Path != "/api/v5/repos/team/inferred" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		return forkResponse(http.StatusOK, `{"name":"inferred","full_name":"team/inferred","web_url":"https://atomgit.com/team/inferred"}`), nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "team", Name: "inferred"}, nil
+	}
+	cmd := newCmdRepoEdit(factory)
+	if err := cmd.Flags().Set("description", "updated"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
 	}
 }
 

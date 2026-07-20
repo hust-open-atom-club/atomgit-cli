@@ -26,7 +26,7 @@ func newCmdRepoEdit(f *cmdutil.Factory) *cobra.Command {
 	opts := &EditOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "edit [<owner>/]<repo>",
+		Use:   "edit [<owner>/<repo>]",
 		Short: "Edit repository settings",
 		Long: `Edit supported repository metadata and visibility on AtomGit.
 
@@ -36,7 +36,10 @@ used. --visibility, --public, and --private are mutually exclusive.
 
 This command does not change the repository path, owner, homepage, LFS state,
 module switches, merge policies, or other unsupported GitHub CLI settings.`,
-		Example: `  # Update a description
+		Example: `  # Update the current Git repository
+  ag repo edit --description "New description"
+
+  # Update an explicitly selected repository
   ag repo edit owner/repo --description "New description"
 
   # Clear a description without changing other settings
@@ -47,17 +50,18 @@ module switches, merge policies, or other unsupported GitHub CLI settings.`,
 
   # Skip confirmation for a visibility update
   ag repo edit owner/repo --public --yes`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			request, consequential, err := buildRepoEditRequest(cmd, opts)
 			if err != nil {
 				return err
 			}
 
-			owner, repoName, err := resolveEditRepository(f, args[0])
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
 			if err != nil {
 				return err
 			}
+			owner, repoName := repository.Owner, repository.Name
 
 			if consequential && !opts.Yes {
 				confirmed, err := confirmRepoEdit(cmd.InOrStdin(), cmd.OutOrStdout(), owner, repoName, request)
@@ -107,6 +111,7 @@ module switches, merge policies, or other unsupported GitHub CLI settings.`,
 	cmd.Flags().BoolVar(&opts.Public, "public", false, "Make the repository public")
 	cmd.Flags().BoolVar(&opts.Private, "private", false, "Make the repository private")
 	cmd.Flags().BoolVarP(&opts.Yes, "yes", "y", false, "Skip confirmation for name or visibility changes")
+	cmdutil.AddRepositoryContextHelp(cmd)
 
 	return cmd
 }
@@ -194,18 +199,6 @@ func validateRepositoryEditName(name string) error {
 		}
 	}
 	return nil
-}
-
-func resolveEditRepository(f *cmdutil.Factory, value string) (string, string, error) {
-	defaultOwner := ""
-	if !strings.Contains(value, "/") {
-		user, err := f.Config.GetUser()
-		if err != nil {
-			return "", "", fmt.Errorf("failed to get current user: %w", err)
-		}
-		defaultOwner = user
-	}
-	return parseRepositoryName(value, defaultOwner)
 }
 
 func confirmRepoEdit(in io.Reader, out io.Writer, owner, repo string, request map[string]interface{}) (bool, error) {

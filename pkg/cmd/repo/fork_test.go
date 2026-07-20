@@ -147,3 +147,26 @@ func TestRunForkWithoutDescriptionOnlyForks(t *testing.T) {
 		t.Fatalf("request count = %d", requests)
 	}
 }
+
+func TestForkCommandInfersRepository(t *testing.T) {
+	httpClient := &http.Client{Transport: forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/team/inferred/forks" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		return forkResponse(http.StatusCreated, `{"name":"inferred"}`), nil
+	})}
+	factory := &cmdutil.Factory{
+		Config: forkTestConfig{},
+		RepositoryResolver: func() (cmdutil.Repository, error) {
+			return cmdutil.Repository{Owner: "team", Name: "inferred"}, nil
+		},
+		HttpClient: func() (*http.Client, error) {
+			return httpClient, nil
+		},
+	}
+
+	cmd := newCmdRepoFork(factory)
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+}

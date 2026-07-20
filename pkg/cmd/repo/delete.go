@@ -11,7 +11,7 @@ func newCmdRepoDelete(f *cmdutil.Factory) *cobra.Command {
 	var force bool
 
 	cmd := &cobra.Command{
-		Use:   "delete [<owner>/]<repo>",
+		Use:   "delete [<repository>]",
 		Short: "Delete a repository",
 		Long: `Delete a repository from AtomGit.
 
@@ -27,16 +27,24 @@ the confirmation prompt.`,
 
   # Delete a repository in an organization
   ag repo delete my-org/my-project --yes`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			currentUser, err := f.Config.GetUser()
-			if err != nil {
-				return fmt.Errorf("failed to get current user: %w", err)
-			}
-
-			owner, repoName, err := parseRepositoryName(args[0], currentUser)
-			if err != nil {
-				return err
+			var owner, repoName string
+			if len(args) == 0 {
+				repository, err := cmdutil.ResolveRepository(f, "")
+				if err != nil {
+					return err
+				}
+				owner, repoName = repository.Owner, repository.Name
+			} else {
+				currentUser, err := f.Config.GetUser()
+				if err != nil {
+					return fmt.Errorf("failed to get current user: %w", err)
+				}
+				owner, repoName, err = parseRepositoryName(args[0], currentUser)
+				if err != nil {
+					return err
+				}
 			}
 
 			token, err := f.Config.GetToken()
@@ -74,6 +82,7 @@ the confirmation prompt.`,
 	}
 
 	cmd.Flags().BoolVarP(&force, "yes", "y", false, "Skip confirmation prompt")
+	cmdutil.AddRepositoryContextHelp(cmd)
 
 	return cmd
 }

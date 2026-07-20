@@ -56,6 +56,17 @@ func TestResolveBaseBranch(t *testing.T) {
 	}
 }
 
+func TestPRHelpExplainsRepositoryInference(t *testing.T) {
+	cmd := NewCmdPR(&cmdutil.Factory{})
+	list, _, err := cmd.Find([]string{"list"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(list.Long, cmdutil.RepositoryContextHelp) {
+		t.Fatal("list help does not explain repository inference")
+	}
+}
+
 func TestPRCreateUsesRequestedOrRepositoryDefaultBase(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -143,10 +154,13 @@ func prResponse(statusCode int, body string) *http.Response {
 	}
 }
 
-func TestPRListHonorsLimit(t *testing.T) {
+func TestPRListInfersRepositoryAndHonorsLimit(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
+		RepositoryResolver: func() (cmdutil.Repository, error) {
+			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+		},
 		HttpClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
@@ -160,7 +174,7 @@ func TestPRListHonorsLimit(t *testing.T) {
 	cmd := newCmdPRList(factory)
 	_ = cmd.Flags().Set("state", "closed")
 	_ = cmd.Flags().Set("limit", "1")
-	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+	if err := cmd.RunE(cmd, nil); err != nil {
 		t.Fatal(err)
 	}
 	if requests != 1 {
@@ -260,7 +274,6 @@ func TestPRMergeSuccess(t *testing.T) {
 		{
 			name: "default merge",
 			args: []string{
-				"alice/demo",
 				"42",
 			},
 			flags:      map[string]string{},
@@ -307,6 +320,9 @@ func TestPRMergeSuccess(t *testing.T) {
 			var mergeBody json.RawMessage
 			factory := &cmdutil.Factory{
 				Config: prTestConfig{},
+				RepositoryResolver: func() (cmdutil.Repository, error) {
+					return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+				},
 				HttpClient: func() (*http.Client, error) {
 					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
@@ -818,8 +834,11 @@ func TestPRReopenSendsOpenState(t *testing.T) {
 
 func TestPRReopenRejectsWrongArgCount(t *testing.T) {
 	cmd := newCmdPRReopen(&cmdutil.Factory{Config: prTestConfig{}})
-	if err := cmd.Args(cmd, []string{"alice/demo"}); err == nil {
-		t.Fatal("reopen accepted 1 arg, want error")
+	if err := cmd.Args(cmd, nil); err == nil {
+		t.Fatal("reopen accepted no PR number")
+	}
+	if err := cmd.Args(cmd, []string{"5"}); err != nil {
+		t.Fatalf("reopen rejected an inferred-repository invocation: %v", err)
 	}
 	if err := cmd.Args(cmd, []string{"alice/demo", "5", "extra"}); err == nil {
 		t.Fatal("reopen accepted 3 args, want error")

@@ -2,7 +2,6 @@ package tag
 
 import (
 	"fmt"
-	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -19,6 +18,7 @@ func NewCmdTag(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdTagList(f))
 	cmd.AddCommand(newCmdTagCreate(f))
 	cmd.AddCommand(newCmdTagDelete(f))
+	cmdutil.AddRepositoryContextHelp(cmd)
 
 	return cmd
 }
@@ -37,7 +37,7 @@ func newAPIClient(f *cmdutil.Factory, token string) (*api.Client, error) {
 
 func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list [<owner>/]<repo>",
+		Use:   "list [<owner>/<repo>]",
 		Short: "List tags",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -51,16 +51,11 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			var owner, repo string
-			if len(args) == 0 {
-				return fmt.Errorf("repository required")
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
 			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
+			owner, repo := repository.Owner, repository.Name
 
 			var tags []api.Tag
 			path := fmt.Sprintf("/repos/%s/%s/tags", owner, repo)
@@ -92,9 +87,9 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "create [<owner>/]<repo> <tag_name>",
+		Use:   "create [<owner>/<repo>] <tag_name>",
 		Short: "Create a tag",
-		Args:  cobra.RangeArgs(2, 3),
+		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
@@ -106,17 +101,12 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			var owner, repo, tagName string
-			if len(args) == 2 {
-				parts := strings.Split(args[0], "/")
-				if len(parts) != 2 {
-					return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-				}
-				owner, repo = parts[0], parts[1]
-				tagName = args[1]
-			} else {
-				return fmt.Errorf("repository and tag name required")
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
 			}
+			owner, repo := repository.Owner, repository.Name
+			tagName := remaining[0]
 
 			body := api.TagRequest{
 				TagName: tagName,
@@ -144,9 +134,9 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete [<owner>/]<repo> <tag_name>",
+		Use:   "delete [<owner>/<repo>] <tag_name>",
 		Short: "Delete a tag",
-		Args:  cobra.RangeArgs(2, 3),
+		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
@@ -158,17 +148,12 @@ func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			var owner, repo, tagName string
-			if len(args) == 2 {
-				parts := strings.Split(args[0], "/")
-				if len(parts) != 2 {
-					return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-				}
-				owner, repo = parts[0], parts[1]
-				tagName = args[1]
-			} else {
-				return fmt.Errorf("repository and tag name required")
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
 			}
+			owner, repo := repository.Owner, repository.Name
+			tagName := remaining[0]
 
 			path := fmt.Sprintf("/repos/%s/%s/tags/%s", owner, repo, tagName)
 			if err := client.Delete(path); err != nil {
