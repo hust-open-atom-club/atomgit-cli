@@ -20,8 +20,9 @@ func Main() int {
 	}
 
 	factory := &cmdutil.Factory{
-		Config:        cfg,
-		BrowserOpener: browser.NewOpener(),
+		Config:             cfg,
+		BrowserOpener:      browser.NewOpener(),
+		RepositoryResolver: cmdutil.NewGitRepositoryResolver(""),
 	}
 
 	rootCmd, err := root.NewCmdRoot(factory)

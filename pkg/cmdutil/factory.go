@@ -8,7 +8,8 @@ import (
 )
 
 type Factory struct {
-	Config        config.Config
-	HttpClient    func() (*http.Client, error)
-	BrowserOpener browser.Opener
+	Config             config.Config
+	HttpClient         func() (*http.Client, error)
+	BrowserOpener      browser.Opener
+	RepositoryResolver RepositoryResolver
 }

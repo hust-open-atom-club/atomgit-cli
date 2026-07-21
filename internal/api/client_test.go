@@ -251,6 +251,69 @@ func TestPostAllowsNilBodyAndResult(t *testing.T) {
 	}
 }
 
+func TestPostAcceptsEmptySuccessResponseWithoutResult(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+	}{
+		{name: "200 empty body", statusCode: http.StatusOK},
+		{name: "204 empty body", statusCode: http.StatusNoContent},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost || r.URL.Path != "/resource" {
+					t.Fatalf("request = %s %s", r.Method, r.URL.Path)
+				}
+				w.WriteHeader(tt.statusCode)
+			})
+
+			if err := client.Post("/resource", map[string]string{"value": "post"}, nil); err != nil {
+				t.Fatalf("Post() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestPostReturnsEOFWhenResultIsExpected(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+	}{
+		{name: "200 empty body", statusCode: http.StatusOK},
+		{name: "201 empty body", statusCode: http.StatusCreated},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.statusCode)
+			})
+
+			var result map[string]bool
+			err := client.Post("/resource", nil, &result)
+			if !errors.Is(err, io.EOF) {
+				t.Fatalf("Post() error = %v, want io.EOF", err)
+			}
+		})
+	}
+}
+
+func TestPostAcceptsNoContentWithResult(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	result := map[string]bool{"existing": true}
+	if err := client.Post("/resource", nil, &result); err != nil {
+		t.Fatalf("Post() error = %v", err)
+	}
+	if !result["existing"] {
+		t.Fatalf("Post() replaced the existing result: %#v", result)
+	}
+}
+
 func TestDeleteMethods(t *testing.T) {
 	t.Run("delete", func(t *testing.T) {
 		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {

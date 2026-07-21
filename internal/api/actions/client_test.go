@@ -184,6 +184,21 @@ func TestRunJobAndArtifactJSONPaths(t *testing.T) {
 	}
 }
 
+func TestGetJobHandlesEmptySuccessResponse(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path != "/api/v8/repos/team/demo/actions/runs/run-1/jobs/missing-job" {
+			t.Fatalf("path = %q", req.URL.Path)
+		}
+		return response(req, http.StatusOK, ""), nil
+	})
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+
+	_, err := client.GetJob("team", "demo", "run-1", "missing-job")
+	if err == nil || err.Error() != "get workflow run job: job missing-job not found (API returned an empty response)" {
+		t.Fatalf("error = %v", err)
+	}
+}
+
 func TestDownloadJobLogReturnsRawBody(t *testing.T) {
 	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		if req.URL.Path != "/api/v8/repos/team/demo/actions/runs/run-1/jobs/job-1/download_log" {

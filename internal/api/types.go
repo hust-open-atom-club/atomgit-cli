@@ -9,24 +9,26 @@ import (
 
 // Repository represents an AtomGit repository
 type Repository struct {
-	ID              int64  `json:"id"`
-	Name            string `json:"name"`
-	FullName        string `json:"full_name"`
-	Description     string `json:"description"`
-	HTMLURL         string `json:"web_url"`
-	Private         bool   `json:"private"`
-	Internal        bool   `json:"internal"`
-	DefaultBranch   string `json:"default_branch"`
-	Language        string `json:"language"`
-	License         string `json:"license"`
-	Fork            bool   `json:"fork"`
-	ParentFullName  string `json:"parentfull_name"`
-	UpdatedAt       string `json:"updated_at"`
-	StarsCount      int    `json:"stargazers_count"`
-	ForksCount      int    `json:"forks_count"`
-	WatchersCount   int    `json:"watchers_count"`
-	OpenIssuesCount int    `json:"open_issues_count"`
-	Owner           struct {
+	ID               int64  `json:"id"`
+	Name             string `json:"name"`
+	Path             string `json:"path"`
+	FullName         string `json:"full_name"`
+	Description      string `json:"description"`
+	HTMLURL          string `json:"web_url"`
+	AlternateHTMLURL string `json:"html_url"`
+	Private          bool   `json:"private"`
+	Internal         bool   `json:"internal"`
+	DefaultBranch    string `json:"default_branch"`
+	Language         string `json:"language"`
+	License          string `json:"license"`
+	Fork             bool   `json:"fork"`
+	ParentFullName   string `json:"parentfull_name"`
+	UpdatedAt        string `json:"updated_at"`
+	StarsCount       int    `json:"stargazers_count"`
+	ForksCount       int    `json:"forks_count"`
+	WatchersCount    int    `json:"watchers_count"`
+	OpenIssuesCount  int    `json:"open_issues_count"`
+	Owner            struct {
 		Login string `json:"login"`
 		Type  string `json:"type"`
 	} `json:"owner"`
@@ -48,6 +50,12 @@ type PullRequest struct {
 	UpdatedAt string      `json:"updated_at"`
 	Merged    bool        `json:"merged"`
 	Mergeable bool        `json:"mergeable"`
+}
+
+// PullRequestReviewRequest represents AtomGit's formal review request.
+// Force only takes effect for repository administrators.
+type PullRequestReviewRequest struct {
+	Force bool `json:"force"`
 }
 
 // GetNumber returns the PR number as a string
@@ -300,4 +308,21 @@ type TagRequest struct {
 	TagName string `json:"tag_name"`
 	Message string `json:"message"`
 	Refs    string `json:"refs"`
+}
+
+// MergePRRequest represents the request body for merging a pull request
+type MergePRRequest struct {
+	MergeMethod         string `json:"merge_method"`
+	Title               string `json:"title,omitempty"`
+	Description         string `json:"description,omitempty"`
+	ForceMerge          bool   `json:"force_merge,omitempty"`
+	Squash              bool   `json:"squash,omitempty"`
+	SquashCommitMessage string `json:"squash_commit_message,omitempty"`
+}
+
+// MergePRResponse represents the response from merging a pull request
+type MergePRResponse struct {
+	SHA     string `json:"sha"`
+	Merged  bool   `json:"merged"`
+	Message string `json:"message"`
 }

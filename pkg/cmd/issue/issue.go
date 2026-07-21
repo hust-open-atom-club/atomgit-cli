@@ -27,13 +27,14 @@ func NewCmdIssue(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdIssueLabel(f))
 	cmd.AddCommand(newCmdIssueReopen(f))
 	cmd.AddCommand(comment.NewCmdComment(f))
+	cmdutil.AddRepositoryContextHelp(cmd)
 
 	return cmd
 }
 
 func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "close [<owner>/]<repo> <number>",
+		Use:   "close [<owner>/<repo>] <number>",
 		Short: "Close an issue",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -42,20 +43,12 @@ func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			var owner, repo string
-			var number string
-
-			if len(args) == 1 {
-				return fmt.Errorf("repository and issue number required")
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
 			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number = args[1]
+			owner, repo := repository.Owner, repository.Name
+			number := remaining[0]
 
 			client, err := newAPIClient(f, token)
 			if err != nil {
@@ -97,9 +90,9 @@ func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdIssueReopen(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "reopen <owner>/<repo> <number>",
+		Use:   "reopen [<owner>/<repo>] <number>",
 		Short: "Reopen an issue",
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
@@ -111,12 +104,12 @@ func newCmdIssueReopen(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
 			}
-			owner, repo := parts[0], parts[1]
-			number := args[1]
+			owner, repo := repository.Owner, repository.Name
+			number := remaining[0]
 
 			issuePath := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
 			var current api.Issue
@@ -158,7 +151,7 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "list [<owner>/]<repo>",
+		Use:   "list [<owner>/<repo>]",
 		Short: "List issues",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -171,16 +164,11 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
 
-			var owner, repo string
-			if len(args) == 0 {
-				return fmt.Errorf("repository required")
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
 			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
+			owner, repo := repository.Owner, repository.Name
 
 			client, err := newAPIClient(f, token)
 			if err != nil {
@@ -214,24 +202,26 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "view [<owner>/]<repo> <number>",
+		Use:   "view [<owner>/<repo>] <number>",
 		Short: "View an issue",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var owner, repo string
-			var number string
-
-			if len(args) == 1 {
-				return fmt.Errorf("repository and issue number required")
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
 			}
-			owner, repo = parts[0], parts[1]
 
-			number = args[1]
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			number := remaining[0]
 
 			if opts.web {
 				num, err := strconv.Atoi(number)
@@ -246,16 +236,6 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 					}
 				}
 				return nil
-			}
-
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
-			client, err := newAPIClient(f, token)
-			if err != nil {
-				return err
 			}
 
 			var issue api.Issue
@@ -303,7 +283,7 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "create [<owner>/]<repo>",
+		Use:   "create [<owner>/<repo>]",
 		Short: "Create an issue",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -312,18 +292,16 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client := api.NewClient(token)
-
-			var owner, repo string
-			if len(args) == 0 {
-				return fmt.Errorf("repository required")
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
 			}
 
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
 			}
-			owner, repo = parts[0], parts[1]
+			owner, repo := repository.Owner, repository.Name
 
 			if opts.Title == "" {
 				return fmt.Errorf("title is required")

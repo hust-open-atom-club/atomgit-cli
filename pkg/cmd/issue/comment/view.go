@@ -14,7 +14,7 @@ import (
 
 func newCmdView(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:   "view [<owner>/]<repo> <number>",
+		Use:   "view [<owner>/<repo>] <number>",
 		Short: "View all comments on an issue",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -23,22 +23,15 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			var owner, repo string
-			var number int
-
-			if len(args) == 1 {
-				return fmt.Errorf("repository and issue number required")
-			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number, err = strconv.Atoi(args[1])
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
-				return fmt.Errorf("invalid issue number: %s", args[1])
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+
+			number, err := strconv.Atoi(remaining[0])
+			if err != nil {
+				return fmt.Errorf("invalid issue number: %s", remaining[0])
 			}
 
 			client := api.NewClient(token)

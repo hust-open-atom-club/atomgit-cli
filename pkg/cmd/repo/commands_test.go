@@ -41,6 +41,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 		"clone":  {"branch"},
 		"create": {"clone", "description", "private", "public"},
 		"delete": {"yes"},
+		"edit":   {"default-branch", "description", "name", "private", "public", "visibility", "yes"},
 		"fork":   {"clone", "description", "name", "private", "public"},
 		"list":   {"limit"},
 		"view":   {"web"},
@@ -63,6 +64,20 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	}
 	if err := clone.Args(clone, []string{"owner/repo", "target", "extra"}); err == nil {
 		t.Fatal("clone accepted too many arguments")
+	}
+
+	edit, _, _ := cmd.Find([]string{"edit"})
+	if err := edit.Args(edit, []string{"owner/repo", "extra"}); err == nil {
+		t.Fatal("edit accepted too many repositories")
+	}
+	for _, name := range []string{"view", "edit", "fork", "delete"} {
+		child, _, _ := cmd.Find([]string{name})
+		if !strings.Contains(child.Long, cmdutil.RepositoryContextHelp) {
+			t.Errorf("%s help does not explain repository inference", name)
+		}
+		if err := child.Args(child, nil); err != nil {
+			t.Errorf("%s rejected repository inference: %v", name, err)
+		}
 	}
 }
 
@@ -168,8 +183,11 @@ func TestRepoViewCommandReadsRepository(t *testing.T) {
 		return forkResponse(http.StatusOK, `{"full_name":"alice/demo","description":"demo repository","web_url":"https://atomgit.com/alice/demo","default_branch":"main","private":false}`), nil
 	})
 	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+	}
 	cmd := newCmdRepoView(factory)
-	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+	if err := cmd.RunE(cmd, nil); err != nil {
 		t.Fatal(err)
 	}
 	if requests != 1 {
@@ -280,6 +298,24 @@ func TestRepoViewWebFlag(t *testing.T) {
 	}
 }
 
+func TestRepoDeleteCommandInfersRepository(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodDelete || req.URL.Path != "/api/v5/repos/team/inferred" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		return forkResponse(http.StatusNoContent, ""), nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "team", Name: "inferred"}, nil
+	}
+	cmd := newCmdRepoDelete(factory)
+	_ = cmd.Flags().Set("yes", "true")
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRepoCommandsReportAuthenticationErrors(t *testing.T) {
 	config := repoCommandConfig{tokenErr: errors.New("missing token"), user: "alice"}
 	factory := repoFactory(config, nil)
@@ -291,6 +327,11 @@ func TestRepoCommandsReportAuthenticationErrors(t *testing.T) {
 		{name: "view", call: func() error { cmd := newCmdRepoView(factory); return cmd.RunE(cmd, []string{"alice/demo"}) }},
 		{name: "create", call: func() error { return runCreate(io.Discard, factory, &CreateOptions{Name: "demo"}) }},
 		{name: "fork", call: func() error { return runFork(io.Discard, factory, &ForkOptions{}, "alice/demo") }},
+		{name: "edit", call: func() error {
+			cmd := newCmdRepoEdit(factory)
+			_ = cmd.Flags().Set("description", "updated")
+			return cmd.RunE(cmd, []string{"alice/demo"})
+		}},
 		{name: "delete", call: func() error {
 			cmd := newCmdRepoDelete(factory)
 			_ = cmd.Flags().Set("yes", "true")

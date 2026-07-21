@@ -3,7 +3,6 @@ package repo
 import (
 	"fmt"
 	"io"
-	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -22,7 +21,7 @@ func newCmdRepoFork(f *cmdutil.Factory) *cobra.Command {
 	opts := &ForkOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "fork [<owner>/]<repo>",
+		Use:   "fork [<owner>/<repo>]",
 		Short: "Fork a repository",
 		Long: `Fork a repository on AtomGit.
 
@@ -30,9 +29,13 @@ Creates a fork of the specified repository under your account or an organization
 
 By default, the fork will have the same visibility as the original repository.
 Use --private or --public to override.`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runFork(cmd.OutOrStdout(), f, opts, args[0])
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+			return runFork(cmd.OutOrStdout(), f, opts, repository.String())
 		},
 	}
 
@@ -41,6 +44,7 @@ Use --private or --public to override.`,
 	cmd.Flags().BoolVar(&opts.Public, "public", false, "Make the forked repository public")
 	cmd.Flags().BoolVar(&opts.Private, "private", false, "Make the forked repository private")
 	cmd.Flags().BoolVarP(&opts.Clone, "clone", "c", false, "Clone the forked repository")
+	cmdutil.AddRepositoryContextHelp(cmd)
 
 	return cmd
 }
@@ -56,11 +60,11 @@ func runFork(out io.Writer, f *cmdutil.Factory, opts *ForkOptions, repoArg strin
 		return err
 	}
 
-	parts := strings.Split(repoArg, "/")
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid repository format: %s (expected owner/repo)", repoArg)
+	repository, err := cmdutil.ParseRepository(repoArg)
+	if err != nil {
+		return err
 	}
-	owner, repoName := parts[0], parts[1]
+	owner, repoName := repository.Owner, repository.Name
 
 	currentUser, err := f.Config.GetUser()
 	if err != nil {

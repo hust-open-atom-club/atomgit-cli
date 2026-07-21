@@ -19,12 +19,13 @@ func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "repo",
 		Short: "Manage repositories",
-		Long:  `Create, clone, fork, and view repositories.`,
+		Long:  "Create, clone, edit, fork, and view repositories.\n\nFor view, edit, fork, and delete, OWNER/REPO may be omitted and inferred from the current Git repository.",
 	}
 
 	cmd.AddCommand(newCmdRepoList(f))
 	cmd.AddCommand(newCmdRepoView(f))
 	cmd.AddCommand(newCmdRepoCreate(f))
+	cmd.AddCommand(newCmdRepoEdit(f))
 	cmd.AddCommand(newCmdRepoClone(f))
 	cmd.AddCommand(newCmdRepoDelete(f))
 	cmd.AddCommand(newCmdRepoFork(f))
@@ -161,30 +162,25 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "view [<owner>/]<repo>",
+		Use:   "view [<owner>/<repo>]",
 		Short: "View a repository",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var owner, repo string
-			if len(args) == 0 {
-				user, err := f.Config.GetUser()
-				if err != nil {
-					return err
-				}
-				owner = user
-				repo = ""
-			} else {
-				// Parse owner/repo format
-				parts := strings.Split(args[0], "/")
-				if len(parts) != 2 {
-					return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-				}
-				owner, repo = parts[0], parts[1]
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated. Please check your token file: %w", err)
 			}
 
-			if repo == "" {
-				return fmt.Errorf("repository name required")
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
 			}
+
+			contextRepository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+			owner, repo := contextRepository.Owner, contextRepository.Name
 
 			if opts.web {
 				u := browser.BuildRepoURL(owner, repo)
@@ -195,16 +191,6 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 					}
 				}
 				return nil
-			}
-
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated. Please check your token file: %w", err)
-			}
-
-			client, err := newAPIClient(f, token)
-			if err != nil {
-				return err
 			}
 
 			var repository api.Repository
@@ -238,6 +224,7 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 			return nil
 		},
 	}
+	cmdutil.AddRepositoryContextHelp(cmd)
 
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open a repository in the browser")
 

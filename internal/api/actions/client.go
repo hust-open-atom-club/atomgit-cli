@@ -2,6 +2,7 @@ package actions
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -163,6 +164,11 @@ func (c *Client) GetJob(owner, repo, runID, jobID string) (Job, error) {
 	var result Job
 	path := repositoryPath(owner, repo) + "/actions/runs/" + url.PathEscape(runID) + "/jobs/" + url.PathEscape(jobID)
 	if err := c.getJSON("get workflow run job", path, &result); err != nil {
+		// AtomGit currently returns 200 with an empty body when a job does not
+		// exist, so translate the resulting decoder EOF into a useful error.
+		if errors.Is(err, io.EOF) {
+			return Job{}, fmt.Errorf("get workflow run job: job %s not found (API returned an empty response)", jobID)
+		}
 		return Job{}, err
 	}
 	return result, nil
