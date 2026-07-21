@@ -167,8 +167,14 @@ func TestLabelEdit(t *testing.T) {
 				if req.Method != http.MethodPatch || req.URL.EscapedPath() != "/api/v5/repos/alice/demo/labels/help%20wanted" {
 					t.Fatalf("request = %s %s", req.Method, req.URL.EscapedPath())
 				}
-				if req.URL.Query().Get("name") != "support" || req.URL.Query().Get("color") != "#abc" {
-					t.Fatalf("query = %#v", req.URL.Query())
+				if len(req.URL.Query()) != 0 {
+					t.Fatalf("unexpected query = %#v", req.URL.Query())
+				}
+				if err := req.ParseMultipartForm(1 << 20); err != nil {
+					t.Fatal(err)
+				}
+				if req.FormValue("name") != "support" || req.FormValue("color") != "#abc" {
+					t.Fatalf("form = %#v", req.Form)
 				}
 				return labelResponse(http.StatusOK, `{}`), nil
 			})}, nil

@@ -89,20 +89,20 @@ func newCmdLabelEdit(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid existing label name: %w", err)
 			}
 
-			params := make(url.Values)
+			fields := make(map[string]string)
 			if nameChanged {
 				name = strings.TrimSpace(name)
 				if err := validateLabelName(name); err != nil {
 					return err
 				}
-				params.Set("name", name)
+				fields["name"] = name
 			}
 			if colorChanged {
 				color = strings.TrimSpace(color)
 				if err := validateLabelColor(color); err != nil {
 					return err
 				}
-				params.Set("color", color)
+				fields["color"] = color
 			}
 
 			token, err := f.Config.GetToken()
@@ -114,8 +114,8 @@ func newCmdLabelEdit(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			path := fmt.Sprintf("/repos/%s/%s/labels/%s?%s", repository.Owner, repository.Name, url.PathEscape(originalName), params.Encode())
-			if err := client.Patch(path, nil, nil); err != nil {
+			path := fmt.Sprintf("/repos/%s/%s/labels/%s", repository.Owner, repository.Name, url.PathEscape(originalName))
+			if err := client.PatchForm(path, fields, nil); err != nil {
 				return fmt.Errorf("failed to edit label: %w", err)
 			}
 
