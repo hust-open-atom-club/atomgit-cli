@@ -122,16 +122,6 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 		Short: "View a pull request",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
-			client, err := newAPIClient(f, token)
-			if err != nil {
-				return err
-			}
-
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
@@ -152,6 +142,16 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 					}
 				}
 				return nil
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
+			}
+
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
 			}
 
 			var pr api.PullRequest

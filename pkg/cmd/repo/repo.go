@@ -166,16 +166,6 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 		Short: "View a repository",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated. Please check your token file: %w", err)
-			}
-
-			client, err := newAPIClient(f, token)
-			if err != nil {
-				return err
-			}
-
 			contextRepository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
 			if err != nil {
 				return err
@@ -191,6 +181,16 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 					}
 				}
 				return nil
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated. Please check your token file: %w", err)
+			}
+
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
 			}
 
 			var repository api.Repository
