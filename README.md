@@ -116,7 +116,7 @@ make install
 
 ### 当前仓库推断
 
-`issue`、`pr`、`tag` 命令以及 `repo view`、`repo edit`、`repo fork`、`repo delete` 可以省略 `owner/repo`。省略时，`ag` 会从当前 Git 仓库的 AtomGit remote 推断目标仓库；显式传入的 `owner/repo` 始终优先。
+`issue`、`pr`、`tag`、`label` 命令以及 `repo view`、`repo edit`、`repo fork`、`repo delete` 可以省略 `owner/repo`。省略时，`ag` 会从当前 Git 仓库的 AtomGit remote 推断目标仓库；显式传入的 `owner/repo` 始终优先。
 
 支持 `git@atomgit.com:owner/repo.git`、`ssh://git@atomgit.com/owner/repo.git` 和 `https://atomgit.com/owner/repo.git`。存在多个 remote 时，依次选择 `remote.pushDefault`、当前分支的 upstream remote、AtomGit `origin` 或唯一的 AtomGit remote。GitHub、GitLab 等其他服务的 remote 不会被识别为 AtomGit 仓库；无法唯一确定时，请显式传入 `owner/repo`。
 
@@ -302,6 +302,10 @@ ag issue view owner/repo 42
 
 # 添加 Issue 标签（使用逗号分隔多个标签）
 ag issue label owner/repo 42 "bug, help wanted,priority/high"
+ag issue label owner/repo 42 --add "bug, help wanted"
+
+# 移除 Issue 标签
+ag issue label owner/repo 42 --remove "priority/high"
 
 # 修改 Issue 标题或正文
 ag issue edit owner/repo 42 --title "Updated title"
@@ -354,7 +358,20 @@ ag tag delete v1.0.0
 # 列出仓库标签（默认显示 30 条）
 ag label list owner/repo
 ag label list owner/repo --limit 50
+
+# 创建标签
+ag label create owner/repo --name bug --color "#ff0000"
+
+# 修改标签名称或颜色
+ag label edit owner/repo bug --name defect
+ag label edit owner/repo defect --color "#d73a4a"
+
+# 删除标签（默认要求确认）
+ag label delete owner/repo obsolete
+ag label delete owner/repo obsolete --yes
 ```
+
+AtomGit API v5 的标签创建和修改接口支持 `name` 与 `color`。`label list` 会在接口返回时显示标签描述，但创建和修改命令不会发送 API 未公开支持的 `description` 字段。颜色必须使用 `#RGB` 或 `#RRGGBB` 格式。
 
 ### Actions 运行记录 (run)
 
