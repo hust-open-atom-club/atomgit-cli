@@ -76,6 +76,7 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 						if b, err := resolveDefaultBranch(f, owner, repo); err == nil {
 							commitRef = b
 						} else {
+							fmt.Fprintf(cmd.ErrOrStderr(), "warning: could not determine default branch: %v; assuming \"main\"\n", err)
 							commitRef = "main"
 						}
 					}
