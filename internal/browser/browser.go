@@ -24,6 +24,11 @@ var (
 
 type Opener func(rawURL string) error
 
+// NewOpener returns a function that asks the operating system to open a URL.
+//
+// The returned opener is asynchronous. It only reports failures that prevent
+// the browser opener command from being started and does not wait for the
+// browser or desktop opener process to exit.
 func NewOpener() Opener {
 	return func(url string) error {
 		var cmd *exec.Cmd
@@ -37,7 +42,15 @@ func NewOpener() Opener {
 		default:
 			return fmt.Errorf("unsupported GOOS: %s", runtime.GOOS)
 		}
-		return cmd.Run()
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("open browser: %w", err)
+		}
+
+		// Reap the child process without blocking the caller.
+		go func() {
+			_ = cmd.Wait()
+		}()
+		return nil
 	}
 }
 
