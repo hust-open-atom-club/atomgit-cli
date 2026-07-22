@@ -54,14 +54,10 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 					if err != nil {
 						return fmt.Errorf("not authenticated: %w", err)
 					}
-					var httpClient *http.Client
-					if f.HttpClient != nil {
-						httpClient, err = f.HttpClient()
-						if err != nil {
-							return fmt.Errorf("failed to create HTTP client: %w", err)
-						}
+					client, err := newAPIClient(f, token)
+					if err != nil {
+						return err
 					}
-					client := api.NewClientWithHTTPClient(token, httpClient)
 					targetURL, err = resolveNumber(client, owner, repo, num)
 					if err != nil {
 						return err
@@ -167,14 +163,10 @@ func resolveDefaultBranch(f *cmdutil.Factory, owner, repo string) (string, error
 	if err != nil {
 		return "", err
 	}
-	var httpClient *http.Client
-	if f.HttpClient != nil {
-		httpClient, err = f.HttpClient()
-		if err != nil {
-			return "", err
-		}
+	client, err := newAPIClient(f, token)
+	if err != nil {
+		return "", err
 	}
-	client := api.NewClientWithHTTPClient(token, httpClient)
 	var repoInfo api.Repository
 	if err := client.Get(fmt.Sprintf("/repos/%s/%s", owner, repo), &repoInfo); err != nil {
 		return "", err
