@@ -166,22 +166,36 @@ in
 
 Home Manager 中同样可以将 `unstable.atomgit-cli` 加入 `home.packages`。
 
-### 使用本仓库 flake 安装开发版
+### 使用本仓库 flake
 
-仓库仍提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake。需要跟随本仓库最新源码或指定 revision 时，可以直接使用仓库 flake：
+仓库仍提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake，并包含两种 package：
+
+- `stable`：从固定版本的 AtomGit Release 源码归档构建。
+- `latest`：从当前 flake revision 的源码构建。
+
+默认 package 和兼容名称 `ag` 均指向 `stable`。安装稳定版：
+
+由于 nixos-unstable 已停止支持 Intel macOS，flake 对 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
 
 ```bash
 nix profile install git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag
 ag version
 ```
 
-也可以在不安装的情况下直接运行：
+跟随仓库 revision 安装 latest：
 
 ```bash
-nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag -- version
+nix profile install git+https://atomgit.com/hust-open-atom-club/atomgit-cli#latest
 ```
 
-以下是使用本仓库 flake 的完整配置示例。`pkgs` 由 `nixpkgs` 为目标系统实例化，并通过 `pkgs.stdenv.hostPlatform.system` 选择对应的 AtomGit CLI package：
+也可以在不安装的情况下直接运行任一 package：
+
+```bash
+nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#stable -- version
+nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#latest -- version
+```
+
+以下是使用本仓库 stable package 的完整配置示例。`pkgs` 由 `nixpkgs` 为目标系统实例化，并通过 `pkgs.stdenv.hostPlatform.system` 选择对应的 AtomGit CLI package：
 
 ```nix
 {
@@ -197,7 +211,7 @@ nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag -- version
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
-      ag = atomgit-cli.packages.${pkgs.stdenv.hostPlatform.system}.ag;
+      ag = atomgit-cli.packages.${pkgs.stdenv.hostPlatform.system}.stable;
     in
     {
       # Home Manager 模块
