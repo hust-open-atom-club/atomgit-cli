@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 
@@ -328,30 +327,6 @@ func TestBrowseNoBrowser(t *testing.T) {
 	}
 	if openerCalled {
 		t.Fatal("browser was opened with --no-browser")
-	}
-}
-
-func TestBrowseNoRepoError(t *testing.T) {
-	dir := t.TempDir()
-	orig, _ := os.Getwd()
-	_ = os.Chdir(dir)
-	t.Cleanup(func() { _ = os.Chdir(orig) })
-
-	f := &cmdutil.Factory{Config: browseTestConfig{}}
-	cmd := NewCmdBrowse(f)
-	err := cmd.Execute()
-	if err == nil || !strings.Contains(err.Error(), "no repository specified") {
-		t.Fatalf("error = %v", err)
-	}
-}
-
-func TestBrowseInvalidRepoFlag(t *testing.T) {
-	f := &cmdutil.Factory{Config: browseTestConfig{}}
-	cmd := NewCmdBrowse(f)
-	cmd.SetArgs([]string{"-R", "invalid"})
-	err := cmd.Execute()
-	if err == nil || !strings.Contains(err.Error(), "invalid --repo format") {
-		t.Fatalf("error = %v, want invalid format", err)
 	}
 }
 

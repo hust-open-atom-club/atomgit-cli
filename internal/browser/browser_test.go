@@ -1,7 +1,6 @@
 package browser
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 )
@@ -104,84 +103,5 @@ func TestBuildFileURLLineRangeReversed(t *testing.T) {
 	want := fmt.Sprintf("https://atomgit.com/%s/%s/blob/main/main.go#L320", owner, repo)
 	if got := BuildFileURL(owner, repo, "main", "main.go", 320, 312); got != want {
 		t.Errorf("BuildFileURL() = %q, want %q", got, want)
-	}
-}
-
-func TestParseRemoteURL(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name      string
-		raw       string
-		wantOwner string
-		wantRepo  string
-		wantErr   error
-	}{
-		{
-			name:      "https atomgit",
-			raw:       fmt.Sprintf("https://atomgit.com/%s/%s.git", owner, repo),
-			wantOwner: owner,
-			wantRepo:  repo,
-		},
-		{
-			name:      "https gitcode",
-			raw:       fmt.Sprintf("https://gitcode.com/%s/%s.git", owner, repo),
-			wantOwner: owner,
-			wantRepo:  repo,
-		},
-		{
-			name:      "ssh atomgit",
-			raw:       fmt.Sprintf("git@atomgit.com/%s/%s.git", owner, repo),
-			wantOwner: owner,
-			wantRepo:  repo,
-		},
-		{
-			name:      "ssh gitcode",
-			raw:       fmt.Sprintf("git@gitcode.com/%s/%s.git", owner, repo),
-			wantOwner: owner,
-			wantRepo:  repo,
-		},
-		{
-			name:      "ssh protocol",
-			raw:       fmt.Sprintf("ssh://git@atomgit.com/%s/%s.git", owner, repo),
-			wantOwner: owner,
-			wantRepo:  repo,
-		},
-		{
-			name:      "without .git",
-			raw:       fmt.Sprintf("https://atomgit.com/%s/%s", owner, repo),
-			wantOwner: owner,
-			wantRepo:  repo,
-		},
-		{
-			name:    "unknown host",
-			raw:     fmt.Sprintf("https://github.com/%s/%s.git", owner, repo),
-			wantErr: ErrUnknownHost,
-		},
-		{
-			name:    "bare host",
-			raw:     fmt.Sprintf("git@atomgit.com/%s.git", repo),
-			wantErr: ErrParseRemoteURL,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			gotOwner, gotRepo, gotErr := ParseRemoteURL(tt.raw)
-			if gotErr != nil {
-				if !errors.Is(gotErr, tt.wantErr) {
-					t.Errorf("ParseRemoteURL() = %v, want %v", gotErr, tt.wantErr)
-				}
-
-				return
-			}
-			if tt.wantErr != nil {
-				t.Fatal("ParseRemoteURL() succeeded unexpectedly")
-			}
-			if gotOwner != tt.wantOwner || gotRepo != tt.wantRepo {
-				t.Errorf("ParseRemoteURL() = (%q, %q), want (%q, %q)", gotOwner, gotRepo, tt.wantOwner, tt.wantRepo)
-			}
-		})
 	}
 }

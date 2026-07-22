@@ -6,21 +6,9 @@ import (
 	"net/url"
 	"os/exec"
 	"runtime"
-	"slices"
-	"strings"
 )
 
 const host = "atomgit.com"
-
-var validHosts = []string{
-	"atomgit.com",
-	"gitcode.com",
-}
-
-var (
-	ErrUnknownHost    = errors.New("unknown host")
-	ErrParseRemoteURL = errors.New("failed to parse url")
-)
 
 type Opener func(rawURL string) error
 
@@ -147,25 +135,4 @@ func BuildReleasesURL(owner, repo string) string {
 		Path:   fmt.Sprintf("/%s/%s/releases", owner, repo),
 	}
 	return u.String()
-}
-
-func ParseRemoteURL(raw string) (owner, repo string, err error) {
-	s := strings.TrimSpace(raw)
-	s = strings.TrimSuffix(s, ".git")
-	s = strings.TrimPrefix(s, "https://")
-	s = strings.TrimPrefix(s, "http://")
-	s = strings.TrimPrefix(s, "ssh://")
-	s = strings.TrimPrefix(s, "git@")
-	s = strings.Replace(s, ":", "/", 1)
-
-	host, rest, ok := strings.Cut(s, "/")
-	if !ok || !slices.Contains(validHosts, host) {
-		return "", "", fmt.Errorf("cannot resolve repo %s: %w", raw, ErrUnknownHost)
-	}
-
-	parts := strings.SplitN(rest, "/", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return "", "", fmt.Errorf("cannot resolve repo %s: %w", raw, ErrParseRemoteURL)
-	}
-	return parts[0], parts[1], nil
 }

@@ -3,7 +3,6 @@ package browse
 import (
 	"fmt"
 	"net/http"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -28,10 +27,11 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 		Short: "Open repositories, issues, pull requests, and more in the browser",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			owner, repo, err := resolveRepo(opts.repo)
+			repository, err := cmdutil.ResolveRepository(f, opts.repo)
 			if err != nil {
 				return err
 			}
+			owner, repo := repository.Owner, repository.Name
 
 			var targetURL string
 
@@ -111,6 +111,8 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().BoolVarP(&opts.releases, "releases", "r", false, "Open repository releases")
 	cmd.Flags().BoolVarP(&opts.noBrowser, "no-browser", "n", false, "Print destination URL instead of opening the browser")
 
+	cmdutil.AddRepositoryContextHelp(cmd)
+
 	return cmd
 }
 
@@ -157,23 +159,6 @@ func parseFilePathArg(arg string) (path string, lineStart, lineEnd int) {
 		lineEnd, _ = strconv.Atoi(matches[3])
 	}
 	return path, lineStart, lineEnd
-}
-
-func resolveRepo(repoFlag string) (owner, repo string, err error) {
-	if repoFlag != "" {
-		parts := strings.SplitN(repoFlag, "/", 2)
-		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-			return "", "", fmt.Errorf("invalid --repo format: %s (expected OWNER/REPO)", repoFlag)
-		}
-		return parts[0], parts[1], nil
-	}
-
-	remote, err := exec.Command("git", "remote", "get-url", "origin").Output()
-	if err != nil {
-		return "", "", fmt.Errorf("no repository specified; run inside a git repo or use --repo")
-	}
-
-	return browser.ParseRemoteURL(string(remote))
 }
 
 func resolveDefaultBranch(f *cmdutil.Factory, owner, repo string) (string, error) {
