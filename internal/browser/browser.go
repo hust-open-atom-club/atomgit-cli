@@ -41,7 +41,7 @@ func NewSyncOpener() Opener {
 			if errors.As(err, &exitErr) {
 				return fmt.Errorf("browser exited with error: %w", exitErr)
 			}
-			return fmt.Errorf("open browser: %w", err)
+			return fmt.Errorf("browser opener: %w", err)
 		}
 		return nil
 	}
@@ -59,7 +59,7 @@ func NewAsyncOpener() Opener {
 			return err
 		}
 		if err := cmd.Start(); err != nil {
-			return fmt.Errorf("open browser: %w", err)
+			return fmt.Errorf("browser opener: %w", err)
 		}
 
 		// Reap the child process without blocking the caller.
