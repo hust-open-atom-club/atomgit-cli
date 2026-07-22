@@ -56,11 +56,8 @@ Pass --clone to clone the repository locally after creation.`,
 	return cmd
 }
 
-func createdRepositoryURL(result api.Repository, owner, repo string) string {
-	if url := strings.TrimSpace(result.HTMLURL); url != "" {
-		return url
-	}
-	return fmt.Sprintf("https://atomgit.com/%s/%s", owner, repo)
+func createdRepositoryURL(result api.Repository, host, owner, repo string) string {
+	return cmdutil.ResolveWebURL(result.HTMLURL, host, owner, repo)
 }
 
 func runCreate(out io.Writer, f *cmdutil.Factory, opts *CreateOptions) error {
@@ -111,7 +108,7 @@ func runCreate(out io.Writer, f *cmdutil.Factory, opts *CreateOptions) error {
 		return fmt.Errorf("failed to create repository: %w", err)
 	}
 
-	repoURL := createdRepositoryURL(result, owner, repoName)
+	repoURL := createdRepositoryURL(result, f.Config.GetHost(), owner, repoName)
 	fmt.Fprintf(out, "✓ Created repository %s/%s\n", owner, repoName)
 	fmt.Fprintf(out, "  URL: %s\n", repoURL)
 

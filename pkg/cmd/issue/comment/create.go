@@ -68,17 +68,25 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("comment body cannot be empty")
 			}
 
-			client := api.NewClient(token)
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
+			}
 			req := api.CommentRequest{Body: body}
 
-			var comment api.Comment
+			var comment api.CreateCommentResponse
 			path := fmt.Sprintf("/repos/%s/%s/issues/%d/comments", owner, repo, number)
 			if err := client.Post(path, req, &comment); err != nil {
 				return err
 			}
 
-			summary := fmt.Sprintf("Created comment #%d", comment.ID)
-			cmdutil.PrintResultWithOptionalURL(cmd.OutOrStdout(), summary, comment.HTMLURL)
+			commentID := comment.GetID()
+			if commentID == "" {
+				return fmt.Errorf("created comment response did not include a comment ID")
+			}
+			commentURL := cmdutil.ResolveWebURL(comment.GetURL(), f.Config.GetHost(), owner, repo, "issues", strconv.Itoa(number))
+			summary := fmt.Sprintf("Created comment #%s", commentID)
+			cmdutil.PrintResultWithOptionalURL(cmd.OutOrStdout(), summary, commentURL)
 			return nil
 		},
 	}
