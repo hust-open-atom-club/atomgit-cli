@@ -115,7 +115,7 @@ func TestPRCreateUsesRequestedOrRepositoryDefaultBase(t *testing.T) {
 						if got := body["base"]; got != tt.wantBase {
 							t.Fatalf("base = %q, want %q", got, tt.wantBase)
 						}
-						return prResponse(http.StatusCreated, `{"number":"7","web_url":"https://atomgit.com/alice/demo/pull/7"}`), nil
+						return prResponse(http.StatusCreated, `{"number":"7","web_url":"https://atomgit.com/alice/demo/merge_requests/7"}`), nil
 					})}, nil
 				},
 			}
@@ -139,7 +139,7 @@ func TestPRCreateUsesRequestedOrRepositoryDefaultBase(t *testing.T) {
 			if requests != wantRequests {
 				t.Fatalf("requests = %d, want %d", requests, wantRequests)
 			}
-			if got := output.String(); got != "Created PR #7: https://atomgit.com/alice/demo/pull/7\n" {
+			if got := output.String(); got != "Created PR #7: https://atomgit.com/alice/demo/merge_requests/7\n" {
 				t.Fatalf("output = %q", got)
 			}
 		})

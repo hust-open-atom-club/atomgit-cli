@@ -45,7 +45,7 @@ func TestWriteResponseFixtures(t *testing.T) {
 		if got := result.GetNumber(); got != "7" {
 			t.Fatalf("number = %q, want 7", got)
 		}
-		if got := result.GetURL(); got != "https://atomgit.com/alice/demo/pull/7" {
+		if got := result.GetURL(); got != "https://atomgit.com/alice/demo/merge_requests/7" {
 			t.Fatalf("URL = %q", got)
 		}
 	})
