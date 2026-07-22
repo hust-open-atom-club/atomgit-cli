@@ -1,6 +1,7 @@
 package browse
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -8,9 +9,12 @@ import (
 	"testing"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
+	"github.com/spf13/cobra"
 )
 
 type browseTestConfig struct{}
+
+var errBrowserOpener = errors.New("browser exited with code 7")
 
 func (browseTestConfig) GetToken() (string, error) { return "token", nil }
 func (browseTestConfig) GetUser() (string, error)  { return "alice", nil }
@@ -480,4 +484,57 @@ func TestParseFilePathArg(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBrowse_OpenerReturnsError(t *testing.T) {
+	var openedURL string
+
+	f := &cmdutil.Factory{
+		Config: browseTestConfig{},
+		BrowserOpener: func(rawURL string) error {
+			openedURL = rawURL
+			return errBrowserOpener
+		},
+	}
+
+	cmd, out := newBrowseTestCmd(f)
+	cmd.SetArgs([]string{"-R", "alice/demo"})
+
+	err := cmd.Execute()
+
+	if !errors.Is(err, errBrowserOpener) {
+		t.Fatalf("error = %v, want %v", err, errBrowserOpener)
+	}
+	if openedURL != "https://atomgit.com/alice/demo" {
+		t.Errorf("opened URL = %q, want %q", openedURL, "https://atomgit.com/alice/demo")
+	}
+	if got := out.String(); !strings.Contains(got, "https://atomgit.com/alice/demo") {
+		t.Errorf("stdout = %q, want URL", got)
+	}
+}
+
+func TestBrowse_OpenerNil(t *testing.T) {
+	f := &cmdutil.Factory{
+		Config: browseTestConfig{},
+	}
+
+	cmd, out := newBrowseTestCmd(f)
+	cmd.SetArgs([]string{"-R", "alice/demo"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if got := out.String(); !strings.Contains(got, "https://atomgit.com/alice/demo") {
+		t.Errorf("stdout = %q, want URL", got)
+	}
+}
+
+func newBrowseTestCmd(f *cmdutil.Factory) (*cobra.Command, *strings.Builder) {
+	cmd := NewCmdBrowse(f)
+
+	var buf strings.Builder
+	cmd.SetOut(&buf)
+
+	return cmd, &buf
 }
