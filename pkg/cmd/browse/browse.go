@@ -28,7 +28,7 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 		Short: "Open repositories, issues, pull requests, and more in the browser",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			owner, repo, err := resolveRepo(f, opts.repo)
+			owner, repo, err := resolveRepo(opts.repo)
 			if err != nil {
 				return err
 			}
@@ -122,9 +122,11 @@ const (
 	argTypeCommit
 )
 
-var digitsRe = regexp.MustCompile(`^\d+$`)
-var hexHashRe = regexp.MustCompile(`^[0-9a-fA-F]{6,40}$`)
-var fileLineRe = regexp.MustCompile(`^(\d+)(?:-(\d+)|\.\.(\d+))?$`)
+var (
+	digitsRe   = regexp.MustCompile(`^\d+$`)
+	hexHashRe  = regexp.MustCompile(`^[0-9a-fA-F]{6,40}$`)
+	fileLineRe = regexp.MustCompile(`^(\d+)(?:-(\d+)|\.\.(\d+))?$`)
+)
 
 func classifyArg(arg string) argType {
 	if digitsRe.MatchString(arg) {
@@ -157,7 +159,7 @@ func parseFilePathArg(arg string) (path string, lineStart, lineEnd int) {
 	return path, lineStart, lineEnd
 }
 
-func resolveRepo(f *cmdutil.Factory, repoFlag string) (owner, repo string, err error) {
+func resolveRepo(repoFlag string) (owner, repo string, err error) {
 	if repoFlag != "" {
 		parts := strings.SplitN(repoFlag, "/", 2)
 		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
