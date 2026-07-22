@@ -21,7 +21,7 @@ func Main() int {
 
 	factory := &cmdutil.Factory{
 		Config:             cfg,
-		BrowserOpener:      browser.NewOpener(),
+		BrowserOpener:      browser.NewSyncOpener(),
 		RepositoryResolver: cmdutil.NewGitRepositoryResolver(""),
 	}
 

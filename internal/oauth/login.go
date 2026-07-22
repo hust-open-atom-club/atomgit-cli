@@ -148,7 +148,7 @@ func Login(ctx context.Context) (*LoginResult, error) {
 	fmt.Println()
 	fmt.Printf("Waiting for callback on %s …\n", redir)
 
-	if err := browser.NewOpener()(authURL); err != nil {
+	if err := browser.NewAsyncOpener()(authURL); err != nil {
 		fmt.Fprintf(os.Stderr, "Could not open browser: %v\n", err)
 	}
 
