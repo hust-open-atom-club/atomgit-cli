@@ -50,6 +50,11 @@ func resolveBaseBranch(requested string, repository api.Repository) (string, err
 	return "", fmt.Errorf("repository default branch is empty; specify --base")
 }
 
+func pullRequestResultURL(rawURL, host, owner, repo, number string) string {
+	rawURL = strings.Replace(strings.TrimSpace(rawURL), "/pulls/", "/pull/", 1)
+	return cmdutil.ResolveWebURL(rawURL, host, owner, repo, "pull", number)
+}
+
 func parsePRNumber(numberArg string) (string, error) {
 	numberText := strings.TrimSpace(numberArg)
 	number, err := strconv.Atoi(numberText)
@@ -255,14 +260,18 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 				"head":  head,
 			}
 
-			var pr api.PullRequest
+			var pr api.PullRequestWriteResponse
 			path := fmt.Sprintf("/repos/%s/%s/pulls", owner, repo)
 			if err := client.Post(path, body, &pr); err != nil {
 				return err
 			}
 
-			htmlURL := strings.Replace(pr.HTMLURL, "/pulls/", "/pull/", 1)
-			fmt.Fprintf(cmd.OutOrStdout(), "Created PR #%s: %s\n", pr.GetNumber(), htmlURL)
+			number := pr.GetNumber()
+			if number == "" {
+				return fmt.Errorf("created PR response did not include a PR number")
+			}
+			htmlURL := pullRequestResultURL(pr.GetURL(), f.Config.GetHost(), owner, repo, number)
+			fmt.Fprintf(cmd.OutOrStdout(), "Created PR #%s: %s\n", number, htmlURL)
 
 			return nil
 		},
@@ -316,13 +325,18 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("at least one of --title or --body must be provided")
 			}
 
-			var pr api.PullRequest
+			var pr api.PullRequestWriteResponse
 			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
 			if err := client.Patch(path, body, &pr); err != nil {
 				return err
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "Updated PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			resultNumber := pr.GetNumber()
+			if resultNumber == "" {
+				resultNumber = number
+			}
+			htmlURL := pullRequestResultURL(pr.GetURL(), f.Config.GetHost(), owner, repo, resultNumber)
+			fmt.Fprintf(cmd.OutOrStdout(), "Updated PR #%s: %s\n", resultNumber, htmlURL)
 
 			return nil
 		},
@@ -361,13 +375,18 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 				"state": "closed",
 			}
 
-			var pr api.PullRequest
+			var pr api.PullRequestWriteResponse
 			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
 			if err := client.Patch(path, body, &pr); err != nil {
 				return err
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "Closed PR #%s: %s\n", pr.GetNumber(), pr.HTMLURL)
+			resultNumber := pr.GetNumber()
+			if resultNumber == "" {
+				resultNumber = number
+			}
+			htmlURL := pullRequestResultURL(pr.GetURL(), f.Config.GetHost(), owner, repo, resultNumber)
+			fmt.Fprintf(cmd.OutOrStdout(), "Closed PR #%s: %s\n", resultNumber, htmlURL)
 
 			return nil
 		},
@@ -408,7 +427,8 @@ func newCmdPRReopen(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("failed to reopen PR: %w", err)
 			}
 
-			cmd.Printf("Reopened PR #%s\n", number)
+			htmlURL := pullRequestResultURL("", f.Config.GetHost(), owner, repo, number)
+			cmd.Printf("Reopened PR #%s: %s\n", number, htmlURL)
 
 			return nil
 		},

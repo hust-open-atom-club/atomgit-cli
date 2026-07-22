@@ -3,6 +3,8 @@ package root
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -11,6 +13,16 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
+
+type rootTestConfig struct{}
+
+func (rootTestConfig) GetToken() (string, error) { return "secret", nil }
+func (rootTestConfig) GetUser() (string, error)  { return "tester", nil }
+func (rootTestConfig) GetHost() string           { return "atomgit.com" }
+
+type rootRoundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f rootRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
 
 func setVersionMetadata(t *testing.T) {
 	t.Helper()
@@ -32,7 +44,7 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 	}
 
 	want := map[string]bool{
-		"auth": false, "branch": false, "issue": false, "label": false, "license": false,
+		"api": false, "auth": false, "branch": false, "issue": false, "label": false, "license": false,
 		"pr": false, "repo": false, "run": false, "ssh-key": false, "tag": false, "version": false,
 	}
 	for _, child := range cmd.Commands() {
@@ -57,6 +69,25 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 	}
 	if versionFlag.Shorthand != "" {
 		t.Fatalf("version shorthand = %q, want none", versionFlag.Shorthand)
+	}
+}
+
+func TestAPIHelpDocumentsSafetyContract(t *testing.T) {
+	cmd, err := NewCmdRoot(&cmdutil.Factory{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"api", "--help"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	help := out.String()
+	for _, want := range []string{"api <endpoint>", "GET is the default", "POST", "PATCH", "PUT", "DELETE", "relative AtomGit API v5", "does not infer or", "--paginate", "--raw-output"} {
+		if !strings.Contains(help, want) {
+			t.Errorf("help does not contain %q:\n%s", want, help)
+		}
 	}
 }
 
@@ -152,5 +183,43 @@ func TestRootRawOutputIsExplicitOptOut(t *testing.T) {
 	}
 	if got := stdout.String(); got != payload {
 		t.Fatalf("stdout = %q, want raw %q", got, payload)
+	}
+}
+
+func TestAPIOutputHonorsRootSanitization(t *testing.T) {
+	payload := "api \x1b[31moutput\x1b[0m\n"
+	factory := &cmdutil.Factory{
+		Config: rootTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: make(http.Header), Body: io.NopCloser(strings.NewReader(payload)), Request: req}, nil
+			})}, nil
+		},
+	}
+	for _, tt := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "safe", args: []string{"api", "/user"}, want: "api \\x1b[31moutput\\x1b[0m\n"},
+		{name: "raw", args: []string{"--raw-output", "api", "/user"}, want: payload},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			cmd, err := newCmdRootWithWriters(factory, &stdout, &stderr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cmd.SetArgs(tt.args)
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+				t.Fatal(err)
+			}
+			if stdout.String() != tt.want {
+				t.Fatalf("stdout = %q, want %q", stdout.String(), tt.want)
+			}
+		})
 	}
 }

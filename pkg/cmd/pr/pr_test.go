@@ -10,6 +10,7 @@ import (
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
+	"github.com/spf13/cobra"
 )
 
 type prTestConfig struct{}
@@ -114,7 +115,7 @@ func TestPRCreateUsesRequestedOrRepositoryDefaultBase(t *testing.T) {
 						if got := body["base"]; got != tt.wantBase {
 							t.Fatalf("base = %q, want %q", got, tt.wantBase)
 						}
-						return prResponse(http.StatusCreated, `{"number":"7","html_url":"https://atomgit.com/alice/demo/pulls/7"}`), nil
+						return prResponse(http.StatusCreated, `{"number":"7","web_url":"https://atomgit.com/alice/demo/merge_requests/7"}`), nil
 					})}, nil
 				},
 			}
@@ -138,8 +139,68 @@ func TestPRCreateUsesRequestedOrRepositoryDefaultBase(t *testing.T) {
 			if requests != wantRequests {
 				t.Fatalf("requests = %d, want %d", requests, wantRequests)
 			}
-			if got := output.String(); got != "Created PR #7: https://atomgit.com/alice/demo/pull/7\n" {
+			if got := output.String(); got != "Created PR #7: https://atomgit.com/alice/demo/merge_requests/7\n" {
 				t.Fatalf("output = %q", got)
+			}
+		})
+	}
+}
+
+func TestPRCreateFallsBackToBrowserURL(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return prResponse(http.StatusCreated, `{"number":7}`), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRCreate(factory)
+	_ = cmd.Flags().Set("title", "Test PR")
+	_ = cmd.Flags().Set("head", "feature")
+	_ = cmd.Flags().Set("base", "main")
+	var output strings.Builder
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+		t.Fatal(err)
+	}
+	if got := output.String(); got != "Created PR #7: https://atomgit.com/alice/demo/pull/7\n" {
+		t.Fatalf("output = %q", got)
+	}
+}
+
+func TestPRWriteCommandsUseRequestNumberForEmptyResponses(t *testing.T) {
+	tests := []struct {
+		name string
+		cmd  func(*cmdutil.Factory) *cobra.Command
+		args []string
+		want string
+	}{
+		{name: "edit", cmd: newCmdPREdit, args: []string{"alice/demo", "42"}, want: "Updated PR #42: https://atomgit.com/alice/demo/pull/42\n"},
+		{name: "close", cmd: newCmdPRClose, args: []string{"alice/demo", "42"}, want: "Closed PR #42: https://atomgit.com/alice/demo/pull/42\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := &cmdutil.Factory{
+				Config: prTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						return prResponse(http.StatusNoContent, ""), nil
+					})}, nil
+				},
+			}
+			cmd := tt.cmd(factory)
+			if tt.name == "edit" {
+				_ = cmd.Flags().Set("title", "Updated")
+			}
+			var output strings.Builder
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, tt.args); err != nil {
+				t.Fatal(err)
+			}
+			if got := output.String(); got != tt.want {
+				t.Fatalf("output = %q, want %q", got, tt.want)
 			}
 		})
 	}
@@ -837,6 +898,8 @@ func TestPRReopenSendsOpenState(t *testing.T) {
 		},
 	}
 	cmd := newCmdPRReopen(factory)
+	var output strings.Builder
+	cmd.SetOut(&output)
 	if err := cmd.RunE(cmd, []string{"alice/demo", "5"}); err != nil {
 		t.Fatal(err)
 	}
@@ -848,6 +911,9 @@ func TestPRReopenSendsOpenState(t *testing.T) {
 	}
 	if !strings.Contains(gotBody, `"state":"open"`) {
 		t.Errorf("body = %s, want state:open", gotBody)
+	}
+	if got := output.String(); got != "Reopened PR #5: https://atomgit.com/alice/demo/pull/5\n" {
+		t.Errorf("output = %q", got)
 	}
 }
 

@@ -16,8 +16,20 @@ func isolateConfig(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	t.Setenv("XDG_CONFIG_HOME", "")
 	return home
+}
+
+func TestIsolateConfigUsesTemporaryHome(t *testing.T) {
+	home := isolateConfig(t)
+	got, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != home {
+		t.Fatalf("os.UserHomeDir() = %q, want %q", got, home)
+	}
 }
 
 func writeCredentialsFile(t *testing.T, path string, credentials StoredCredentials) {
@@ -234,6 +246,9 @@ func TestLoadStoredCredentials(t *testing.T) {
 			t.Fatal(err)
 		}
 		if err := os.Symlink(target, linkPath); err != nil {
+			if isSymlinkPrivilegeNotHeld(err) {
+				t.Skipf("symlink privilege is unavailable: %v", err)
+			}
 			t.Fatal(err)
 		}
 

@@ -116,7 +116,7 @@ make install
 
 ### 当前仓库推断
 
-`issue`、`pr`、`tag` 命令以及 `repo view`、`repo edit`、`repo fork`、`repo delete` 可以省略 `owner/repo`。省略时，`ag` 会从当前 Git 仓库的 AtomGit remote 推断目标仓库；显式传入的 `owner/repo` 始终优先。
+`issue`、`pr`、`tag`、`label` 命令以及 `repo view`、`repo edit`、`repo fork`、`repo delete` 可以省略 `owner/repo`。省略时，`ag` 会从当前 Git 仓库的 AtomGit remote 推断目标仓库；显式传入的 `owner/repo` 始终优先。
 
 支持 `git@atomgit.com:owner/repo.git`、`ssh://git@atomgit.com/owner/repo.git` 和 `https://atomgit.com/owner/repo.git`。存在多个 remote 时，依次选择 `remote.pushDefault`、当前分支的 upstream remote、AtomGit `origin` 或唯一的 AtomGit remote。GitHub、GitLab 等其他服务的 remote 不会被识别为 AtomGit 仓库；无法唯一确定时，请显式传入 `owner/repo`。
 
@@ -346,6 +346,10 @@ ag issue view owner/repo 42 --web
 
 # 添加 Issue 标签（使用逗号分隔多个标签）
 ag issue label owner/repo 42 "bug, help wanted,priority/high"
+ag issue label owner/repo 42 --add "bug, help wanted"
+
+# 移除 Issue 标签
+ag issue label owner/repo 42 --remove "priority/high"
 
 # 修改 Issue 标题或正文
 ag issue edit owner/repo 42 --title "Updated title"
@@ -398,7 +402,20 @@ ag tag delete v1.0.0
 # 列出仓库标签（默认显示 30 条）
 ag label list owner/repo
 ag label list owner/repo --limit 50
+
+# 创建标签
+ag label create owner/repo --name bug --color "#ff0000"
+
+# 修改标签名称或颜色
+ag label edit owner/repo bug --name defect
+ag label edit owner/repo defect --color "#d73a4a"
+
+# 删除标签（默认要求确认）
+ag label delete owner/repo obsolete
+ag label delete owner/repo obsolete --yes
 ```
+
+AtomGit API v5 的标签创建和修改接口支持 `name` 与 `color`。`label list` 会在接口返回时显示标签描述，但创建和修改命令不会发送 API 未公开支持的 `description` 字段。颜色必须使用 `#RGB` 或 `#RRGGBB` 格式。
 
 ### Actions 运行记录 (run)
 
@@ -434,6 +451,36 @@ ag run view owner/repo <run-id> --artifact <artifact-id> --artifact-file build.z
 ```
 
 `--log` 会先把 AtomGit 返回的日志 ZIP 流式写入临时文件，再逐项输出其中的日志文本；若服务端返回纯文本也会直接兼容。`--log-file` 保留服务端原始 ZIP。日志和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
+
+### 通用 API 请求
+
+`ag api` 向 AtomGit API v5 的相对路径发送认证请求，适合调用尚无专用命令的接口。默认方法为 GET；POST、PATCH、PUT 和 DELETE 必须用 `--method` 显式选择。通用命令不会推断接口影响，也不会在可能修改远程资源前要求确认。
+
+```bash
+# 基本 GET 请求
+ag api /user
+
+# GET 字段会追加为 URL 编码的查询参数
+ag api /repos/owner/repo/issues --field state=open --field labels="help wanted"
+
+# 非 GET 字段会编码为仅包含字符串值的 JSON 对象
+ag api /repos/owner/repo/issues --method POST --field title="API-created issue"
+
+# 从文件或标准输入原样读取请求体
+ag api /repos/owner/repo/issues/42 --method PATCH --input update.json
+printf '%s' '{"title":"stdin"}' | ag api /repos/owner/repo/issues --method POST --input -
+
+# 逐页请求；每个完整 JSON 页面压缩为一行 NDJSON
+ag api /repos/owner/repo/issues --paginate
+```
+
+端点必须是 API v5 下的相对路径；绝对 URL、`//host/path`、片段和越过 API 基址的路径会在读取凭据前被拒绝。认证信息仅通过 `Authorization` 请求头发送。同源重定向可保留认证；scheme、主机或有效端口变化后，当前及后续跳转均不会再携带认证信息。
+
+`--field key=value` 在第一个 `=` 处分隔。GET 会保留已有查询值并按命令行顺序追加字段；其他支持的方法生成 JSON 对象，重复键以最后一个值为准。`--input` 与 `--field` 互斥，原始输入不会推断 `Content-Type`。`--accept` 默认是 `application/json`。
+
+`--paginate` 仅支持无原始输入的 GET。默认从 `page=1&per_page=100` 开始；已有的正整数值会被保留。服务端提供一致的 `total_page` 响应头时据此停止；否则仅数组响应可通过空页或短页停止。后续页面失败时，已完成的 NDJSON 行会保留，失败页面不会产生部分输出。
+
+成功响应（包括空响应和二进制响应）会直接写到标准输出，不增加标签或换行。终端控制字符默认仍会转换为可见转义；机器处理确需原始字节时使用 `ag --raw-output api ...`，不要将未经检查的原始输出直接转发到终端。
 
 ### License
 
