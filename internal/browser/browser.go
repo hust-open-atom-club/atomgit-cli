@@ -24,23 +24,51 @@ var (
 
 type Opener func(rawURL string) error
 
-// NewOpener returns a function that asks the operating system to open a URL.
+func newURLOpenerCmd(rawURL string) (*exec.Cmd, error) {
+	switch runtime.GOOS {
+	case "darwin":
+		return exec.Command("open", rawURL), nil
+	case "linux":
+		return exec.Command("xdg-open", rawURL), nil
+	case "windows":
+		return exec.Command("rundll32", "url.dll,FileProtocolHandler", rawURL), nil
+	default:
+		return nil, fmt.Errorf("unsupported GOOS: %s", runtime.GOOS)
+	}
+}
+
+// NewSyncOpener returns a function that asks the operating system to open a URL.
+//
+// The returned opener is synchronous. It blocks until the operating
+// system's URL opener process exits and returns an error if that process
+// exits with a non-zero status.
+func NewSyncOpener() Opener {
+	return func(rawURL string) error {
+		cmd, err := newURLOpenerCmd(rawURL)
+		if err != nil {
+			return err
+		}
+		if err := cmd.Run(); err != nil {
+			var exitErr *exec.ExitError
+			if errors.As(err, &exitErr) {
+				return fmt.Errorf("browser exited with error: %w", exitErr)
+			}
+			return fmt.Errorf("open browser: %w", err)
+		}
+		return nil
+	}
+}
+
+// NewAsyncOpener returns a function that asks the operating system to open a URL.
 //
 // The returned opener is asynchronous. It only reports failures that prevent
-// the browser opener command from being started and does not wait for the
-// browser or desktop opener process to exit.
-func NewOpener() Opener {
-	return func(url string) error {
-		var cmd *exec.Cmd
-		switch runtime.GOOS {
-		case "darwin":
-			cmd = exec.Command("open", url)
-		case "linux":
-			cmd = exec.Command("xdg-open", url)
-		case "windows":
-			cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-		default:
-			return fmt.Errorf("unsupported GOOS: %s", runtime.GOOS)
+// the operating system's URL opener process from being started and does not
+// wait for that process to exit.
+func NewAsyncOpener() Opener {
+	return func(rawURL string) error {
+		cmd, err := newURLOpenerCmd(rawURL)
+		if err != nil {
+			return err
 		}
 		if err := cmd.Start(); err != nil {
 			return fmt.Errorf("open browser: %w", err)
@@ -52,6 +80,12 @@ func NewOpener() Opener {
 		}()
 		return nil
 	}
+}
+
+// Deprecated: NewOpener creates an asynchronous opener.
+// Use NewAsyncOpener or NewSyncOpener explicitly.
+func NewOpener() Opener {
+	return NewAsyncOpener()
 }
 
 func BuildRepoURL(owner, repo string) string {
