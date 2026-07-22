@@ -116,7 +116,7 @@ make install
 
 ### 当前仓库推断
 
-`issue`、`pr`、`tag`、`label` 命令以及 `repo view`、`repo edit`、`repo fork`、`repo delete` 可以省略 `owner/repo`。省略时，`ag` 会从当前 Git 仓库的 AtomGit remote 推断目标仓库；显式传入的 `owner/repo` 始终优先。
+`issue`、`pr`、`tag`、`label`、`release` 命令以及 `repo view`、`repo edit`、`repo fork`、`repo delete` 可以省略 `owner/repo`。省略时，`ag` 会从当前 Git 仓库的 AtomGit remote 推断目标仓库；显式传入的 `owner/repo` 始终优先。
 
 支持 `git@atomgit.com:owner/repo.git`、`ssh://git@atomgit.com/owner/repo.git` 和 `https://atomgit.com/owner/repo.git`。存在多个 remote 时，依次选择 `remote.pushDefault`、当前分支的 upstream remote、AtomGit `origin` 或唯一的 AtomGit remote。GitHub、GitLab 等其他服务的 remote 不会被识别为 AtomGit 仓库；无法唯一确定时，请显式传入 `owner/repo`。
 
@@ -437,6 +437,34 @@ ag api /repos/owner/repo/issues --paginate
 `--paginate` 仅支持无原始输入的 GET。默认从 `page=1&per_page=100` 开始；已有的正整数值会被保留。服务端提供一致的 `total_page` 响应头时据此停止；否则仅数组响应可通过空页或短页停止。后续页面失败时，已完成的 NDJSON 行会保留，失败页面不会产生部分输出。
 
 成功响应（包括空响应和二进制响应）会直接写到标准输出，不增加标签或换行。终端控制字符默认仍会转换为可见转义；机器处理确需原始字节时使用 `ag --raw-output api ...`，不要将未经检查的原始输出直接转发到终端。
+
+### Release
+
+```bash
+# 列出仓库 Release（默认最多 30 条）
+ag release list
+ag release list owner/repo --limit 50
+
+# 按 tag 查看 Release 详情（附件列表、作者、时间、状态等）
+ag release view v1.0.0
+ag release view owner/repo v1.0.0
+
+# 创建 Release；--target 指向提交 SHA，--prerelease 标记预发布
+ag release create v1.0.0 --body "首批正式发布"
+ag release create owner/repo v1.0.0 --name "Release 1.0" --body "首批正式发布"
+ag release create owner/repo v1.0.0 --body-file ./CHANGELOG.md --target 0123abcd --prerelease
+
+# 编辑 Release；只改变用户明确指定的内容，未指定的 name/body 会从当前 Release 回读并保持不变
+ag release edit v1.0.0 --name "Release 1.0.1"
+ag release edit owner/repo v1.0.0 --body-file ./docs/release-notes.md --latest
+ag release edit owner/repo v1.1.0-rc --prerelease
+ag release edit owner/repo v1.0.0 --name "Release 1.1" --body "热修复"
+
+```
+
+`ag release create` 必须通过 `--body` 或 `--body-file` 提供非空说明，这是 AtomGit 创建 Release API 的必填字段。`ag release edit` 只改变用户明确指定的内容（`--name`、`--body` 或 `--body-file`、`--latest`、`--prerelease`），未指定的 name/body 会从当前 Release 回读并保持不变；状态仅在显式 `--latest` 或 `--prerelease` 时改变。`--body` 与 `--body-file` 互斥。`--latest` 将该 Release 标记为仓库最新发布。
+
+本组 `ag release` 命令是供手工或脚本调用的底层 Release 管理原语，不会自动执行版本 tag 校验、测试、跨平台构建、校验和生成或整套发布编排。tag 驱动的端到端自动发布由 Issue #18 跟踪。
 
 ### License
 

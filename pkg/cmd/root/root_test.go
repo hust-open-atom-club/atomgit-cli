@@ -45,7 +45,7 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 
 	want := map[string]bool{
 		"api": false, "auth": false, "branch": false, "issue": false, "label": false, "license": false,
-		"pr": false, "repo": false, "run": false, "ssh-key": false, "tag": false, "version": false,
+		"pr": false, "release": false, "repo": false, "run": false, "ssh-key": false, "tag": false, "version": false,
 	}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
