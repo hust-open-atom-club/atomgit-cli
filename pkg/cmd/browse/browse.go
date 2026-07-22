@@ -2,6 +2,7 @@ package browse
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -186,29 +187,31 @@ func resolveDefaultBranch(f *cmdutil.Factory, owner, repo string) (string, error
 
 func resolveNumber(client *api.Client, owner, repo string, num int) (string, error) {
 	issuePath := fmt.Sprintf("/repos/%s/%s/issues/%d", owner, repo, num)
-	resp, err := client.DoRequestRaw(http.MethodGet, issuePath)
+	issueResp, err := client.DoRequestRaw(http.MethodGet, issuePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to check issue #%d: %w", num, err)
 	}
-	resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
+	defer issueResp.Body.Close()
+	io.Copy(io.Discard, issueResp.Body)
+	if issueResp.StatusCode == http.StatusOK {
 		return browser.BuildIssueURL(owner, repo, num), nil
 	}
-	if resp.StatusCode != http.StatusNotFound {
-		return "", fmt.Errorf("unexpected status checking issue #%d: %s", num, resp.Status)
+	if issueResp.StatusCode != http.StatusNotFound {
+		return "", fmt.Errorf("unexpected status checking issue #%d: %s", num, issueResp.Status)
 	}
 
 	prPath := fmt.Sprintf("/repos/%s/%s/pulls/%d", owner, repo, num)
-	resp, err = client.DoRequestRaw(http.MethodGet, prPath)
+	prResp, err := client.DoRequestRaw(http.MethodGet, prPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to check PR #%d: %w", num, err)
 	}
-	resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
+	defer prResp.Body.Close()
+	io.Copy(io.Discard, prResp.Body)
+	if prResp.StatusCode == http.StatusOK {
 		return browser.BuildPRURL(owner, repo, num), nil
 	}
-	if resp.StatusCode != http.StatusNotFound {
-		return "", fmt.Errorf("unexpected status checking PR #%d: %s", num, resp.Status)
+	if prResp.StatusCode != http.StatusNotFound {
+		return "", fmt.Errorf("unexpected status checking PR #%d: %s", num, prResp.Status)
 	}
 
 	return "", fmt.Errorf("no issue or pull request with number %d found in %s/%s", num, owner, repo)
