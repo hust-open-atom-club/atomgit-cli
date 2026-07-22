@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -126,6 +127,96 @@ func TestRawRequestSupportsCustomAcceptAndEmptyToken(t *testing.T) {
 	}
 	if string(body) != "content" {
 		t.Fatalf("body = %q", body)
+	}
+}
+
+func TestDoRequestRawWithBody(t *testing.T) {
+	tests := []struct {
+		method      string
+		body        string
+		contentType string
+		accept      string
+	}{
+		{method: http.MethodGet, accept: "application/json"},
+		{method: http.MethodPost, body: `{"name":"demo"}`, contentType: "application/json", accept: "application/vnd.atomgit+json"},
+		{method: http.MethodPatch, body: "patch"},
+		{method: http.MethodPut, body: "put"},
+		{method: http.MethodDelete, body: "delete"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.method, func(t *testing.T) {
+			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				gotBody, err := io.ReadAll(r.Body)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if r.Method != tt.method || string(gotBody) != tt.body {
+					t.Fatalf("request = %s body %q", r.Method, gotBody)
+				}
+				if got := r.Header.Get("Content-Type"); got != tt.contentType {
+					t.Fatalf("Content-Type = %q", got)
+				}
+				if got := r.Header.Get("Accept"); got != tt.accept {
+					t.Fatalf("Accept = %q", got)
+				}
+				if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
+					t.Fatalf("Authorization = %q", got)
+				}
+				if got := r.Header.Get("User-Agent"); got != "AtomCode-CLI-v0.4" {
+					t.Fatalf("User-Agent = %q", got)
+				}
+				w.WriteHeader(http.StatusAccepted)
+			})
+
+			resp, err := client.DoRequestRawWithBody(tt.method, "/resource", []byte(tt.body), tt.contentType, tt.accept)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusAccepted {
+				t.Fatalf("status = %d", resp.StatusCode)
+			}
+		})
+	}
+}
+
+func TestDoRequestRawWithBodyReplaysBodyOnRetry(t *testing.T) {
+	var calls int32
+	client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			call := atomic.AddInt32(&calls, 1)
+			body, err := io.ReadAll(req.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(body) != "replay me" {
+				t.Fatalf("call %d body = %q", call, body)
+			}
+			if call == 1 {
+				return nil, errors.New("temporary network failure")
+			}
+			return runRawResponse(req, http.StatusOK, "ok"), nil
+		}),
+	})
+
+	resp, err := client.DoRequestRawWithBody(http.MethodPut, "/resource", []byte("replay me"), "text/plain", "*/*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if atomic.LoadInt32(&calls) != 2 {
+		t.Fatalf("calls = %d", calls)
+	}
+}
+
+func runRawResponse(req *http.Request, status int, body string) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Status:     fmt.Sprintf("%d %s", status, http.StatusText(status)),
+		Header:     make(http.Header),
+		Body:       io.NopCloser(strings.NewReader(body)),
+		Request:    req,
 	}
 }
 
