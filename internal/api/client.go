@@ -314,3 +314,14 @@ func (c *Client) DoRequestRaw(method, path string) (*http.Response, error) {
 func (c *Client) DoRequestRawWithAccept(method, path, accept string) (*http.Response, error) {
 	return c.doRequestWithContentTypeAndAccept(method, path, nil, "", accept)
 }
+
+// DoRequestRawWithBody performs a request with replayable body bytes and
+// caller-selected Content-Type and Accept headers. The caller is responsible
+// for closing resp.Body.
+func (c *Client) DoRequestRawWithBody(method, path string, body []byte, contentType, accept string) (*http.Response, error) {
+	var bodyReader io.Reader
+	if body != nil {
+		bodyReader = bytes.NewReader(body)
+	}
+	return c.doRequestWithContentTypeAndAccept(method, path, bodyReader, contentType, accept)
+}
