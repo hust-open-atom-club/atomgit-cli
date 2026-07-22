@@ -41,3 +41,26 @@ func TestPrintResultWithOptionalURL(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveWebURL(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		host string
+		path []string
+		want string
+	}{
+		{name: "API URL", raw: " https://atomgit.com/owner/repo/pull/7 ", want: "https://atomgit.com/owner/repo/pull/7"},
+		{name: "default host", path: []string{"owner", "repo", "issues", "7"}, want: "https://atomgit.com/owner/repo/issues/7"},
+		{name: "configured host", host: "https://git.example.test/", path: []string{"owner", "repo"}, want: "https://git.example.test/owner/repo"},
+		{name: "escape segment", path: []string{"owner name", "repo"}, want: "https://atomgit.com/owner%20name/repo"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ResolveWebURL(tt.raw, tt.host, tt.path...); got != tt.want {
+				t.Fatalf("ResolveWebURL() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

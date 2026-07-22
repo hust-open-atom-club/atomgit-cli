@@ -53,6 +53,7 @@ func TestCreatedRepositoryURL(t *testing.T) {
 	tests := []struct {
 		name   string
 		result api.Repository
+		host   string
 		owner  string
 		repo   string
 		want   string
@@ -66,15 +67,16 @@ func TestCreatedRepositoryURL(t *testing.T) {
 		},
 		{
 			name:  "fallback URL",
+			host:  "git.example.test",
 			owner: "owner",
 			repo:  "repo",
-			want:  "https://atomgit.com/owner/repo",
+			want:  "https://git.example.test/owner/repo",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := createdRepositoryURL(tt.result, tt.owner, tt.repo); got != tt.want {
+			if got := createdRepositoryURL(tt.result, tt.host, tt.owner, tt.repo); got != tt.want {
 				t.Fatalf("createdRepositoryURL() = %q, want %q", got, tt.want)
 			}
 		})

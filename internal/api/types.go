@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // Repository represents an AtomGit repository
@@ -52,6 +53,33 @@ type PullRequest struct {
 	Mergeable bool        `json:"mergeable"`
 }
 
+// PullRequestWriteResponse represents the compact response returned by pull
+// request write endpoints. AtomGit uses web_url in create responses while
+// other endpoints may use html_url or return an empty body.
+type PullRequestWriteResponse struct {
+	ID      interface{} `json:"id"`
+	Number  interface{} `json:"number"`
+	IID     interface{} `json:"iid"`
+	HTMLURL string      `json:"html_url"`
+	WebURL  string      `json:"web_url"`
+}
+
+// GetNumber returns the PR number from either supported response field.
+func (pr *PullRequestWriteResponse) GetNumber() string {
+	if number := formatIdentifier(pr.Number); number != "" {
+		return number
+	}
+	return formatIdentifier(pr.IID)
+}
+
+// GetURL returns the browser URL from either supported response field.
+func (pr *PullRequestWriteResponse) GetURL() string {
+	if url := strings.TrimSpace(pr.WebURL); url != "" {
+		return url
+	}
+	return strings.TrimSpace(pr.HTMLURL)
+}
+
 // PullRequestReviewRequest represents AtomGit's formal review request.
 // Force only takes effect for repository administrators.
 type PullRequestReviewRequest struct {
@@ -60,18 +88,7 @@ type PullRequestReviewRequest struct {
 
 // GetNumber returns the PR number as a string
 func (pr *PullRequest) GetNumber() string {
-	switch v := pr.Number.(type) {
-	case string:
-		return v
-	case float64:
-		return fmt.Sprintf("%.0f", v)
-	case int:
-		return fmt.Sprintf("%d", v)
-	case int64:
-		return fmt.Sprintf("%d", v)
-	default:
-		return fmt.Sprintf("%v", v)
-	}
+	return formatIdentifier(pr.Number)
 }
 
 // Issue represents an AtomGit issue
@@ -90,17 +107,25 @@ type Issue struct {
 
 // GetNumber returns the Issue number as a string
 func (i *Issue) GetNumber() string {
-	switch v := i.Number.(type) {
+	return formatIdentifier(i.Number)
+}
+
+func formatIdentifier(value interface{}) string {
+	switch v := value.(type) {
+	case nil:
+		return ""
 	case string:
-		return v
+		return strings.TrimSpace(v)
 	case float64:
 		return fmt.Sprintf("%.0f", v)
 	case int:
-		return fmt.Sprintf("%d", v)
+		return strconv.Itoa(v)
 	case int64:
-		return fmt.Sprintf("%d", v)
+		return strconv.FormatInt(v, 10)
+	case json.Number:
+		return v.String()
 	default:
-		return fmt.Sprintf("%v", v)
+		return strings.TrimSpace(fmt.Sprintf("%v", v))
 	}
 }
 
@@ -266,12 +291,30 @@ type DiffPosition struct {
 
 // CreateCommentResponse represents the response from creating a comment
 type CreateCommentResponse struct {
-	ID        string `json:"id"`
-	Body      string `json:"body"`
-	User      User   `json:"user"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
-	HTMLURL   string `json:"html_url"`
+	ID        interface{} `json:"id"`
+	NoteID    interface{} `json:"note_id"`
+	Body      string      `json:"body"`
+	User      User        `json:"user"`
+	CreatedAt string      `json:"created_at"`
+	UpdatedAt string      `json:"updated_at"`
+	HTMLURL   string      `json:"html_url"`
+	WebURL    string      `json:"web_url"`
+}
+
+// GetID returns the created comment identifier from either response shape.
+func (c *CreateCommentResponse) GetID() string {
+	if id := formatIdentifier(c.ID); id != "" {
+		return id
+	}
+	return formatIdentifier(c.NoteID)
+}
+
+// GetURL returns the comment browser URL when AtomGit supplies one.
+func (c *CreateCommentResponse) GetURL() string {
+	if url := strings.TrimSpace(c.WebURL); url != "" {
+		return url
+	}
+	return strings.TrimSpace(c.HTMLURL)
 }
 
 // CommentRequest represents the request body for creating/updating a comment
