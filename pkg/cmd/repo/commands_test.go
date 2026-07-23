@@ -466,6 +466,17 @@ func TestRepoListAndViewPreserveCanonicalAuthenticationError(t *testing.T) {
 	}
 }
 
+func TestRepoListValidatesLimitBeforeAuthentication(t *testing.T) {
+	factory := repoFactory(repoCommandConfig{tokenErr: config.ErrNotAuthenticated}, nil)
+	cmd := newCmdRepoList(factory)
+	if err := cmd.Flags().Set("limit", "0"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.RunE(cmd, nil); err == nil || !strings.Contains(err.Error(), "invalid limit: 0") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
 func TestRepoViewResolvesRepositoryBeforeAuthentication(t *testing.T) {
 	wantErr := errors.New("repository context unavailable")
 	factory := repoFactory(repoCommandConfig{tokenErr: config.ErrNotAuthenticated}, nil)

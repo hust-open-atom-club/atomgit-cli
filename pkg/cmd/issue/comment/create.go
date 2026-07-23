@@ -25,7 +25,7 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)

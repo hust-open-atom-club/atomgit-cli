@@ -24,7 +24,7 @@ func newCmdReleaseList(f *cmdutil.Factory) *cobra.Command {
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)

@@ -77,7 +77,7 @@ func runList(out io.Writer, f *cmdutil.Factory, opts *ListOptions) error {
 func authenticatedAPIClient(f *cmdutil.Factory) (*api.Client, error) {
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return nil, fmt.Errorf("not authenticated: %w", err)
+		return nil, cmdutil.AuthenticationError(err)
 	}
 	return newAPIClient(f, token)
 }

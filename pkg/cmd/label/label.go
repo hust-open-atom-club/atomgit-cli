@@ -35,7 +35,7 @@ func newCmdLabelList(f *cmdutil.Factory) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			if limit <= 0 {

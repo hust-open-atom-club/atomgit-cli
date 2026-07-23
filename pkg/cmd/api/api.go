@@ -230,7 +230,7 @@ func execute(cmd *cobra.Command, f *cmdutil.Factory, request preparedRequest) er
 	}
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return redact(fmt.Errorf("not authenticated: %w", err), token)
+		return redact(cmdutil.AuthenticationError(err), token)
 	}
 	httpClient, err := requestHTTPClient(f)
 	if err != nil {

@@ -55,7 +55,7 @@ func newCmdSSHKeyAdd(f *cmdutil.Factory) *cobra.Command {
 func runAdd(out io.Writer, f *cmdutil.Factory, opts *AddOptions) error {
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return fmt.Errorf("not authenticated: %w", err)
+		return cmdutil.AuthenticationError(err)
 	}
 
 	var keyReader io.Reader

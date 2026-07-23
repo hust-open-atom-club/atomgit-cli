@@ -43,7 +43,7 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := newAPIClient(f, token)
@@ -93,7 +93,7 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := newAPIClient(f, token)
@@ -140,7 +140,7 @@ func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := newAPIClient(f, token)

@@ -79,7 +79,7 @@ func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory,
 
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return fmt.Errorf("not authenticated: %w", err)
+		return cmdutil.AuthenticationError(err)
 	}
 
 	client, err := newAPIClient(f, token)

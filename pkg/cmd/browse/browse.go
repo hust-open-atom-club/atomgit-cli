@@ -52,7 +52,7 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 					}
 					token, err := f.Config.GetToken()
 					if err != nil {
-						return fmt.Errorf("not authenticated: %w", err)
+						return cmdutil.AuthenticationError(err)
 					}
 					client, err := newAPIClient(f, token)
 					if err != nil {

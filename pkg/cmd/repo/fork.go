@@ -52,7 +52,7 @@ Use --private or --public to override.`,
 func runFork(out io.Writer, f *cmdutil.Factory, opts *ForkOptions, repoArg string) error {
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return fmt.Errorf("not authenticated: %w", err)
+		return cmdutil.AuthenticationError(err)
 	}
 
 	client, err := newAPIClient(f, token)

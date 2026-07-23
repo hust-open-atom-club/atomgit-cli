@@ -41,7 +41,7 @@ by the public API.`,
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 			currentUser, err := f.Config.GetUser()
 			if err != nil {
