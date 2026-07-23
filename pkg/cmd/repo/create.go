@@ -18,6 +18,8 @@ type CreateOptions struct {
 	Clone       bool
 }
 
+type cloneRepositoryFunc func(io.Reader, io.Writer, io.Writer, string, *CloneOptions) error
+
 func newCmdRepoCreate(f *cmdutil.Factory) *cobra.Command {
 	opts := &CreateOptions{}
 
@@ -44,7 +46,7 @@ Pass --clone to clone the repository locally after creation.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.Name = args[0]
 
-			return runCreate(cmd.OutOrStdout(), f, opts)
+			return runCreate(cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr(), f, opts)
 		},
 	}
 
@@ -56,11 +58,15 @@ Pass --clone to clone the repository locally after creation.`,
 	return cmd
 }
 
-func createdRepositoryURL(result api.Repository, host, owner, repo string) string {
-	return cmdutil.ResolveWebURL(result.HTMLURL, host, owner, repo)
+func createdRepositoryURL(host, owner, repo string) string {
+	return cmdutil.ResolveWebURL("", host, owner, repo)
 }
 
-func runCreate(out io.Writer, f *cmdutil.Factory, opts *CreateOptions) error {
+func runCreate(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory, opts *CreateOptions) error {
+	return runCreateWithClone(in, out, errOut, f, opts, runClone)
+}
+
+func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory, opts *CreateOptions, clone cloneRepositoryFunc) error {
 	currentUser, err := f.Config.GetUser()
 	if err != nil {
 		return fmt.Errorf("failed to get current user: %w", err)
@@ -108,15 +114,17 @@ func runCreate(out io.Writer, f *cmdutil.Factory, opts *CreateOptions) error {
 		return fmt.Errorf("failed to create repository: %w", err)
 	}
 
-	repoURL := createdRepositoryURL(result, f.Config.GetHost(), owner, repoName)
+	repoURL := createdRepositoryURL(f.Config.GetHost(), owner, repoName)
 	fmt.Fprintf(out, "✓ Created repository %s/%s\n", owner, repoName)
 	fmt.Fprintf(out, "  URL: %s\n", repoURL)
 
 	// Clone if requested
 	if opts.Clone {
 		cloneURL := strings.TrimSuffix(repoURL, ".git") + ".git"
-		fmt.Fprintf(out, "\nTo clone this repository, run:\n")
-		fmt.Fprintf(out, "  git clone %s\n", cloneURL)
+		cloneOpts := &CloneOptions{Directory: repoName}
+		if err := clone(in, out, errOut, cloneURL, cloneOpts); err != nil {
+			return fmt.Errorf("failed to clone newly created repository: %w", err)
+		}
 	}
 
 	return nil
