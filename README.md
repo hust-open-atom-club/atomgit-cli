@@ -157,6 +157,9 @@ ag repo list --limit 100
 ag repo view
 ag repo view owner/repo
 
+# 在浏览器中打开仓库
+ag repo view owner/repo --web
+
 # 创建仓库
 # 在当前用户账号下创建
 ag repo create my-project --public
@@ -218,6 +221,41 @@ ag branch delete owner/repo feature/foo
 ag branch delete owner/repo feature/foo --yes
 ```
 
+### Browse
+
+在默认浏览器中打开仓库页面或指定资源：
+
+```bash
+# 打开当前仓库首页（需在 git 仓库内运行）
+ag browse
+
+# 打开指定仓库
+ag browse -R owner/repo
+
+# 打开 Issue 或 PR
+ag browse 42
+
+# 打开文件（默认分支）
+ag browse main.go
+
+# 打开文件并定位到指定行
+ag browse main.go:312
+ag browse main.go:312-320
+ag browse main.go:312..320
+
+# 在指定分支上打开文件
+ag browse -b dev main.go:42
+
+# 在指定 commit 上打开文件
+ag browse -c abc1234 main.go
+
+# 打开 Releases 页面
+ag browse -r
+
+# 只打印 URL，不打开浏览器
+ag browse -n
+```
+
 ### Pull Request (pr)
 
 ```bash
@@ -229,6 +267,9 @@ ag pr list owner/repo --state closed
 # 查看 PR
 ag pr view 123
 ag pr view owner/repo 123
+
+# 在浏览器中打开 PR
+ag pr view owner/repo 123 --web
 
 # 查看 PR diff
 ag pr diff owner/repo 123
@@ -299,6 +340,9 @@ ag issue list owner/repo --state all
 # 查看 Issue
 ag issue view 42
 ag issue view owner/repo 42
+
+# 在浏览器中打开 Issue
+ag issue view owner/repo 42 --web
 
 # 添加 Issue 标签（使用逗号分隔多个标签）
 ag issue label owner/repo 42 "bug, help wanted,priority/high"
@@ -460,9 +504,22 @@ ag release edit owner/repo v1.0.0 --body-file ./docs/release-notes.md --latest
 ag release edit owner/repo v1.1.0-rc --prerelease
 ag release edit owner/repo v1.0.0 --name "Release 1.1" --body "热修复"
 
+# 上传附件；远端附件名默认为本地文件名，可用 --name 指定
+ag release upload v1.0.0 ./dist/app.tar.gz
+ag release upload owner/repo v1.0.0 ./build/app.zip --name app-v1.zip
+ag release upload owner/repo v1.0.0 ./existing.tar.gz --skip-existing
+ag release upload owner/repo v1.0.0 ./new.tar.gz --overwrite
+
 ```
 
 `ag release create` 必须通过 `--body` 或 `--body-file` 提供非空说明，这是 AtomGit 创建 Release API 的必填字段。`ag release edit` 只改变用户明确指定的内容（`--name`、`--body` 或 `--body-file`、`--latest`、`--prerelease`），未指定的 name/body 会从当前 Release 回读并保持不变；状态仅在显式 `--latest` 或 `--prerelease` 时改变。`--body` 与 `--body-file` 互斥。`--latest` 将该 Release 标记为仓库最新发布。
+
+`ag release upload` 的远端附件名默认为本地文件名（`filepath.Base(file)`），可用 `--name` 指定。若远端已存在同名附件，默认会报错并提示选择 `--skip-existing` 或 `--overwrite`，**绝不静默覆盖**：
+
+- `--skip-existing`：发现同名附件即报告成功并退出，**不会修改远端**，也不会执行删除、查询上传地址或上传操作。
+- `--overwrite`：仅当远端唯一匹配且该附件 `type=attach`、ID 为正整数时，先成功取得上传地址，再删除旧附件并上传新文件；取得上传地址失败时旧附件保持不变。若删除响应中断，命令会重新读取 Release，仅在确认旧附件已经不存在时继续；若后续上传失败，错误信息会明确说明旧附件已被删除。对于 `type=source` 的源码归档、ID 非正、或存在多个同名匹配的情况，均会拒绝且不执行删除。
+
+附件传输不会使用普通 API 请求的 30 秒总超时，而是默认限制为 30 分钟，可用 `--timeout` 调整，或用 `--timeout 0` 关闭总时限。非空文件只会在传输尚未开始（请求体零字节被读取）时自动重试一次；零字节文件或传输开始后的中断会返回非零退出码并提示远端状态可能不确定，不会盲目重放上传。
 
 本组 `ag release` 命令是供手工或脚本调用的底层 Release 管理原语，不会自动执行版本 tag 校验、测试、跨平台构建、校验和生成或整套发布编排。tag 驱动的端到端自动发布由 Issue #18 跟踪。
 
@@ -481,7 +538,45 @@ ag license check GPL-3.0
 # 添加 SSH key
 ag ssh-key add ~/.ssh/id_rsa.pub --title "My Laptop"
 cat ~/.ssh/id_rsa.pub | ag ssh-key add --title "My Laptop"
+
+# 查看 SSH keys（可通过 --limit 限制数量）
+ag ssh-key list
+ag ssh-key list --limit 200
+
+# 删除 SSH key（默认要求确认）
+ag ssh-key delete 123
+ag ssh-key delete 123 --yes
 ```
+
+### 搜索
+
+```bash
+# 搜索命令均需要先登录
+ag auth login
+
+# 搜索用户；可按注册时间排序
+ag search users torvalds
+ag search users torvalds --sort joined_at --order asc
+
+# 搜索仓库；repositories 可简写为 repos
+ag search repositories kernel --limit 20
+ag search repos kernel --limit 20
+ag search repos cli --owner hust-open-atom-club --language Go --sort stars_count --order desc
+ag search repos cli --fork
+
+# 搜索 Issue；repo 接收仓库路径，state 支持 open 或 closed
+ag search issues "memory leak" --limit 50
+ag search issues bug --repo hust-open-atom-club/atomgit-cli --state open --sort created_at --order desc
+
+# 结构化输出
+ag search users torvalds --json
+```
+
+支持的服务端过滤和排序选项：
+
+- `search users`：`--sort joined_at`、`--order asc|desc`；
+- `search repositories|repos`：`--owner`、`--language`、`--fork`、`--sort last_push_at|stars_count|forks_count`、`--order asc|desc`；
+- `search issues`：`--repo`、`--state open|closed`、`--sort created_at|last_push_at`、`--order asc|desc`。
 
 ### 版本
 
@@ -579,6 +674,7 @@ atomgit-cli/
 │   └── cmd/
 │       ├── root/root.go        # 根命令
 │       ├── auth/auth.go        # 认证命令
+│       ├── browse/browse.go    # Browse 命令
 │       ├── repo/               # 仓库命令
 │       │   ├── repo.go
 │       │   ├── create.go

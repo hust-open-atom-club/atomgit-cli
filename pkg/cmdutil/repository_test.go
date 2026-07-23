@@ -18,12 +18,20 @@ func TestParseAtomGitRemoteURL(t *testing.T) {
 		{name: "SSH URL", url: "ssh://git@atomgit.com/owner/repo.git", want: Repository{Owner: "owner", Name: "repo"}},
 		{name: "HTTPS", url: "https://atomgit.com/owner/repo.git", want: Repository{Owner: "owner", Name: "repo"}},
 		{name: "HTTPS without suffix", url: "https://atomgit.com/owner/repo", want: Repository{Owner: "owner", Name: "repo"}},
-		{name: "GitHub", url: "https://github.com/owner/repo.git", wantErr: "not an AtomGit remote"},
-		{name: "GitLab SSH", url: "git@gitlab.com:owner/repo.git", wantErr: "not an AtomGit remote"},
+		{name: "scp SSH gitcode", url: "git@gitcode.com:owner/repo.git", want: Repository{Owner: "owner", Name: "repo"}},
+		{name: "SSH URL gitcode", url: "ssh://git@gitcode.com/owner/repo.git", want: Repository{Owner: "owner", Name: "repo"}},
+		{name: "HTTPS gitcode", url: "https://gitcode.com/owner/repo.git", want: Repository{Owner: "owner", Name: "repo"}},
+		{name: "HTTPS gitcode without suffix", url: "https://gitcode.com/owner/repo", want: Repository{Owner: "owner", Name: "repo"}},
+		{name: "GitHub", url: "https://github.com/owner/repo.git", wantErr: "not an AtomGit/GitCode remote"},
+		{name: "GitLab SSH", url: "git@gitlab.com:owner/repo.git", wantErr: "not an AtomGit/GitCode remote"},
 		{name: "wrong path", url: "https://atomgit.com/owner", wantErr: "expected owner/repo"},
+		{name: "wrong path gitcode", url: "https://gitcode.com/owner", wantErr: "expected owner/repo"},
 		{name: "extra path", url: "https://atomgit.com/owner/repo/extra.git", wantErr: "expected owner/repo"},
+		{name: "extra path gitcode", url: "https://gitcode.com/owner/repo/extra.git", wantErr: "expected owner/repo"},
 		{name: "unsupported scheme", url: "http://atomgit.com/owner/repo.git", wantErr: "unsupported"},
+		{name: "unsupported scheme gitcode", url: "http://gitcode.com/owner/repo.git", wantErr: "unsupported"},
 		{name: "query", url: "https://atomgit.com/owner/repo.git?token=redacted", wantErr: "invalid"},
+		{name: "query gitcode", url: "https://gitcode.com/owner/repo.git?token=redacted", wantErr: "invalid"},
 	}
 
 	for _, tt := range tests {
@@ -180,11 +188,42 @@ func TestGitRepositoryResolver(t *testing.T) {
 			wantErr:   "no Git remotes",
 		},
 		{
+			name: "origin SSH gitcode",
+			configure: func(t *testing.T, dir string) {
+				gitRun(t, dir, "remote", "add", "origin", "git@gitcode.com:alice/demo.git")
+			},
+			want: "alice/demo",
+		},
+		{
+			name: "origin HTTPS gitcode",
+			configure: func(t *testing.T, dir string) {
+				gitRun(t, dir, "remote", "add", "origin", "https://gitcode.com/alice/demo.git")
+			},
+			want: "alice/demo",
+		},
+		{
+			name: "push default wins gitcode",
+			configure: func(t *testing.T, dir string) {
+				gitRun(t, dir, "remote", "add", "origin", "git@gitcode.com:alice/origin.git")
+				gitRun(t, dir, "remote", "add", "work", "git@gitcode.com:alice/work.git")
+				gitRun(t, dir, "config", "remote.pushDefault", "work")
+			},
+			want: "alice/work",
+		},
+		{
+			name: "mixed atomgit and gitcode same repo",
+			configure: func(t *testing.T, dir string) {
+				gitRun(t, dir, "remote", "add", "one", "git@atomgit.com:alice/demo.git")
+				gitRun(t, dir, "remote", "add", "two", "https://gitcode.com/alice/demo.git")
+			},
+			want: "alice/demo",
+		},
+		{
 			name: "invalid AtomGit URL",
 			configure: func(t *testing.T, dir string) {
 				gitRun(t, dir, "remote", "add", "origin", "https://atomgit.com/only-owner.git")
 			},
-			wantErr: "invalid AtomGit remote URL",
+			wantErr: "invalid AtomGit/GitCode remote URL",
 		},
 		{
 			name:       "not a Git repository",

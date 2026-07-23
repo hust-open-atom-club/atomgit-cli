@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -45,7 +46,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 		"edit":   {"default-branch", "description", "name", "private", "public", "visibility", "yes"},
 		"fork":   {"clone", "description", "name", "private", "public"},
 		"list":   {"limit"},
-		"view":   {},
+		"view":   {"web"},
 	}
 	for name, flags := range want {
 		child, _, err := cmd.Find([]string{name})
@@ -239,11 +240,102 @@ func TestRunCreateSelectsNamespaceAndBody(t *testing.T) {
 				return forkResponse(http.StatusCreated, `{"name":"demo","web_url":"https://atomgit.com/alice/demo"}`), nil
 			})
 			factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
-			err := runCreate(io.Discard, factory, &CreateOptions{Name: tt.repository, Description: "description", Public: tt.public})
+			err := runCreate(strings.NewReader(""), io.Discard, io.Discard, factory, &CreateOptions{Name: tt.repository, Description: "description", Public: tt.public})
 			if err != nil {
 				t.Fatal(err)
 			}
 		})
+	}
+}
+
+func TestRunCreateClonesPublicAndPrivateRepositories(t *testing.T) {
+	tests := []struct {
+		name        string
+		repository  string
+		public      bool
+		wantPath    string
+		wantPrivate bool
+		wantClone   string
+	}{
+		{
+			name:       "public user repository",
+			repository: "demo",
+			public:     true,
+			wantPath:   "/api/v5/user/repos",
+			wantClone:  "https://atomgit.com/alice/demo.git",
+		},
+		{
+			name:        "private organization repository",
+			repository:  "team/demo",
+			wantPath:    "/api/v5/orgs/team/repos",
+			wantPrivate: true,
+			wantClone:   "https://atomgit.com/team/demo.git",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method != http.MethodPost || req.URL.Path != tt.wantPath {
+					t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+				}
+				var body map[string]interface{}
+				if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+					t.Fatal(err)
+				}
+				if body["private"] != tt.wantPrivate {
+					t.Fatalf("private = %#v, want %v", body["private"], tt.wantPrivate)
+				}
+				// Deliberately return a malformed URL. Creation and cloning must use
+				// the owner and repository name already known from the request.
+				return forkResponse(http.StatusCreated, `{"name":"demo","web_url":"https://atomgit.com//demo"}`), nil
+			})
+			factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+
+			cloneCalls := 0
+			clone := func(_ io.Reader, _, _ io.Writer, cloneURL string, opts *CloneOptions) error {
+				cloneCalls++
+				if cloneURL != tt.wantClone {
+					t.Fatalf("clone URL = %q, want %q", cloneURL, tt.wantClone)
+				}
+				if opts.Directory != "demo" {
+					t.Fatalf("clone directory = %q, want demo", opts.Directory)
+				}
+				return nil
+			}
+
+			var out bytes.Buffer
+			err := runCreateWithClone(strings.NewReader(""), &out, io.Discard, factory, &CreateOptions{
+				Name:   tt.repository,
+				Public: tt.public,
+				Clone:  true,
+			}, clone)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cloneCalls != 1 {
+				t.Fatalf("clone calls = %d, want 1", cloneCalls)
+			}
+			wantURL := strings.TrimSuffix(tt.wantClone, ".git")
+			if !strings.Contains(out.String(), "URL: "+wantURL) {
+				t.Fatalf("output = %q, want canonical URL %q", out.String(), wantURL)
+			}
+		})
+	}
+}
+
+func TestRunCreateReportsCloneFailure(t *testing.T) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		return forkResponse(http.StatusCreated, `{}`), nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+	clone := func(io.Reader, io.Writer, io.Writer, string, *CloneOptions) error {
+		return errors.New("git failed")
+	}
+
+	err := runCreateWithClone(strings.NewReader(""), io.Discard, io.Discard, factory, &CreateOptions{Name: "demo", Clone: true}, clone)
+	if err == nil || !strings.Contains(err.Error(), "failed to clone newly created repository: git failed") {
+		t.Fatalf("error = %v", err)
 	}
 }
 
@@ -252,7 +344,7 @@ func TestRunCreateReportsAPIError(t *testing.T) {
 		return forkResponse(http.StatusForbidden, `{"message":"denied"}`), nil
 	})
 	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
-	err := runCreate(io.Discard, factory, &CreateOptions{Name: "demo"})
+	err := runCreate(strings.NewReader(""), io.Discard, io.Discard, factory, &CreateOptions{Name: "demo"})
 	if err == nil || !strings.Contains(err.Error(), "failed to create repository") || !strings.Contains(err.Error(), "403") {
 		t.Fatalf("error = %v", err)
 	}
@@ -277,6 +369,25 @@ func TestRepoDeleteCommand(t *testing.T) {
 	}
 	if requests != 1 {
 		t.Fatalf("request count = %d", requests)
+	}
+}
+
+func TestRepoViewWebFlag(t *testing.T) {
+	var capturedURL string
+	f := &cmdutil.Factory{
+		Config: repoCommandConfig{token: "token", user: "alice"},
+		BrowserOpener: func(rawURL string) error {
+			capturedURL = rawURL
+			return nil
+		},
+	}
+	cmd := newCmdRepoView(f)
+	cmd.SetArgs([]string{"--web", "alice/demo"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if capturedURL != "https://atomgit.com/alice/demo" {
+		t.Fatalf("URL = %q", capturedURL)
 	}
 }
 
@@ -307,7 +418,9 @@ func TestRepoCommandsReportAuthenticationErrors(t *testing.T) {
 	}{
 		{name: "list", call: func() error { cmd := newCmdRepoList(factory); return cmd.RunE(cmd, nil) }},
 		{name: "view", call: func() error { cmd := newCmdRepoView(factory); return cmd.RunE(cmd, []string{"alice/demo"}) }},
-		{name: "create", call: func() error { return runCreate(io.Discard, factory, &CreateOptions{Name: "demo"}) }},
+		{name: "create", call: func() error {
+			return runCreate(strings.NewReader(""), io.Discard, io.Discard, factory, &CreateOptions{Name: "demo"})
+		}},
 		{name: "fork", call: func() error { return runFork(io.Discard, factory, &ForkOptions{}, "alice/demo") }},
 		{name: "edit", call: func() error {
 			cmd := newCmdRepoEdit(factory)

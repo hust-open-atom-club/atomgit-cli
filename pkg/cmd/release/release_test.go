@@ -62,7 +62,8 @@ func TestNewCmdReleaseRegistersCommands(t *testing.T) {
 	}
 	wantExample := `  ag release list owner/repo
   ag release view owner/repo v1.0.0
-  ag release create owner/repo v1.0.0 --name "Version 1.0.0" --body "Release notes"`
+  ag release create owner/repo v1.0.0 --name "Version 1.0.0" --body "Release notes"
+  ag release upload owner/repo v1.0.0 ./dist/app.tar.gz`
 	if cmd.Example != wantExample {
 		t.Fatalf("release Example = %q, want %q", cmd.Example, wantExample)
 	}

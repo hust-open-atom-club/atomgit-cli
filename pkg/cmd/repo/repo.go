@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/browser"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -42,13 +43,13 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 		Short: "List repositories",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.Limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return err
-			}
-
-			if opts.Limit <= 0 {
-				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
 
 			client, err := newAPIClient(f, token)
@@ -156,6 +157,10 @@ func formatRepositoryTime(value string) string {
 }
 
 func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
+	var opts struct {
+		web bool
+	}
+
 	cmd := &cobra.Command{
 		Use:   "view [<owner>/<repo>]",
 		Short: "View a repository",
@@ -166,6 +171,17 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			owner, repo := contextRepository.Owner, contextRepository.Name
+
+			if opts.web {
+				u := browser.BuildRepoURL(owner, repo)
+				fmt.Fprintf(cmd.OutOrStdout(), "Opening %s in your browser.\n", u)
+				if f.BrowserOpener != nil {
+					if err := f.BrowserOpener(u); err != nil {
+						return fmt.Errorf("failed to open browser: %w", err)
+					}
+				}
+				return nil
+			}
 
 			token, err := f.Config.GetToken()
 			if err != nil {
@@ -209,6 +225,8 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 	cmdutil.AddRepositoryContextHelp(cmd)
+
+	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open a repository in the browser")
 
 	return cmd
 }

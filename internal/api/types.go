@@ -139,6 +139,16 @@ type User struct {
 	Type    string `json:"type"`
 }
 
+// SSHKey represents a public SSH key registered with an AtomGit account.
+type SSHKey struct {
+	ID          int64  `json:"id"`
+	Title       string `json:"title"`
+	Key         string `json:"key"`
+	Fingerprint string `json:"fingerprint"`
+	URL         string `json:"url"`
+	CreatedAt   string `json:"created_at"`
+}
+
 // FlexibleBool decodes AtomGit boolean metadata that may be returned as
 // JSON booleans, integers, or strings depending on the endpoint.
 type FlexibleBool bool
@@ -434,4 +444,14 @@ type UpdateReleaseRequest struct {
 	Name          string `json:"name"`
 	Body          string `json:"body"`
 	ReleaseStatus string `json:"release_status,omitempty"`
+}
+
+// ReleaseUploadURL is the exact response of
+// GET /repos/{owner}/{repo}/releases/{tag}/upload_url?file_name=...
+// The URL points at an external object-store; only the headers returned here
+// may be sent on the subsequent PUT. The AtomGit Bearer token must not be
+// forwarded to the external host.
+type ReleaseUploadURL struct {
+	URL     string            `json:"url"`
+	Headers map[string]string `json:"headers"`
 }

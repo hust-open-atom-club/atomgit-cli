@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/browser"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/pr/comment"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
@@ -117,11 +118,37 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 }
 
 func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
+	var opts struct {
+		web bool
+	}
+
 	cmd := &cobra.Command{
 		Use:   "view [<owner>/<repo>] <number>",
 		Short: "View a pull request",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			number := remaining[0]
+
+			if opts.web {
+				num, err := strconv.Atoi(number)
+				if err != nil {
+					return fmt.Errorf("invalid PR number: %s", number)
+				}
+				u := browser.BuildPRURL(owner, repo, num)
+				fmt.Fprintf(cmd.OutOrStdout(), "Opening %s in your browser.\n", u)
+				if f.BrowserOpener != nil {
+					if err := f.BrowserOpener(u); err != nil {
+						return fmt.Errorf("failed to open browser: %w", err)
+					}
+				}
+				return nil
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return fmt.Errorf("not authenticated: %w", err)
@@ -131,13 +158,6 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
 
 			var pr api.PullRequest
 			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
@@ -174,6 +194,8 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open a pull request in the browser")
 
 	return cmd
 }

@@ -3,7 +3,7 @@
 *2026-03-20T15:45:37Z by Showboat 0.6.1*
 <!-- showboat-id: b030d62e-efd4-4a80-ba65-4606c83a676c -->
 
-在 AtomGit 环境下，如果你 Fork 了一个上游仓库（如 `hust-open-atom-club/atomgit-cli` 到 `mywaaagh_admin/atomgit-cli`），你可能需要从你的 Fork 向前者的 `main` 分支创建一个 Pull Request（合并请求）。
+在 AtomGit 环境下，如果你 Fork 了一个上游仓库（如 `hust-open-atom-club/atomgit-cli` 到 `mywaaagh_admin/atomgit-cli`），你可能需要从你的 Fork 向上游的 `main` 分支创建一个 Pull Request（合并请求）。
 
 在使用 `ag` 时，要实现这种跨仓库 PR，只需要将 `--head` 参数指定为带命名空间的格式，例如 `你的用户名:你的开发分支`（如 `mywaaagh_admin:test-head`）。
 
@@ -24,7 +24,7 @@ ag pr close hust-open-atom-club/atomgit-cli 14
 ```
 
 ```output
-Closed PR #<nil>: 
+Closed PR #14:
 ```
 
 如果你只需要在你的同一个仓库下，从一个开发分支（如 `test-head`）合入到主分支（如 `test-base`），可以直接省略 `owner:` 的前缀，这样系统会判断这是一个内部 PR：
@@ -42,5 +42,5 @@ ag pr close mywaaagh_admin/atomgit-cli 2
 ```
 
 ```output
-Closed PR #<nil>: 
+Closed PR #2:
 ```
