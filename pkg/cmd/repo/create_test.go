@@ -2,8 +2,6 @@ package repo
 
 import (
 	"testing"
-
-	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 )
 
 func TestParseRepositoryName(t *testing.T) {
@@ -51,19 +49,17 @@ func TestParseRepositoryName(t *testing.T) {
 
 func TestCreatedRepositoryURL(t *testing.T) {
 	tests := []struct {
-		name   string
-		result api.Repository
-		host   string
-		owner  string
-		repo   string
-		want   string
+		name  string
+		host  string
+		owner string
+		repo  string
+		want  string
 	}{
 		{
-			name:   "API response URL",
-			result: api.Repository{HTMLURL: "https://atomgit.com/owner/repo"},
-			owner:  "owner",
-			repo:   "repo",
-			want:   "https://atomgit.com/owner/repo",
+			name:  "default host",
+			owner: "owner",
+			repo:  "repo",
+			want:  "https://atomgit.com/owner/repo",
 		},
 		{
 			name:  "fallback URL",
@@ -76,7 +72,7 @@ func TestCreatedRepositoryURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := createdRepositoryURL(tt.result, tt.host, tt.owner, tt.repo); got != tt.want {
+			if got := createdRepositoryURL(tt.host, tt.owner, tt.repo); got != tt.want {
 				t.Fatalf("createdRepositoryURL() = %q, want %q", got, tt.want)
 			}
 		})
