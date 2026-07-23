@@ -11,12 +11,33 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const atomGitHost = "atomgit.com"
+var atomgitHosts = []string{"atomgit.com", "gitcode.com"}
+
+// isAtomGitHost reports whether host matches a known AtomGit/GitCode host.
+func isAtomGitHost(host string) bool {
+	for _, h := range atomgitHosts {
+		if strings.EqualFold(host, h) {
+			return true
+		}
+	}
+	return false
+}
+
+// containsKnownHost reports whether value contains any known host substring.
+func containsKnownHost(value string) bool {
+	lower := strings.ToLower(value)
+	for _, h := range atomgitHosts {
+		if strings.Contains(lower, h) {
+			return true
+		}
+	}
+	return false
+}
 
 // RepositoryContextHelp describes repository selection for command help.
-const RepositoryContextHelp = `When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit remote.`
+const RepositoryContextHelp = `When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.`
 
-var errNotAtomGitRemote = errors.New("not an AtomGit remote")
+var errNotAtomGitRemote = errors.New("not an AtomGit/GitCode remote")
 
 // Repository identifies an AtomGit repository.
 type Repository struct {
@@ -185,13 +206,13 @@ func NewGitRepositoryResolver(dir string) RepositoryResolver {
 				names = append(names, name)
 			}
 			sort.Strings(names)
-			return Repository{}, fmt.Errorf("unable to determine repository: AtomGit remotes conflict (%s); pass owner/repo explicitly or configure remote.pushDefault", strings.Join(names, ", "))
+			return Repository{}, fmt.Errorf("unable to determine repository: AtomGit/GitCode remotes conflict (%s); pass owner/repo explicitly or configure remote.pushDefault", strings.Join(names, ", "))
 		}
 		if len(invalid) > 0 {
 			sort.Strings(invalid)
-			return Repository{}, fmt.Errorf("unable to determine repository: invalid AtomGit remote URL for %s; pass owner/repo explicitly", strings.Join(invalid, ", "))
+			return Repository{}, fmt.Errorf("unable to determine repository: invalid AtomGit/GitCode remote URL for %s; pass owner/repo explicitly", strings.Join(invalid, ", "))
 		}
-		return Repository{}, errors.New("unable to determine repository: no AtomGit remote found; pass owner/repo explicitly")
+		return Repository{}, errors.New("unable to determine repository: no AtomGit/GitCode remote found; pass owner/repo explicitly")
 	}
 }
 
@@ -205,13 +226,13 @@ func parseAtomGitRemoteURL(value string) (Repository, error) {
 		colon := strings.Index(value, ":")
 		if colon > at {
 			host := value[at+1 : colon]
-			if !strings.EqualFold(host, atomGitHost) {
+			if !isAtomGitHost(host) {
 				return Repository{}, errNotAtomGitRemote
 			}
 			return parseRemotePath(value[colon+1:])
 		}
-		if strings.Contains(strings.ToLower(value), atomGitHost) {
-			return Repository{}, errors.New("invalid AtomGit remote URL")
+		if containsKnownHost(value) {
+			return Repository{}, errors.New("invalid AtomGit/GitCode remote URL")
 		}
 		return Repository{}, errNotAtomGitRemote
 	}
@@ -220,7 +241,7 @@ func parseAtomGitRemoteURL(value string) (Repository, error) {
 	if err != nil {
 		return Repository{}, errors.New("invalid remote URL")
 	}
-	if !strings.EqualFold(parsed.Hostname(), atomGitHost) {
+	if !isAtomGitHost(parsed.Hostname()) {
 		return Repository{}, errNotAtomGitRemote
 	}
 	if parsed.Scheme != "https" && parsed.Scheme != "ssh" {
