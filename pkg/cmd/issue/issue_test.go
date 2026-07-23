@@ -2,6 +2,7 @@ package issue
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -89,6 +90,48 @@ func TestIssueListInfersRepositoryAndHonorsLimit(t *testing.T) {
 	}
 	if requests != 1 {
 		t.Fatalf("requests = %d, want 1", requests)
+	}
+}
+
+func TestIssueListJSON(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		body string
+		want int
+	}{
+		{name: "issues", body: `[{"id":1,"number":7,"title":"bug","state":"open","labels":[{"name":"bug"}],"user":{"login":"alice"}}]`, want: 1},
+		{name: "empty", body: `[]`, want: 0},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := &cmdutil.Factory{
+				Config: issueTestConfig{},
+				RepositoryResolver: func() (cmdutil.Repository, error) {
+					return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+				},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
+						return issueResponse(http.StatusOK, tt.body), nil
+					})}, nil
+				},
+			}
+			cmd := newCmdIssueList(factory)
+			_ = cmd.Flags().Set("json", "true")
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, nil); err != nil {
+				t.Fatal(err)
+			}
+			var values []map[string]any
+			if err := json.Unmarshal(output.Bytes(), &values); err != nil {
+				t.Fatalf("invalid JSON %q: %v", output.String(), err)
+			}
+			if len(values) != tt.want {
+				t.Fatalf("items = %d, want %d", len(values), tt.want)
+			}
+			if tt.want > 0 && (values[0]["number"] != "7" || values[0]["author"] != "alice") {
+				t.Fatalf("issue = %#v", values[0])
+			}
+		})
 	}
 }
 
@@ -276,6 +319,35 @@ func TestIssueViewOutputsLabels(t *testing.T) {
 				t.Fatalf("output = %q, want %q", got, want)
 			}
 		})
+	}
+}
+
+func TestIssueViewJSON(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: issueTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
+				return issueResponse(http.StatusOK, `{"id":1,"number":"8","title":"bug","body":"details","state":"open","html_url":"https://atomgit.com/alice/demo/issues/8","user":{"login":"alice"},"labels":[{"name":"bug"},{"name":" "}],"created_at":"today"}`), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdIssueView(factory)
+	_ = cmd.Flags().Set("json", "true")
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "8"}); err != nil {
+		t.Fatal(err)
+	}
+	var value struct {
+		Number string   `json:"number"`
+		Labels []string `json:"labels"`
+		Body   string   `json:"body"`
+	}
+	if err := json.Unmarshal(output.Bytes(), &value); err != nil {
+		t.Fatal(err)
+	}
+	if value.Number != "8" || value.Body != "details" || len(value.Labels) != 1 || value.Labels[0] != "bug" {
+		t.Fatalf("issue = %#v", value)
 	}
 }
 

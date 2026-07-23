@@ -148,6 +148,7 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
 		State string
 		Limit int
+		JSON  bool
 	}
 
 	cmd := &cobra.Command{
@@ -180,6 +181,9 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if opts.JSON {
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), issuesJSON(issues))
+			}
 
 			out := cmd.OutOrStdout()
 			for _, issue := range issues {
@@ -192,13 +196,15 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.State, "state", "s", "open", "Filter by state: open, closed, all")
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of issues to list")
+	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output issues as JSON")
 
 	return cmd
 }
 
 func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
-		web bool
+		web  bool
+		json bool
 	}
 
 	cmd := &cobra.Command{
@@ -243,6 +249,9 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 			if err := client.Get(path, &issue); err != nil {
 				return err
 			}
+			if opts.json {
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), newIssueJSON(issue))
+			}
 
 			out := cmd.OutOrStdout()
 			fmt.Fprintf(out, "Title: %s\n", issue.Title)
@@ -262,8 +271,41 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open an issue in the browser")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Output issue as JSON")
+	cmd.MarkFlagsMutuallyExclusive("web", "json")
 
 	return cmd
+}
+
+type issueJSON struct {
+	ID        int64    `json:"id"`
+	Number    string   `json:"number"`
+	Title     string   `json:"title"`
+	Body      string   `json:"body"`
+	State     string   `json:"state"`
+	URL       string   `json:"url"`
+	Author    string   `json:"author"`
+	Labels    []string `json:"labels"`
+	CreatedAt string   `json:"createdAt"`
+	UpdatedAt string   `json:"updatedAt"`
+}
+
+func issuesJSON(issues []api.Issue) []issueJSON {
+	result := make([]issueJSON, len(issues))
+	for index, issue := range issues {
+		result[index] = newIssueJSON(issue)
+	}
+	return result
+}
+
+func newIssueJSON(issue api.Issue) issueJSON {
+	labels := make([]string, 0, len(issue.Labels))
+	for _, label := range issue.Labels {
+		if name := strings.TrimSpace(label.Name); name != "" {
+			labels = append(labels, name)
+		}
+	}
+	return issueJSON{ID: issue.ID, Number: issue.GetNumber(), Title: issue.Title, Body: issue.Body, State: issue.State, URL: issue.HTMLURL, Author: issue.User.Login, Labels: labels, CreatedAt: issue.CreatedAt, UpdatedAt: issue.UpdatedAt}
 }
 
 func formatIssueLabels(labels []api.Label) string {

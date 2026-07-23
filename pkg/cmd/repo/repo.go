@@ -13,6 +13,27 @@ import (
 
 type ListOptions struct {
 	Limit int
+	JSON  bool
+}
+
+type repositoryJSON struct {
+	ID            int64  `json:"id"`
+	Name          string `json:"name"`
+	FullName      string `json:"fullName"`
+	Description   string `json:"description"`
+	URL           string `json:"url"`
+	Visibility    string `json:"visibility"`
+	DefaultBranch string `json:"defaultBranch"`
+	Language      string `json:"language"`
+	License       string `json:"license"`
+	Fork          bool   `json:"fork"`
+	Parent        string `json:"parent"`
+	UpdatedAt     string `json:"updatedAt"`
+	Stars         int    `json:"stars"`
+	Forks         int    `json:"forks"`
+	Watchers      int    `json:"watchers"`
+	OpenIssues    int    `json:"openIssues"`
+	Owner         string `json:"owner"`
 }
 
 func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
@@ -60,6 +81,9 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if opts.JSON {
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), repositoriesJSON(repos))
+			}
 
 			out := cmd.OutOrStdout()
 			for _, repo := range repos {
@@ -71,6 +95,7 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of repositories to list")
+	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output repositories as JSON")
 
 	return cmd
 }
@@ -126,6 +151,40 @@ func repositoryListName(repo api.Repository) string {
 	return fmt.Sprintf("%s/%s", repo.Owner.Login, repo.Name)
 }
 
+func repositoriesJSON(repositories []api.Repository) []repositoryJSON {
+	result := make([]repositoryJSON, len(repositories))
+	for index, repository := range repositories {
+		result[index] = newRepositoryJSON(repository)
+	}
+	return result
+}
+
+func newRepositoryJSON(repository api.Repository) repositoryJSON {
+	url := strings.TrimSpace(repository.HTMLURL)
+	if url == "" {
+		url = strings.TrimSpace(repository.AlternateHTMLURL)
+	}
+	return repositoryJSON{
+		ID:            repository.ID,
+		Name:          repository.Name,
+		FullName:      repositoryListName(repository),
+		Description:   repository.Description,
+		URL:           url,
+		Visibility:    repositoryVisibility(repository),
+		DefaultBranch: repository.DefaultBranch,
+		Language:      repository.Language,
+		License:       repository.License,
+		Fork:          repository.Fork,
+		Parent:        repositoryParentName(repository),
+		UpdatedAt:     repository.UpdatedAt,
+		Stars:         repository.StarsCount,
+		Forks:         repository.ForksCount,
+		Watchers:      repository.WatchersCount,
+		OpenIssues:    repository.OpenIssuesCount,
+		Owner:         repository.Owner.Login,
+	}
+}
+
 func repositoryVisibility(repo api.Repository) string {
 	if repo.Private {
 		return "private"
@@ -158,7 +217,8 @@ func formatRepositoryTime(value string) string {
 
 func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
-		web bool
+		web  bool
+		json bool
 	}
 
 	cmd := &cobra.Command{
@@ -198,6 +258,9 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 			if err := client.Get(path, &repository); err != nil {
 				return err
 			}
+			if opts.json {
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), newRepositoryJSON(repository))
+			}
 
 			out := cmd.OutOrStdout()
 			fmt.Fprintf(out, "Name: %s\n", repository.FullName)
@@ -227,6 +290,8 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 	cmdutil.AddRepositoryContextHelp(cmd)
 
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open a repository in the browser")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Output repository as JSON")
+	cmd.MarkFlagsMutuallyExclusive("web", "json")
 
 	return cmd
 }
