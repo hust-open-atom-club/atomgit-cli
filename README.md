@@ -535,6 +535,36 @@ ag ssh-key delete 123
 ag ssh-key delete 123 --yes
 ```
 
+### 搜索
+
+```bash
+# 搜索命令均需要先登录
+ag auth login
+
+# 搜索用户；可按注册时间排序
+ag search users torvalds
+ag search users torvalds --sort joined_at --order asc
+
+# 搜索仓库；repositories 可简写为 repos
+ag search repositories kernel --limit 20
+ag search repos kernel --limit 20
+ag search repos cli --owner hust-open-atom-club --language Go --sort stars_count --order desc
+ag search repos cli --fork
+
+# 搜索 Issue；repo 接收仓库路径，state 支持 open 或 closed
+ag search issues "memory leak" --limit 50
+ag search issues bug --repo hust-open-atom-club/atomgit-cli --state open --sort created_at --order desc
+
+# 结构化输出
+ag search users torvalds --json
+```
+
+支持的服务端过滤和排序选项：
+
+- `search users`：`--sort joined_at`、`--order asc|desc`；
+- `search repositories|repos`：`--owner`、`--language`、`--fork`、`--sort last_push_at|stars_count|forks_count`、`--order asc|desc`；
+- `search issues`：`--repo`、`--state open|closed`、`--sort created_at|last_push_at`、`--order asc|desc`。
+
 ### 版本
 
 ```bash
