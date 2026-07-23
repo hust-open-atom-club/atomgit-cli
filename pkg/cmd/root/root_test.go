@@ -2,12 +2,14 @@ package root
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	internalversion "atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 	versioncmd "atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/version"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -19,6 +21,16 @@ type rootTestConfig struct{}
 func (rootTestConfig) GetToken() (string, error) { return "secret", nil }
 func (rootTestConfig) GetUser() (string, error)  { return "tester", nil }
 func (rootTestConfig) GetHost() string           { return "atomgit.com" }
+
+type rootUnauthenticatedConfig struct{}
+
+func (rootUnauthenticatedConfig) GetToken() (string, error) {
+	return "", config.ErrNotAuthenticated
+}
+func (rootUnauthenticatedConfig) GetUser() (string, error) {
+	return "", config.ErrNotAuthenticated
+}
+func (rootUnauthenticatedConfig) GetHost() string { return "atomgit.com" }
 
 type rootRoundTripFunc func(*http.Request) (*http.Response, error)
 
@@ -69,6 +81,30 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 	}
 	if versionFlag.Shorthand != "" {
 		t.Fatalf("version shorthand = %q, want none", versionFlag.Shorthand)
+	}
+}
+
+func TestRootDefersErrorOutputToMain(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(
+		&cmdutil.Factory{Config: rootUnauthenticatedConfig{}},
+		&stdout,
+		&stderr,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetArgs([]string{"auth", "token"})
+
+	err = cmd.Execute()
+	if !errors.Is(err, config.ErrNotAuthenticated) {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if err := cmdutil.FlushWriter(cmd.ErrOrStderr()); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(stderr.String(), config.ErrNotAuthenticated.Error()) {
+		t.Fatalf("root command printed the returned error: %q", stderr.String())
 	}
 }
 

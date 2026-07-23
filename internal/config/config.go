@@ -14,6 +14,9 @@ import (
 )
 
 var (
+	// ErrNotAuthenticated is returned when a command requires stored credentials.
+	ErrNotAuthenticated = errors.New("not authenticated: run `ag auth login`")
+
 	// ErrTokenNotFound is returned when no token file exists in any search path.
 	ErrTokenNotFound = errors.New("token file not found")
 
@@ -71,7 +74,7 @@ func (c *config) GetToken() (string, error) {
 	token, _, err := loadTokenFromFile()
 	if err != nil {
 		if errors.Is(err, ErrTokenNotFound) {
-			return "", fmt.Errorf("not authenticated: run `ag auth login`")
+			return "", ErrNotAuthenticated
 		}
 		return "", err
 	}
@@ -87,7 +90,7 @@ func (c *config) GetUser() (string, error) {
 	_, user, err := loadTokenFromFile()
 	if err != nil {
 		if errors.Is(err, ErrTokenNotFound) {
-			return "", fmt.Errorf("not authenticated: run `ag auth login`")
+			return "", ErrNotAuthenticated
 		}
 		return "", err
 	}

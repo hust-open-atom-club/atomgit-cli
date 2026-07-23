@@ -2,6 +2,7 @@ package issue
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
@@ -17,6 +19,16 @@ type issueTestConfig struct{}
 func (issueTestConfig) GetToken() (string, error) { return "token", nil }
 func (issueTestConfig) GetUser() (string, error)  { return "alice", nil }
 func (issueTestConfig) GetHost() string           { return "atomgit.com" }
+
+type issueUnauthenticatedConfig struct{}
+
+func (issueUnauthenticatedConfig) GetToken() (string, error) {
+	return "", config.ErrNotAuthenticated
+}
+func (issueUnauthenticatedConfig) GetUser() (string, error) {
+	return "", config.ErrNotAuthenticated
+}
+func (issueUnauthenticatedConfig) GetHost() string { return "atomgit.com" }
 
 type issueRoundTripFunc func(*http.Request) (*http.Response, error)
 
@@ -227,6 +239,13 @@ func TestIssueListRejectsInvalidLimit(t *testing.T) {
 				t.Fatalf("error = %v", err)
 			}
 		})
+	}
+}
+
+func TestIssueListPreservesCanonicalAuthenticationError(t *testing.T) {
+	cmd := newCmdIssueList(&cmdutil.Factory{Config: issueUnauthenticatedConfig{}})
+	if err := cmd.RunE(cmd, nil); !errors.Is(err, config.ErrNotAuthenticated) {
+		t.Fatalf("error = %v", err)
 	}
 }
 

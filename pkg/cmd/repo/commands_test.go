@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
@@ -298,8 +299,8 @@ func TestRepoDeleteCommandInfersRepository(t *testing.T) {
 }
 
 func TestRepoCommandsReportAuthenticationErrors(t *testing.T) {
-	config := repoCommandConfig{tokenErr: errors.New("missing token"), user: "alice"}
-	factory := repoFactory(config, nil)
+	cfg := repoCommandConfig{tokenErr: errors.New("missing token"), user: "alice"}
+	factory := repoFactory(cfg, nil)
 	tests := []struct {
 		name string
 		call func() error
@@ -322,6 +323,30 @@ func TestRepoCommandsReportAuthenticationErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.call(); err == nil || !strings.Contains(err.Error(), "missing token") {
+				t.Fatalf("error = %v", err)
+			}
+		})
+	}
+}
+
+func TestRepoListAndViewPreserveCanonicalAuthenticationError(t *testing.T) {
+	factory := repoFactory(repoCommandConfig{tokenErr: config.ErrNotAuthenticated}, nil)
+	tests := []struct {
+		name string
+		call func() error
+	}{
+		{name: "list", call: func() error {
+			cmd := newCmdRepoList(factory)
+			return cmd.RunE(cmd, nil)
+		}},
+		{name: "view", call: func() error {
+			cmd := newCmdRepoView(factory)
+			return cmd.RunE(cmd, []string{"alice/demo"})
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.call(); !errors.Is(err, config.ErrNotAuthenticated) {
 				t.Fatalf("error = %v", err)
 			}
 		})

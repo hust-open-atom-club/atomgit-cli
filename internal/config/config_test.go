@@ -358,10 +358,10 @@ func TestNewConfigWithoutCredentials(t *testing.T) {
 	if cfg.GetHost() != defaultHost {
 		t.Fatalf("host = %q", cfg.GetHost())
 	}
-	if _, err := cfg.GetToken(); err == nil || !strings.Contains(err.Error(), "not authenticated") {
+	if _, err := cfg.GetToken(); !errors.Is(err, ErrNotAuthenticated) {
 		t.Fatalf("GetToken error = %v", err)
 	}
-	if _, err := cfg.GetUser(); err == nil || !strings.Contains(err.Error(), "not authenticated") {
+	if _, err := cfg.GetUser(); !errors.Is(err, ErrNotAuthenticated) {
 		t.Fatalf("GetUser error = %v", err)
 	}
 }
