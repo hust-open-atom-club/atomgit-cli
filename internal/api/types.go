@@ -139,6 +139,16 @@ type User struct {
 	Type    string `json:"type"`
 }
 
+// SSHKey represents a public SSH key registered with an AtomGit account.
+type SSHKey struct {
+	ID          int64  `json:"id"`
+	Title       string `json:"title"`
+	Key         string `json:"key"`
+	Fingerprint string `json:"fingerprint"`
+	URL         string `json:"url"`
+	CreatedAt   string `json:"created_at"`
+}
+
 // FlexibleBool decodes AtomGit boolean metadata that may be returned as
 // JSON booleans, integers, or strings depending on the endpoint.
 type FlexibleBool bool
@@ -368,4 +378,70 @@ type MergePRResponse struct {
 	SHA     string `json:"sha"`
 	Merged  bool   `json:"merged"`
 	Message string `json:"message"`
+}
+
+// ReleaseStatusPre and ReleaseStatusLatest are the two supported values of
+// the release_status field in the create/update release request body.
+const (
+	ReleaseStatusPre    = "pre"
+	ReleaseStatusLatest = "latest"
+)
+
+// ReleaseAuthor is the author embedded in a Release response.
+type ReleaseAuthor struct {
+	ID        string `json:"id"`
+	Login     string `json:"login"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
+	HTMLURL   string `json:"html_url"`
+	Type      string `json:"type"`
+	URL       string `json:"url"`
+}
+
+// ReleaseAsset is one entry of the assets array on a Release. The id and
+// type fields distinguish deletable uploaded attachments (type="attach",
+// id>0) from auto-generated source archives that cannot be removed.
+type ReleaseAsset struct {
+	ID                 int64  `json:"id"`
+	Name               string `json:"name"`
+	Type               string `json:"type"`
+	BrowserDownloadURL string `json:"browser_download_url"`
+}
+
+// Release is the response shape returned by the AtomGit release endpoints.
+// release_status is the server-side status field; it is reported on every
+// release response (e.g. "latest" or "pre").
+type Release struct {
+	TagName         string         `json:"tag_name"`
+	TargetCommitish string         `json:"target_commitish"`
+	Prerelease      bool           `json:"prerelease"`
+	Name            string         `json:"name"`
+	Body            string         `json:"body"`
+	ReleaseStatus   string         `json:"release_status"`
+	CreatedAt       string         `json:"created_at"`
+	Author          ReleaseAuthor  `json:"author"`
+	Assets          []ReleaseAsset `json:"assets"`
+}
+
+// CreateReleaseRequest is the body for POST /repos/{owner}/{repo}/releases.
+// tag_name, name and body are required; target_commitish and release_status
+// are optional. release_status, when sent, must be ReleaseStatusPre or
+// ReleaseStatusLatest; it is omitted from the wire format when empty so the
+// server keeps its default.
+type CreateReleaseRequest struct {
+	TagName         string `json:"tag_name"`
+	Name            string `json:"name"`
+	Body            string `json:"body"`
+	TargetCommitish string `json:"target_commitish,omitempty"`
+	ReleaseStatus   string `json:"release_status,omitempty"`
+}
+
+// UpdateReleaseRequest is the body for PATCH /repos/{owner}/{repo}/releases/{tag}.
+// name and body are required; release_status is optional and follows the same
+// rules as CreateReleaseRequest. The AtomGit release API does not support
+// changing target_commitish after creation.
+type UpdateReleaseRequest struct {
+	Name          string `json:"name"`
+	Body          string `json:"body"`
+	ReleaseStatus string `json:"release_status,omitempty"`
 }
