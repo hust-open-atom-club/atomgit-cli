@@ -481,6 +481,14 @@ ag license check GPL-3.0
 # 添加 SSH key
 ag ssh-key add ~/.ssh/id_rsa.pub --title "My Laptop"
 cat ~/.ssh/id_rsa.pub | ag ssh-key add --title "My Laptop"
+
+# 查看 SSH keys（可通过 --limit 限制数量）
+ag ssh-key list
+ag ssh-key list --limit 200
+
+# 删除 SSH key（默认要求确认）
+ag ssh-key delete 123
+ag ssh-key delete 123 --yes
 ```
 
 ### 版本

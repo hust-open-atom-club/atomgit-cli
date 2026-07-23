@@ -139,6 +139,16 @@ type User struct {
 	Type    string `json:"type"`
 }
 
+// SSHKey represents a public SSH key registered with an AtomGit account.
+type SSHKey struct {
+	ID          int64  `json:"id"`
+	Title       string `json:"title"`
+	Key         string `json:"key"`
+	Fingerprint string `json:"fingerprint"`
+	URL         string `json:"url"`
+	CreatedAt   string `json:"created_at"`
+}
+
 // FlexibleBool decodes AtomGit boolean metadata that may be returned as
 // JSON booleans, integers, or strings depending on the endpoint.
 type FlexibleBool bool
