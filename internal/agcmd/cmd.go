@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/browser"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/root"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -20,6 +21,7 @@ func Main() int {
 
 	factory := &cmdutil.Factory{
 		Config:             cfg,
+		BrowserOpener:      browser.NewSyncOpener(),
 		RepositoryResolver: cmdutil.NewGitRepositoryResolver(""),
 	}
 

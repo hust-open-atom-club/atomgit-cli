@@ -2,9 +2,11 @@ package issue
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/browser"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/issue/comment"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
@@ -195,11 +197,37 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 }
 
 func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
+	var opts struct {
+		web bool
+	}
+
 	cmd := &cobra.Command{
 		Use:   "view [<owner>/<repo>] <number>",
 		Short: "View an issue",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			number := remaining[0]
+
+			if opts.web {
+				num, err := strconv.Atoi(number)
+				if err != nil {
+					return fmt.Errorf("invalid issue number: %s", number)
+				}
+				u := browser.BuildIssueURL(owner, repo, num)
+				fmt.Fprintf(cmd.OutOrStdout(), "Opening %s in your browser.\n", u)
+				if f.BrowserOpener != nil {
+					if err := f.BrowserOpener(u); err != nil {
+						return fmt.Errorf("failed to open browser: %w", err)
+					}
+				}
+				return nil
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return fmt.Errorf("not authenticated: %w", err)
@@ -209,13 +237,6 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
 
 			var issue api.Issue
 			path := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
@@ -239,6 +260,8 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open an issue in the browser")
 
 	return cmd
 }

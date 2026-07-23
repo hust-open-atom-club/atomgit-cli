@@ -157,6 +157,9 @@ ag repo list --limit 100
 ag repo view
 ag repo view owner/repo
 
+# 在浏览器中打开仓库
+ag repo view owner/repo --web
+
 # 创建仓库
 # 在当前用户账号下创建
 ag repo create my-project --public
@@ -218,6 +221,41 @@ ag branch delete owner/repo feature/foo
 ag branch delete owner/repo feature/foo --yes
 ```
 
+### Browse
+
+在默认浏览器中打开仓库页面或指定资源：
+
+```bash
+# 打开当前仓库首页（需在 git 仓库内运行）
+ag browse
+
+# 打开指定仓库
+ag browse -R owner/repo
+
+# 打开 Issue 或 PR
+ag browse 42
+
+# 打开文件（默认分支）
+ag browse main.go
+
+# 打开文件并定位到指定行
+ag browse main.go:312
+ag browse main.go:312-320
+ag browse main.go:312..320
+
+# 在指定分支上打开文件
+ag browse -b dev main.go:42
+
+# 在指定 commit 上打开文件
+ag browse -c abc1234 main.go
+
+# 打开 Releases 页面
+ag browse -r
+
+# 只打印 URL，不打开浏览器
+ag browse -n
+```
+
 ### Pull Request (pr)
 
 ```bash
@@ -229,6 +267,9 @@ ag pr list owner/repo --state closed
 # 查看 PR
 ag pr view 123
 ag pr view owner/repo 123
+
+# 在浏览器中打开 PR
+ag pr view owner/repo 123 --web
 
 # 查看 PR diff
 ag pr diff owner/repo 123
@@ -299,6 +340,9 @@ ag issue list owner/repo --state all
 # 查看 Issue
 ag issue view 42
 ag issue view owner/repo 42
+
+# 在浏览器中打开 Issue
+ag issue view owner/repo 42 --web
 
 # 添加 Issue 标签（使用逗号分隔多个标签）
 ag issue label owner/repo 42 "bug, help wanted,priority/high"
@@ -587,6 +631,7 @@ atomgit-cli/
 │   └── cmd/
 │       ├── root/root.go        # 根命令
 │       ├── auth/auth.go        # 认证命令
+│       ├── browse/browse.go    # Browse 命令
 │       ├── repo/               # 仓库命令
 │       │   ├── repo.go
 │       │   ├── create.go

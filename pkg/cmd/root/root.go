@@ -8,6 +8,7 @@ import (
 	apiCmd "atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/auth"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/branch"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/browse"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/issue"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/label"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/license"
@@ -15,7 +16,7 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/release"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/repo"
 	runcmd "atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/run"
-	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/ssh-key"
+	key "atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/ssh-key"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/tag"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/version"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -68,6 +69,7 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	cmd.AddCommand(runcmd.NewCmdRun(f))
 	cmd.AddCommand(tag.NewCmdTag(f))
 	cmd.AddCommand(auth.NewCmdAuth(f))
+	cmd.AddCommand(browse.NewCmdBrowse(f))
 	cmd.AddCommand(key.NewCmdSSHKey(f))
 	cmd.AddCommand(license.NewCmdLicense(f))
 	cmd.AddCommand(version.NewCmdVersion())

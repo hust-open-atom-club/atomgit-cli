@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/browser"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -156,11 +157,32 @@ func formatRepositoryTime(value string) string {
 }
 
 func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
+	var opts struct {
+		web bool
+	}
+
 	cmd := &cobra.Command{
 		Use:   "view [<owner>/<repo>]",
 		Short: "View a repository",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			contextRepository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+			owner, repo := contextRepository.Owner, contextRepository.Name
+
+			if opts.web {
+				u := browser.BuildRepoURL(owner, repo)
+				fmt.Fprintf(cmd.OutOrStdout(), "Opening %s in your browser.\n", u)
+				if f.BrowserOpener != nil {
+					if err := f.BrowserOpener(u); err != nil {
+						return fmt.Errorf("failed to open browser: %w", err)
+					}
+				}
+				return nil
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return fmt.Errorf("not authenticated. Please check your token file: %w", err)
@@ -170,12 +192,6 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			contextRepository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
-			if err != nil {
-				return err
-			}
-			owner, repo := contextRepository.Owner, contextRepository.Name
 
 			var repository api.Repository
 			path := fmt.Sprintf("/repos/%s/%s", owner, repo)
@@ -209,6 +225,8 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 	cmdutil.AddRepositoryContextHelp(cmd)
+
+	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open a repository in the browser")
 
 	return cmd
 }
