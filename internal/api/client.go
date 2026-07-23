@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -69,6 +70,45 @@ func (c *Client) doRequestWithContentType(method, path string, body io.Reader, c
 }
 
 func (c *Client) doRequestWithContentTypeAndAccept(method, path string, body io.Reader, contentType, accept string) (*http.Response, error) {
+	return c.doRequestWithPolicy(c.httpClient, method, path, body, contentType, accept, isIdempotent(method))
+}
+
+// doRequestWithPolicy performs a request with an explicit HTTP client and
+// retry policy. Most API calls use the client's normal idempotency policy;
+// state-sensitive operations can opt out of an otherwise ambiguous retry.
+func (c *Client) doRequestWithPolicy(
+	httpClient *http.Client,
+	method, path string,
+	body io.Reader,
+	contentType, accept string,
+	canRetry bool,
+) (*http.Response, error) {
+	return c.doRequestWithPolicyContext(
+		context.Background(),
+		httpClient,
+		method,
+		path,
+		body,
+		contentType,
+		accept,
+		canRetry,
+	)
+}
+
+// doRequestWithPolicyContext is doRequestWithPolicy with caller-controlled
+// cancellation for streaming operations.
+func (c *Client) doRequestWithPolicyContext(
+	ctx context.Context,
+	httpClient *http.Client,
+	method, path string,
+	body io.Reader,
+	contentType, accept string,
+	canRetry bool,
+) (*http.Response, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("request context is nil")
+	}
+
 	// body 必须能被重读：io.Reader 读完一次就空了，重试时需重建 reader。
 	// 把 body 读成 []byte 缓存，重试时用 bytes.NewReader 重建。GET/HEAD 无 body 不受影响。
 	var bodyBytes []byte
@@ -80,8 +120,11 @@ func (c *Client) doRequestWithContentTypeAndAccept(method, path string, body io.
 		}
 	}
 
-	url := c.baseURL + path
-	canRetry := isIdempotent(method)
+	if httpClient == nil {
+		httpClient = &http.Client{Timeout: 30 * time.Second}
+	}
+
+	requestURL := c.baseURL + path
 	const retryDelay = 200 * time.Millisecond
 
 	for attempt := 1; ; attempt++ {
@@ -90,7 +133,7 @@ func (c *Client) doRequestWithContentTypeAndAccept(method, path string, body io.
 			bodyReader = bytes.NewReader(bodyBytes)
 		}
 
-		req, err := http.NewRequest(method, url, bodyReader)
+		req, err := http.NewRequestWithContext(ctx, method, requestURL, bodyReader)
 		if err != nil {
 			return nil, err
 		}
@@ -106,10 +149,14 @@ func (c *Client) doRequestWithContentTypeAndAccept(method, path string, body io.
 			req.Header.Set("Accept", accept)
 		}
 
-		resp, err := c.httpClient.Do(req)
+		resp, err := httpClient.Do(req)
 		// 首次失败 + 幂等方法 + 网络错误 → 短睡后重试一次
-		if err != nil && canRetry && attempt == 1 {
-			time.Sleep(retryDelay)
+		if err != nil && canRetry && attempt == 1 && ctx.Err() == nil {
+			select {
+			case <-time.After(retryDelay):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
 			continue
 		}
 		return resp, err

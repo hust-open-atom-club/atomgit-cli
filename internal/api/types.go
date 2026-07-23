@@ -445,3 +445,13 @@ type UpdateReleaseRequest struct {
 	Body          string `json:"body"`
 	ReleaseStatus string `json:"release_status,omitempty"`
 }
+
+// ReleaseUploadURL is the exact response of
+// GET /repos/{owner}/{repo}/releases/{tag}/upload_url?file_name=...
+// The URL points at an external object-store; only the headers returned here
+// may be sent on the subsequent PUT. The AtomGit Bearer token must not be
+// forwarded to the external host.
+type ReleaseUploadURL struct {
+	URL     string            `json:"url"`
+	Headers map[string]string `json:"headers"`
+}

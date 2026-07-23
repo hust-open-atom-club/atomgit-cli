@@ -167,3 +167,21 @@ func TestUpdateReleaseRequestJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestReleaseUploadURLJSON(t *testing.T) {
+	raw := `{"url": "https://store.example.com/upload", "headers": {"Content-Type": "application/octet-stream", "X-MD5": "abc"}}`
+
+	var got ReleaseUploadURL
+	if err := json.Unmarshal([]byte(raw), &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if got.URL != "https://store.example.com/upload" {
+		t.Fatalf("url = %q", got.URL)
+	}
+	if got.Headers["Content-Type"] != "application/octet-stream" {
+		t.Fatalf("Content-Type header = %q", got.Headers["Content-Type"])
+	}
+	if got.Headers["X-MD5"] != "abc" {
+		t.Fatalf("X-MD5 header = %q", got.Headers["X-MD5"])
+	}
+}
