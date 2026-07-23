@@ -352,3 +352,15 @@ func TestRepoListAndViewPreserveCanonicalAuthenticationError(t *testing.T) {
 		})
 	}
 }
+
+func TestRepoViewResolvesRepositoryBeforeAuthentication(t *testing.T) {
+	wantErr := errors.New("repository context unavailable")
+	factory := repoFactory(repoCommandConfig{tokenErr: config.ErrNotAuthenticated}, nil)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{}, wantErr
+	}
+	cmd := newCmdRepoView(factory)
+	if err := cmd.RunE(cmd, nil); !errors.Is(err, wantErr) {
+		t.Fatalf("error = %v, want repository resolution error", err)
+	}
+}

@@ -243,10 +243,40 @@ func TestIssueListRejectsInvalidLimit(t *testing.T) {
 }
 
 func TestIssueListPreservesCanonicalAuthenticationError(t *testing.T) {
-	cmd := newCmdIssueList(&cmdutil.Factory{Config: issueUnauthenticatedConfig{}})
+	cmd := newCmdIssueList(&cmdutil.Factory{
+		Config: issueUnauthenticatedConfig{},
+		RepositoryResolver: func() (cmdutil.Repository, error) {
+			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+		},
+	})
 	if err := cmd.RunE(cmd, nil); !errors.Is(err, config.ErrNotAuthenticated) {
 		t.Fatalf("error = %v", err)
 	}
+}
+
+func TestIssueListValidatesInputBeforeAuthentication(t *testing.T) {
+	t.Run("invalid limit", func(t *testing.T) {
+		cmd := newCmdIssueList(&cmdutil.Factory{Config: issueUnauthenticatedConfig{}})
+		if err := cmd.Flags().Set("limit", "0"); err != nil {
+			t.Fatal(err)
+		}
+		if err := cmd.RunE(cmd, nil); err == nil || !strings.Contains(err.Error(), "must be positive") {
+			t.Fatalf("error = %v", err)
+		}
+	})
+
+	t.Run("repository resolution", func(t *testing.T) {
+		wantErr := errors.New("repository context unavailable")
+		cmd := newCmdIssueList(&cmdutil.Factory{
+			Config: issueUnauthenticatedConfig{},
+			RepositoryResolver: func() (cmdutil.Repository, error) {
+				return cmdutil.Repository{}, wantErr
+			},
+		})
+		if err := cmd.RunE(cmd, nil); !errors.Is(err, wantErr) {
+			t.Fatalf("error = %v, want repository resolution error", err)
+		}
+	})
 }
 
 func TestIssueViewOutputsLabels(t *testing.T) {

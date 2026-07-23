@@ -161,6 +161,12 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 		Short: "View a repository",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			contextRepository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+			owner, repo := contextRepository.Owner, contextRepository.Name
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return err
@@ -170,12 +176,6 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			contextRepository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
-			if err != nil {
-				return err
-			}
-			owner, repo := contextRepository.Owner, contextRepository.Name
 
 			var repository api.Repository
 			path := fmt.Sprintf("/repos/%s/%s", owner, repo)

@@ -153,11 +153,6 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 		Short: "List issues",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return err
-			}
-
 			if opts.Limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
@@ -167,6 +162,11 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return err
+			}
 
 			client, err := newAPIClient(f, token)
 			if err != nil {
