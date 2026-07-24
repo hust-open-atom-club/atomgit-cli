@@ -139,6 +139,31 @@ type User struct {
 	Type    string `json:"type"`
 }
 
+// Collaborator represents a repository member and the provenance of their
+// effective permission.
+type Collaborator struct {
+	ID          string                  `json:"id"`
+	Name        string                  `json:"name"`
+	Username    string                  `json:"username"`
+	Login       string                  `json:"login"`
+	WebURL      string                  `json:"web_url"`
+	AccessLevel int                     `json:"access_level"`
+	Type        string                  `json:"type"`
+	JoinWay     string                  `json:"join_way"`
+	SourceName  string                  `json:"source_name"`
+	RoleName    string                  `json:"role_name"`
+	RoleNameCN  string                  `json:"role_name_cn"`
+	Permission  string                  `json:"permission"`
+	Permissions CollaboratorPermissions `json:"permissions"`
+}
+
+// CollaboratorPermissions contains AtomGit's built-in repository permissions.
+type CollaboratorPermissions struct {
+	Pull  FlexibleBool `json:"pull"`
+	Push  FlexibleBool `json:"push"`
+	Admin FlexibleBool `json:"admin"`
+}
+
 // SSHKey represents a public SSH key registered with an AtomGit account.
 type SSHKey struct {
 	ID          int64  `json:"id"`
