@@ -617,7 +617,18 @@ ag --version
 ag version --json
 ```
 
-通过 `make build` 或 `make install` 从源码构建且未注入发布元数据时，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，`ag version` 会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
+`ag version`、`ag --version` 和 `ag version --json` 同时显示 `selfUpdate` 与 `source`，用于说明当前二进制是否允许自替换以及其发行来源。通过 `make build` 或 `make install` 从源码构建且未注入发布元数据时，默认报告 `selfUpdate=true, source=source`，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，命令会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
+
+下游源码打包方应显式注入自身来源并禁用自升级，例如：
+
+```bash
+go build -trimpath -ldflags \
+  "-X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.SelfUpdate=false \
+   -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Source=example-manager" \
+  ./cmd/ag
+```
+
+`source` 必须是长度不超过 64 的小写 ASCII 标识符，可包含数字、点、下划线和连字符；`unknown` 为无效元数据的保守回退值，不能作为构建来源。
 
 ## 发布打包
 
@@ -631,11 +642,14 @@ make release VERSION=v0.6.0
 
 `make release` 会检查工作区干净、tag 存在且指向当前 HEAD，然后在 `dist/v0.6.0/` 生成以下文件：
 
-- Linux 和 macOS 的 amd64/arm64 `.tar.gz` 归档。
-- Windows 的 amd64/arm64 `.zip` 归档。
+- 六个名称不变的普通归档；其中二进制报告 `selfUpdate=true, source=release`。
+- `package-managers/` 下 npm 的六个、Homebrew 的四个和 Winget 的两个独立归档；文件名为 `ag_<os>_<arch>_<source>.<ext>`，二进制报告 `selfUpdate=false` 和对应来源。
+- `package-managers/package-managers-manifest.json` 与只使用归档 basename 的 `package-managers-checksums.txt`。
 - 已绑定当前 tag 的 `install.sh` 和 `install.ps1`。
 - `npm/` 下的六个平台二进制包、一个主启动包和独立的 `npm/checksums.txt`。
 - 仅覆盖 AtomGit Release 附件（六个归档和两个安装脚本）的根 `checksums.txt`。
+
+npm 平台包从对应的 `_npm` 归档提取二进制；Homebrew formula 和 Winget manifest 应分别消费匹配的 `_homebrew` 与 `_winget` 归档及校验和。Nix 不生成 `_nix` 归档。
 
 发布 npm 制品时，先发布 `npm/` 下六个名称带平台和架构的包；确认它们可用后，再发布 `atomgit-cli` 主包。主包和平台包必须使用相同版本。
 
@@ -654,6 +668,14 @@ npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registr
 ```bash
 (cd dist/v0.6.0/npm && shasum -a 256 -c checksums.txt)
 ```
+
+包管理器归档使用独立校验文件：
+
+```bash
+(cd dist/v0.6.0/package-managers && shasum -a 256 -c package-managers-checksums.txt)
+```
+
+`scripts/build-release.sh` 始终使用 GoReleaser 的 `--skip=publish`，只在本地准备并验证制品，然后打印完整的附件 basename 清单。维护者按该清单手工上传六个普通归档、安装脚本、十二个包管理器归档、manifest 和包管理器校验文件；脚本不会创建 AtomGit Release 或上传附件。
 
 未创建 tag 时，可使用 `make release-snapshot VERSION=v0.6.0` 进行本地试打包。Snapshot 允许脏工作区，其制品仅用于验证，不应上传到正式 Release。
 

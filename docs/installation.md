@@ -20,7 +20,7 @@ npm 主包通过 `optionalDependencies` 声明六个平台二进制包。npm 根
 | Linux | x64 / amd64、arm64 / aarch64 |
 | Windows | x64 / amd64、arm64 |
 
-npm 主包、六个平台包与 AtomGit Release tag 一一对应，版本必须完全一致。执行 `make release VERSION=vX.Y.Z` 会在 `dist/vX.Y.Z/npm/` 生成七个 npm tarball 和独立的 `checksums.txt`，供发布前本地校验；这些 npm 文件不作为 AtomGit Release 附件上传。发布时必须先发布六个平台包，确认它们可从 npm registry 获取后，再发布主包。
+npm 主包、六个平台包与 AtomGit Release tag 一一对应，版本必须完全一致。每个平台包从 `ag_<os>_<arch>_npm.<ext>` 归档提取二进制，该二进制报告 `selfUpdate=false, source=npm`。执行 `make release VERSION=vX.Y.Z` 会在 `dist/vX.Y.Z/npm/` 生成七个 npm tarball 和独立的 `checksums.txt`，供发布前本地校验；这些 npm 文件不作为 AtomGit Release 附件上传。发布时必须先发布六个平台包，确认它们可从 npm registry 获取后，再发布主包。
 
 准备新版本时，先同步所有 npm 版本字段：
 
@@ -56,6 +56,8 @@ brew install hust-open-atom-club/tap/atomgit-cli
 brew update
 brew upgrade atomgit-cli
 ```
+
+Homebrew formula 应消费与平台匹配的 `ag_<os>_<arch>_homebrew.tar.gz` 和对应 SHA-256。该二进制报告 `selfUpdate=false, source=homebrew`。
 
 ## 自动化安装（推荐）
 
@@ -324,6 +326,16 @@ go install ./cmd/ag
 ```
 
 可执行文件会安装到 `go env GOPATH` 所显示目录下的 `bin` 子目录。请确保该目录已加入 `PATH`。
+
+## 包管理器发行制品
+
+发布快照和正式本地构建保留六个普通 Release 归档名称，同时在 `dist/<tag>/package-managers/` 生成十二个独立包管理器归档：
+
+- npm：Linux、macOS、Windows 的 amd64/arm64；
+- Homebrew：Linux、macOS 的 amd64/arm64；
+- Winget：Windows 的 amd64/arm64。
+
+目录还包含 `package-managers-manifest.json` 和 basename-only 的 `package-managers-checksums.txt`。AtomGit Release 附件使用扁平命名空间，因此维护者按脚本打印的 basename 清单逐个手工上传这些文件。`scripts/build-release.sh` 保持 `--skip=publish`，不会创建 Release、调用上传 API 或发布 npm 包。
 
 ## 验证安装
 

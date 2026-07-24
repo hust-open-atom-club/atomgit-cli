@@ -10,8 +10,8 @@ import (
 
 func Text() string {
 	info := version.Get()
-	return fmt.Sprintf("ag version %s (commit: %s, built: %s)\n",
-		info.Version, info.Commit, info.BuildDate)
+	return fmt.Sprintf("ag version %s (commit: %s, built: %s, self-update: %t, source: %s)\n",
+		info.Version, info.Commit, info.BuildDate, info.SelfUpdate, info.Source)
 }
 
 func NewCmdVersion() *cobra.Command {
