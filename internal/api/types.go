@@ -256,6 +256,26 @@ type Label struct {
 	Color       string `json:"color"`
 }
 
+// Milestone represents an AtomGit repository milestone.
+type Milestone struct {
+	Number       interface{} `json:"number"`
+	Title        string      `json:"title"`
+	Description  string      `json:"description"`
+	State        string      `json:"state"`
+	DueOn        string      `json:"due_on"`
+	OpenIssues   int         `json:"open_issues"`
+	ClosedIssues int         `json:"closed_issues"`
+	RepositoryID int64       `json:"repository_id"`
+	URL          string      `json:"url"`
+	CreatedAt    string      `json:"created_at"`
+	UpdatedAt    string      `json:"updated_at"`
+}
+
+// GetNumber returns the milestone number as a string.
+func (m *Milestone) GetNumber() string {
+	return formatIdentifier(m.Number)
+}
+
 // Comment represents a comment on an issue or pull request
 type Comment struct {
 	ID        int64  `json:"id"`

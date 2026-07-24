@@ -436,6 +436,27 @@ ag label delete owner/repo obsolete --yes
 
 AtomGit API v5 的标签创建和修改接口支持 `name` 与 `color`。`label list` 会在接口返回时显示标签描述，但创建和修改命令不会发送 API 未公开支持的 `description` 字段。颜色必须使用 `#RGB` 或 `#RRGGBB` 格式。
 
+### Milestone
+
+Milestone 日期使用明确的 `YYYY-MM-DD` 格式。关闭 Milestone 会保留数据，删除则会永久移除并默认要求确认。AtomGit API 要求每次更新都包含 `title` 和 `due_on`，因此 edit、close 和 reopen 会先读取当前 Milestone 并原样保留这两个必填字段；其他未指定字段不会发送。
+
+```bash
+# 列出和查看 Milestone
+ag milestone list owner/repo --state all --limit 50
+ag milestone view owner/repo 12
+ag milestone view owner/repo 12 --json
+
+# 创建和修改 Milestone
+ag milestone create owner/repo --title "Version 1.0" --description "Release scope" --due-on 2026-08-31
+ag milestone edit owner/repo 12 --title "Version 1.1" --due-on 2026-09-30
+
+# 关闭、重新打开或永久删除
+ag milestone close owner/repo 12
+ag milestone reopen owner/repo 12
+ag milestone delete owner/repo 12
+ag milestone delete owner/repo 12 --yes
+```
+
 ### Actions 运行记录 (run)
 
 `ag run` 目前只提供只读的运行检查能力，不会触发、重跑、取消或删除工作流运行。
