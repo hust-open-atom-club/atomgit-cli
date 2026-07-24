@@ -248,17 +248,35 @@ func newPullRequestJSON(pullRequest api.PullRequest, labels []api.Label) pullReq
 
 func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
-		Title string
-		Body  string
-		Base  string
-		Head  string
+		Title    string
+		Body     string
+		BodyFile string
+		Base     string
+		Head     string
 	}
 
 	cmd := &cobra.Command{
 		Use:   "create [<owner>/<repo>]",
 		Short: "Create a pull request",
-		Args:  cobra.MaximumNArgs(1),
+		Example: `  ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature
+  ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature
+  ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.Title == "" {
+				return fmt.Errorf("title is required")
+			}
+			bodyText, err := cmdutil.ReadBody(
+				opts.Body,
+				opts.BodyFile,
+				cmd.Flags().Changed("body"),
+				cmd.Flags().Changed("body-file"),
+				cmd.InOrStdin(),
+			)
+			if err != nil {
+				return err
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return fmt.Errorf("not authenticated: %w", err)
@@ -274,10 +292,6 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-
-			if opts.Title == "" {
-				return fmt.Errorf("title is required")
-			}
 
 			base := strings.TrimSpace(opts.Base)
 			if base == "" {
@@ -301,7 +315,7 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 
 			body := map[string]interface{}{
 				"title": opts.Title,
-				"body":  opts.Body,
+				"body":  bodyText,
 				"base":  base,
 				"head":  head,
 			}
@@ -325,8 +339,10 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "PR title")
 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "PR body")
+	cmd.Flags().StringVarP(&opts.BodyFile, "body-file", "F", "", "Read PR body from file (use - for stdin)")
 	cmd.Flags().StringVar(&opts.Base, "base", "", "Base branch (defaults to repository default)")
 	cmd.Flags().StringVar(&opts.Head, "head", "", "Head branch")
+	cmd.MarkFlagsMutuallyExclusive("body", "body-file")
 
 	return cmd
 }
