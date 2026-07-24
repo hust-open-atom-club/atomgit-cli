@@ -174,6 +174,68 @@ func TestRepoListCommandUsesInjectedClient(t *testing.T) {
 	}
 }
 
+func TestRepoListJSON(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{name: "repositories", body: `[{"id":1,"name":"demo","full_name":"alice/demo","web_url":"https://atomgit.com/alice/demo","private":true,"owner":{"login":"alice"}}]`, want: `[{"id":1,"name":"demo","fullName":"alice/demo","description":"","url":"https://atomgit.com/alice/demo","visibility":"private","defaultBranch":"","language":"","license":"","fork":false,"parent":"","updatedAt":"","stars":0,"forks":0,"watchers":0,"openIssues":0,"owner":"alice"}]`},
+		{name: "empty", body: `[]`, want: `[]`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
+				return forkResponse(http.StatusOK, tt.body), nil
+			})
+			cmd := newCmdRepoList(repoFactory(repoCommandConfig{token: "token"}, transport))
+			if err := cmd.Flags().Set("json", "true"); err != nil {
+				t.Fatal(err)
+			}
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, nil); err != nil {
+				t.Fatal(err)
+			}
+			assertJSONEqual(t, output.Bytes(), []byte(tt.want))
+		})
+	}
+}
+
+func TestRepoViewJSON(t *testing.T) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		return forkResponse(http.StatusOK, `{"id":2,"name":"demo","full_name":"alice/demo","html_url":"https://atomgit.com/alice/demo","internal":true,"fork":true,"parentfull_name":"upstream/demo","owner":{"login":"alice"}}`), nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "token"}, transport)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+	}
+	cmd := newCmdRepoView(factory)
+	if err := cmd.Flags().Set("json", "true"); err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+	assertJSONEqual(t, output.Bytes(), []byte(`{"id":2,"name":"demo","fullName":"alice/demo","description":"","url":"https://atomgit.com/alice/demo","visibility":"internal","defaultBranch":"","language":"","license":"","fork":true,"parent":"upstream/demo","updatedAt":"","stars":0,"forks":0,"watchers":0,"openIssues":0,"owner":"alice"}`))
+}
+
+func assertJSONEqual(t *testing.T, got, want []byte) {
+	t.Helper()
+	var gotValue, wantValue any
+	if err := json.Unmarshal(got, &gotValue); err != nil {
+		t.Fatalf("invalid JSON output %q: %v", got, err)
+	}
+	if err := json.Unmarshal(want, &wantValue); err != nil {
+		t.Fatal(err)
+	}
+	if fmt.Sprintf("%#v", gotValue) != fmt.Sprintf("%#v", wantValue) {
+		t.Fatalf("JSON = %s, want %s", got, want)
+	}
+}
+
 func TestRepoViewCommandReadsRepository(t *testing.T) {
 	requests := 0
 	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
