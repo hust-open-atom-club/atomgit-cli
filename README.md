@@ -206,6 +206,27 @@ ag repo delete owner/repo --yes
 
 `ag repo edit` 仅发送命令行中明确指定的字段，支持 `--name`、`--description`、`--default-branch` 和 `--visibility public|private`。`--public`、`--private` 是可见性的便利选项；它们与 `--visibility` 三者互斥。名称或可见性修改需要交互确认，可使用 `--yes` 跳过确认。成功后命令会显示更新后的仓库名称和浏览器 URL。
 
+#### 仓库 Webhook
+
+```bash
+# 列出和查看 Webhook（输出不包含 secret）
+ag repo webhook list owner/repo --limit 50
+ag repo webhook view owner/repo 42 --json
+
+# 从环境变量、文件或标准输入安全读取 secret
+ag repo webhook create owner/repo --url https://example.com/hook --events push,issues --secret-env WEBHOOK_SECRET
+ag repo webhook create owner/repo --url https://example.com/hook --events merge-requests --secret-file ./webhook-secret
+Get-Content ./webhook-secret | ag repo webhook edit owner/repo 42 --secret-stdin --encryption signature
+
+# 替换事件、删除或发送真实测试请求
+ag repo webhook edit owner/repo 42 --events push,tag-push,merge-requests
+ag repo webhook edit owner/repo 42 --events none
+ag repo webhook test owner/repo 42
+ag repo webhook delete owner/repo 42 --yes
+```
+
+支持的事件为 `push`、`tag-push`、`issues`、`note` 和 `merge-requests`。Webhook secret 不支持命令行明文参数，只能通过 `--secret-env`、`--secret-file` 或 `--secret-stdin` 三选一提供，也不会出现在列表、详情、JSON 或错误响应中。`test` 会向真实目标发送请求，和删除操作一样默认要求确认。AtomGit 当前公开 API 仅在响应中提供 `active`，因此 CLI 将启用状态作为只读信息展示，不发送未公开的修改字段。
+
 该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。
 
 ### Branch
