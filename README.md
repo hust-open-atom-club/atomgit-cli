@@ -293,6 +293,8 @@ ag pr merge owner/repo 123 --rebase --squash --admin --subject "Merge PR #123" -
 
 # 创建 PR
 ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch
+ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature-branch
+cat description.md | ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature-branch
 
 # 关闭 PR
 ag pr close owner/repo 123
@@ -368,6 +370,8 @@ ag issue edit owner/repo 42 --body-file details.md
 
 # 创建 Issue
 ag issue create owner/repo --title "Bug report" --body "Description"
+ag issue create owner/repo --title "Bug report" --body-file description.md
+cat description.md | ag issue create owner/repo --title "Bug report" --body-file -
 
 # 重新打开 Issue
 ag issue reopen owner/repo 42
