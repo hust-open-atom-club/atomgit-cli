@@ -4,14 +4,6 @@ AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 
 ## 安装
 
-### go （构建并安装）
-
-所有支持 Go 的平台都可以使用，需要 Go 1.24.2 或更高版本：
-
-```bash
-go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
-```
-
 ### npm
 
 需要 Node.js 18 或更高版本：
@@ -68,6 +60,16 @@ nix profile install github:NixOS/nixpkgs/nixos-unstable#atomgit-cli
 ```bash
 nix run github:NixOS/nixpkgs/nixos-unstable#atomgit-cli -- version
 ```
+
+### go （构建并安装）
+
+所有支持 Go 的平台都可以使用，需要 Go 1.24.2 或更高版本：
+
+```bash
+go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
+```
+
+通过 Go 模块代理安装时，`ag version` 能显示模块版本，但由于模块代理提供的源码包不包含 Git 历史，文本输出会省略无法获得的 commit 和构建时间；`ag version --json` 中对应字段为 `unknown`。这不影响 CLI 功能；如需完整的版本元数据，请使用 npm、Homebrew 或 Release 页面提供的预编译版本。
 
 其他安装方式请参阅[完整安装指南](https://atomgit.com/hust-open-atom-club/atomgit-cli/blob/main/docs/installation.md)。
 
@@ -646,7 +648,7 @@ ag --version
 ag version --json
 ```
 
-通过 `make build` 或 `make install` 从源码构建且未注入发布元数据时，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，`ag version` 会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
+通过 `make build` 或 `make install` 从源码构建且未注入发布元数据时，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，`ag version` 会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。通过 `go install ...@latest` 从模块代理安装时，模块版本仍然可用，但由于源码包不包含 Git 历史，文本输出会省略无法获得的 commit 和构建时间，JSON 输出则将对应字段保留为 `unknown`。
 
 ## 发布打包
 

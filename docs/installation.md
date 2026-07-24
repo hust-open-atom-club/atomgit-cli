@@ -1,18 +1,6 @@
 # 安装指南
 
-AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、自动安装脚本、Nix、手动下载预编译文件或从源码构建进行安装。
-
-## 使用 go 安装
-
-go 安装将自动下载源码包并进行编译，需要 Go 1.24.2 或更高版本：
-
-```
-go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
-```
-
-该方法将从 Go 模块代理下载该项目及其依赖的源码包，并在本机构建出二进制文件。
-因此，所有支持 Go 的平台应该都可以使用该方法安装，包含 npm 安装未覆盖的 
-BSD、AIX、Solaris 和 Plan 9 等特殊平台，以及 LoongArch64、32 位 x86 等架构。
+AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、Nix、go install、AtomGit Release 自动或手动安装，也可以从源码构建。
 
 ## 使用 npm 安装
 
@@ -68,42 +56,6 @@ brew install hust-open-atom-club/tap/atomgit-cli
 brew update
 brew upgrade atomgit-cli
 ```
-
-## 自动化安装（推荐）
-
-安装脚本会识别当前操作系统（支持 Linux，Windows 和 macOS）与处理器架构（支持 amd64 和 arm64），下载匹配的预编译文件并安装 `ag`。
-
-### macOS 和 Linux
-
-请在终端执行：
-
-```bash
-curl -fsSL "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.sh" | sh
-```
-
-脚本默认将 `ag` 安装到 `/usr/local/bin`；该目录不可写时，会改用 `~/.local/bin`。如果安装目录不在 `PATH` 中，脚本会输出相应的配置提示。
-
-### Windows
-
-请在 Windows PowerShell 5.1 或 PowerShell 7+ 中执行：
-
-```powershell
-irm "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1" | iex
-```
-
-`irm` 是 `Invoke-RestMethod` 的别名。若当前环境不支持该别名，可执行：
-
-```powershell
-Invoke-RestMethod -Uri "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1" | Invoke-Expression
-```
-
-如果系统禁止运行脚本，可先为当前用户设置执行策略（只需执行一次）：
-
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-```
-
-脚本默认安装到 `%USERPROFILE%\.local\bin`，并将该目录加入当前用户的 `Path`。
 
 ## 使用 Nix 安装
 
@@ -239,7 +191,59 @@ nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#latest -- versio
 }
 ```
 
-## 手动安装
+## 使用 go 安装
+
+go 安装将自动下载源码包并进行编译，需要 Go 1.24.2 或更高版本：
+
+```bash
+go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
+```
+
+该方法将从 Go 模块代理下载该项目及其依赖的源码包，并在本机构建出二进制文件。
+因此，所有支持 Go 的平台应该都可以使用该方法安装，包含 npm 安装未覆盖的
+BSD、AIX、Solaris 和 Plan 9 等特殊平台，以及 LoongArch64、32 位 x86 等架构。
+
+Go 模块代理提供的源码包不包含 `.git` 目录，因此这种安装方式构建的二进制只能可靠获得模块版本。执行 `ag version` 时，文本输出会省略无法获得的 commit 和构建时间；`ag version --json` 中对应字段为 `unknown`。这是预期行为，不影响 CLI 功能。如需同时包含版本、commit 和构建时间，请改用 npm、Homebrew，或通过 AtomGit Release 自动或手动安装预编译版本。
+
+## 使用 AtomGit Release 安装
+
+### 自动安装
+
+安装脚本会识别当前操作系统（支持 Linux，Windows 和 macOS）与处理器架构（支持 amd64 和 arm64），下载匹配的预编译文件并安装 `ag`。
+
+#### macOS 和 Linux
+
+请在终端执行：
+
+```bash
+curl -fsSL "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.sh" | sh
+```
+
+脚本默认将 `ag` 安装到 `/usr/local/bin`；该目录不可写时，会改用 `~/.local/bin`。如果安装目录不在 `PATH` 中，脚本会输出相应的配置提示。
+
+#### Windows
+
+请在 Windows PowerShell 5.1 或 PowerShell 7+ 中执行：
+
+```powershell
+irm "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1" | iex
+```
+
+`irm` 是 `Invoke-RestMethod` 的别名。若当前环境不支持该别名，可执行：
+
+```powershell
+Invoke-RestMethod -Uri "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1" | Invoke-Expression
+```
+
+如果系统禁止运行脚本，可先为当前用户设置执行策略（只需执行一次）：
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+脚本默认安装到 `%USERPROFILE%\.local\bin`，并将该目录加入当前用户的 `Path`。
+
+### 手动安装
 
 从 [Release 页面](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)下载与操作系统和处理器架构匹配的文件：
 
@@ -254,7 +258,7 @@ nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#latest -- versio
 
 macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应 arm64，`x86_64` 对应 amd64。Windows 可在 PowerShell 中执行 `$env:PROCESSOR_ARCHITECTURE`；`ARM64` 对应 arm64，`AMD64` 对应 amd64。
 
-### macOS 和 Linux
+#### macOS 和 Linux
 
 1. 解压下载的 `.tar.gz` 文件，得到可执行文件 `ag`。例如：
 
@@ -277,7 +281,7 @@ macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应
    export PATH="$HOME/.local/bin:$PATH"
    ```
 
-### Windows
+#### Windows
 
 1. 解压下载的 `.zip` 文件，得到 `ag.exe`。
 2. 将 `ag.exe` 放入固定目录，例如 `C:\Users\<用户名>\.local\bin`。
