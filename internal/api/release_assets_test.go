@@ -522,6 +522,132 @@ func TestDeleteReleaseAttachmentRejectsNonPositiveID(t *testing.T) {
 	}
 }
 
+type closeTracker struct {
+	rc     io.ReadCloser
+	closed int32
+}
+
+func (c *closeTracker) Read(p []byte) (int, error) { return c.rc.Read(p) }
+func (c *closeTracker) Close() error {
+	atomic.AddInt32(&c.closed, 1)
+	return c.rc.Close()
+}
+
+func TestDownloadReleaseAttachmentSuccess(t *testing.T) {
+	want := []byte{0x00, 0x01, 'b', 'i', 'n', 0xFF, 0xFE, 'x', 0x0A, 0x00}
+	var gotMethod, gotAccept, gotPath string
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotAccept = r.Header.Get("Accept")
+		gotPath = r.URL.EscapedPath()
+		_, _ = w.Write(want)
+	})
+
+	rc, err := DownloadReleaseAttachment(context.Background(), client, "atom club", "atom/git-cli", "v1.2 rc", "release file.tar.gz")
+	if err != nil {
+		t.Fatalf("DownloadReleaseAttachment: %v", err)
+	}
+	defer rc.Close()
+
+	got, err := io.ReadAll(rc)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Fatalf("body = %q, want %q", got, want)
+	}
+	if gotMethod != http.MethodGet {
+		t.Fatalf("method = %q, want GET", gotMethod)
+	}
+	if gotAccept != "*/*" {
+		t.Fatalf("Accept = %q, want %q", gotAccept, "*/*")
+	}
+	const wantPath = "/repos/atom%20club/atom%2Fgit-cli/releases/v1.2%20rc/attach_files/release%20file.tar.gz/download"
+	if gotPath != wantPath {
+		t.Fatalf("path = %q, want %q", gotPath, wantPath)
+	}
+}
+
+func TestDownloadReleaseAttachmentDoesNotUseMetadataTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("first-"))
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+		time.Sleep(40 * time.Millisecond)
+		_, _ = w.Write([]byte("second"))
+	}))
+	defer server.Close()
+
+	httpClient := server.Client()
+	httpClient.Timeout = 10 * time.Millisecond
+	client := NewClientWithBaseURL("token", server.URL, httpClient)
+
+	body, err := DownloadReleaseAttachment(context.Background(), client, "owner", "repo", "v1.0", "asset.bin")
+	if err != nil {
+		t.Fatalf("DownloadReleaseAttachment: %v", err)
+	}
+	defer body.Close()
+	got, err := io.ReadAll(body)
+	if err != nil {
+		t.Fatalf("read download: %v", err)
+	}
+	if string(got) != "first-second" {
+		t.Fatalf("body = %q, want %q", got, "first-second")
+	}
+}
+
+func TestDownloadReleaseAttachmentRejectsNonOKAndClosesBody(t *testing.T) {
+	for _, status := range []int{http.StatusNoContent, http.StatusPartialContent, http.StatusNotFound} {
+		t.Run(fmt.Sprintf("status_%d", status), func(t *testing.T) {
+			tracker := &closeTracker{rc: io.NopCloser(strings.NewReader("response body"))}
+			transport := funcRoundTrip(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: status,
+					Status:     fmt.Sprintf("%d %s", status, http.StatusText(status)),
+					Header:     make(http.Header),
+					Body:       tracker,
+				}, nil
+			})
+			client := newUploadClient(t, transport)
+
+			rc, err := DownloadReleaseAttachment(context.Background(), client, "owner", "repo", "v1.0", "asset.bin")
+			if err == nil || !strings.Contains(err.Error(), fmt.Sprintf("%d", status)) {
+				t.Fatalf("error = %v, want status %d", err, status)
+			}
+			if rc != nil {
+				t.Fatalf("reader = %v, want nil", rc)
+			}
+			if got := atomic.LoadInt32(&tracker.closed); got != 1 {
+				t.Fatalf("body closes = %d, want 1", got)
+			}
+		})
+	}
+}
+
+func TestDownloadReleaseAttachmentStopsWhenContextExpires(t *testing.T) {
+	var calls int32
+	transport := funcRoundTrip(func(req *http.Request) (*http.Response, error) {
+		atomic.AddInt32(&calls, 1)
+		<-req.Context().Done()
+		return nil, req.Context().Err()
+	})
+	client := newUploadClient(t, transport)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+
+	body, err := DownloadReleaseAttachment(ctx, client, "owner", "repo", "v1.0", "asset.bin")
+	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("error = %v, want deadline exceeded", err)
+	}
+	if body != nil {
+		t.Fatalf("body = %v, want nil", body)
+	}
+	if got := atomic.LoadInt32(&calls); got != 1 {
+		t.Fatalf("transport calls = %d, want 1", got)
+	}
+}
+
 func TestUploadReleaseAssetExhaustsRetryOnRepeatedInterruption(t *testing.T) {
 	upload := ReleaseUploadURL{
 		URL:     "https://store.example.com/upload?policy=abc",
