@@ -248,16 +248,22 @@ func newPullRequestJSON(pullRequest api.PullRequest, labels []api.Label) pullReq
 
 func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
-		Title string
-		Body  string
-		Base  string
-		Head  string
+		Title    string
+		Body     string
+		Base     string
+		Head     string
+		Metadata prCreateMetadataOptions
 	}
 
 	cmd := &cobra.Command{
 		Use:   "create [<owner>/<repo>]",
 		Short: "Create a pull request",
-		Args:  cobra.MaximumNArgs(1),
+		Long: `Create a pull request and optionally set its collaboration metadata.
+
+Assignees own follow-up work, approval reviewers approve the change, and
+testers verify it. These AtomGit roles are managed independently. Labels and
+milestones must already exist in the repository.`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
@@ -277,6 +283,11 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 
 			if opts.Title == "" {
 				return fmt.Errorf("title is required")
+			}
+
+			metadata, err := resolvePRCreateMetadata(client, owner, repo, opts.Metadata)
+			if err != nil {
+				return err
 			}
 
 			base := strings.TrimSpace(opts.Base)
@@ -305,6 +316,7 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 				"base":  base,
 				"head":  head,
 			}
+			metadata.addToCreateBody(body)
 
 			var pr api.PullRequestWriteResponse
 			path := fmt.Sprintf("/repos/%s/%s/pulls", owner, repo)
@@ -317,6 +329,9 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("created PR response did not include a PR number")
 			}
 			htmlURL := pullRequestResultURL(pr.GetURL(), f.Config.GetHost(), owner, repo, number)
+			if err := applyPRCreateMetadata(client, owner, repo, number, metadata); err != nil {
+				return fmt.Errorf("created PR #%s at %s, but failed to set collaboration metadata: %w", number, htmlURL, err)
+			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Created PR #%s: %s\n", number, htmlURL)
 
 			return nil
@@ -327,20 +342,31 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "PR body")
 	cmd.Flags().StringVar(&opts.Base, "base", "", "Base branch (defaults to repository default)")
 	cmd.Flags().StringVar(&opts.Head, "head", "", "Head branch")
+	cmd.Flags().StringSliceVar(&opts.Metadata.Assignees, "assignee", nil, "Assignee login (repeat for multiple users)")
+	cmd.Flags().StringSliceVar(&opts.Metadata.Reviewers, "reviewer", nil, "Approval reviewer login (repeat for multiple users)")
+	cmd.Flags().StringSliceVar(&opts.Metadata.Testers, "tester", nil, "Tester login (repeat for multiple users)")
+	cmd.Flags().StringSliceVar(&opts.Metadata.Labels, "label", nil, "Label name (repeat for multiple labels)")
+	cmd.Flags().StringVar(&opts.Metadata.Milestone, "milestone", "", "Milestone number or exact title")
 
 	return cmd
 }
 
 func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
-		Title string
-		Body  string
+		Title    string
+		Body     string
+		Metadata prEditMetadataOptions
 	}
 
 	cmd := &cobra.Command{
 		Use:   "edit [<owner>/<repo>] <number>",
 		Short: "Edit a pull request",
-		Args:  cobra.RangeArgs(1, 2),
+		Long: `Edit a pull request and explicitly add or remove collaboration metadata.
+
+Assignees, approval reviewers, and testers are distinct AtomGit roles.
+Unspecified metadata is left unchanged; use --milestone none to clear the
+current milestone.`,
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
@@ -357,7 +383,16 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
+			number, err := parsePRNumber(remaining[0])
+			if err != nil {
+				return err
+			}
+
+			metadataRequested := opts.Metadata.requested(cmd)
+			metadata, err := resolvePREditMetadata(client, owner, repo, number, opts.Metadata, cmd)
+			if err != nil {
+				return err
+			}
 
 			body := map[string]interface{}{}
 			if opts.Title != "" {
@@ -367,14 +402,21 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 				body["body"] = opts.Body
 			}
 
-			if len(body) == 0 {
-				return fmt.Errorf("at least one of --title or --body must be provided")
+			if len(body) == 0 && !metadataRequested {
+				return fmt.Errorf("at least one PR field or collaboration metadata flag must be provided")
 			}
 
-			var pr api.PullRequestWriteResponse
 			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
-			if err := client.Patch(path, body, &pr); err != nil {
-				return err
+			var pr api.PullRequestWriteResponse
+			if len(body) > 0 {
+				if err := client.Patch(path, body, &pr); err != nil {
+					return err
+				}
+			}
+			if metadataRequested {
+				if err := applyPREditMetadata(client, owner, repo, number, metadata); err != nil {
+					return fmt.Errorf("failed to update collaboration metadata for PR #%s: %w", number, err)
+				}
 			}
 
 			resultNumber := pr.GetNumber()
@@ -390,6 +432,15 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "New PR title")
 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "New PR body")
+	cmd.Flags().StringSliceVar(&opts.Metadata.AddAssignees, "add-assignee", nil, "Assignee login to add (repeat for multiple users)")
+	cmd.Flags().StringSliceVar(&opts.Metadata.RemoveAssignees, "remove-assignee", nil, "Assignee login to remove (repeat for multiple users)")
+	cmd.Flags().StringSliceVar(&opts.Metadata.AddReviewers, "add-reviewer", nil, "Approval reviewer login to add (repeat for multiple users)")
+	cmd.Flags().StringSliceVar(&opts.Metadata.RemoveReviewers, "remove-reviewer", nil, "Approval reviewer login to remove (repeat for multiple users)")
+	cmd.Flags().StringSliceVar(&opts.Metadata.AddTesters, "add-tester", nil, "Tester login to add (repeat for multiple users)")
+	cmd.Flags().StringSliceVar(&opts.Metadata.RemoveTesters, "remove-tester", nil, "Tester login to remove (repeat for multiple users)")
+	cmd.Flags().StringSliceVar(&opts.Metadata.AddLabels, "add-label", nil, "Label name to add (repeat for multiple labels)")
+	cmd.Flags().StringSliceVar(&opts.Metadata.RemoveLabels, "remove-label", nil, "Label name to remove (repeat for multiple labels)")
+	cmd.Flags().StringVar(&opts.Metadata.Milestone, "milestone", "", "Milestone number, exact title, or 'none' to clear")
 
 	return cmd
 }

@@ -293,6 +293,15 @@ ag pr merge owner/repo 123 --rebase --squash --admin --subject "Merge PR #123" -
 
 # 创建 PR
 ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch
+ag pr create owner/repo --title "Fix bug" --head feature-branch \
+  --assignee alice --reviewer bob --tester carol --label Bug --milestone v1.0
+
+# 修改 PR 协作元数据
+ag pr edit owner/repo 123 --add-assignee alice --remove-assignee bob
+ag pr edit owner/repo 123 --add-reviewer carol --remove-reviewer dave
+ag pr edit owner/repo 123 --add-tester erin --add-label "Priority:High"
+ag pr edit owner/repo 123 --remove-label Bug --milestone v1.1
+ag pr edit owner/repo 123 --milestone none
 
 # 关闭 PR
 ag pr close owner/repo 123
@@ -300,6 +309,8 @@ ag pr close owner/repo 123
 # 重新打开 PR
 ag pr reopen owner/repo 123
 ```
+
+负责人（assignee）负责后续工作，批准审查人（approval reviewer）负责批准变更，测试人（tester）负责验证变更；三个 AtomGit 角色相互独立。用户账号、标签和里程碑会在修改 PR 前解析，标签和里程碑必须已存在。`pr edit` 只修改显式传入的字段，添加和移除参数可重复使用，也可用逗号一次传入多个值。
 
 #### PR 评审
 
