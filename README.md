@@ -309,6 +309,10 @@ ag pr create owner/repo --title "Fix bug" --body "Description" --base main --hea
 ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature-branch
 cat description.md | ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature-branch
 
+# 查看 PR 当前提交的 CI 检查；等待检查完成
+ag pr checks owner/repo 123
+ag pr checks owner/repo 123 --watch --interval 5s
+
 # 关闭 PR
 ag pr close owner/repo 123
 
