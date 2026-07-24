@@ -68,7 +68,7 @@ func runFork(out io.Writer, f *cmdutil.Factory, opts *ForkOptions, repoArg strin
 
 	currentUser, err := f.Config.GetUser()
 	if err != nil {
-		return fmt.Errorf("failed to get current user: %w", err)
+		return cmdutil.AuthenticationError(err)
 	}
 
 	body := map[string]interface{}{}

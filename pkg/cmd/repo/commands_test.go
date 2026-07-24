@@ -528,6 +528,36 @@ func TestRepoListAndViewPreserveCanonicalAuthenticationError(t *testing.T) {
 	}
 }
 
+func TestRepoCreateAndDeletePreserveCanonicalUserAuthenticationError(t *testing.T) {
+	factory := repoFactory(repoCommandConfig{userErr: config.ErrNotAuthenticated}, nil)
+	tests := []struct {
+		name string
+		call func() error
+	}{
+		{name: "create", call: func() error {
+			return runCreate(strings.NewReader(""), io.Discard, io.Discard, factory, &CreateOptions{Name: "demo"})
+		}},
+		{name: "delete", call: func() error {
+			cmd := newCmdRepoDelete(factory)
+			if err := cmd.Flags().Set("yes", "true"); err != nil {
+				return err
+			}
+			return cmd.RunE(cmd, []string{"demo"})
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.call()
+			if !errors.Is(err, config.ErrNotAuthenticated) {
+				t.Fatalf("error = %v", err)
+			}
+			if err.Error() != config.ErrNotAuthenticated.Error() {
+				t.Fatalf("error = %q, want %q", err, config.ErrNotAuthenticated)
+			}
+		})
+	}
+}
+
 func TestRepoListValidatesLimitBeforeAuthentication(t *testing.T) {
 	factory := repoFactory(repoCommandConfig{tokenErr: config.ErrNotAuthenticated}, nil)
 	cmd := newCmdRepoList(factory)

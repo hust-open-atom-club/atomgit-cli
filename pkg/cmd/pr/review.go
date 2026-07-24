@@ -45,7 +45,7 @@ by the public API.`,
 			}
 			currentUser, err := f.Config.GetUser()
 			if err != nil {
-				return fmt.Errorf("failed to determine current user: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 			currentUser = strings.TrimSpace(currentUser)
 			if currentUser == "" {

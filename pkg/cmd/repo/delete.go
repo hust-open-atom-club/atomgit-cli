@@ -39,7 +39,7 @@ the confirmation prompt.`,
 			} else {
 				currentUser, err := f.Config.GetUser()
 				if err != nil {
-					return fmt.Errorf("failed to get current user: %w", err)
+					return cmdutil.AuthenticationError(err)
 				}
 				owner, repoName, err = parseRepositoryName(args[0], currentUser)
 				if err != nil {

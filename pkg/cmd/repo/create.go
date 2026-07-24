@@ -69,7 +69,7 @@ func runCreate(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory, opts *Cr
 func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory, opts *CreateOptions, clone cloneRepositoryFunc) error {
 	currentUser, err := f.Config.GetUser()
 	if err != nil {
-		return fmt.Errorf("failed to get current user: %w", err)
+		return cmdutil.AuthenticationError(err)
 	}
 
 	owner, repoName, err := parseRepositoryName(opts.Name, currentUser)
