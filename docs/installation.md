@@ -2,6 +2,18 @@
 
 AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、自动安装脚本、Nix、手动下载预编译文件或从源码构建进行安装。
 
+## 使用 go 安装
+
+go 安装将自动下载源码包并进行编译，需要 Go 1.24.2 或更高版本：
+
+```
+go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
+```
+
+该方法将从 Go 模块代理下载该项目及其依赖的源码包，并在本机构建出二进制文件。
+因此，所有支持 Go 的平台应该都可以使用该方法安装，包含 npm 安装未覆盖的 
+BSD、AIX、Solaris 和 Plan 9 等特殊平台，以及 LoongArch64、32 位 x86 等架构。
+
 ## 使用 npm 安装
 
 npm 安装需要 Node.js 18 或更高版本。执行：
