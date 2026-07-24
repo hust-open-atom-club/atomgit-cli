@@ -294,6 +294,10 @@ ag pr merge owner/repo 123 --rebase --squash --admin --subject "Merge PR #123" -
 # 创建 PR
 ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch
 
+# 查看 PR 当前提交的 CI 检查；等待检查完成
+ag pr checks owner/repo 123
+ag pr checks owner/repo 123 --watch --interval 5s
+
 # 关闭 PR
 ag pr close owner/repo 123
 
