@@ -635,20 +635,25 @@ npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registr
 
 ### 维护 Nix package
 
-更新 Nix package 的版本和 `vendorHash` 时，推荐先进入 flake 提供的开发环境，以使用项目声明的工具版本：
+仓库 flake 提供两种 package：
+
+- `stable` 从对应版本的 AtomGit Release 源码归档构建，并固定源码 hash 和 `vendorHash`。
+- `latest` 从当前 flake revision 的源码构建，使用独立的 `vendorHash`。
+
+`default` 和兼容名称 `ag` 都指向 `stable`。更新 Nix package 时，推荐先进入 flake 提供的开发环境：
+
+当前 nixos-unstable 已停止支持 Intel macOS，因此 flake 仅为 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
 
 ```bash
+# 默认更新 stable 的版本、Release 源码 hash 和 vendorHash
 nix develop
 ./scripts/update-nix-package.sh v0.6.0
+
+# 只更新当前源码对应的 latestVendorHash
+./scripts/update-nix-package.sh --latest
 ```
 
-也可以直接运行更新脚本：
-
-```bash
-./scripts/update-nix-package.sh v0.6.0
-```
-
-直接运行需要预先安装 Nix 和 Git，并要求 `tar` 支持以 NUL 分隔的文件列表；Linux 上的 GNU tar 和 macOS 默认的 bsdtar 均受支持。脚本会更新 `flake.nix` 中的版本和 `vendorHash`，随后执行 `nix build .#ag` 和 `ag version --json` 验证。验证失败时会自动恢复原始 `flake.nix`，且脚本不会提交、打标签或推送。
+也可以不进入开发环境直接运行，但需要预先安装 Nix 和 Git，并要求 `tar` 支持以 NUL 分隔的文件列表；Linux 上的 GNU tar 和 macOS 默认的 bsdtar 均受支持。脚本使用 `nix store prefetch-file` 计算 stable 源码 hash，并通过 `buildGoModule` 校验对应的 `vendorHash`。更新后会构建目标 package 并执行 `ag version --json`；验证失败时自动恢复原始 `flake.nix`，且不会提交、打标签或推送。
 
 ## 项目结构
 
