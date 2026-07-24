@@ -4,6 +4,14 @@ AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 
 ## 安装
 
+### go （构建并安装）
+
+所有支持 Go 的平台都可以使用，需要 Go 24.2 或更高版本：
+
+```bash
+go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
+```
+
 ### npm
 
 需要 Node.js 18 或更高版本：
