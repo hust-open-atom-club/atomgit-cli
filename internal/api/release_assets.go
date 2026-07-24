@@ -234,6 +234,41 @@ func DeleteReleaseAttachment(client *Client, owner, repo, tag string, attachment
 	return nil
 }
 
+// DownloadReleaseAttachment returns a streamed attachment body owned by the caller.
+func DownloadReleaseAttachment(ctx context.Context, client *Client, owner, repo, tag, fileName string) (io.ReadCloser, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("download context is nil")
+	}
+	path := fmt.Sprintf(
+		"/repos/%s/%s/releases/%s/attach_files/%s/download",
+		url.PathEscape(owner),
+		url.PathEscape(repo),
+		url.PathEscape(tag),
+		url.PathEscape(fileName),
+	)
+
+	resp, err := client.doRequestWithPolicyContext(
+		ctx,
+		streamingHTTPClient(client),
+		http.MethodGet,
+		path,
+		nil,
+		"",
+		"*/*",
+		true,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("download failed: %s - %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+	return resp.Body, nil
+}
+
 // streamingHTTPClient clones the configured client without its whole-request
 // timeout. http.Client.Timeout includes reading the response body, so retaining
 // the metadata client's 30-second limit would truncate large uploads and

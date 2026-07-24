@@ -69,6 +69,7 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
 		State string
 		Limit int
+		JSON  bool
 	}
 
 	cmd := &cobra.Command{
@@ -101,6 +102,9 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if opts.JSON {
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), pullRequestsJSON(prs))
+			}
 
 			out := cmd.OutOrStdout()
 			for _, pr := range prs {
@@ -113,13 +117,15 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.State, "state", "s", "open", "Filter by state: open, closed, all")
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of PRs to list")
+	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output pull requests as JSON")
 
 	return cmd
 }
 
 func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
-		web bool
+		web  bool
+		json bool
 	}
 
 	cmd := &cobra.Command{
@@ -172,6 +178,9 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 				// Labels endpoint might not exist or fail, continue without labels
 				labels = nil
 			}
+			if opts.json {
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), newPullRequestJSON(pr, labels))
+			}
 
 			out := cmd.OutOrStdout()
 			fmt.Fprintf(out, "Title: %s\n", pr.Title)
@@ -196,8 +205,45 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open a pull request in the browser")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Output pull request as JSON")
+	cmd.MarkFlagsMutuallyExclusive("web", "json")
 
 	return cmd
+}
+
+type pullRequestJSON struct {
+	ID        int64    `json:"id"`
+	Number    string   `json:"number"`
+	Title     string   `json:"title"`
+	Body      string   `json:"body"`
+	State     string   `json:"state"`
+	URL       string   `json:"url"`
+	Author    string   `json:"author"`
+	Head      string   `json:"head"`
+	Base      string   `json:"base"`
+	Labels    []string `json:"labels"`
+	CreatedAt string   `json:"createdAt"`
+	UpdatedAt string   `json:"updatedAt"`
+	Merged    bool     `json:"merged"`
+	Mergeable bool     `json:"mergeable"`
+}
+
+func pullRequestsJSON(pullRequests []api.PullRequest) []pullRequestJSON {
+	result := make([]pullRequestJSON, len(pullRequests))
+	for index, pullRequest := range pullRequests {
+		result[index] = newPullRequestJSON(pullRequest, pullRequest.Labels)
+	}
+	return result
+}
+
+func newPullRequestJSON(pullRequest api.PullRequest, labels []api.Label) pullRequestJSON {
+	labelNames := make([]string, 0, len(labels))
+	for _, label := range labels {
+		if name := strings.TrimSpace(label.Name); name != "" {
+			labelNames = append(labelNames, name)
+		}
+	}
+	return pullRequestJSON{ID: pullRequest.ID, Number: pullRequest.GetNumber(), Title: pullRequest.Title, Body: pullRequest.Body, State: pullRequest.State, URL: pullRequest.HTMLURL, Author: pullRequest.User.Login, Head: pullRequest.Head.Ref, Base: pullRequest.Base.Ref, Labels: labelNames, CreatedAt: pullRequest.CreatedAt, UpdatedAt: pullRequest.UpdatedAt, Merged: pullRequest.Merged, Mergeable: pullRequest.Mergeable}
 }
 
 func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {

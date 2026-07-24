@@ -36,6 +36,7 @@ func newAPIClient(f *cmdutil.Factory, token string) (*api.Client, error) {
 }
 
 func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
+	var jsonOutput bool
 	cmd := &cobra.Command{
 		Use:   "list [<owner>/<repo>]",
 		Short: "List tags",
@@ -62,6 +63,9 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 			if err := client.Get(path, &tags); err != nil {
 				return err
 			}
+			if jsonOutput {
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), tagsJSON(tags))
+			}
 
 			out := cmd.OutOrStdout()
 			if len(tags) == 0 {
@@ -76,8 +80,26 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output tags as JSON")
 
 	return cmd
+}
+
+type tagJSON struct {
+	Name      string `json:"name"`
+	Message   string `json:"message"`
+	CommitSHA string `json:"commitSha"`
+	CommitURL string `json:"commitUrl"`
+	Tagger    string `json:"tagger"`
+	TaggedAt  string `json:"taggedAt"`
+}
+
+func tagsJSON(tags []api.Tag) []tagJSON {
+	result := make([]tagJSON, len(tags))
+	for index, tag := range tags {
+		result[index] = tagJSON{Name: tag.Name, Message: tag.Message, CommitSHA: tag.Commit.SHA, CommitURL: tag.Commit.URL, Tagger: tag.Tagger.Name, TaggedAt: tag.Tagger.Date}
+	}
+	return result
 }
 
 func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {

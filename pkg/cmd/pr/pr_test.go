@@ -1,6 +1,7 @@
 package pr
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -259,6 +260,66 @@ func TestPRListInfersRepositoryAndHonorsLimit(t *testing.T) {
 	}
 	if requests != 1 {
 		t.Fatalf("requests = %d, want 1", requests)
+	}
+}
+
+func TestPRListJSON(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		RepositoryResolver: func() (cmdutil.Repository, error) {
+			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+		},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
+				return prResponse(http.StatusOK, `[{"id":1,"number":9,"title":"change","state":"open","head":{"ref":"feature"},"base":{"ref":"main"},"labels":[{"name":"ready"}]}]`), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRList(factory)
+	_ = cmd.Flags().Set("json", "true")
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+	var values []map[string]any
+	if err := json.Unmarshal(output.Bytes(), &values); err != nil {
+		t.Fatal(err)
+	}
+	if len(values) != 1 || values[0]["number"] != "9" || values[0]["head"] != "feature" || values[0]["base"] != "main" {
+		t.Fatalf("pull requests = %#v", values)
+	}
+}
+
+func TestPRViewJSON(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if strings.HasSuffix(req.URL.Path, "/labels") {
+					return prResponse(http.StatusOK, `[{"name":"reviewed"}]`), nil
+				}
+				return prResponse(http.StatusOK, `{"id":2,"number":"10","title":"change","state":"open","html_url":"https://atomgit.com/alice/demo/pull/10","user":{"login":"alice"},"head":{"ref":"feature"},"base":{"ref":"main"},"merged":false,"mergeable":true}`), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRView(factory)
+	_ = cmd.Flags().Set("json", "true")
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "10"}); err != nil {
+		t.Fatal(err)
+	}
+	var value struct {
+		Number    string   `json:"number"`
+		Labels    []string `json:"labels"`
+		Mergeable bool     `json:"mergeable"`
+	}
+	if err := json.Unmarshal(output.Bytes(), &value); err != nil {
+		t.Fatal(err)
+	}
+	if value.Number != "10" || !value.Mergeable || len(value.Labels) != 1 || value.Labels[0] != "reviewed" {
+		t.Fatalf("pull request = %#v", value)
 	}
 }
 

@@ -153,9 +153,15 @@ ag repo list
 # 指定最多列出100条仓库
 ag repo list --limit 100
 
+# 输出 JSON 数组
+ag repo list --json
+
 # 查看仓库详情
 ag repo view
 ag repo view owner/repo
+
+# 输出 JSON 对象
+ag repo view owner/repo --json
 
 # 在浏览器中打开仓库
 ag repo view owner/repo --web
@@ -263,10 +269,12 @@ ag browse -n
 ag pr list
 ag pr list owner/repo
 ag pr list owner/repo --state closed
+ag pr list owner/repo --json
 
 # 查看 PR
 ag pr view 123
 ag pr view owner/repo 123
+ag pr view owner/repo 123 --json
 
 # 在浏览器中打开 PR
 ag pr view owner/repo 123 --web
@@ -336,10 +344,12 @@ ag pr comment reply owner/repo 123 456 --body "Thanks for the feedback!"
 ag issue list
 ag issue list owner/repo
 ag issue list owner/repo --state all
+ag issue list owner/repo --json
 
 # 查看 Issue
 ag issue view 42
 ag issue view owner/repo 42
+ag issue view owner/repo 42 --json
 
 # 在浏览器中打开 Issue
 ag issue view owner/repo 42 --web
@@ -390,11 +400,20 @@ ag tag list
 
 # 显式指定仓库
 ag tag list owner/repo
+ag tag list owner/repo --json
 
 # 创建或删除标签
 ag tag create v1.0.0 --ref main
 ag tag delete v1.0.0
 ```
+
+### 资源命令的 JSON 输出
+
+`repo list/view`、`issue list/view`、`pr list/view` 和 `tag list` 支持布尔参数 `--json`。list 命令输出完整 JSON 数组，view 命令输出完整 JSON 对象；没有结果时 list 输出 `[]`。默认文本输出保持不变。
+
+JSON 字段使用 lowerCamelCase，并由 CLI 显式定义，不会因为 AtomGit API 增加字段而自动改变。Issue 和 PR 的 `number` 始终是字符串，标签输出为名称数组，PR 的 `head` 和 `base` 输出分支名称。可选的服务端字段缺失时仍输出对应的零值，以保持固定结构。
+
+`view --json` 与 `view --web` 互斥；JSON 模式只向标准输出写入一个 JSON 值，不混入浏览器提示或其他文本。原始字节流命令（例如 `ag pr diff`）不提供 JSON 包装。
 
 ### Label
 
@@ -510,6 +529,9 @@ ag release upload owner/repo v1.0.0 ./build/app.zip --name app-v1.zip
 ag release upload owner/repo v1.0.0 ./existing.tar.gz --skip-existing
 ag release upload owner/repo v1.0.0 ./new.tar.gz --overwrite
 
+# 下载附件；-o/--output 必填，默认不覆盖已有文件
+ag release download v1.0.0 app.tar.gz -o ./dist/app.tar.gz
+ag release download owner/repo v1.0.0 app.tar.gz --output ./existing.tar.gz --overwrite
 ```
 
 `ag release create` 必须通过 `--body` 或 `--body-file` 提供非空说明，这是 AtomGit 创建 Release API 的必填字段。`ag release edit` 只改变用户明确指定的内容（`--name`、`--body` 或 `--body-file`、`--latest`、`--prerelease`），未指定的 name/body 会从当前 Release 回读并保持不变；状态仅在显式 `--latest` 或 `--prerelease` 时改变。`--body` 与 `--body-file` 互斥。`--latest` 将该 Release 标记为仓库最新发布。
@@ -520,6 +542,10 @@ ag release upload owner/repo v1.0.0 ./new.tar.gz --overwrite
 - `--overwrite`：仅当远端唯一匹配且该附件 `type=attach`、ID 为正整数时，先成功取得上传地址，再删除旧附件并上传新文件；取得上传地址失败时旧附件保持不变。若删除响应中断，命令会重新读取 Release，仅在确认旧附件已经不存在时继续；若后续上传失败，错误信息会明确说明旧附件已被删除。对于 `type=source` 的源码归档、ID 非正、或存在多个同名匹配的情况，均会拒绝且不执行删除。
 
 附件传输不会使用普通 API 请求的 30 秒总超时，而是默认限制为 30 分钟，可用 `--timeout` 调整，或用 `--timeout 0` 关闭总时限。非空文件只会在传输尚未开始（请求体零字节被读取）时自动重试一次；零字节文件或传输开始后的中断会返回非零退出码并提示远端状态可能不确定，不会盲目重放上传。
+
+`ag release download` 的 `-o/--output` 为必填项，命令不会将二进制写入 stdout。默认若目标文件已存在会立即失败且不发任何请求，只有显式 `--overwrite` 才允许替换。下载体先写入目标目录中的临时文件，完整接收后才安装到目标路径；传输失败会保留已有目标文件且不残留临时文件。下载与上传一样默认限制为 30 分钟，可通过 `--timeout` 调整或用 `--timeout 0` 关闭总时限。
+
+`ag run view --artifact` 下载的是 Actions workflow run 的 artifact，而 `ag release download` 下载的是仓库 Release 的附件，两者来源和标识不同：前者按 run 的 artifact ID 下载，后者按 Release tag 和附件名下载。
 
 本组 `ag release` 命令是供手工或脚本调用的底层 Release 管理原语，不会自动执行版本 tag 校验、测试、跨平台构建、校验和生成或整套发布编排。tag 驱动的端到端自动发布由 Issue #18 跟踪。
 
@@ -635,20 +661,25 @@ npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registr
 
 ### 维护 Nix package
 
-更新 Nix package 的版本和 `vendorHash` 时，推荐先进入 flake 提供的开发环境，以使用项目声明的工具版本：
+仓库 flake 提供两种 package：
+
+- `stable` 从对应版本的 AtomGit Release 源码归档构建，并固定源码 hash 和 `vendorHash`。
+- `latest` 从当前 flake revision 的源码构建，使用独立的 `vendorHash`。
+
+`default` 和兼容名称 `ag` 都指向 `stable`。更新 Nix package 时，推荐先进入 flake 提供的开发环境：
+
+当前 nixos-unstable 已停止支持 Intel macOS，因此 flake 仅为 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
 
 ```bash
+# 默认更新 stable 的版本、Release 源码 hash 和 vendorHash
 nix develop
 ./scripts/update-nix-package.sh v0.6.0
+
+# 只更新当前源码对应的 latestVendorHash
+./scripts/update-nix-package.sh --latest
 ```
 
-也可以直接运行更新脚本：
-
-```bash
-./scripts/update-nix-package.sh v0.6.0
-```
-
-直接运行需要预先安装 Nix 和 Git，并要求 `tar` 支持以 NUL 分隔的文件列表；Linux 上的 GNU tar 和 macOS 默认的 bsdtar 均受支持。脚本会更新 `flake.nix` 中的版本和 `vendorHash`，随后执行 `nix build .#ag` 和 `ag version --json` 验证。验证失败时会自动恢复原始 `flake.nix`，且脚本不会提交、打标签或推送。
+也可以不进入开发环境直接运行，但需要预先安装 Nix 和 Git，并要求 `tar` 支持以 NUL 分隔的文件列表；Linux 上的 GNU tar 和 macOS 默认的 bsdtar 均受支持。脚本使用 `nix store prefetch-file` 计算 stable 源码 hash，并通过 `buildGoModule` 校验对应的 `vendorHash`。更新后会构建目标 package 并执行 `ag version --json`；验证失败时自动恢复原始 `flake.nix`，且不会提交、打标签或推送。
 
 ## 项目结构
 

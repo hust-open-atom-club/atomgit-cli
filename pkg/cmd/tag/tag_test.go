@@ -1,6 +1,8 @@
 package tag
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -84,5 +86,47 @@ func TestTagListInfersRepository(t *testing.T) {
 	}
 	if requests != 1 {
 		t.Fatalf("requests = %d, want 1", requests)
+	}
+}
+
+func TestTagListJSON(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		body string
+		want int
+	}{
+		{name: "tags", body: `[{"name":"v1.0.0","message":"release","commit":{"sha":"abc","url":"commit-url"},"tagger":{"name":"alice","date":"today"}}]`, want: 1},
+		{name: "empty", body: `[]`, want: 0},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := &cmdutil.Factory{
+				Config: tagTestConfig{},
+				RepositoryResolver: func() (cmdutil.Repository, error) {
+					return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+				},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: tagRoundTripFunc(func(*http.Request) (*http.Response, error) {
+						return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: make(http.Header), Body: io.NopCloser(strings.NewReader(tt.body))}, nil
+					})}, nil
+				},
+			}
+			cmd := newCmdTagList(factory)
+			_ = cmd.Flags().Set("json", "true")
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, nil); err != nil {
+				t.Fatal(err)
+			}
+			var values []map[string]any
+			if err := json.Unmarshal(output.Bytes(), &values); err != nil {
+				t.Fatalf("invalid JSON %q: %v", output.String(), err)
+			}
+			if len(values) != tt.want {
+				t.Fatalf("tags = %#v", values)
+			}
+			if tt.want > 0 && (values[0]["commitSha"] != "abc" || values[0]["tagger"] != "alice") {
+				t.Fatalf("tag = %#v", values[0])
+			}
+		})
 	}
 }
