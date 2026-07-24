@@ -208,6 +208,19 @@ ag repo delete owner/repo --yes
 
 该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。
 
+### 组织 (org)
+
+```bash
+# 列出当前账号所属的组织
+ag org list
+
+# 限制返回数量
+ag org list --limit 100
+
+# 输出固定字段的 JSON 数组
+ag org list --json
+```
+
 ### Branch
 
 ```bash

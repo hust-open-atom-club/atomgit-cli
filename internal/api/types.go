@@ -139,6 +139,16 @@ type User struct {
 	Type    string `json:"type"`
 }
 
+// Organization represents an AtomGit organization visible to the authenticated user.
+type Organization struct {
+	ID          int64  `json:"id"`
+	Login       string `json:"login"`
+	Path        string `json:"path"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	HTMLURL     string `json:"html_url"`
+}
+
 // SSHKey represents a public SSH key registered with an AtomGit account.
 type SSHKey struct {
 	ID          int64  `json:"id"`
