@@ -225,7 +225,25 @@ ag branch create owner/repo feature/foo --ref main
 # 删除远程分支（默认需要确认；不会删除本地 Git 分支）
 ag branch delete owner/repo feature/foo
 ag branch delete owner/repo feature/foo --yes
+
+# 查看保护分支规则（输出会区分 exact 与 wildcard）
+ag branch protection list owner/repo
+ag branch protection view owner/repo main
+ag branch protection view owner/repo "release/*"
+
+# 创建保护规则；新规则必须同时指定 push 与 merge 权限
+ag branch protection set owner/repo main --push admin --merge maintainer
+ag branch protection set owner/repo "release/*" --push "develop;alice" --merge admin
+
+# 仅修改已有规则的推送权限；未指定的合并权限保持不变
+ag branch protection set owner/repo main --push "" --yes
+
+# 删除规则（默认显示当前规则并要求确认）
+ag branch protection delete owner/repo "release/*"
+ag branch protection delete owner/repo "release/*" --yes
 ```
+
+保护规则的 `--push` 与 `--merge` 接受由英文分号分隔的 `develop`、`admin`、`maintainer` 或用户名；显式传入空字符串表示不允许任何人执行该操作。AtomGit 对精确分支规则的优先级高于匹配的 wildcard 规则。CLI 只管理官方 API 暴露的推送与合并白名单，不修改评审、流水线等其他保护设置。更新接口要求同时提交两类权限，因此 CLI 会先读取现有规则并保留未显式修改的一侧；若服务端返回无法无损表示的旧权限，命令会停止并要求显式提供该权限。
 
 ### Browse
 
