@@ -198,15 +198,15 @@ func TestPREditRejectsConflictingRoleChangeBeforeMutation(t *testing.T) {
 	}
 }
 
-func TestApplyAssigneeChangesReportsRestoreFailure(t *testing.T) {
+func TestApplyAssigneeChangesReportsTargetedRemovalFailure(t *testing.T) {
 	client := api.NewClientWithBaseURL("token", "https://api.atomgit.com/api/v5", &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-		if req.Method == http.MethodDelete {
-			return prResponse(http.StatusNoContent, ""), nil
+		if got := req.URL.Query().Get("assignees"); got != "bob" {
+			t.Fatalf("assignees query = %q, want bob", got)
 		}
 		return prResponse(http.StatusForbidden, `{"message":"forbidden"}`), nil
 	})})
 	err := applyAssigneeChanges(client, "/repos/alice/demo/pulls/42", resolvedPREditMetadata{CurrentAssignees: []string{"ann", "bob"}, RemoveAssignees: []string{"bob"}})
-	if err == nil || !strings.Contains(err.Error(), "removed all assignees but failed to restore desired assignees ann") {
+	if err == nil || !strings.Contains(err.Error(), "remove assignees") {
 		t.Fatalf("error = %v", err)
 	}
 }
@@ -251,8 +251,11 @@ func assertEditMutationBody(t *testing.T, req *http.Request) {
 		if body != nil {
 			t.Fatalf("assignee DELETE body = %#v, want nil", body)
 		}
+		if got := req.URL.Query().Get("assignees"); got != "bob" {
+			t.Fatalf("assignee DELETE query = %q, want bob", got)
+		}
 	case strings.HasSuffix(path, "/assignees"):
-		assertBodyMapValue(t, body, "assignees", "ann,cara")
+		assertBodyMapValue(t, body, "assignees", "cara")
 	case strings.HasSuffix(path, "/reviewers"):
 		assertBodyMapValue(t, body, "reviewers", map[bool]string{true: "vera", false: "ruth"}[req.Method == http.MethodPost])
 	case strings.HasSuffix(path, "/testers"):

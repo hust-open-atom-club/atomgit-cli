@@ -224,17 +224,10 @@ func applyPREditMetadata(client *api.Client, owner, repo, number string, metadat
 func applyAssigneeChanges(client *api.Client, base string, metadata resolvedPREditMetadata) error {
 	path := base + "/assignees"
 	if len(metadata.RemoveAssignees) > 0 {
-		remaining := removeValues(metadata.CurrentAssignees, metadata.RemoveAssignees)
-		remaining = appendUnique(remaining, metadata.AddAssignees...)
-		if err := client.Delete(path); err != nil {
+		query := url.Values{"assignees": {strings.Join(metadata.RemoveAssignees, ",")}}
+		if err := client.Delete(path + "?" + query.Encode()); err != nil {
 			return fmt.Errorf("remove assignees: %w", err)
 		}
-		if len(remaining) > 0 {
-			if err := client.Post(path, map[string]string{"assignees": strings.Join(remaining, ",")}, nil); err != nil {
-				return fmt.Errorf("removed all assignees but failed to restore desired assignees %s: %w", strings.Join(remaining, ", "), err)
-			}
-		}
-		return nil
 	}
 	if len(metadata.AddAssignees) > 0 {
 		if err := client.Post(path, map[string]string{"assignees": strings.Join(metadata.AddAssignees, ",")}, nil); err != nil {
