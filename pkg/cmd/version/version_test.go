@@ -69,6 +69,55 @@ func TestNewCmdVersion_TextProfileAndInvalidMatrix(t *testing.T) {
 	}
 }
 
+func TestFormatTextOmitsUnknownMetadata(t *testing.T) {
+	tests := []struct {
+		name string
+		info version.Info
+		want string
+	}{
+		{
+			name: "all metadata",
+			info: version.Info{
+				Version: "v1.0.0", Commit: "abc1234", BuildDate: "2026-07-15T00:00:00Z",
+				SelfUpdate: true, Source: "release",
+			},
+			want: "ag version v1.0.0 (commit: abc1234, built: 2026-07-15T00:00:00Z, self-update: true, source: release)\n",
+		},
+		{
+			name: "commit only",
+			info: version.Info{
+				Version: "v1.0.0", Commit: "abc1234", BuildDate: "unknown",
+				Source: "npm",
+			},
+			want: "ag version v1.0.0 (commit: abc1234, self-update: false, source: npm)\n",
+		},
+		{
+			name: "build date only",
+			info: version.Info{
+				Version: "v1.0.0", Commit: "unknown", BuildDate: "2026-07-15T00:00:00Z",
+				SelfUpdate: true, Source: "source",
+			},
+			want: "ag version v1.0.0 (built: 2026-07-15T00:00:00Z, self-update: true, source: source)\n",
+		},
+		{
+			name: "no optional metadata",
+			info: version.Info{
+				Version: "v1.0.0", Commit: " UNKNOWN ", BuildDate: "",
+				Source: "unknown",
+			},
+			want: "ag version v1.0.0 (self-update: false, source: unknown)\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := formatText(tt.info); got != tt.want {
+				t.Errorf("formatText() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestText_MatchesVersionCLIContract(t *testing.T) {
 	setVersionMetadata(t, "true", "release")
 

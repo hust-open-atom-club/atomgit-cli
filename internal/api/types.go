@@ -139,6 +139,33 @@ type User struct {
 	Type    string `json:"type"`
 }
 
+// Webhook represents a repository webhook. The API's password field is
+// intentionally omitted so commands cannot accidentally render stored secrets.
+type Webhook struct {
+	ID                  int64        `json:"id"`
+	URL                 string       `json:"url"`
+	Result              string       `json:"result"`
+	ProjectID           int64        `json:"project_id"`
+	ResultCode          int          `json:"result_code"`
+	PushEvents          FlexibleBool `json:"push_events"`
+	TagPushEvents       FlexibleBool `json:"tag_push_events"`
+	IssuesEvents        FlexibleBool `json:"issues_events"`
+	NoteEvents          FlexibleBool `json:"note_events"`
+	MergeRequestsEvents FlexibleBool `json:"merge_requests_events"`
+	CreatedAt           string       `json:"created_at"`
+	Active              FlexibleBool `json:"active"`
+}
+
+// Organization represents an AtomGit organization visible to the authenticated user.
+type Organization struct {
+	ID          int64  `json:"id"`
+	Login       string `json:"login"`
+	Path        string `json:"path"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	HTMLURL     string `json:"html_url"`
+}
+
 // SSHKey represents a public SSH key registered with an AtomGit account.
 type SSHKey struct {
 	ID          int64  `json:"id"`
@@ -246,6 +273,43 @@ type BranchCommit struct {
 type BranchRequest struct {
 	BranchName string `json:"branch_name"`
 	Refs       string `json:"refs"`
+}
+
+// ProtectedBranchUser identifies a user explicitly allowed by a protected
+// branch rule. AtomGit responses use either username or login.
+type ProtectedBranchUser struct {
+	Username string `json:"username"`
+	Login    string `json:"login"`
+	Name     string `json:"name"`
+}
+
+// ProtectedBranchRule is the rule returned by the protect_branches endpoint.
+type ProtectedBranchRule struct {
+	Name               string                `json:"name"`
+	UpdatedAt          string                `json:"updated_at"`
+	PushUsers          []ProtectedBranchUser `json:"push_users"`
+	MergeUsers         []ProtectedBranchUser `json:"merge_users"`
+	Merged             FlexibleBool          `json:"merged"`
+	DevelopersCanPush  FlexibleBool          `json:"developers_can_push"`
+	DevelopersCanMerge FlexibleBool          `json:"developers_can_merge"`
+	CommitterCanPush   FlexibleBool          `json:"committer_can_push"`
+	CommitterCanMerge  FlexibleBool          `json:"committer_can_merge"`
+	MasterCanPush      FlexibleBool          `json:"master_can_push"`
+	MasterCanMerge     FlexibleBool          `json:"master_can_merge"`
+	MaintainerCanPush  FlexibleBool          `json:"maintainer_can_push"`
+	MaintainerCanMerge FlexibleBool          `json:"maintainer_can_merge"`
+	OwnerCanPush       FlexibleBool          `json:"owner_can_push"`
+	OwnerCanMerge      FlexibleBool          `json:"owner_can_merge"`
+	NoOneCanPush       FlexibleBool          `json:"no_one_can_push"`
+	NoOneCanMerge      FlexibleBool          `json:"no_one_can_merge"`
+}
+
+// ProtectedBranchRequest is accepted by both protected branch create and
+// update endpoints. The API requires both permission strings on every write.
+type ProtectedBranchRequest struct {
+	Wildcard string `json:"wildcard,omitempty"`
+	Pusher   string `json:"pusher"`
+	Merger   string `json:"merger"`
 }
 
 // Label represents an issue/PR label
