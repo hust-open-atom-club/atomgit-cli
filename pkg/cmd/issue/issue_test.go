@@ -7,6 +7,8 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -63,6 +65,95 @@ func TestNewCmdIssueRegistersSubcommands(t *testing.T) {
 	if !strings.Contains(edit.Example, "ag issue edit") {
 		t.Fatalf("edit command example = %q", edit.Example)
 	}
+}
+
+func TestIssueCreateBodyInput(t *testing.T) {
+	tests := []struct {
+		name      string
+		body      *string
+		bodyFile  *string
+		stdin     string
+		wantBody  string
+		wantError string
+	}{
+		{name: "inline body", body: issueStringPointer("inline\nbody"), wantBody: "inline\nbody"},
+		{name: "UTF-8 file with trailing newlines", bodyFile: issueStringPointer("file"), wantBody: "标题\n\n正文\n"},
+		{name: "empty file", bodyFile: issueStringPointer("empty"), wantBody: ""},
+		{name: "stdin", bodyFile: issueStringPointer("-"), stdin: "stdin body\n\n", wantBody: "stdin body\n\n"},
+		{name: "conflicting flags", body: issueStringPointer("inline"), bodyFile: issueStringPointer("-"), wantError: "mutually exclusive"},
+		{name: "missing file", bodyFile: issueStringPointer("missing"), wantError: "failed to read body file"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requests := 0
+			factory := &cmdutil.Factory{
+				Config: issueTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						requests++
+						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/issues" {
+							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+						}
+						var body map[string]interface{}
+						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+							t.Fatal(err)
+						}
+						if got := body["body"]; got != tt.wantBody {
+							t.Fatalf("body = %q, want %q", got, tt.wantBody)
+						}
+						return issueResponse(http.StatusCreated, `{"number":"7","html_url":"https://atomgit.com/alice/demo/issues/7"}`), nil
+					})}, nil
+				},
+			}
+
+			cmd := newCmdIssueCreate(factory)
+			_ = cmd.Flags().Set("title", "Test issue")
+			if tt.body != nil {
+				_ = cmd.Flags().Set("body", *tt.body)
+			}
+			if tt.bodyFile != nil {
+				path := *tt.bodyFile
+				switch path {
+				case "file":
+					path = filepath.Join(t.TempDir(), "body.md")
+					if err := os.WriteFile(path, []byte(tt.wantBody), 0o600); err != nil {
+						t.Fatal(err)
+					}
+				case "empty":
+					path = filepath.Join(t.TempDir(), "empty.md")
+					if err := os.WriteFile(path, nil, 0o600); err != nil {
+						t.Fatal(err)
+					}
+				case "missing":
+					path = filepath.Join(t.TempDir(), "missing.md")
+				}
+				_ = cmd.Flags().Set("body-file", path)
+			}
+			cmd.SetIn(strings.NewReader(tt.stdin))
+
+			err := cmd.RunE(cmd, []string{"alice/demo"})
+			if tt.wantError != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+					t.Fatalf("error = %v, want containing %q", err, tt.wantError)
+				}
+				if requests != 0 {
+					t.Fatalf("requests = %d, want 0", requests)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if requests != 1 {
+				t.Fatalf("requests = %d, want 1", requests)
+			}
+		})
+	}
+}
+
+func issueStringPointer(value string) *string {
+	return &value
 }
 
 func TestIssueListInfersRepositoryAndHonorsLimit(t *testing.T) {
