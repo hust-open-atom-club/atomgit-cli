@@ -61,6 +61,7 @@ atomgit-cli/
 │   └── ag.js                   # npm 主包的平台二进制启动器
 ├── docs/
 │   ├── configuration.md        # 认证、凭据和运行配置
+│   ├── cross_repo_pr_demo.md   # 跨仓库 PR 示例
 │   ├── installation.md         # 完整安装指南
 │   ├── project-structure.md    # 本文档
 │   ├── releasing.md            # 发布打包与 Nix package 维护

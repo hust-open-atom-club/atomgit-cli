@@ -179,6 +179,10 @@ ag pr view owner/repo 123 --json
 # 在浏览器中打开 PR
 ag pr view owner/repo 123 --web
 
+# 修改 PR 标题或正文
+ag pr edit owner/repo 123 --title "Updated title"
+ag pr edit owner/repo 123 --body "Updated description"
+
 # 查看 PR diff
 ag pr diff owner/repo 123
 
@@ -196,6 +200,11 @@ ag pr create owner/repo --title "Fix bug" --body "Description" --base main --hea
 ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature-branch
 cat description.md | ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature-branch
 
+# 查看、关联或取消关联 PR 对应的 Issue
+ag pr issues owner/repo 123
+ag pr link-issues owner/repo 123 --issue 42 --issue 43
+ag pr unlink-issues owner/repo 123 --issue 42
+
 # 查看 PR 当前提交的 CI 检查；等待检查完成
 ag pr checks owner/repo 123
 ag pr checks owner/repo 123 --watch --interval 5s
@@ -206,6 +215,8 @@ ag pr close owner/repo 123
 # 重新打开 PR
 ag pr reopen owner/repo 123
 ```
+
+跨仓库创建 PR 时 `--head` 的写法请参阅[跨仓库 PR 示例](cross_repo_pr_demo.md)。
 
 #### PR 评审
 
@@ -276,6 +287,9 @@ ag issue edit owner/repo 42 --body-file details.md
 ag issue create owner/repo --title "Bug report" --body "Description"
 ag issue create owner/repo --title "Bug report" --body-file description.md
 cat description.md | ag issue create owner/repo --title "Bug report" --body-file -
+
+# 关闭 Issue
+ag issue close owner/repo 42
 
 # 重新打开 Issue
 ag issue reopen owner/repo 42

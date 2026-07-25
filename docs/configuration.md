@@ -21,8 +21,7 @@
 ```json
 {
   "access_token": "your-personal-access-token",
-  "user": "your-atomgit-login",
-  "token_type": "Bearer"
+  "user": "your-atomgit-login"
 }
 ```
 
@@ -35,7 +34,7 @@
 | `refresh_token` | 否 | OAuth 刷新令牌，仅由 `ag auth login` 获取，并供 `ag auth refresh` 换取新的访问令牌。PAT 没有该字段。 |
 | `expires_in` | 否 | OAuth 访问令牌从签发时刻起的有效秒数，由服务端返回。PAT 的有效期在创建 PAT 时设置，手动配置可省略。 |
 | `created_at` | 否 | CLI 保存或刷新 OAuth 凭据时记录的 Unix 时间戳（秒），用于表示签发/保存时间。手动配置 PAT 时可省略。 |
-| `token_type` | 是 | 令牌认证类型。当前 PAT 和 OAuth 访问令牌均使用 `Bearer`。 |
+| `token_type` | 否 | OAuth 服务返回的令牌类型；手动配置 PAT 时可省略。API 请求当前使用 `Bearer`。 |
 
 `ag auth login` 会自动写入上述 OAuth 字段；手动使用 PAT 时不要自行编造 `refresh_token`、`expires_in` 或 `created_at`。请确保配置文件仅允许当前用户读取和写入令牌文件。
 

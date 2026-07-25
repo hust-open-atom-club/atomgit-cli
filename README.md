@@ -40,7 +40,7 @@ nix profile install github:NixOS/nixpkgs/nixos-unstable#atomgit-cli
 
 ### Go
 
-所有支持 Go 的平台都可以使用，需要 Go 1.24.2 或更高版本：
+需要 Go 1.24.2 或更高版本。项目正式支持 macOS、Linux 和 Windows；其他 Go 目标平台的兼容性不作保证：
 
 ```bash
 go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest

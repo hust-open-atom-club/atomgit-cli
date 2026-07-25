@@ -20,14 +20,6 @@ npm 主包通过 `optionalDependencies` 声明六个平台二进制包。npm 根
 | Linux | x64 / amd64、arm64 / aarch64 |
 | Windows | x64 / amd64、arm64 |
 
-npm 主包、六个平台包与 AtomGit Release tag 一一对应，版本必须完全一致。执行 `make release VERSION=vX.Y.Z` 会在 `dist/vX.Y.Z/npm/` 生成七个 npm tarball 和独立的 `checksums.txt`，供发布前本地校验；这些 npm 文件不作为 AtomGit Release 附件上传。发布时必须先发布六个平台包，确认它们可从 npm registry 获取后，再发布主包。
-
-准备新版本时，先同步所有 npm 版本字段：
-
-```bash
-npm run version:npm -- X.Y.Z
-```
-
 安装完成后验证：
 
 ```bash
@@ -193,15 +185,13 @@ nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#latest -- versio
 
 ## Go 安装
 
-go 安装将自动下载源码包并进行编译，需要 Go 1.24.2 或更高版本：
+Go 安装将自动下载源码包并进行编译，需要 Go 1.24.2 或更高版本：
 
 ```bash
 go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 ```
 
-该方法将从 Go 模块代理下载该项目及其依赖的源码包，并在本机构建出二进制文件。
-因此，所有支持 Go 的平台应该都可以使用该方法安装，包含 npm 安装未覆盖的
-BSD、AIX、Solaris 和 Plan 9 等特殊平台，以及 LoongArch64、32 位 x86 等架构。
+该方法将从 Go 模块代理下载该项目及其依赖的源码包，并在本机构建出二进制文件。项目正式支持并测试 macOS、Linux 和 Windows；其他 Go 目标平台可能能够编译，但不保证完整兼容。`ag auth login` 的浏览器 OAuth 流程仅支持上述三个操作系统，其他平台需要在功能可用的前提下手动配置 PAT。
 
 Go 模块代理提供的源码包不包含 `.git` 目录，因此这种安装方式构建的二进制只能可靠获得模块版本。执行 `ag version` 时，文本输出会省略无法获得的 commit 和构建时间；`ag version --json` 中对应字段为 `unknown`。这是预期行为，不影响 CLI 功能。如需同时包含版本、commit 和构建时间，请改用 npm、Homebrew，或通过 AtomGit Release 自动或手动安装预编译版本。
 
@@ -345,6 +335,6 @@ go install ./cmd/ag
 
 完成安装或构建后，新开一个终端并执行：
 
-```text
+```bash
 ag version
 ```
