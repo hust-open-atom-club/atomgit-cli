@@ -55,7 +55,25 @@
 ```bash
 gofmt -w <修改的.go文件>
 go test ./...
-go build -o /tmp/atomgit-cli-ag ./cmd/ag
+(
+  ag_build_dir="$(mktemp -d)"
+  trap 'rm -rf "$ag_build_dir"' EXIT
+  go build -o "$ag_build_dir/ag" ./cmd/ag
+)
+```
+
+在 PowerShell 中使用系统临时目录并在构建后清理：
+
+```powershell
+gofmt -w <修改的.go文件>
+go test ./...
+$agBuildDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.Guid]::NewGuid())
+New-Item -ItemType Directory -Path $agBuildDir | Out-Null
+try {
+    go build -o (Join-Path $agBuildDir "ag.exe") ./cmd/ag
+} finally {
+    Remove-Item -Recurse -Force $agBuildDir
+}
 ```
 
 也可用以下命令确认没有遗漏格式问题：
