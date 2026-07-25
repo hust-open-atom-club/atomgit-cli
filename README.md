@@ -688,6 +688,8 @@ npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registr
 - `stable` 从对应版本的 AtomGit Release 源码归档构建，并固定源码 hash 和 `vendorHash`。
 - `latest` 从当前 flake revision 的源码构建，使用独立的 `vendorHash`。
 
+两个 package 都由 Nix 管理；支持发行来源字段的版本会报告 `selfUpdate=false, source=nix`。当前固定的 v0.6.0 stable 源码早于该字段，因此要在 stable 输出中看到这两个字段，需先将 stable 更新到包含发行来源标记的版本。
+
 `default` 和兼容名称 `ag` 都指向 `stable`。更新 Nix package 时，推荐先进入 flake 提供的开发环境：
 
 当前 nixos-unstable 已停止支持 Intel macOS，因此 flake 仅为 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
