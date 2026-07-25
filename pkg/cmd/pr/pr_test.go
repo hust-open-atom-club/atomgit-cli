@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -23,6 +24,35 @@ func (prTestConfig) GetHost() string             { return "atomgit.com" }
 type prRoundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f prRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
+
+func TestPRIssueLinksValidateBeforeAuthentication(t *testing.T) {
+	factory := &cmdutil.Factory{Config: prTestConfig{tokenErr: config.ErrNotAuthenticated}}
+	tests := []struct {
+		name    string
+		command func(*cmdutil.Factory) *cobra.Command
+		args    []string
+		issue   string
+		want    string
+	}{
+		{name: "link missing issue", command: newCmdLinkIssues, args: []string{"alice/demo", "1"}, want: "at least one issue number"},
+		{name: "link invalid issue", command: newCmdLinkIssues, args: []string{"alice/demo", "1"}, issue: "bad", want: "invalid issue number"},
+		{name: "link invalid PR", command: newCmdLinkIssues, args: []string{"alice/demo", "bad"}, issue: "1", want: "invalid PR number"},
+		{name: "unlink missing issue", command: newCmdUnlinkIssues, args: []string{"alice/demo", "1"}, want: "at least one issue number"},
+		{name: "unlink invalid issue", command: newCmdUnlinkIssues, args: []string{"alice/demo", "1"}, issue: "bad", want: "invalid issue number"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cmd := test.command(factory)
+			if test.issue != "" {
+				_ = cmd.Flags().Set("issue", test.issue)
+			}
+			err := cmd.RunE(cmd, test.args)
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("error = %v, want containing %q", err, test.want)
+			}
+		})
+	}
+}
 
 func TestResolveBaseBranch(t *testing.T) {
 	tests := []struct {

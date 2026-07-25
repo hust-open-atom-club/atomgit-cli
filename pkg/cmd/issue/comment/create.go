@@ -23,11 +23,6 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 		Short: "Create a comment on an issue",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return cmdutil.AuthenticationError(err)
-			}
-
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
@@ -35,7 +30,7 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 			owner, repo := repository.Owner, repository.Name
 
 			number, err := strconv.Atoi(remaining[0])
-			if err != nil {
+			if err != nil || number <= 0 {
 				return fmt.Errorf("invalid issue number: %s", remaining[0])
 			}
 
@@ -66,6 +61,11 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 
 			if strings.TrimSpace(body) == "" {
 				return fmt.Errorf("comment body cannot be empty")
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := newAPIClient(f, token)

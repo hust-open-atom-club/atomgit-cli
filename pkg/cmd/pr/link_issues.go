@@ -20,35 +20,37 @@ func newCmdLinkIssues(f *cmdutil.Factory) *cobra.Command {
 		Long:  `Link one or more issues to a pull request.`,
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return cmdutil.AuthenticationError(err)
-			}
-
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-			prNumber := remaining[0]
+			prNumber, err := parsePRNumber(remaining[0])
+			if err != nil {
+				return err
+			}
 
 			if len(opts.Issues) == 0 {
 				return fmt.Errorf("at least one issue number is required (--issue)")
-			}
-
-			client, err := newAPIClient(f, token)
-			if err != nil {
-				return err
 			}
 
 			// Convert issue numbers to integers
 			issueNumbers := []int{}
 			for _, issueNumber := range opts.Issues {
 				num, err := strconv.Atoi(issueNumber)
-				if err != nil {
+				if err != nil || num <= 0 {
 					return fmt.Errorf("invalid issue number: %s", issueNumber)
 				}
 				issueNumbers = append(issueNumbers, num)
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+			client, err := newAPIClient(f, token)
+			if err != nil {
+				return err
 			}
 
 			// Link issues using array format
