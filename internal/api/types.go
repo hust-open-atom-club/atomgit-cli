@@ -139,6 +139,23 @@ type User struct {
 	Type    string `json:"type"`
 }
 
+// Webhook represents a repository webhook. The API's password field is
+// intentionally omitted so commands cannot accidentally render stored secrets.
+type Webhook struct {
+	ID                  int64        `json:"id"`
+	URL                 string       `json:"url"`
+	Result              string       `json:"result"`
+	ProjectID           int64        `json:"project_id"`
+	ResultCode          int          `json:"result_code"`
+	PushEvents          FlexibleBool `json:"push_events"`
+	TagPushEvents       FlexibleBool `json:"tag_push_events"`
+	IssuesEvents        FlexibleBool `json:"issues_events"`
+	NoteEvents          FlexibleBool `json:"note_events"`
+	MergeRequestsEvents FlexibleBool `json:"merge_requests_events"`
+	CreatedAt           string       `json:"created_at"`
+	Active              FlexibleBool `json:"active"`
+}
+
 // Organization represents an AtomGit organization visible to the authenticated user.
 type Organization struct {
 	ID          int64  `json:"id"`
