@@ -2,7 +2,7 @@
 
 AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、Nix、go install、AtomGit Release 自动或手动安装，也可以从源码构建。
 
-## 使用 npm 安装
+## npm 安装
 
 npm 安装需要 Node.js 18 或更高版本。执行：
 
@@ -34,7 +34,7 @@ npm run version:npm -- X.Y.Z
 ag version
 ```
 
-## 使用 Homebrew 安装
+## Homebrew 安装
 
 macOS 或 Linux 用户可以通过项目维护的 Homebrew tap 安装：
 
@@ -57,7 +57,7 @@ brew update
 brew upgrade atomgit-cli
 ```
 
-## 使用 Nix 安装
+## Nix / NixOS 安装
 
 AtomGit CLI 已进入 `nixos-unstable`，nixpkgs 包名为 `atomgit-cli`，安装后提供 `ag` 命令。
 
@@ -191,7 +191,7 @@ nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#latest -- versio
 }
 ```
 
-## 使用 go 安装
+## Go 安装
 
 go 安装将自动下载源码包并进行编译，需要 Go 1.24.2 或更高版本：
 
@@ -205,7 +205,7 @@ BSD、AIX、Solaris 和 Plan 9 等特殊平台，以及 LoongArch64、32 位 x86
 
 Go 模块代理提供的源码包不包含 `.git` 目录，因此这种安装方式构建的二进制只能可靠获得模块版本。执行 `ag version` 时，文本输出会省略无法获得的 commit 和构建时间；`ag version --json` 中对应字段为 `unknown`。这是预期行为，不影响 CLI 功能。如需同时包含版本、commit 和构建时间，请改用 npm、Homebrew，或通过 AtomGit Release 自动或手动安装预编译版本。
 
-## 使用 AtomGit Release 安装
+## AtomGit Release 安装
 
 ### 自动安装
 
@@ -288,7 +288,7 @@ macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应
 3. 打开系统“环境变量”，编辑当前用户的 `Path`，添加上述目录。
 4. 新开 PowerShell 或命令提示符。
 
-## 源码构建
+## 源码安装
 
 源码构建支持 macOS、Linux 和 Windows，需要安装：
 
@@ -346,5 +346,5 @@ go install ./cmd/ag
 完成安装或构建后，新开一个终端并执行：
 
 ```text
-ag --help
+ag version
 ```
