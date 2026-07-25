@@ -30,6 +30,7 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdPRReopen(f))
 	cmd.AddCommand(newCmdPRReview(f))
 	cmd.AddCommand(newCmdPRDiff(f))
+	cmd.AddCommand(newCmdPRChecks(f))
 	cmd.AddCommand(newCmdViewIssues(f))
 	cmd.AddCommand(newCmdLinkIssues(f))
 	cmd.AddCommand(newCmdUnlinkIssues(f))
@@ -250,6 +251,7 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
 		Title    string
 		Body     string
+		BodyFile string
 		Base     string
 		Head     string
 		Metadata prCreateMetadataOptions
@@ -263,8 +265,25 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 Assignees own follow-up work, approval reviewers approve the change, and
 testers verify it. These AtomGit roles are managed independently. Labels and
 milestones must already exist in the repository.`,
+		Example: `  ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature
+  ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature
+  ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.Title == "" {
+				return fmt.Errorf("title is required")
+			}
+			bodyText, err := cmdutil.ReadBody(
+				opts.Body,
+				opts.BodyFile,
+				cmd.Flags().Changed("body"),
+				cmd.Flags().Changed("body-file"),
+				cmd.InOrStdin(),
+			)
+			if err != nil {
+				return err
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return fmt.Errorf("not authenticated: %w", err)
@@ -281,15 +300,10 @@ milestones must already exist in the repository.`,
 			}
 			owner, repo := repository.Owner, repository.Name
 
-			if opts.Title == "" {
-				return fmt.Errorf("title is required")
-			}
-
 			metadata, err := resolvePRCreateMetadata(client, owner, repo, opts.Metadata)
 			if err != nil {
 				return err
 			}
-
 			base := strings.TrimSpace(opts.Base)
 			if base == "" {
 				var repository api.Repository
@@ -312,7 +326,7 @@ milestones must already exist in the repository.`,
 
 			body := map[string]interface{}{
 				"title": opts.Title,
-				"body":  opts.Body,
+				"body":  bodyText,
 				"base":  base,
 				"head":  head,
 			}
@@ -340,6 +354,7 @@ milestones must already exist in the repository.`,
 
 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "PR title")
 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "PR body")
+	cmd.Flags().StringVarP(&opts.BodyFile, "body-file", "F", "", "Read PR body from file (use - for stdin)")
 	cmd.Flags().StringVar(&opts.Base, "base", "", "Base branch (defaults to repository default)")
 	cmd.Flags().StringVar(&opts.Head, "head", "", "Head branch")
 	cmd.Flags().StringSliceVar(&opts.Metadata.Assignees, "assignee", nil, "Assignee login (repeat for multiple users)")
@@ -347,6 +362,7 @@ milestones must already exist in the repository.`,
 	cmd.Flags().StringSliceVar(&opts.Metadata.Testers, "tester", nil, "Tester login (repeat for multiple users)")
 	cmd.Flags().StringSliceVar(&opts.Metadata.Labels, "label", nil, "Label name (repeat for multiple labels)")
 	cmd.Flags().StringVar(&opts.Metadata.Milestone, "milestone", "", "Milestone number or exact title")
+	cmd.MarkFlagsMutuallyExclusive("body", "body-file")
 
 	return cmd
 }
