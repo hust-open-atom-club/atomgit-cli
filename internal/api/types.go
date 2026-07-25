@@ -37,20 +37,24 @@ type Repository struct {
 
 // PullRequest represents an AtomGit pull request
 type PullRequest struct {
-	ID        int64       `json:"id"`
-	Number    interface{} `json:"number"`
-	Title     string      `json:"title"`
-	Body      string      `json:"body"`
-	State     string      `json:"state"`
-	HTMLURL   string      `json:"html_url"`
-	User      User        `json:"user"`
-	Head      Branch      `json:"head"`
-	Base      Branch      `json:"base"`
-	Labels    []Label     `json:"labels"`
-	CreatedAt string      `json:"created_at"`
-	UpdatedAt string      `json:"updated_at"`
-	Merged    bool        `json:"merged"`
-	Mergeable bool        `json:"mergeable"`
+	ID                int64       `json:"id"`
+	Number            interface{} `json:"number"`
+	Title             string      `json:"title"`
+	Body              string      `json:"body"`
+	State             string      `json:"state"`
+	HTMLURL           string      `json:"html_url"`
+	User              User        `json:"user"`
+	Head              Branch      `json:"head"`
+	Base              Branch      `json:"base"`
+	Assignees         []User      `json:"assignees"`
+	ApprovalReviewers []User      `json:"approval_reviewers"`
+	Testers           []User      `json:"testers"`
+	Labels            []Label     `json:"labels"`
+	Milestone         *Milestone  `json:"milestone"`
+	CreatedAt         string      `json:"created_at"`
+	UpdatedAt         string      `json:"updated_at"`
+	Merged            bool        `json:"merged"`
+	Mergeable         bool        `json:"mergeable"`
 }
 
 // PullRequestWriteResponse represents the compact response returned by pull
@@ -137,6 +141,31 @@ type User struct {
 	Email   string `json:"email"`
 	HTMLURL string `json:"html_url"`
 	Type    string `json:"type"`
+}
+
+// Collaborator represents a repository member and the provenance of their
+// effective permission.
+type Collaborator struct {
+	ID          string                  `json:"id"`
+	Name        string                  `json:"name"`
+	Username    string                  `json:"username"`
+	Login       string                  `json:"login"`
+	WebURL      string                  `json:"web_url"`
+	AccessLevel int                     `json:"access_level"`
+	Type        string                  `json:"type"`
+	JoinWay     string                  `json:"join_way"`
+	SourceName  string                  `json:"source_name"`
+	RoleName    string                  `json:"role_name"`
+	RoleNameCN  string                  `json:"role_name_cn"`
+	Permission  string                  `json:"permission"`
+	Permissions CollaboratorPermissions `json:"permissions"`
+}
+
+// CollaboratorPermissions contains AtomGit's built-in repository permissions.
+type CollaboratorPermissions struct {
+	Pull  FlexibleBool `json:"pull"`
+	Push  FlexibleBool `json:"push"`
+	Admin FlexibleBool `json:"admin"`
 }
 
 // Webhook represents a repository webhook. The API's password field is
@@ -318,6 +347,15 @@ type Label struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Color       string `json:"color"`
+}
+
+// Milestone represents a repository milestone that can be assigned to a PR.
+type Milestone struct {
+	Number      int    `json:"number"`
+	Title       string `json:"title"`
+	State       string `json:"state"`
+	Description string `json:"description"`
+	URL         string `json:"url"`
 }
 
 // Comment represents a comment on an issue or pull request

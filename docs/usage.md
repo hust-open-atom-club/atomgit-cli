@@ -95,6 +95,24 @@ ag repo delete owner/repo --yes
 
 该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。
 
+### 仓库协作者
+
+```bash
+# 列出协作者并查看有效权限及权限来源
+ag repo collaborator list owner/repo --limit 50
+ag repo collaborator view owner/repo octocat
+ag repo collaborator view owner/repo octocat --json
+
+# 添加、调整或移除直接协作者
+ag repo collaborator add owner/repo octocat --permission push
+ag repo collaborator edit owner/repo octocat --permission admin
+ag repo collaborator edit owner/repo octocat --permission pull --yes
+ag repo collaborator remove owner/repo octocat
+ag repo collaborator remove owner/repo octocat --yes
+```
+
+AtomGit 内置协作者权限为 `pull`（参与者）、`push`（开发者）和 `admin`（仓库维护者）。`list` 和 `view` 会明确标记直接权限或权限来源；组织继承权限不能通过仓库级命令修改。降权和移除操作默认要求确认，可使用 `--yes` 跳过确认。
+
 ### 仓库 Webhook
 
 ```bash
@@ -239,6 +257,15 @@ ag pr merge owner/repo 123 --rebase --squash --admin --subject "Merge PR #123" -
 ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch
 ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature-branch
 cat description.md | ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature-branch
+ag pr create owner/repo --title "Fix bug" --head feature-branch \
+  --assignee alice --reviewer bob --tester carol --label Bug --milestone v1.0
+
+# 修改 PR 协作元数据
+ag pr edit owner/repo 123 --add-assignee alice --remove-assignee bob
+ag pr edit owner/repo 123 --add-reviewer carol --remove-reviewer dave
+ag pr edit owner/repo 123 --add-tester erin --add-label "Priority:High"
+ag pr edit owner/repo 123 --remove-label Bug --milestone v1.1
+ag pr edit owner/repo 123 --milestone none
 
 # 查看、关联或取消关联 PR 对应的 Issue
 ag pr issues owner/repo 123
@@ -257,6 +284,8 @@ ag pr reopen owner/repo 123
 ```
 
 跨仓库创建 PR 时 `--head` 的写法请参阅[跨仓库 PR 示例](cross_repo_pr_demo.md)。
+
+负责人（assignee）负责后续工作，批准审查人（approval reviewer）负责批准变更，测试人（tester）负责验证变更；三个 AtomGit 角色相互独立。用户账号、标签和里程碑会在修改 PR 前解析，标签和里程碑必须已存在。`pr edit` 只修改显式传入的字段，添加和移除参数可重复使用，也可用逗号一次传入多个值。
 
 #### PR 评审
 
