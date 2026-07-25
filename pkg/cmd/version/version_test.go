@@ -33,7 +33,7 @@ func TestNewCmdVersion_Text(t *testing.T) {
 		{
 			name: "dev text output",
 			args: []string{},
-			want: "ag version dev (commit: unknown, built: unknown)\n",
+			want: "ag version dev\n",
 		},
 	}
 
@@ -58,6 +58,43 @@ func TestNewCmdVersion_Text(t *testing.T) {
 			}
 			if got := buf.String(); got != tt.want {
 				t.Errorf("output = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFormatTextOmitsUnknownMetadata(t *testing.T) {
+	tests := []struct {
+		name string
+		info version.Info
+		want string
+	}{
+		{
+			name: "all metadata",
+			info: version.Info{Version: "v1.0.0", Commit: "abc1234", BuildDate: "2026-07-15T00:00:00Z"},
+			want: "ag version v1.0.0 (commit: abc1234, built: 2026-07-15T00:00:00Z)\n",
+		},
+		{
+			name: "commit only",
+			info: version.Info{Version: "v1.0.0", Commit: "abc1234", BuildDate: "unknown"},
+			want: "ag version v1.0.0 (commit: abc1234)\n",
+		},
+		{
+			name: "build date only",
+			info: version.Info{Version: "v1.0.0", Commit: "unknown", BuildDate: "2026-07-15T00:00:00Z"},
+			want: "ag version v1.0.0 (built: 2026-07-15T00:00:00Z)\n",
+		},
+		{
+			name: "no optional metadata",
+			info: version.Info{Version: "v1.0.0", Commit: " UNKNOWN ", BuildDate: ""},
+			want: "ag version v1.0.0\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := formatText(tt.info); got != tt.want {
+				t.Errorf("formatText() = %q, want %q", got, tt.want)
 			}
 		})
 	}
