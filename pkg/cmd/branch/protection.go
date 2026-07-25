@@ -104,11 +104,12 @@ func newCmdProtectionSet(f *cmdutil.Factory) *cobra.Command {
 		Long: `Create or update a protected branch rule.
 
 Permission values are semicolon-separated role names or usernames. Supported
-roles are develop and admin. An explicitly empty value denies the
+roles are develop, admin, and maintainer. An explicitly empty value denies the
 operation to everyone. Existing rules preserve any permission whose flag is
 omitted; new rules require both --push and --merge. Updating an existing rule
 requires confirmation unless --yes is supplied.`,
 		Example: `  ag branch protection set owner/repo main --push admin --merge admin
+  ag branch protection set owner/repo main --push maintainer --merge admin
   ag branch protection set owner/repo "release/*" --push "develop;alice" --merge admin
   ag branch protection set owner/repo main --push "" --yes`,
 		Args: cobra.ExactArgs(2),
@@ -199,8 +200,8 @@ requires confirmation unless --yes is supplied.`,
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&opts.Push, "push", "", "Push allowlist: develop, admin, usernames, or empty")
-	cmd.Flags().StringVar(&opts.Merge, "merge", "", "Merge allowlist: develop, admin, usernames, or empty")
+	cmd.Flags().StringVar(&opts.Push, "push", "", "Push allowlist: develop, admin, maintainer, usernames, or empty")
+	cmd.Flags().StringVar(&opts.Merge, "merge", "", "Merge allowlist: develop, admin, maintainer, usernames, or empty")
 	cmd.Flags().BoolVarP(&opts.Yes, "yes", "y", false, "Skip confirmation when updating an existing rule")
 	return cmd
 }
@@ -322,9 +323,6 @@ func validateProtectionPermission(value string) error {
 				return fmt.Errorf("unsupported role or username %q", token)
 			}
 		}
-		if token == "maintainer" {
-			return fmt.Errorf("unsupported role %q", token)
-		}
 		if _, exists := seen[token]; exists {
 			return fmt.Errorf("duplicate role or username %q", token)
 		}
@@ -363,7 +361,7 @@ func protectionPermissionValue(rule api.ProtectedBranchRule, push bool) (string,
 	case master:
 		values = append(values, "admin")
 	case maintainer:
-		return "", fmt.Errorf("the API response contains unsupported maintainer-only access; specify this permission explicitly")
+		values = append(values, "maintainer")
 	case committer:
 		return "", fmt.Errorf("the API response contains unsupported committer-only access; specify this permission explicitly")
 	}
