@@ -95,6 +95,24 @@ ag repo delete owner/repo --yes
 
 该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。
 
+### 仓库协作者
+
+```bash
+# 列出协作者并查看有效权限及权限来源
+ag repo collaborator list owner/repo --limit 50
+ag repo collaborator view owner/repo octocat
+ag repo collaborator view owner/repo octocat --json
+
+# 添加、调整或移除直接协作者
+ag repo collaborator add owner/repo octocat --permission push
+ag repo collaborator edit owner/repo octocat --permission admin
+ag repo collaborator edit owner/repo octocat --permission pull --yes
+ag repo collaborator remove owner/repo octocat
+ag repo collaborator remove owner/repo octocat --yes
+```
+
+AtomGit 内置协作者权限为 `pull`（参与者）、`push`（开发者）和 `admin`（仓库维护者）。`list` 和 `view` 会明确标记直接权限或权限来源；组织继承权限不能通过仓库级命令修改。降权和移除操作默认要求确认，可使用 `--yes` 跳过确认。
+
 ### 仓库 Webhook
 
 ```bash
