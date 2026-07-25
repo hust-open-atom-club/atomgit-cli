@@ -22,6 +22,14 @@ macOS 或 Linux 用户可以通过项目维护的 Homebrew tap 安装：
 brew install hust-open-atom-club/tap/atomgit-cli
 ```
 
+### Scoop
+
+Windows 用户可以通过组织维护的 scoop bucket 安装：
+
+```powershell
+scoop install https://raw.githubusercontent.com/hust-open-atom-club/ScoopBucket/main/bucket/atomgit-cli.json
+```
+
 ### Nix / NixOS
 
 AtomGit CLI 已进入 `nixos-unstable`，包名为 `atomgit-cli`，安装后提供 `ag` 命令。

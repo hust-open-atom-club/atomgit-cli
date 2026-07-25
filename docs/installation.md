@@ -49,6 +49,28 @@ brew update
 brew upgrade atomgit-cli
 ```
 
+## Scoop 安装
+
+Windows 用户可以通过组织维护的 scoop bucket 安装：
+
+```powershell
+scoop bucket add hust-open-atom-club https://github.com/hust-open-atom-club/ScoopBucket
+scoop install atomgit-cli
+ag version
+```
+
+或者直接运行：
+
+```powershell
+scoop install https://raw.githubusercontent.com/hust-open-atom-club/ScoopBucket/main/bucket/atomgit-cli.json
+```
+
+更新已安装的 AtomGit CLI:
+
+```powershell
+scoop update atomgit-cli
+```
+
 ## Nix / NixOS 安装
 
 AtomGit CLI 已进入 `nixos-unstable`，nixpkgs 包名为 `atomgit-cli`，安装后提供 `ag` 命令。
