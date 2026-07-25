@@ -59,10 +59,28 @@ func (c ioNopCloser) Close() error { return nil }
 func TestNewCmdBranchRegistersSubcommandsAndHelp(t *testing.T) {
 	cmd := NewCmdBranch(&cmdutil.Factory{})
 	want := map[string][]string{
-		"list":   {"limit"},
-		"view":   {},
-		"create": {"ref"},
-		"delete": {"yes"},
+		"list":       {"limit"},
+		"view":       {},
+		"create":     {"ref"},
+		"delete":     {"yes"},
+		"protection": {},
+	}
+	protection, _, err := cmd.Find([]string{"protection"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, flags := range map[string][]string{
+		"list": {}, "view": {}, "set": {"push", "merge", "yes"}, "delete": {"yes"},
+	} {
+		child, _, findErr := protection.Find([]string{name})
+		if findErr != nil || child.Name() != name {
+			t.Fatalf("protection subcommand %q: %v", name, findErr)
+		}
+		for _, flag := range flags {
+			if child.Flags().Lookup(flag) == nil {
+				t.Errorf("protection %s --%s flag was not registered", name, flag)
+			}
+		}
 	}
 	for name, flags := range want {
 		child, _, err := cmd.Find([]string{name})
@@ -83,7 +101,7 @@ func TestNewCmdBranchRegistersSubcommandsAndHelp(t *testing.T) {
 		t.Fatal(err)
 	}
 	help := out.String()
-	for _, text := range []string{"list", "view", "create", "delete", "ag branch create owner/repo feature/foo --ref main"} {
+	for _, text := range []string{"list", "view", "create", "delete", "protection", "ag branch create owner/repo feature/foo --ref main"} {
 		if !strings.Contains(help, text) {
 			t.Fatalf("help missing %q:\n%s", text, help)
 		}
