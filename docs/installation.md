@@ -288,7 +288,7 @@ macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应
 3. 打开系统“环境变量”，编辑当前用户的 `Path`，添加上述目录。
 4. 新开 PowerShell 或命令提示符。
 
-## 从源码构建
+## 源码构建
 
 源码构建支持 macOS、Linux 和 Windows，需要安装：
 

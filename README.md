@@ -73,16 +73,6 @@ go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 
 其他安装方式请参阅[完整安装指南](https://atomgit.com/hust-open-atom-club/atomgit-cli/blob/main/docs/installation.md)。
 
-### 从源码构建
-
-```bash
-# 构建到 bin/ag（Windows 为 bin/ag.exe）
-make build
-
-# 安装到 $GOPATH/bin
-make install
-```
-
 ## 配置
 
 首次使用本工具前，需要选择以下任一方式配置访问令牌：
