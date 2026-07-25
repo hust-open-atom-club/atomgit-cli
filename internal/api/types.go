@@ -277,6 +277,7 @@ type Milestone struct {
 	ClosedIssues int         `json:"closed_issues"`
 	RepositoryID int64       `json:"repository_id"`
 	URL          string      `json:"url"`
+	HTMLURL      string      `json:"html_url"`
 	CreatedAt    string      `json:"created_at"`
 	UpdatedAt    string      `json:"updated_at"`
 }

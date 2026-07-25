@@ -60,7 +60,7 @@ func TestMilestoneListPaginatesAndFilters(t *testing.T) {
 			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 		}
 		query := req.URL.Query()
-		if query.Get("state") != "all" || query.Get("sort") != "due_on" || query.Get("direction") != "desc" || query.Get("per_page") != "100" {
+		if query.Get("state") != "all" || query.Get("sort") != "created" || query.Get("direction") != "desc" || query.Get("per_page") != "100" {
 			t.Fatalf("query = %v", query)
 		}
 		page := query.Get("page")
@@ -81,7 +81,7 @@ func TestMilestoneListPaginatesAndFilters(t *testing.T) {
 		return milestoneResponse(http.StatusOK, string(body)), nil
 	})
 	cmd := newCmdMilestoneList(factory)
-	setFlags(t, cmd, map[string]string{"state": "all", "direction": "desc", "limit": "101"})
+	setFlags(t, cmd, map[string]string{"state": "all", "sort": "created", "direction": "desc", "limit": "101"})
 	var output bytes.Buffer
 	cmd.SetOut(&output)
 	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
@@ -132,7 +132,7 @@ func TestMilestoneListJSONAndEmptyText(t *testing.T) {
 }
 
 func TestMilestoneViewTextAndJSON(t *testing.T) {
-	response := `{"number":"12","title":"Release","description":"Ship it","state":"active","due_on":"2026-09-01","open_issues":4,"closed_issues":5}`
+	response := `{"number":"12","title":"Release","description":"Ship it","state":"active","due_on":"2026-09-01","open_issues":4,"closed_issues":5,"url":"https://api.atomgit.com/api/v5/repos/alice/demo/milestones/12","html_url":"https://atomgit.com/alice/demo/milestones/12"}`
 	for _, jsonOutput := range []bool{false, true} {
 		t.Run(fmt.Sprintf("json=%t", jsonOutput), func(t *testing.T) {
 			factory := milestoneFactory(func(req *http.Request) (*http.Response, error) {
@@ -151,7 +151,7 @@ func TestMilestoneViewTextAndJSON(t *testing.T) {
 				t.Fatal(err)
 			}
 			if jsonOutput {
-				if !strings.Contains(output.String(), `"openIssues": 4`) {
+				if !strings.Contains(output.String(), `"openIssues": 4`) || !strings.Contains(output.String(), `"url": "https://atomgit.com/alice/demo/milestones/12"`) {
 					t.Fatalf("output = %q", output.String())
 				}
 			} else {

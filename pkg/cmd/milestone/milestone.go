@@ -104,7 +104,7 @@ func newCmdMilestoneList(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&opts.State, "state", "s", "open", "Filter by state: open, closed, all")
-	cmd.Flags().StringVar(&opts.Sort, "sort", "due_on", "Sort milestones by due_on")
+	cmd.Flags().StringVar(&opts.Sort, "sort", "due_on", "Sort milestones by created or due_on")
 	cmd.Flags().StringVar(&opts.Direction, "direction", "asc", "Sort direction: asc, desc")
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of milestones to list")
 	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output milestones as JSON")
@@ -387,8 +387,8 @@ func validateMilestoneListOptions(state, sortBy, direction string, limit int) er
 	if state != "open" && state != "closed" && state != "all" {
 		return fmt.Errorf("invalid milestone state %q (expected open, closed, or all)", state)
 	}
-	if sortBy != "due_on" {
-		return fmt.Errorf("invalid milestone sort %q (expected due_on)", sortBy)
+	if sortBy != "created" && sortBy != "due_on" {
+		return fmt.Errorf("invalid milestone sort %q (expected created or due_on)", sortBy)
 	}
 	if direction != "asc" && direction != "desc" {
 		return fmt.Errorf("invalid milestone direction %q (expected asc or desc)", direction)
@@ -413,7 +413,11 @@ func milestoneResultURL(item api.Milestone, host string, repository cmdutil.Repo
 	if number == "" {
 		number = fallbackNumber
 	}
-	return cmdutil.ResolveWebURL(item.URL, host, repository.Owner, repository.Name, "milestones", number)
+	candidate := strings.TrimSpace(item.HTMLURL)
+	if candidate == "" && !strings.Contains(item.URL, "/api/") {
+		candidate = item.URL
+	}
+	return cmdutil.ResolveWebURL(candidate, host, repository.Owner, repository.Name, "milestones", number)
 }
 
 func displayMilestoneDueDate(value string) string {
@@ -448,6 +452,15 @@ func newMilestoneJSON(item api.Milestone) milestoneJSON {
 	return milestoneJSON{
 		Number: item.GetNumber(), Title: item.Title, Description: item.Description, State: item.State,
 		DueOn: item.DueOn, OpenIssues: item.OpenIssues, ClosedIssues: item.ClosedIssues,
-		URL: item.URL, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt,
+		URL: firstNonEmpty(item.HTMLURL, item.URL), CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt,
 	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
