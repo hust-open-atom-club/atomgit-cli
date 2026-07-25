@@ -33,13 +33,13 @@ func newCmdLabelList(f *cmdutil.Factory) *cobra.Command {
 		Example: `  ag label list owner/repo --limit 50`,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", limit)
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
-			}
-
-			if limit <= 0 {
-				return fmt.Errorf("invalid limit: %d (must be positive)", limit)
 			}
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
 			if err != nil {

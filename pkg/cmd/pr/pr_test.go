@@ -14,11 +14,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type prTestConfig struct{}
+type prTestConfig struct{ tokenErr error }
 
-func (prTestConfig) GetToken() (string, error) { return "token", nil }
-func (prTestConfig) GetUser() (string, error)  { return "alice", nil }
-func (prTestConfig) GetHost() string           { return "atomgit.com" }
+func (c prTestConfig) GetToken() (string, error) { return "token", c.tokenErr }
+func (prTestConfig) GetUser() (string, error)    { return "alice", nil }
+func (prTestConfig) GetHost() string             { return "atomgit.com" }
 
 type prRoundTripFunc func(*http.Request) (*http.Response, error)
 
@@ -326,7 +326,7 @@ func TestPRViewJSON(t *testing.T) {
 func TestPRListRejectsInvalidLimit(t *testing.T) {
 	for _, limit := range []string{"0", "-1"} {
 		t.Run(limit, func(t *testing.T) {
-			cmd := newCmdPRList(&cmdutil.Factory{Config: prTestConfig{}})
+			cmd := newCmdPRList(&cmdutil.Factory{Config: prTestConfig{tokenErr: fmt.Errorf("not authenticated")}})
 			_ = cmd.Flags().Set("limit", limit)
 			if err := cmd.RunE(cmd, []string{"alice/demo"}); err == nil || !strings.Contains(err.Error(), "must be positive") {
 				t.Fatalf("error = %v", err)

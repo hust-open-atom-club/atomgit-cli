@@ -77,13 +77,13 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 		Short: "List pull requests",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.Limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
-			}
-
-			if opts.Limit <= 0 {
-				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
 
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)

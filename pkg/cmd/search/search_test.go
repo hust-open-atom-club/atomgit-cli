@@ -289,6 +289,31 @@ func TestSearchCommandsRequireAuthentication(t *testing.T) {
 	}
 }
 
+func TestSearchCommandsValidateLimitBeforeAuthentication(t *testing.T) {
+	tests := []struct {
+		name string
+		new  func(*cmdutil.Factory) *cobra.Command
+	}{
+		{name: "users", new: newCmdSearchUsers},
+		{name: "repositories", new: newCmdSearchRepositories},
+		{name: "issues", new: newCmdSearchIssues},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			factory := &cmdutil.Factory{Config: searchTestConfig{tokenErr: errors.New("not authenticated")}}
+			cmd := test.new(factory)
+			if err := cmd.Flags().Set("limit", "0"); err != nil {
+				t.Fatal(err)
+			}
+			err := cmd.RunE(cmd, []string{"query"})
+			if err == nil || !strings.Contains(err.Error(), "invalid limit: 0") {
+				t.Fatalf("error = %v, want invalid limit before authentication", err)
+			}
+		})
+	}
+}
+
 func TestSearchIssuesFormatsRepositoryNumberAndTitle(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: searchTestConfig{token: "token"},

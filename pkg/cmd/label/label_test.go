@@ -2,6 +2,7 @@ package label
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -12,11 +13,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type labelTestConfig struct{}
+type labelTestConfig struct{ tokenErr error }
 
-func (labelTestConfig) GetToken() (string, error) { return "token", nil }
-func (labelTestConfig) GetUser() (string, error)  { return "alice", nil }
-func (labelTestConfig) GetHost() string           { return "atomgit.com" }
+func (c labelTestConfig) GetToken() (string, error) { return "token", c.tokenErr }
+func (labelTestConfig) GetUser() (string, error)    { return "alice", nil }
+func (labelTestConfig) GetHost() string             { return "atomgit.com" }
 
 type labelRoundTripFunc func(*http.Request) (*http.Response, error)
 
@@ -105,7 +106,11 @@ func TestLabelListRejectsInvalidInput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := newCmdLabelList(&cmdutil.Factory{Config: labelTestConfig{}})
+			config := labelTestConfig{}
+			if tt.limit != "" {
+				config.tokenErr = errors.New("not authenticated")
+			}
+			cmd := newCmdLabelList(&cmdutil.Factory{Config: config})
 			if tt.limit != "" {
 				if err := cmd.Flags().Set("limit", tt.limit); err != nil {
 					t.Fatal(err)
