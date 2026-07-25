@@ -44,7 +44,7 @@ func TestProtectionListAndViewDistinguishExactAndWildcard(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, text := range []string{
-		"main type:exact push:admin merge:maintainer",
+		"main type:exact push:admin merge:unsupported",
 		"release/* type:wildcard push:develop;alice merge:admin;bob",
 	} {
 		if !strings.Contains(listOut.String(), text) {
@@ -118,7 +118,7 @@ func TestProtectionSetPreservesOmittedPermissionAndConfirms(t *testing.T) {
 			transport := branchRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				switch {
 				case req.Method == http.MethodGet:
-					return branchResponse(http.StatusOK, `[{"name":"release/*","committer_can_push":true,"maintainer_can_merge":true}]`), nil
+					return branchResponse(http.StatusOK, `[{"name":"release/*","committer_can_push":true,"master_can_merge":true}]`), nil
 				case req.Method == http.MethodPut:
 					writes++
 					if req.URL.EscapedPath() != "/api/v5/repos/alice/demo/branches/release%2F%2A/setting" {
@@ -128,7 +128,7 @@ func TestProtectionSetPreservesOmittedPermissionAndConfirms(t *testing.T) {
 					if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 						t.Fatal(err)
 					}
-					if _, present := body["wildcard"]; present || body["pusher"] != "" || body["merger"] != "maintainer" {
+					if _, present := body["wildcard"]; present || body["pusher"] != "" || body["merger"] != "admin" {
 						t.Fatalf("body = %#v", body)
 					}
 					return branchResponse(http.StatusOK, `{}`), nil
@@ -155,7 +155,7 @@ func TestProtectionSetPreservesOmittedPermissionAndConfirms(t *testing.T) {
 			if !tt.wantWrite && !strings.Contains(out.String(), "cancelled") {
 				t.Fatalf("output = %q", out.String())
 			}
-			if !tt.yes && (!strings.Contains(out.String(), "New Push: none") || !strings.Contains(out.String(), "New Merge: maintainer")) {
+			if !tt.yes && (!strings.Contains(out.String(), "New Push: none") || !strings.Contains(out.String(), "New Merge: admin")) {
 				t.Fatalf("proposed permissions were not shown: %q", out.String())
 			}
 		})
@@ -163,22 +163,35 @@ func TestProtectionSetPreservesOmittedPermissionAndConfirms(t *testing.T) {
 }
 
 func TestProtectionSetRefusesUnrepresentableOmittedPermission(t *testing.T) {
-	writes := 0
-	transport := branchRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-		if req.Method == http.MethodPut {
-			writes++
-		}
-		return branchResponse(http.StatusOK, `[{"name":"main","owner_can_merge":true}]`), nil
-	})
-	cmd := newCmdProtectionSet(branchFactory(branchCommandConfig{token: "token"}, transport))
-	_ = cmd.Flags().Set("push", "admin")
-	_ = cmd.Flags().Set("yes", "true")
-	err := cmd.RunE(cmd, []string{"alice/demo", "main"})
-	if err == nil || !strings.Contains(err.Error(), "owner-only") {
-		t.Fatalf("error = %v", err)
+	tests := []struct {
+		name string
+		rule string
+		want string
+	}{
+		{name: "owner", rule: `[{"name":"main","owner_can_merge":true}]`, want: "owner-only"},
+		{name: "committer", rule: `[{"name":"main","committer_can_merge":true}]`, want: "committer-only"},
+		{name: "maintainer", rule: `[{"name":"main","maintainer_can_merge":true}]`, want: "maintainer-only"},
 	}
-	if writes != 0 {
-		t.Fatalf("writes = %d", writes)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			writes := 0
+			transport := branchRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method == http.MethodPut {
+					writes++
+				}
+				return branchResponse(http.StatusOK, tt.rule), nil
+			})
+			cmd := newCmdProtectionSet(branchFactory(branchCommandConfig{token: "token"}, transport))
+			_ = cmd.Flags().Set("push", "admin")
+			_ = cmd.Flags().Set("yes", "true")
+			err := cmd.RunE(cmd, []string{"alice/demo", "main"})
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("error = %v", err)
+			}
+			if writes != 0 {
+				t.Fatalf("writes = %d", writes)
+			}
+		})
 	}
 }
 
@@ -241,6 +254,7 @@ func TestProtectionValidationStopsBeforeRequests(t *testing.T) {
 		{name: "empty segment", pattern: "main", push: "admin;;alice", want: "invalid --push"},
 		{name: "spaces", pattern: "main", push: "admin; alice", want: "invalid --push"},
 		{name: "duplicate", pattern: "main", push: "admin;admin", want: "duplicate"},
+		{name: "unsupported maintainer", pattern: "main", push: "maintainer", want: "unsupported role"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

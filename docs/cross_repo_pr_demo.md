@@ -16,7 +16,7 @@ ag pr create hust-open-atom-club/atomgit-cli --title 'Cross Repo PR Demo (Auto-g
 ```
 
 ```output
-Created PR #14: 
+Created PR #14: https://atomgit.com/hust-open-atom-club/atomgit-cli/pull/14
 ```
 
 ```bash
@@ -24,7 +24,7 @@ ag pr close hust-open-atom-club/atomgit-cli 14
 ```
 
 ```output
-Closed PR #14:
+Closed PR #14: https://atomgit.com/hust-open-atom-club/atomgit-cli/pull/14
 ```
 
 如果你只需要在你的同一个仓库下，从一个开发分支（如 `test-head`）合入到主分支（如 `test-base`），可以直接省略 `owner:` 的前缀，这样系统会判断这是一个内部 PR：
@@ -34,7 +34,7 @@ ag pr create mywaaagh_admin/atomgit-cli --title 'Internal Repo PR Demo (Auto-gen
 ```
 
 ```output
-Created PR #2: 
+Created PR #2: https://atomgit.com/mywaaagh_admin/atomgit-cli/pull/2
 ```
 
 ```bash
@@ -42,5 +42,5 @@ ag pr close mywaaagh_admin/atomgit-cli 2
 ```
 
 ```output
-Closed PR #2:
+Closed PR #2: https://atomgit.com/mywaaagh_admin/atomgit-cli/pull/2
 ```
