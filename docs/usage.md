@@ -113,6 +113,27 @@ ag repo collaborator remove owner/repo octocat --yes
 
 AtomGit 内置协作者权限为 `pull`（参与者）、`push`（开发者）和 `admin`（仓库维护者）。`list` 和 `view` 会明确标记直接权限或权限来源；组织继承权限不能通过仓库级命令修改。降权和移除操作默认要求确认，可使用 `--yes` 跳过确认。
 
+### 仓库 Webhook
+
+```bash
+# 列出和查看 Webhook（输出不包含 secret）
+ag repo webhook list owner/repo --limit 50
+ag repo webhook view owner/repo 42 --json
+
+# 从环境变量、文件或标准输入安全读取 secret
+ag repo webhook create owner/repo --url https://example.com/hook --events push,issues --secret-env WEBHOOK_SECRET
+ag repo webhook create owner/repo --url https://example.com/hook --events merge-requests --secret-file ./webhook-secret
+Get-Content ./webhook-secret | ag repo webhook edit owner/repo 42 --secret-stdin --encryption signature
+
+# 替换事件、删除或发送真实测试请求
+ag repo webhook edit owner/repo 42 --events push,tag-push,merge-requests
+ag repo webhook edit owner/repo 42 --events none
+ag repo webhook test owner/repo 42
+ag repo webhook delete owner/repo 42 --yes
+```
+
+支持的事件为 `push`、`tag-push`、`issues`、`note` 和 `merge-requests`。Webhook secret 不支持命令行明文参数，只能通过 `--secret-env`、`--secret-file` 或 `--secret-stdin` 三选一提供，也不会出现在列表、详情、JSON 或错误响应中。`test` 会向真实目标发送请求，和删除操作一样默认要求确认。AtomGit 当前公开 API 仅在响应中提供 `active`，因此 CLI 将启用状态作为只读信息展示，不发送未公开的修改字段。
+
 ## 组织 (org)
 
 ```bash
@@ -143,7 +164,26 @@ ag branch create owner/repo feature/foo --ref main
 # 删除远程分支（默认需要确认；不会删除本地 Git 分支）
 ag branch delete owner/repo feature/foo
 ag branch delete owner/repo feature/foo --yes
+
+# 查看保护分支规则（输出会区分 exact 与 wildcard）
+ag branch protection list owner/repo
+ag branch protection view owner/repo main
+ag branch protection view owner/repo "release/*"
+
+# 创建保护规则；新规则必须同时指定 push 与 merge 权限
+ag branch protection set owner/repo main --push admin --merge admin
+ag branch protection set owner/repo main --push maintainer --merge admin
+ag branch protection set owner/repo "release/*" --push "develop;alice" --merge admin
+
+# 仅修改已有规则的推送权限；未指定的合并权限保持不变
+ag branch protection set owner/repo main --push "" --yes
+
+# 删除规则（默认显示当前规则并要求确认）
+ag branch protection delete owner/repo "release/*"
+ag branch protection delete owner/repo "release/*" --yes
 ```
+
+保护规则的 `--push` 与 `--merge` 接受由英文分号分隔的 `develop`、`admin`、`maintainer` 或用户名；显式传入空字符串表示不允许任何人执行该操作。AtomGit 对精确分支规则的优先级高于匹配的 wildcard 规则。CLI 只管理官方 API 暴露的推送与合并白名单，不修改评审、流水线等其他保护设置。更新接口要求同时提交两类权限，因此 CLI 会先读取现有规则并保留未显式修改的一侧；若服务端返回无法无损表示的旧权限，命令会停止并要求显式提供该权限。
 
 ## Browse
 
