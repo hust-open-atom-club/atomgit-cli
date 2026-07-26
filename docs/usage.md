@@ -22,7 +22,6 @@ ag auth login --force --git-name "Alice" --git-email alice@example.com
 ag auth list
 ag auth list --json
 ag auth switch alice
-ag auth switch atomgit.com/alice
 
 # 按当前活动账号同步 Git identity；默认仅修改当前仓库
 ag auth git-sync

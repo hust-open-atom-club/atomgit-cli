@@ -33,7 +33,7 @@ func TestAuthListRedactsTokensAndMarksActive(t *testing.T) {
 	if err := cmd.RunE(cmd, nil); err != nil {
 		t.Fatal(err)
 	}
-	for _, secret := range []string{"alice-secret", "bob-secret", "access_token", "refresh_token"} {
+	for _, secret := range []string{"alice-secret", "bob-secret", "access_token", "refresh_token", `"host"`} {
 		if strings.Contains(output.String(), secret) {
 			t.Fatalf("output leaked %q: %s", secret, output.String())
 		}
@@ -53,7 +53,7 @@ func TestAuthSwitchChangesOnlyActiveAccount(t *testing.T) {
 	if err := cmd.RunE(cmd, []string{"alice"}); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(output.String(), "atomgit.com/alice") {
+	if !strings.Contains(output.String(), "alice") {
 		t.Fatalf("output = %q", output.String())
 	}
 	active, err := config.LoadStoredCredentials()
@@ -197,7 +197,7 @@ func TestAuthLogoutSelectedAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 	accounts, active, err := config.ListAccounts()
-	if err != nil || len(accounts) != 1 || accounts[0].User != "bob" || active != "atomgit.com/bob" {
+	if err != nil || len(accounts) != 1 || accounts[0].User != "bob" || active != "bob" {
 		t.Fatalf("accounts = %#v, active = %q, error = %v", accounts, active, err)
 	}
 }
@@ -221,7 +221,7 @@ func TestAuthLogoutActiveAccountRequiresExplicitSwitch(t *testing.T) {
 				t.Fatalf("error = %v", err)
 			}
 			accounts, active, loadErr := config.ListAccounts()
-			if loadErr != nil || len(accounts) != 2 || active != "atomgit.com/bob" {
+			if loadErr != nil || len(accounts) != 2 || active != "bob" {
 				t.Fatalf("accounts = %#v, active = %q, error = %v", accounts, active, loadErr)
 			}
 		})

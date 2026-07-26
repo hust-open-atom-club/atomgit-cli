@@ -32,7 +32,7 @@ func newCmdAuthList() *cobra.Command {
 			if jsonOutput {
 				values := make([]accountJSON, len(accounts))
 				for index, account := range accounts {
-					values[index] = accountJSON{Host: account.Host, Login: account.User, Active: account.Key() == active, Name: account.Name, Email: account.Email}
+					values[index] = accountJSON{Login: account.User, Active: account.Key() == active, Name: account.Name, Email: account.Email}
 				}
 				return cmdutil.WriteJSON(cmd.OutOrStdout(), values)
 			}
@@ -51,7 +51,6 @@ func newCmdAuthList() *cobra.Command {
 }
 
 type accountJSON struct {
-	Host   string `json:"host"`
 	Login  string `json:"login"`
 	Active bool   `json:"active"`
 	Name   string `json:"name"`

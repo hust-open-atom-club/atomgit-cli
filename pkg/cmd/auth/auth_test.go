@@ -251,8 +251,8 @@ func TestAuthLoginAddsAccountWithoutChangingActiveAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"Active account remains atomgit.com/alice",
-		"ag auth switch atomgit.com/bob",
+		"Active account remains alice",
+		"ag auth switch bob",
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("output %q does not contain %q", output, want)
@@ -263,7 +263,7 @@ func TestAuthLoginAddsAccountWithoutChangingActiveAccount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(accounts) != 2 || active != "atomgit.com/alice" {
+	if len(accounts) != 2 || active != "alice" {
 		t.Fatalf("accounts = %#v, active = %q", accounts, active)
 	}
 	bob, err := config.LoadCredentialStore()

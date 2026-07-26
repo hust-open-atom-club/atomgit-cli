@@ -20,23 +20,13 @@ type CredentialStore struct {
 	Accounts []StoredCredentials `json:"accounts"`
 }
 
-func accountKey(host, user string) string {
-	host = strings.ToLower(strings.TrimSpace(host))
-	if host == "" {
-		host = defaultHost
-	}
-	return host + "/" + strings.ToLower(strings.TrimSpace(user))
+// Key returns the normalized AtomGit username used to identify an account.
+func (c StoredCredentials) Key() string {
+	return strings.ToLower(strings.TrimSpace(c.User))
 }
-
-// Key returns the stable host/login identifier for an account.
-func (c StoredCredentials) Key() string { return accountKey(c.Host, c.User) }
 
 func normalizeAccount(c StoredCredentials) (StoredCredentials, error) {
 	c.User = strings.TrimSpace(c.User)
-	c.Host = strings.ToLower(strings.TrimSpace(c.Host))
-	if c.Host == "" {
-		c.Host = defaultHost
-	}
 	if c.AccessToken == "" {
 		return StoredCredentials{}, fmt.Errorf("access_token is empty")
 	}
@@ -77,6 +67,7 @@ func LoadCredentialStore() (*CredentialStore, error) {
 		if len(store.Accounts) == 0 {
 			return nil, fmt.Errorf("token file has no accounts")
 		}
+		store.Active = strings.ToLower(strings.TrimSpace(store.Active))
 		seen := make(map[string]bool, len(store.Accounts))
 		for index := range store.Accounts {
 			account, err := normalizeAccount(store.Accounts[index])
@@ -122,28 +113,22 @@ func (s *CredentialStore) ActiveAccount() (*StoredCredentials, error) {
 	return nil, fmt.Errorf("active account %q was not found", s.Active)
 }
 
-// ResolveAccount accepts host/login or an unambiguous login.
+// ResolveAccount finds an account by its case-insensitive username.
 func (s *CredentialStore) ResolveAccount(selector string) (*StoredCredentials, error) {
 	selector = strings.ToLower(strings.TrimSpace(selector))
 	if selector == "" {
 		return nil, fmt.Errorf("account is required")
 	}
-	var matches []StoredCredentials
 	for _, account := range s.Accounts {
-		if account.Key() == selector || strings.EqualFold(account.User, selector) {
-			matches = append(matches, account)
+		if account.Key() == selector {
+			copy := account
+			return &copy, nil
 		}
 	}
-	if len(matches) == 0 {
-		return nil, fmt.Errorf("account %q was not found", selector)
-	}
-	if len(matches) > 1 {
-		return nil, fmt.Errorf("account %q is ambiguous; use host/login", selector)
-	}
-	return &matches[0], nil
+	return nil, fmt.Errorf("account %q was not found", selector)
 }
 
-// ListAccounts returns accounts sorted by host and login.
+// ListAccounts returns accounts sorted by username.
 func ListAccounts() ([]StoredCredentials, string, error) {
 	store, err := LoadCredentialStore()
 	if err != nil {
@@ -154,7 +139,7 @@ func ListAccounts() ([]StoredCredentials, string, error) {
 	return accounts, store.Active, nil
 }
 
-// SaveAccount adds or replaces one host/login record.
+// SaveAccount adds or replaces one username record.
 func SaveAccount(credentials *StoredCredentials, makeActive bool) error {
 	if credentials == nil {
 		return fmt.Errorf("credentials are nil")

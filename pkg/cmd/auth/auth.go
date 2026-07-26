@@ -80,7 +80,7 @@ otherwise switch to another account first. Use --all to remove every account.`,
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&account, "account", "", "Account login or host/login to remove")
+	cmd.Flags().StringVar(&account, "account", "", "Account username to remove")
 	cmd.Flags().BoolVar(&all, "all", false, "Remove all saved accounts")
 	cmd.MarkFlagsMutuallyExclusive("account", "all")
 	return cmd
@@ -126,7 +126,6 @@ account becomes active; later logins do not change the active account.`,
 			cred := &config.StoredCredentials{
 				AccessToken:  result.AccessToken,
 				User:         result.Login,
-				Host:         f.Config.GetHost(),
 				Name:         result.Name,
 				Email:        result.Email,
 				GitName:      strings.TrimSpace(gitName),

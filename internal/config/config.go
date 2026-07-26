@@ -110,7 +110,6 @@ func loadTokenFromFile() (string, string, error) {
 type StoredCredentials struct {
 	AccessToken  string `json:"access_token"`
 	User         string `json:"user"`
-	Host         string `json:"host,omitempty"`
 	Name         string `json:"name,omitempty"`
 	Email        string `json:"email,omitempty"`
 	GitName      string `json:"git_name,omitempty"`

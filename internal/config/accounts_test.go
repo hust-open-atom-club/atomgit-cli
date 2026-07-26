@@ -21,7 +21,7 @@ func TestCredentialStoreMigratesLegacyWithoutLosingOAuthFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if store.Active != "atomgit.com/alice" || len(store.Accounts) != 1 || store.Accounts[0].RefreshToken != "alice-refresh" {
+	if store.Active != "alice" || len(store.Accounts) != 1 || store.Accounts[0].RefreshToken != "alice-refresh" {
 		t.Fatalf("store = %#v", store)
 	}
 	before, err := os.ReadFile(path)
@@ -43,7 +43,7 @@ func TestCredentialStoreMigratesLegacyWithoutLosingOAuthFields(t *testing.T) {
 	if err := json.Unmarshal(data, &persisted); err != nil {
 		t.Fatal(err)
 	}
-	if persisted.Version != credentialStoreVersion || persisted.Active != "atomgit.com/bob" || len(persisted.Accounts) != 2 {
+	if persisted.Version != credentialStoreVersion || persisted.Active != "bob" || len(persisted.Accounts) != 2 {
 		t.Fatalf("persisted = %#v", persisted)
 	}
 	alice, err := persisted.ResolveAccount("alice")
@@ -57,7 +57,7 @@ func TestCredentialStoreRejectsFutureVersionWithoutRewriting(t *testing.T) {
 	path := filepath.Join(home, ".config", appName, tokenFile)
 	data := []byte(`{
   "version": 3,
-  "active": "atomgit.com/alice",
+  "active": "alice",
   "future_store_field": "keep",
   "accounts": [{
     "access_token": "alice-token",
@@ -102,7 +102,7 @@ func TestSaveAccountUpdatesOneAccountAndPreservesOthers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(store.Accounts) != 2 || store.Active != "atomgit.com/alice" {
+	if len(store.Accounts) != 2 || store.Active != "alice" {
 		t.Fatalf("store = %#v", store)
 	}
 	bob, err := store.ResolveAccount("bob")
@@ -111,28 +111,23 @@ func TestSaveAccountUpdatesOneAccountAndPreservesOthers(t *testing.T) {
 	}
 }
 
-func TestCredentialStoreSwitchAndAmbiguousLogin(t *testing.T) {
+func TestCredentialStoreUsesCaseInsensitiveUsernameKey(t *testing.T) {
 	isolateConfig(t)
-	for _, account := range []StoredCredentials{
-		{AccessToken: "a", User: "same", Host: "atomgit.com"},
-		{AccessToken: "b", User: "same", Host: "gitcode.com"},
-	} {
-		if err := SaveAccount(&account, false); err != nil {
-			t.Fatal(err)
-		}
-	}
-	store, err := LoadCredentialStore()
-	if err != nil {
+	if err := SaveAccount(&StoredCredentials{AccessToken: "old", User: "Alice"}, false); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.ResolveAccount("same"); err == nil || !strings.Contains(err.Error(), "ambiguous") {
-		t.Fatalf("error = %v", err)
+	if err := SaveAccount(&StoredCredentials{AccessToken: "new", User: "alice"}, false); err != nil {
+		t.Fatal(err)
 	}
-	if key, err := SwitchAccount("gitcode.com/same"); err != nil || key != "gitcode.com/same" {
+	store, err := LoadCredentialStore()
+	if err != nil || len(store.Accounts) != 1 {
+		t.Fatalf("store = %#v, error = %v", store, err)
+	}
+	if key, err := SwitchAccount(" ALICE "); err != nil || key != "alice" {
 		t.Fatalf("key = %q, error = %v", key, err)
 	}
 	active, err := LoadStoredCredentials()
-	if err != nil || active.AccessToken != "b" {
+	if err != nil || active.AccessToken != "new" || active.User != "alice" {
 		t.Fatalf("active = %#v, error = %v", active, err)
 	}
 }
@@ -148,11 +143,11 @@ func TestRemoveInactiveAccountKeepsActiveAccount(t *testing.T) {
 		}
 	}
 	removed, empty, err := RemoveAccount("alice")
-	if err != nil || empty || removed != "atomgit.com/alice" {
+	if err != nil || empty || removed != "alice" {
 		t.Fatalf("removed = %q, empty = %t, error = %v", removed, empty, err)
 	}
 	store, err := LoadCredentialStore()
-	if err != nil || len(store.Accounts) != 1 || store.Active != "atomgit.com/bob" {
+	if err != nil || len(store.Accounts) != 1 || store.Active != "bob" {
 		t.Fatalf("store = %#v, error = %v", store, err)
 	}
 }

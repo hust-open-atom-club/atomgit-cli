@@ -36,15 +36,14 @@
 | `created_at` | 否 | CLI 保存或刷新 OAuth 凭据时记录的 Unix 时间戳（秒），用于表示签发/保存时间。手动配置 PAT 时可省略。 |
 | `token_type` | 否 | OAuth 服务返回的令牌类型；手动配置 PAT 时可省略。API 请求当前使用 `Bearer`。 |
 
-`ag auth login` 会将凭据保存为多账号格式，并以 `host/login` 作为唯一标识：
+`ag auth login` 会将凭据保存为多账号格式。由于 CLI 仅支持 `atomgit.com`，账号以规范化后的用户名作为唯一标识：
 
 ```json
 {
   "version": 2,
-  "active": "atomgit.com/alice",
+  "active": "alice",
   "accounts": [
     {
-      "host": "atomgit.com",
       "user": "alice",
       "access_token": "your-personal-access-token",
       "name": "Alice",
