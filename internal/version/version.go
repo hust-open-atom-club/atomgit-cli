@@ -26,6 +26,7 @@ const (
 	SourceNPM         DistributionSource = "npm"
 	SourceHomebrew    DistributionSource = "homebrew"
 	SourceWinget      DistributionSource = "winget"
+	SourceScoop       DistributionSource = "scoop"
 	SourceNix         DistributionSource = "nix"
 	SourceUnknown     DistributionSource = "unknown"
 )

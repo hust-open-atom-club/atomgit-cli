@@ -75,6 +75,8 @@ scoop install https://raw.githubusercontent.com/hust-open-atom-club/ScoopBucket/
 scoop update atomgit-cli
 ```
 
+Scoop 安装的二进制报告 `selfUpdate=false, source=scoop`，升级由 Scoop 管理。
+
 ## Nix / NixOS 安装
 
 AtomGit CLI 已进入 `nixos-unstable`，nixpkgs 包名为 `atomgit-cli`，安装后提供 `ag` 命令。

@@ -5,7 +5,7 @@
 #   - 包管理器:    package-managers/ag_<os>_<arch>_<source>.<ext>
 #   - npm:         六个平台二进制子包和一个主启动包，以及独立的 npm/checksums.txt
 #   - SHA-256:     根 checksums.txt 仅覆盖六个普通归档和两个安装脚本；
-#                  package-managers-checksums.txt 仅覆盖 12 个 managed 归档
+#                  package-managers-checksums.txt 仅覆盖 14 个 managed 归档
 #
 # 用法:
 #   ./scripts/build-release.sh              # 版本来自 git describe，或环境变量 TAG
@@ -127,6 +127,8 @@ ag_linux_amd64_npm.tar.gz
 ag_linux_arm64_npm.tar.gz
 ag_windows_amd64_npm.zip
 ag_windows_arm64_npm.zip
+ag_windows_amd64_scoop.zip
+ag_windows_arm64_scoop.zip
 ag_windows_amd64_winget.zip
 ag_windows_arm64_winget.zip
 "
@@ -311,8 +313,8 @@ verify_managed_metadata() {
 
   filename_count=$(grep -c '"filename":' "$manifest")
   disabled_count=$(grep -c '"selfUpdate": false' "$manifest")
-  if [ "$filename_count" -ne 12 ] || [ "$disabled_count" -ne 12 ]; then
-    echo "错误: managed manifest 必须恰好包含 12 个 selfUpdate=false 条目。" >&2
+  if [ "$filename_count" -ne 14 ] || [ "$disabled_count" -ne 14 ]; then
+    echo "错误: managed manifest 必须恰好包含 14 个 selfUpdate=false 条目。" >&2
     return 1
   fi
 
@@ -554,6 +556,19 @@ case "$verify_os/$verify_arch" in
     verify_profile_metadata winget \
       "${MANAGED_OUT}/ag_windows_amd64_winget.zip" \
       false winget windows amd64
+    ;;
+esac
+
+case "$verify_os/$verify_arch" in
+  windows/amd64|windows/arm64)
+    verify_profile_metadata scoop \
+      "${MANAGED_OUT}/ag_windows_${verify_arch}_scoop.zip" \
+      false scoop windows "$verify_arch"
+    ;;
+  *)
+    verify_profile_metadata scoop \
+      "${MANAGED_OUT}/ag_windows_amd64_scoop.zip" \
+      false scoop windows amd64
     ;;
 esac
 

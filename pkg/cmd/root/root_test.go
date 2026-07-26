@@ -102,6 +102,7 @@ func TestNewCmdRootVersionMatchesVersionCommandForEveryProfile(t *testing.T) {
 		{name: "npm", source: "npm"},
 		{name: "homebrew", source: "homebrew"},
 		{name: "winget", source: "winget"},
+		{name: "scoop", source: "scoop"},
 		{name: "nix", source: "nix"},
 		{name: "extension source", source: "corp-repo"},
 		{name: "invalid source", source: "unknown"},

@@ -30,6 +30,8 @@ Windows 用户可以通过组织维护的 scoop bucket 安装：
 scoop install https://raw.githubusercontent.com/hust-open-atom-club/ScoopBucket/main/bucket/atomgit-cli.json
 ```
 
+Scoop 安装的二进制由 Scoop 管理升级，并报告 `selfUpdate=false, source=scoop`。
+
 ### Nix / NixOS
 
 AtomGit CLI 已进入 `nixos-unstable`，包名为 `atomgit-cli`，安装后提供 `ag` 命令。

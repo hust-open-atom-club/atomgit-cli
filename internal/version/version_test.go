@@ -242,6 +242,7 @@ func TestPolicy_DerivesSelfUpdateFromSource(t *testing.T) {
 		{name: "npm", source: "npm", wantState: PolicyDisabled, wantSource: SourceNPM},
 		{name: "homebrew", source: "homebrew", wantState: PolicyDisabled, wantSource: SourceHomebrew},
 		{name: "winget", source: "winget", wantState: PolicyDisabled, wantSource: SourceWinget},
+		{name: "scoop", source: "scoop", wantState: PolicyDisabled, wantSource: SourceScoop},
 		{name: "nix", source: "nix", wantState: PolicyDisabled, wantSource: SourceNix},
 		{name: "extension source", source: "corp_repo-1.2", wantState: PolicyDisabled, wantSource: "corp_repo-1.2"},
 		{name: "empty source", source: "", wantState: PolicyInvalid, wantSource: SourceUnknown},
