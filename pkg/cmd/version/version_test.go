@@ -10,20 +10,18 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 )
 
-func setVersionMetadata(t *testing.T, selfUpdate, source string) {
+func setVersionMetadata(t *testing.T, source string) {
 	t.Helper()
 	oldV, oldC, oldB := version.Version, version.Commit, version.BuildDate
-	oldSelfUpdate, oldSource := version.SelfUpdate, version.Source
+	oldSource := version.Source
 	version.Version = "v1.2.3"
 	version.Commit = "abc1234"
 	version.BuildDate = "2026-07-24T00:00:00Z"
-	version.SelfUpdate = selfUpdate
 	version.Source = source
 	t.Cleanup(func() {
 		version.Version = oldV
 		version.Commit = oldC
 		version.BuildDate = oldB
-		version.SelfUpdate = oldSelfUpdate
 		version.Source = oldSource
 	})
 }
@@ -31,25 +29,24 @@ func setVersionMetadata(t *testing.T, selfUpdate, source string) {
 func TestNewCmdVersion_TextProfileAndInvalidMatrix(t *testing.T) {
 	tests := []struct {
 		name           string
-		selfUpdate     string
 		source         string
 		wantSelfUpdate bool
 		wantSource     string
 	}{
-		{name: "source", selfUpdate: "true", source: "source", wantSelfUpdate: true, wantSource: "source"},
-		{name: "release", selfUpdate: "true", source: "release", wantSelfUpdate: true, wantSource: "release"},
-		{name: "development", selfUpdate: "true", source: "development", wantSelfUpdate: true, wantSource: "development"},
-		{name: "npm", selfUpdate: "false", source: "npm", wantSource: "npm"},
-		{name: "homebrew", selfUpdate: "false", source: "homebrew", wantSource: "homebrew"},
-		{name: "winget", selfUpdate: "false", source: "winget", wantSource: "winget"},
-		{name: "nix", selfUpdate: "false", source: "nix", wantSource: "nix"},
-		{name: "invalid boolean", selfUpdate: "TRUE", source: "release", wantSource: "unknown"},
-		{name: "invalid source", selfUpdate: "true", source: "unknown", wantSource: "unknown"},
+		{name: "source", source: "source", wantSelfUpdate: true, wantSource: "source"},
+		{name: "release", source: "release", wantSelfUpdate: true, wantSource: "release"},
+		{name: "development", source: "development", wantSelfUpdate: true, wantSource: "development"},
+		{name: "npm", source: "npm", wantSource: "npm"},
+		{name: "homebrew", source: "homebrew", wantSource: "homebrew"},
+		{name: "winget", source: "winget", wantSource: "winget"},
+		{name: "nix", source: "nix", wantSource: "nix"},
+		{name: "extension source", source: "corp-repo", wantSource: "corp-repo"},
+		{name: "invalid source", source: "unknown", wantSource: "unknown"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			setVersionMetadata(t, tt.selfUpdate, tt.source)
+			setVersionMetadata(t, tt.source)
 
 			var buf bytes.Buffer
 			cmd := NewCmdVersion()
@@ -119,7 +116,7 @@ func TestFormatTextOmitsUnknownMetadata(t *testing.T) {
 }
 
 func TestText_MatchesVersionCLIContract(t *testing.T) {
-	setVersionMetadata(t, "true", "release")
+	setVersionMetadata(t, "release")
 
 	want := "ag version v1.2.3 (commit: abc1234, built: 2026-07-24T00:00:00Z, self-update: true, source: release)\n"
 	if got := Text(); got != want {
@@ -130,25 +127,24 @@ func TestText_MatchesVersionCLIContract(t *testing.T) {
 func TestNewCmdVersion_JSONPreservesFieldsAndAddsPolicy(t *testing.T) {
 	tests := []struct {
 		name           string
-		selfUpdate     string
 		source         string
 		wantSelfUpdate bool
 		wantSource     string
 	}{
-		{name: "source", selfUpdate: "true", source: "source", wantSelfUpdate: true, wantSource: "source"},
-		{name: "release", selfUpdate: "true", source: "release", wantSelfUpdate: true, wantSource: "release"},
-		{name: "development", selfUpdate: "true", source: "development", wantSelfUpdate: true, wantSource: "development"},
-		{name: "npm", selfUpdate: "false", source: "npm", wantSource: "npm"},
-		{name: "homebrew", selfUpdate: "false", source: "homebrew", wantSource: "homebrew"},
-		{name: "winget", selfUpdate: "false", source: "winget", wantSource: "winget"},
-		{name: "nix", selfUpdate: "false", source: "nix", wantSource: "nix"},
-		{name: "invalid boolean", selfUpdate: "yes", source: "release", wantSource: "unknown"},
-		{name: "invalid source", selfUpdate: "true", source: "unknown", wantSource: "unknown"},
+		{name: "source", source: "source", wantSelfUpdate: true, wantSource: "source"},
+		{name: "release", source: "release", wantSelfUpdate: true, wantSource: "release"},
+		{name: "development", source: "development", wantSelfUpdate: true, wantSource: "development"},
+		{name: "npm", source: "npm", wantSource: "npm"},
+		{name: "homebrew", source: "homebrew", wantSource: "homebrew"},
+		{name: "winget", source: "winget", wantSource: "winget"},
+		{name: "nix", source: "nix", wantSource: "nix"},
+		{name: "extension source", source: "corp-repo", wantSource: "corp-repo"},
+		{name: "invalid source", source: "unknown", wantSource: "unknown"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			setVersionMetadata(t, tt.selfUpdate, tt.source)
+			setVersionMetadata(t, tt.source)
 
 			var buf bytes.Buffer
 			cmd := NewCmdVersion()

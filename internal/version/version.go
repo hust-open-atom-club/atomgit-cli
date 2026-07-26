@@ -8,11 +8,10 @@ import (
 
 // Linker-overridable build metadata. Release builds injected via -ldflags -X.
 var (
-	Version    = "dev"
-	Commit     = "unknown"
-	BuildDate  = "unknown"
-	SelfUpdate = "true"
-	Source     = "source"
+	Version   = "dev"
+	Commit    = "unknown"
+	BuildDate = "unknown"
+	Source    = "source"
 )
 
 // ReadBuildInfo is a package-level variable for test injection.
@@ -58,24 +57,25 @@ var distributionSourcePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,63}$`
 
 func Policy() BuildPolicy {
 	source := DistributionSource(Source)
-	if (SelfUpdate != "true" && SelfUpdate != "false") ||
-		source == SourceUnknown ||
+	if source == SourceUnknown ||
 		!distributionSourcePattern.MatchString(string(source)) {
 		return BuildPolicy{
 			State:  PolicyInvalid,
 			Source: SourceUnknown,
 		}
 	}
-	if SelfUpdate == "false" {
+	switch source {
+	case SourceSource, SourceRelease, SourceDevelopment:
+		return BuildPolicy{
+			State:      PolicyEnabled,
+			Source:     source,
+			SelfUpdate: true,
+		}
+	default:
 		return BuildPolicy{
 			State:  PolicyDisabled,
 			Source: source,
 		}
-	}
-	return BuildPolicy{
-		State:      PolicyEnabled,
-		Source:     source,
-		SelfUpdate: true,
 	}
 }
 

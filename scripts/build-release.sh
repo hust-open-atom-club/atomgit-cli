@@ -103,7 +103,6 @@ LINK_FLAGS="-s -w"
 LINK_FLAGS="${LINK_FLAGS} -X 'atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Version=${TAG}'"
 LINK_FLAGS="${LINK_FLAGS} -X 'atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Commit=${COMMIT}'"
 LINK_FLAGS="${LINK_FLAGS} -X 'atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.BuildDate=${BUILD_DATE}'"
-LINK_FLAGS="${LINK_FLAGS} -X 'atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.SelfUpdate=true'"
 LINK_FLAGS="${LINK_FLAGS} -X 'atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Source=release'"
 
 ORDINARY_ARCHIVES="
@@ -223,7 +222,6 @@ verify_profile_metadata() {
     profile_flags="${profile_flags} -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Version=${TAG}"
     profile_flags="${profile_flags} -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Commit=${COMMIT}"
     profile_flags="${profile_flags} -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.BuildDate=${BUILD_DATE}"
-    profile_flags="${profile_flags} -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.SelfUpdate=${expected_self_update}"
     profile_flags="${profile_flags} -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Source=${expected_source}"
     GOOS="$host_os" GOARCH="$host_arch" CGO_ENABLED=0 \
       go build -trimpath -ldflags="$profile_flags" -o "$verify_binary" ./cmd/ag || {

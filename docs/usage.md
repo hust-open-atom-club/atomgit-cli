@@ -608,16 +608,15 @@ ag --version
 ag version --json
 ```
 
-`ag version`、`ag --version` 和 `ag version --json` 同时显示 `selfUpdate` 与 `source`，用于说明当前二进制是否允许自替换以及其发行来源。通过 `make build` 或 `make install` 从源码构建且未注入发布元数据时，默认报告 `selfUpdate=true, source=source`，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，命令会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
+`ag version`、`ag --version` 和 `ag version --json` 同时显示 `selfUpdate` 与 `source`，用于说明当前二进制是否允许自替换以及其发行来源。`selfUpdate` 由 `source` 集中派生，不是独立的构建输入：`release`、`source` 和 `development` 允许自升级，包管理器、自定义和未知来源默认禁止。通过 `make build` 或 `make install` 从源码构建且未注入发布元数据时，默认报告 `selfUpdate=true, source=source`，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，命令会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
 
 通过 `go install ...@latest` 从模块代理安装时，模块版本仍然可用，但由于源码包不包含 Git 历史，文本输出会省略无法获得的 commit 和构建时间，JSON 输出则将对应字段保留为 `unknown`。
 
-下游源码打包方应显式注入自身来源并禁用自升级，例如：
+下游源码打包方应显式注入自身来源；合法的自定义来源会自动禁用自升级，例如：
 
 ```bash
 go build -trimpath -ldflags \
-  "-X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.SelfUpdate=false \
-   -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Source=example-manager" \
+  "-X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Source=example-manager" \
   ./cmd/ag
 ```
 
