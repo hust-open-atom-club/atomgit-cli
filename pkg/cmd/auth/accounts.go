@@ -115,6 +115,8 @@ func newCmdAuthSwitch(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVar(&gitName, "git-name", "", "Override Git user.name for this switch")
 	cmd.Flags().StringVar(&gitEmail, "git-email", "", "Override Git user.email for this switch")
 	cmd.MarkFlagsMutuallyExclusive("no-git", "global")
+	cmd.MarkFlagsMutuallyExclusive("no-git", "git-name")
+	cmd.MarkFlagsMutuallyExclusive("no-git", "git-email")
 	return cmd
 }
 

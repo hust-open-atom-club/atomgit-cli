@@ -266,7 +266,7 @@ func SaveToken(accessToken, user string) error {
 	if accessToken == "" {
 		return fmt.Errorf("access_token is empty")
 	}
-	existing, err := LoadStoredCredentials()
+	store, err := LoadCredentialStore()
 	if err != nil {
 		if errors.Is(err, ErrTokenNotFound) {
 			return SaveCredentials(&StoredCredentials{
@@ -277,10 +277,14 @@ func SaveToken(accessToken, user string) error {
 		}
 		return err
 	}
+	existing, err := store.ActiveAccount()
+	if err != nil {
+		return err
+	}
 	existing.AccessToken = accessToken
 	existing.User = user
 	existing.CreatedAt = time.Now().Unix()
-	return SaveCredentials(existing)
+	return replaceActiveAccount(store, existing)
 }
 
 // SaveCredentials adds or updates an account and makes it active.

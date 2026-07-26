@@ -193,6 +193,40 @@ func SaveAccount(credentials *StoredCredentials, makeActive bool) error {
 	return saveCredentialStore(store)
 }
 
+// replaceActiveAccount replaces the active record, including its username key,
+// without leaving the previous key behind.
+func replaceActiveAccount(store *CredentialStore, credentials *StoredCredentials) error {
+	if store == nil {
+		return fmt.Errorf("credential store is nil")
+	}
+	if credentials == nil {
+		return fmt.Errorf("credentials are nil")
+	}
+	account, err := normalizeAccount(*credentials)
+	if err != nil {
+		return err
+	}
+	previousKey := store.Active
+	replacementKey := account.Key()
+	activeIndex := -1
+	for index := range store.Accounts {
+		key := store.Accounts[index].Key()
+		if key == previousKey {
+			activeIndex = index
+			continue
+		}
+		if key == replacementKey {
+			return fmt.Errorf("cannot rename active account %s to %s: account already exists", previousKey, replacementKey)
+		}
+	}
+	if activeIndex < 0 {
+		return fmt.Errorf("active account %q was not found", previousKey)
+	}
+	store.Accounts[activeIndex] = account
+	store.Active = replacementKey
+	return saveCredentialStore(store)
+}
+
 // SwitchAccount selects an existing account and returns its key.
 func SwitchAccount(selector string) (string, error) {
 	store, err := LoadCredentialStore()

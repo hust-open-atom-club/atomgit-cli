@@ -68,6 +68,30 @@ func TestAuthSwitchWithoutGitChangesActiveAccount(t *testing.T) {
 	}
 }
 
+func TestAuthSwitchRejectsNoGitWithIdentityOverrides(t *testing.T) {
+	for _, flag := range []struct {
+		name  string
+		value string
+	}{
+		{name: "git-name", value: "Alice"},
+		{name: "git-email", value: "alice@example.com"},
+	} {
+		t.Run(flag.name, func(t *testing.T) {
+			cmd := newCmdAuthSwitch(&cmdutil.Factory{})
+			if err := cmd.Flags().Set("no-git", "true"); err != nil {
+				t.Fatal(err)
+			}
+			if err := cmd.Flags().Set(flag.name, flag.value); err != nil {
+				t.Fatal(err)
+			}
+			err := cmd.ValidateFlagGroups()
+			if err == nil || !strings.Contains(err.Error(), "none of the others can be") {
+				t.Fatalf("error = %v", err)
+			}
+		})
+	}
+}
+
 func TestAuthSwitchUpdatesLocalOrGlobalGitIdentity(t *testing.T) {
 	for _, test := range []struct {
 		name   string
