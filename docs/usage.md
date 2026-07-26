@@ -15,6 +15,19 @@ ag pr create --help
 # 浏览器 OAuth 登录并写入令牌文件
 ag auth login
 # 已登录时会提示无需重复登录；若要重新走浏览器：ag auth login --force
+# 可为账号保存提交身份覆盖值
+ag auth login --force --git-name "Alice" --git-email alice@example.com
+
+# 列出账号（不会输出 token）并切换活动账号
+ag auth list
+ag auth list --json
+ag auth switch alice
+ag auth switch atomgit.com/alice
+
+# 按当前活动账号同步 Git identity；默认仅修改当前仓库
+ag auth git-sync
+ag auth git-sync --git-name "Alice" --git-email alice@example.com
+ag auth git-sync --global
 
 # 用 refresh_token 刷新 access_token（需之前登录响应里包含 refresh_token）
 ag auth refresh
@@ -25,9 +38,17 @@ ag auth status
 # 显示当前 token
 ag auth token
 
-# 删除本地令牌文件
+# 删除非活动账号、最后一个活动账号，或全部账号
 ag auth logout
+ag auth logout --account alice
+ag auth logout --all
 ```
+
+`auth status`、`auth token` 和 `auth refresh` 始终使用活动账号。首次登录的账号会自动成为活动账号；后续 `auth login --force` 只新增或更新账号，不会隐式切换，需使用 `auth switch` 显式选择。`auth switch` 只切换活动凭据，不修改 Git 配置；需要同步提交身份时，再显式执行 `auth git-sync`。两条命令互不回滚，调用者应分别检查执行结果并决定是否重试或回切账号。
+
+`auth git-sync` 默认只写当前仓库的 `git config --local user.name/user.email`，只有 `--global` 才修改全局配置。API 邮箱缺失时 CLI 不会猜测邮箱，必须通过登录时的 `--git-email` 或同步时的 `--git-email` 明确提供。Git identity 的 name/email 部分写入失败时会尝试恢复同步前的值，但不会修改活动凭据。
+
+`auth logout` 默认删除活动账号。为避免删除动作隐式选择另一个账号并造成 Git identity 错配，当仍有其他账号时不能删除活动账号；应先执行 `auth switch <account>`，再用 `auth logout --account <old-account>` 删除原账号。`--account` 可直接删除非活动账号，`--all` 明确删除全部账号。access token、refresh token 不会写入 Git 配置、remote URL、账号列表或错误信息。
 
 可选环境变量（覆盖默认 OAuth 应用）：`AG_OAUTH_CLIENT_ID`、`AG_OAUTH_CLIENT_SECRET`；若本机 **8765** 端口被占用，可设置 **`AG_OAUTH_REDIRECT_PORT`**（需与 AtomGit 应用配置的回调地址一致）。
 

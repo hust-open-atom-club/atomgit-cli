@@ -16,7 +16,7 @@
 - macOS：`/Users/<用户名>/.config/ag-cli/token.json`
 - Windows：`C:\Users\<用户名>\.config\ag-cli\token.json`
 
-手动配置 PAT 时，文件内容至少包括：
+手动配置单个 PAT 时，仍可使用兼容的旧格式：
 
 ```json
 {
@@ -36,7 +36,26 @@
 | `created_at` | 否 | CLI 保存或刷新 OAuth 凭据时记录的 Unix 时间戳（秒），用于表示签发/保存时间。手动配置 PAT 时可省略。 |
 | `token_type` | 否 | OAuth 服务返回的令牌类型；手动配置 PAT 时可省略。API 请求当前使用 `Bearer`。 |
 
-`ag auth login` 会自动写入上述 OAuth 字段；手动使用 PAT 时不要自行编造 `refresh_token`、`expires_in` 或 `created_at`。请确保配置文件仅允许当前用户读取和写入令牌文件。
+`ag auth login` 会将凭据保存为多账号格式，并以 `host/login` 作为唯一标识：
+
+```json
+{
+  "version": 2,
+  "active": "atomgit.com/alice",
+  "accounts": [
+    {
+      "host": "atomgit.com",
+      "user": "alice",
+      "access_token": "your-personal-access-token",
+      "name": "Alice",
+      "email": "alice@example.com",
+      "token_type": "Bearer"
+    }
+  ]
+}
+```
+
+旧单账号文件会继续正常读取，并在下一次登录、刷新、切换或退出账号时无损升级；已有 `refresh_token` 等 OAuth 字段会保留。手动使用 PAT 时不要自行编造 `refresh_token`、`expires_in` 或 `created_at`。令牌文件使用 `0600` 权限，写入通过同目录临时文件原子替换；不要将它提交到版本控制。
 
 ## 输出安全
 
