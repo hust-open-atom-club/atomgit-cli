@@ -28,8 +28,22 @@ func NewCmdAuth(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdAuthGitSync(f))
 	cmd.AddCommand(newCmdAuthStatus(f))
 	cmd.AddCommand(newCmdAuthToken(f))
+	for _, child := range cmd.Commands() {
+		child.PreRunE = migrateLegacyCredentials
+	}
 
 	return cmd
+}
+
+func migrateLegacyCredentials(*cobra.Command, []string) error {
+	_, err := config.MigrateCredentialStore()
+	if errors.Is(err, config.ErrTokenNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("migrate credential store: %w", err)
+	}
+	return nil
 }
 
 func newCmdAuthLogout() *cobra.Command {

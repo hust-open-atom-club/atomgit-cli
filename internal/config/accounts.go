@@ -40,63 +40,85 @@ func normalizeAccount(c StoredCredentials) (StoredCredentials, error) {
 }
 
 // LoadCredentialStore reads either the multi-account format or the legacy
-// single-account record. Legacy data remains unchanged until the next write.
+// single-account record without changing the credential file.
 func LoadCredentialStore() (*CredentialStore, error) {
+	store, _, err := loadCredentialStore()
+	return store, err
+}
+
+func loadCredentialStore() (*CredentialStore, bool, error) {
 	data, err := readCredentialData()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	var envelope struct {
 		Version  int             `json:"version"`
 		Accounts json.RawMessage `json:"accounts"`
 	}
 	if err := json.Unmarshal(data, &envelope); err != nil {
-		return nil, fmt.Errorf("failed to parse token file: %w", err)
+		return nil, false, fmt.Errorf("failed to parse token file: %w", err)
 	}
 	if envelope.Version != 0 && envelope.Version != credentialStoreVersion {
-		return nil, fmt.Errorf("unsupported credential store version %d", envelope.Version)
+		return nil, false, fmt.Errorf("unsupported credential store version %d", envelope.Version)
 	}
 	if envelope.Version == 0 && envelope.Accounts != nil {
-		return nil, fmt.Errorf("credential store version is required when accounts are present")
+		return nil, false, fmt.Errorf("credential store version is required when accounts are present")
 	}
 	var store CredentialStore
 	if err := json.Unmarshal(data, &store); err != nil {
-		return nil, fmt.Errorf("failed to parse token file: %w", err)
+		return nil, false, fmt.Errorf("failed to parse token file: %w", err)
 	}
 	if store.Version == credentialStoreVersion {
 		if len(store.Accounts) == 0 {
-			return nil, fmt.Errorf("token file has no accounts")
+			return nil, false, fmt.Errorf("token file has no accounts")
 		}
 		store.Active = strings.ToLower(strings.TrimSpace(store.Active))
 		seen := make(map[string]bool, len(store.Accounts))
 		for index := range store.Accounts {
 			account, err := normalizeAccount(store.Accounts[index])
 			if err != nil {
-				return nil, fmt.Errorf("invalid account %d: %w", index, err)
+				return nil, false, fmt.Errorf("invalid account %d: %w", index, err)
 			}
 			key := account.Key()
 			if seen[key] {
-				return nil, fmt.Errorf("duplicate account %s", key)
+				return nil, false, fmt.Errorf("duplicate account %s", key)
 			}
 			seen[key] = true
 			store.Accounts[index] = account
 		}
 		if !seen[store.Active] {
-			return nil, fmt.Errorf("active account %q was not found", store.Active)
+			return nil, false, fmt.Errorf("active account %q was not found", store.Active)
 		}
 		store.Version = credentialStoreVersion
-		return &store, nil
+		return &store, false, nil
 	}
 
 	var legacy StoredCredentials
 	if err := json.Unmarshal(data, &legacy); err != nil {
-		return nil, fmt.Errorf("failed to parse token file: %w", err)
+		return nil, false, fmt.Errorf("failed to parse token file: %w", err)
 	}
 	legacy, err = normalizeAccount(legacy)
 	if err != nil {
-		return nil, fmt.Errorf("token file has empty access_token or invalid account: %w", err)
+		return nil, false, fmt.Errorf("token file has empty access_token or invalid account: %w", err)
 	}
-	return &CredentialStore{Version: credentialStoreVersion, Active: legacy.Key(), Accounts: []StoredCredentials{legacy}}, nil
+	return &CredentialStore{Version: credentialStoreVersion, Active: legacy.Key(), Accounts: []StoredCredentials{legacy}}, true, nil
+}
+
+// MigrateCredentialStore upgrades a legacy single-account credential file to
+// the current multi-account format. It returns true only when it rewrites the
+// file and leaves current-format files unchanged.
+func MigrateCredentialStore() (bool, error) {
+	store, legacy, err := loadCredentialStore()
+	if err != nil {
+		return false, err
+	}
+	if !legacy {
+		return false, nil
+	}
+	if err := saveCredentialStore(store); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // ActiveAccount returns a copy of the selected account.

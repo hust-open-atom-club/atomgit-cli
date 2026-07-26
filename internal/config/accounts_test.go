@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestCredentialStoreMigratesLegacyWithoutLosingOAuthFields(t *testing.T) {
+func TestMigrateCredentialStorePreservesLegacyOAuthFields(t *testing.T) {
 	home := isolateConfig(t)
 	path := filepath.Join(home, ".config", appName, tokenFile)
 	legacy := StoredCredentials{
@@ -32,6 +32,38 @@ func TestCredentialStoreMigratesLegacyWithoutLosingOAuthFields(t *testing.T) {
 		t.Fatal("read-only migration rewrote the legacy file")
 	}
 
+	migrated, err := MigrateCredentialStore()
+	if err != nil || !migrated {
+		t.Fatalf("migrated = %t, error = %v", migrated, err)
+	}
+	migratedData, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var migratedStore CredentialStore
+	if err := json.Unmarshal(migratedData, &migratedStore); err != nil {
+		t.Fatal(err)
+	}
+	if migratedStore.Version != credentialStoreVersion || migratedStore.Active != "alice" || len(migratedStore.Accounts) != 1 {
+		t.Fatalf("migrated store = %#v", migratedStore)
+	}
+	alice, err := migratedStore.ResolveAccount("alice")
+	if err != nil || alice.RefreshToken != "alice-refresh" || alice.ExpiresIn != 3600 || alice.CreatedAt != 123 {
+		t.Fatalf("alice = %#v, error = %v", alice, err)
+	}
+
+	migratedAgain, err := MigrateCredentialStore()
+	if err != nil || migratedAgain {
+		t.Fatalf("migrated again = %t, error = %v", migratedAgain, err)
+	}
+	afterSecondMigration, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(afterSecondMigration) != string(migratedData) {
+		t.Fatal("current credential store was rewritten")
+	}
+
 	if err := SaveAccount(&StoredCredentials{AccessToken: "bob-access", User: "bob", RefreshToken: "bob-refresh"}, true); err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +78,7 @@ func TestCredentialStoreMigratesLegacyWithoutLosingOAuthFields(t *testing.T) {
 	if persisted.Version != credentialStoreVersion || persisted.Active != "bob" || len(persisted.Accounts) != 2 {
 		t.Fatalf("persisted = %#v", persisted)
 	}
-	alice, err := persisted.ResolveAccount("alice")
+	alice, err = persisted.ResolveAccount("alice")
 	if err != nil || alice.RefreshToken != "alice-refresh" || alice.ExpiresIn != 3600 {
 		t.Fatalf("alice = %#v, error = %v", alice, err)
 	}
@@ -74,6 +106,9 @@ func TestCredentialStoreRejectsFutureVersionWithoutRewriting(t *testing.T) {
 
 	if _, err := SwitchAccount("alice"); err == nil || !strings.Contains(err.Error(), "unsupported credential store version 3") {
 		t.Fatalf("error = %v", err)
+	}
+	if migrated, err := MigrateCredentialStore(); err == nil || migrated || !strings.Contains(err.Error(), "unsupported credential store version 3") {
+		t.Fatalf("migrated = %t, error = %v", migrated, err)
 	}
 	if err := SaveAccount(&StoredCredentials{AccessToken: "bob-token", User: "bob"}, true); err == nil || !strings.Contains(err.Error(), "unsupported credential store version 3") {
 		t.Fatalf("save error = %v", err)

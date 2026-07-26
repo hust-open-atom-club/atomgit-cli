@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -89,6 +90,11 @@ func TestNewCmdAuthRegistersSubcommands(t *testing.T) {
 			t.Errorf("subcommand %q was not registered", name)
 		}
 	}
+	for _, child := range cmd.Commands() {
+		if child.PreRunE == nil {
+			t.Errorf("%s does not migrate credentials before running", child.Name())
+		}
+	}
 	login, _, err := cmd.Find([]string{"login"})
 	if err != nil {
 		t.Fatal(err)
@@ -109,6 +115,52 @@ func TestNewCmdAuthRegistersSubcommands(t *testing.T) {
 		if gitSync.Flags().Lookup(flag) == nil {
 			t.Fatalf("git-sync --%s flag was not registered", flag)
 		}
+	}
+}
+
+func TestAuthPreRunMigratesLegacyCredentialStore(t *testing.T) {
+	isolateAuthConfig(t)
+	path, err := config.PrimaryTokenPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	legacy := `{"access_token":"secret","user":"Alice","refresh_token":"refresh","expires_in":3600}`
+	if err := os.WriteFile(path, []byte(legacy), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewCmdAuth(&cmdutil.Factory{Config: testConfig{token: "secret", user: "Alice"}})
+	list, _, err := cmd.Find([]string{"list"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := list.PreRunE(list, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"version": 2`, `"active": "alice"`, `"refresh_token": "refresh"`} {
+		if !strings.Contains(string(data), want) {
+			t.Fatalf("migrated credential file missing %q:\n%s", want, data)
+		}
+	}
+}
+
+func TestAuthPreRunAllowsMissingCredentialFile(t *testing.T) {
+	isolateAuthConfig(t)
+	cmd := NewCmdAuth(&cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated")}})
+	login, _, err := cmd.Find([]string{"login"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := login.PreRunE(login, nil); err != nil {
+		t.Fatalf("pre-run error = %v", err)
 	}
 }
 
