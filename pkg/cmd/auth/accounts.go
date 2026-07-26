@@ -146,10 +146,10 @@ func updateGitIdentity(f *cmdutil.Factory, global bool, name, email string) (fun
 	}
 	oldName, nameErr := run("config", scope, "--get", "user.name")
 	oldEmail, emailErr := run("config", scope, "--get", "user.email")
-	if !isMissingGitValue(nameErr) {
+	if !isGitConfigSuccessOrMissing(nameErr) {
 		return nil, fmt.Errorf("read Git user.name: %w", nameErr)
 	}
-	if !isMissingGitValue(emailErr) {
+	if !isGitConfigSuccessOrMissing(emailErr) {
 		return nil, fmt.Errorf("read Git user.email: %w", emailErr)
 	}
 	restore := func() error {
@@ -175,7 +175,7 @@ func updateGitIdentity(f *cmdutil.Factory, global bool, name, email string) (fun
 	return restore, nil
 }
 
-func isMissingGitValue(err error) bool {
+func isGitConfigSuccessOrMissing(err error) bool {
 	if err == nil {
 		return true
 	}
@@ -189,7 +189,7 @@ func restoreGitValue(run func(...string) (string, error), scope, key, value stri
 		return err
 	}
 	_, err := run("config", scope, "--unset-all", key)
-	if isMissingGitValue(err) {
+	if isGitConfigSuccessOrMissing(err) {
 		return nil
 	}
 	return err
