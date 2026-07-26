@@ -79,7 +79,7 @@ func TestIsolateAuthConfigUsesTemporaryHome(t *testing.T) {
 
 func TestNewCmdAuthRegistersSubcommands(t *testing.T) {
 	cmd := NewCmdAuth(&cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated")}})
-	want := map[string]bool{"git-sync": false, "list": false, "login": false, "logout": false, "refresh": false, "status": false, "switch": false, "token": false}
+	want := map[string]bool{"list": false, "login": false, "logout": false, "refresh": false, "status": false, "switch": false, "token": false}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
 			want[child.Name()] = true
@@ -107,13 +107,13 @@ func TestNewCmdAuthRegistersSubcommands(t *testing.T) {
 			t.Fatalf("login --%s flag was not registered", flag)
 		}
 	}
-	gitSync, _, err := cmd.Find([]string{"git-sync"})
+	switchCmd, _, err := cmd.Find([]string{"switch"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, flag := range []string{"git-name", "git-email", "global"} {
-		if gitSync.Flags().Lookup(flag) == nil {
-			t.Fatalf("git-sync --%s flag was not registered", flag)
+	for _, flag := range []string{"git-name", "git-email", "global", "no-git"} {
+		if switchCmd.Flags().Lookup(flag) == nil {
+			t.Fatalf("switch --%s flag was not registered", flag)
 		}
 	}
 }
@@ -517,7 +517,7 @@ func TestAuthRefreshValidation(t *testing.T) {
 
 func TestAuthCommandArgs(t *testing.T) {
 	cmd := NewCmdAuth(&cmdutil.Factory{Config: testConfig{token: "token", user: "alice"}})
-	for _, name := range []string{"git-sync", "list", "login", "logout", "refresh", "status", "token"} {
+	for _, name := range []string{"list", "login", "logout", "refresh", "status", "token"} {
 		child, _, err := cmd.Find([]string{name})
 		if err != nil {
 			t.Fatal(err)

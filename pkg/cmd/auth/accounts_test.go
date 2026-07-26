@@ -45,16 +45,22 @@ func TestAuthListRedactsTokensAndMarksActive(t *testing.T) {
 	}
 }
 
-func TestAuthSwitchChangesOnlyActiveAccount(t *testing.T) {
+func TestAuthSwitchWithoutGitChangesActiveAccount(t *testing.T) {
 	saveAuthTestAccounts(t)
-	cmd := newCmdAuthSwitch()
+	gitCalls := 0
+	factory := &cmdutil.Factory{GitConfig: func(args ...string) (string, error) {
+		gitCalls++
+		return "", nil
+	}}
+	cmd := newCmdAuthSwitch(factory)
+	_ = cmd.Flags().Set("no-git", "true")
 	var output bytes.Buffer
 	cmd.SetOut(&output)
 	if err := cmd.RunE(cmd, []string{"alice"}); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(output.String(), "alice") {
-		t.Fatalf("output = %q", output.String())
+	if gitCalls != 0 || !strings.Contains(output.String(), "alice") {
+		t.Fatalf("gitCalls = %d, output = %q", gitCalls, output.String())
 	}
 	active, err := config.LoadStoredCredentials()
 	if err != nil || active.User != "alice" || active.AccessToken != "alice-secret" {
@@ -62,7 +68,7 @@ func TestAuthSwitchChangesOnlyActiveAccount(t *testing.T) {
 	}
 }
 
-func TestAuthGitSyncUpdatesLocalOrGlobalGitIdentity(t *testing.T) {
+func TestAuthSwitchUpdatesLocalOrGlobalGitIdentity(t *testing.T) {
 	for _, test := range []struct {
 		name   string
 		global bool
@@ -73,9 +79,6 @@ func TestAuthGitSyncUpdatesLocalOrGlobalGitIdentity(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			saveAuthTestAccounts(t)
-			if _, err := config.SwitchAccount("alice"); err != nil {
-				t.Fatal(err)
-			}
 			var calls []string
 			factory := &cmdutil.Factory{GitConfig: func(args ...string) (string, error) {
 				calls = append(calls, strings.Join(args, " "))
@@ -87,11 +90,11 @@ func TestAuthGitSyncUpdatesLocalOrGlobalGitIdentity(t *testing.T) {
 				}
 				return "", nil
 			}}
-			cmd := newCmdAuthGitSync(factory)
+			cmd := newCmdAuthSwitch(factory)
 			if test.global {
 				_ = cmd.Flags().Set("global", "true")
 			}
-			if err := cmd.RunE(cmd, nil); err != nil {
+			if err := cmd.RunE(cmd, []string{"alice"}); err != nil {
 				t.Fatal(err)
 			}
 			joined := strings.Join(calls, "\n")
@@ -123,7 +126,7 @@ func TestUpdateGitIdentityRollsBackPartialFailure(t *testing.T) {
 			return "", nil
 		}
 	}}
-	err := updateGitIdentity(factory, false, "New Name", "new@example.com")
+	_, err := updateGitIdentity(factory, false, "New Name", "new@example.com")
 	if err == nil || !strings.Contains(err.Error(), "write failed") {
 		t.Fatalf("error = %v", err)
 	}
@@ -156,7 +159,7 @@ func TestUpdateGitIdentityReportsRollbackFailure(t *testing.T) {
 		return "", nil
 	}}
 
-	err := updateGitIdentity(factory, false, "New Name", "new@example.com")
+	_, err := updateGitIdentity(factory, false, "New Name", "new@example.com")
 	if err == nil {
 		t.Fatal("expected update and rollback error")
 	}
@@ -170,21 +173,54 @@ func TestUpdateGitIdentityReportsRollbackFailure(t *testing.T) {
 	}
 }
 
-func TestAuthGitSyncValidatesIdentityWithoutChangingActiveAccount(t *testing.T) {
+func TestUpdateGitIdentityRestoreContinuesAfterNameFailure(t *testing.T) {
+	identity := map[string]string{
+		"user.name":  "Old Name",
+		"user.email": "old@example.com",
+	}
+	failNameRestore := false
+	factory := &cmdutil.Factory{GitConfig: func(args ...string) (string, error) {
+		if len(args) == 4 && args[2] == "--get" {
+			return identity[args[3]], nil
+		}
+		if failNameRestore && len(args) == 4 && args[2] == "user.name" && args[3] == "Old Name" {
+			return "", errors.New("name rollback failed")
+		}
+		if len(args) == 4 {
+			identity[args[2]] = args[3]
+		}
+		return "", nil
+	}}
+
+	restore, err := updateGitIdentity(factory, false, "New Name", "new@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	failNameRestore = true
+	err = restore()
+	if err == nil || !strings.Contains(err.Error(), "name rollback failed") {
+		t.Fatalf("error = %v", err)
+	}
+	if identity["user.name"] != "New Name" || identity["user.email"] != "old@example.com" {
+		t.Fatalf("identity = %#v", identity)
+	}
+}
+
+func TestAuthSwitchValidatesIdentityBeforeChangingAccount(t *testing.T) {
 	isolateAuthConfig(t)
-	if err := config.SaveAccount(&config.StoredCredentials{AccessToken: "alice", User: "alice"}, true); err != nil {
+	if err := config.SaveAccount(&config.StoredCredentials{AccessToken: "alice", User: "alice"}, false); err != nil {
 		t.Fatal(err)
 	}
-	if err := config.SaveAccount(&config.StoredCredentials{AccessToken: "bob", User: "bob", Name: "Bob", Email: "bob@example.com"}, false); err != nil {
+	if err := config.SaveAccount(&config.StoredCredentials{AccessToken: "bob", User: "bob", Name: "Bob", Email: "bob@example.com"}, true); err != nil {
 		t.Fatal(err)
 	}
-	cmd := newCmdAuthGitSync(&cmdutil.Factory{})
-	err := cmd.RunE(cmd, nil)
+	cmd := newCmdAuthSwitch(&cmdutil.Factory{})
+	err := cmd.RunE(cmd, []string{"alice"})
 	if err == nil || !strings.Contains(err.Error(), "no Git email") {
 		t.Fatalf("error = %v", err)
 	}
 	active, loadErr := config.LoadStoredCredentials()
-	if loadErr != nil || active.User != "alice" {
+	if loadErr != nil || active.User != "bob" {
 		t.Fatalf("active = %#v, error = %v", active, loadErr)
 	}
 }
@@ -242,7 +278,7 @@ func TestAuthLogoutAllAccounts(t *testing.T) {
 	}
 }
 
-func TestAuthGitSyncIdentityOverrides(t *testing.T) {
+func TestAuthSwitchIdentityOverrides(t *testing.T) {
 	saveAuthTestAccounts(t)
 	var writes []string
 	factory := &cmdutil.Factory{GitConfig: func(args ...string) (string, error) {
@@ -253,10 +289,10 @@ func TestAuthGitSyncIdentityOverrides(t *testing.T) {
 		writes = append(writes, call)
 		return "", nil
 	}}
-	cmd := newCmdAuthGitSync(factory)
+	cmd := newCmdAuthSwitch(factory)
 	_ = cmd.Flags().Set("git-name", "Commit Name")
 	_ = cmd.Flags().Set("git-email", "commit@example.com")
-	if err := cmd.RunE(cmd, nil); err != nil {
+	if err := cmd.RunE(cmd, []string{"alice"}); err != nil {
 		t.Fatal(err)
 	}
 	joined := strings.Join(writes, "\n")

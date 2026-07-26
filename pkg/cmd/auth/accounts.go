@@ -57,61 +57,64 @@ type accountJSON struct {
 	Email  string `json:"email"`
 }
 
-func newCmdAuthSwitch() *cobra.Command {
-	return &cobra.Command{
-		Use:   "switch <account>",
-		Short: "Switch the active account",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			key, err := config.SwitchAccount(args[0])
-			if err != nil {
-				return err
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Switched active account to %s\n", key)
-			return nil
-		},
-	}
-}
-
-func newCmdAuthGitSync(f *cmdutil.Factory) *cobra.Command {
-	var global bool
+func newCmdAuthSwitch(f *cmdutil.Factory) *cobra.Command {
+	var noGit, global bool
 	var gitName, gitEmail string
 	cmd := &cobra.Command{
-		Use:   "git-sync",
-		Short: "Synchronize Git identity with the active account",
-		Args:  cobra.NoArgs,
+		Use:   "switch <account>",
+		Short: "Switch the active account and synchronize Git identity",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			store, err := config.LoadCredentialStore()
 			if err != nil {
 				return err
 			}
-			account, err := store.ActiveAccount()
+			account, err := store.ResolveAccount(args[0])
 			if err != nil {
 				return err
 			}
 			name := firstNonEmpty(strings.TrimSpace(gitName), strings.TrimSpace(account.GitName), strings.TrimSpace(account.Name))
 			email := firstNonEmpty(strings.TrimSpace(gitEmail), strings.TrimSpace(account.GitEmail), strings.TrimSpace(account.Email))
-			if email == "" {
-				return fmt.Errorf("active account %s has no Git email; use --git-email", account.Key())
+			if !noGit && email == "" {
+				return fmt.Errorf("account %s has no Git email; use --git-email or --no-git", account.Key())
 			}
-			if name == "" {
-				return fmt.Errorf("active account %s has no Git name; use --git-name", account.Key())
+			if !noGit && name == "" {
+				return fmt.Errorf("account %s has no Git name; use --git-name or --no-git", account.Key())
 			}
 
-			if err := updateGitIdentity(f, global, name, email); err != nil {
+			var rollback func() error
+			if !noGit {
+				rollback, err = updateGitIdentity(f, global, name, email)
+				if err != nil {
+					return err
+				}
+			}
+			key, err := config.SwitchAccount(account.Key())
+			if err != nil {
+				if rollback != nil {
+					if rollbackErr := rollback(); rollbackErr != nil {
+						return fmt.Errorf("switch account: %v; additionally failed to restore Git identity: %w", err, rollbackErr)
+					}
+				}
 				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Switched active account to %s\n", key)
+			if noGit {
+				return nil
 			}
 			scope := "repository"
 			if global {
 				scope = "global"
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Updated %s Git identity for %s to %s <%s>\n", scope, account.Key(), name, email)
+			fmt.Fprintf(cmd.OutOrStdout(), "Updated %s Git identity to %s <%s>\n", scope, name, email)
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&noGit, "no-git", false, "Do not update Git identity")
 	cmd.Flags().BoolVar(&global, "global", false, "Update global Git identity instead of the current repository")
-	cmd.Flags().StringVar(&gitName, "git-name", "", "Override Git user.name for this synchronization")
-	cmd.Flags().StringVar(&gitEmail, "git-email", "", "Override Git user.email for this synchronization")
+	cmd.Flags().StringVar(&gitName, "git-name", "", "Override Git user.name for this switch")
+	cmd.Flags().StringVar(&gitEmail, "git-email", "", "Override Git user.email for this switch")
+	cmd.MarkFlagsMutuallyExclusive("no-git", "global")
 	return cmd
 }
 
@@ -124,7 +127,7 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
-func updateGitIdentity(f *cmdutil.Factory, global bool, name, email string) error {
+func updateGitIdentity(f *cmdutil.Factory, global bool, name, email string) (func() error, error) {
 	run := func(args ...string) (string, error) {
 		if f != nil && f.GitConfig != nil {
 			return f.GitConfig(args...)
@@ -142,10 +145,10 @@ func updateGitIdentity(f *cmdutil.Factory, global bool, name, email string) erro
 	oldName, nameErr := run("config", scope, "--get", "user.name")
 	oldEmail, emailErr := run("config", scope, "--get", "user.email")
 	if !isMissingGitValue(nameErr) {
-		return fmt.Errorf("read Git user.name: %w", nameErr)
+		return nil, fmt.Errorf("read Git user.name: %w", nameErr)
 	}
 	if !isMissingGitValue(emailErr) {
-		return fmt.Errorf("read Git user.email: %w", emailErr)
+		return nil, fmt.Errorf("read Git user.email: %w", emailErr)
 	}
 	restore := func() error {
 		var restoreNameErr, restoreEmailErr error
@@ -158,16 +161,16 @@ func updateGitIdentity(f *cmdutil.Factory, global bool, name, email string) erro
 		return errors.Join(restoreNameErr, restoreEmailErr)
 	}
 	if _, err := run("config", scope, "user.name", name); err != nil {
-		return fmt.Errorf("update Git user.name: %w", err)
+		return nil, fmt.Errorf("update Git user.name: %w", err)
 	}
 	if _, err := run("config", scope, "user.email", email); err != nil {
 		writeErr := fmt.Errorf("update Git user.email: %w", err)
 		if restoreErr := restore(); restoreErr != nil {
-			return errors.Join(writeErr, fmt.Errorf("rollback Git identity: %w", restoreErr))
+			return nil, errors.Join(writeErr, fmt.Errorf("rollback Git identity: %w", restoreErr))
 		}
-		return writeErr
+		return nil, writeErr
 	}
-	return nil
+	return restore, nil
 }
 
 func isMissingGitValue(err error) bool {

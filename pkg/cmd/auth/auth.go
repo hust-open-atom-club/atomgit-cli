@@ -24,8 +24,7 @@ func NewCmdAuth(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdAuthLogout())
 	cmd.AddCommand(newCmdAuthRefresh())
 	cmd.AddCommand(newCmdAuthList())
-	cmd.AddCommand(newCmdAuthSwitch())
-	cmd.AddCommand(newCmdAuthGitSync(f))
+	cmd.AddCommand(newCmdAuthSwitch(f))
 	cmd.AddCommand(newCmdAuthStatus(f))
 	cmd.AddCommand(newCmdAuthToken(f))
 	for _, child := range cmd.Commands() {
