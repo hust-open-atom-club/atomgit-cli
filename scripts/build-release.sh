@@ -577,19 +577,23 @@ esac
 
 rm -rf "$STAGING"
 
-# 生成与本次 TAG 一致的 install.sh / install.ps1，包括默认版本和文件头用法示例。
+# 从无版本的源码模板生成与本次 TAG 绑定的 install.sh / install.ps1。
 ESC_TAG=$(printf '%s\n' "$TAG" | sed 's/[\/&]/\\&/g')
+if ! grep -qx '_BUNDLED_TAG="__AG_RELEASE_TAG__"' "$ROOT/install.sh"; then
+  echo "错误: install.sh 缺少预期的 __AG_RELEASE_TAG__ 占位符" >&2
+  exit 1
+fi
+if ! grep -qx "\$BundledTag = '__AG_RELEASE_TAG__'" "$ROOT/install.ps1"; then
+  echo "错误: install.ps1 缺少预期的 __AG_RELEASE_TAG__ 占位符" >&2
+  exit 1
+fi
 sed \
-  -e "s@/releases/download/v[^/]*/install.sh@/releases/download/${ESC_TAG}/install.sh@" \
-  -e "s/^#   AG_VERSION=v[^ ]* sh install.sh$/#   AG_VERSION=${ESC_TAG} sh install.sh/" \
-  -e "s/^_BUNDLED_TAG=.*/_BUNDLED_TAG=\"${ESC_TAG}\"/" \
+  -e "s/^_BUNDLED_TAG=\"__AG_RELEASE_TAG__\"$/_BUNDLED_TAG=\"${ESC_TAG}\"/" \
   "$ROOT/install.sh" > "${OUT}/install.sh"
 chmod +x "${OUT}/install.sh"
 echo "已生成 ${OUT}/install.sh（默认 TAG=${TAG}）"
 sed \
-  -e "s@/releases/download/v[^/]*/install.ps1@/releases/download/${ESC_TAG}/install.ps1@" \
-  -e "s@^#   \$env:AG_VERSION = .*@#   \$env:AG_VERSION = \"${ESC_TAG}\"; .\\\\install.ps1@" \
-  -e "s/^\$BundledTag = '.*'/\$BundledTag = '${ESC_TAG}'/" \
+  -e "s/^\$BundledTag = '__AG_RELEASE_TAG__'/\$BundledTag = '${ESC_TAG}'/" \
   "$ROOT/install.ps1" > "${OUT}/install.ps1"
 echo "已生成 ${OUT}/install.ps1（默认 TAG=${TAG}）"
 

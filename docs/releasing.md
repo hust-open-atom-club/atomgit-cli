@@ -24,6 +24,8 @@ make release VERSION="v${VERSION}"
 - `npm/` 下的七个平台二进制包、一个主启动包和独立的 `npm/checksums.txt`。
 - 仅覆盖 AtomGit Release 附件（七个归档和两个安装脚本）的根 `checksums.txt`。
 
+仓库根目录的 `install.sh` 和 `install.ps1` 是不绑定具体版本的源码模板，使用 `__AG_RELEASE_TAG__` 占位符。发布构建只替换安装器中的绑定变量，生成的 Release 附件默认下载本次 tag；模板中的使用示例始终保持为 `latest` 和 `vX.Y.Z`，无需随版本手工修改。
+
 npm 平台包从对应的 `_npm` 归档提取二进制；Homebrew formula、Winget manifest 和 Scoop bucket manifest 应分别消费匹配的 `_homebrew`、`_winget` 与 `_scoop` 归档及校验和。Nix 不生成 `_nix` 归档。
 
 发布 npm 制品时，先发布 `npm/` 下七个名称带平台和架构的包；确认它们可用后，再发布 `atomgit-cli` 主包。主包和平台包必须使用相同版本。
