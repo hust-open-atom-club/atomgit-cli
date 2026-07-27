@@ -9,10 +9,10 @@
 #
 # 用法:
 #   ./scripts/build-release.sh              # 版本来自 git describe，或环境变量 TAG
-#   TAG=v0.1.0 ./scripts/build-release.sh
+#   TAG=vX.Y.Z ./scripts/build-release.sh
 #
 # 环境变量:
-#   TAG               版本标签或 git describe 版本 (如 v0.5.0、v0.5.0-2-gabc1234)
+#   TAG               版本标签或 git describe 版本 (如 vX.Y.Z、vX.Y.Z-N-g<commit>)
 #   SOURCE_DATE_EPOCH 用于可复现构建的 Unix 时间戳
 #   AG_VERIFY_ONLY=1  仅构建校验一个二进制，不产生发布归档
 #   AG_RELEASE_SNAPSHOT=1 允许未打 tag 或脏工作区的本地试打包，不得用于正式发布
@@ -61,7 +61,7 @@ validate_release_tag() {
 
 if ! validate_version "$TAG"; then
   echo "错误: TAG 值 \"$TAG\" 不是有效的发布或 git describe 版本" >&2
-  echo "请使用 v0.5.0 或 v0.5.0-2-gabc1234 等格式。" >&2
+  echo "请使用 vX.Y.Z 或 vX.Y.Z-N-g<commit> 等格式。" >&2
   exit 1
 fi
 
@@ -424,7 +424,7 @@ if [ "${AG_RELEASE_SNAPSHOT:-}" = "1" ]; then
   RELEASE_MODE=snapshot
 else
   if ! validate_release_tag "$TAG"; then
-    echo "错误: 正式发布标签必须使用 vX.Y.Z 格式（例如 v0.5.0）。" >&2
+    echo "错误: 正式发布标签必须使用 vX.Y.Z 格式。" >&2
     echo "历史两段式 tag 仅可通过 AG_RELEASE_SNAPSHOT=1 进行本地试打包。" >&2
     exit 1
   fi
@@ -468,7 +468,7 @@ echo "==> 校验 GoReleaser 配置 ..."
 "$GORELEASER" check
 
 if [ "$RELEASE_MODE" = "snapshot" ]; then
-  # 快照模式只在本地打包。AG_VERSION 保留项目已有的 v0.5 等
+  # 快照模式只在本地打包。AG_VERSION 保留项目已有的 vX.Y 等
   # 标签格式；快照内部版本去掉 v 前缀。
   AG_VERSION="$TAG" \
   AG_BUILD_DATE="$BUILD_DATE" \
