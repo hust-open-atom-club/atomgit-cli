@@ -5,6 +5,9 @@
 #   irm https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/v0.6.0/install.ps1 | iex
 #   $env:AG_VERSION = "v0.6.0"; .\install.ps1
 #
+# 安装完成后执行 `ag auth login` 完成 OAuth 认证。
+# 令牌文件默认路径: %USERPROFILE%\.config\ag-cli\token.json
+#
 # 若提示执行策略，可先: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 #Requires -Version 5.1
