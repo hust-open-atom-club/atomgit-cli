@@ -31,6 +31,7 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdPRReview(f))
 	cmd.AddCommand(newCmdPRDiff(f))
 	cmd.AddCommand(newCmdPRChecks(f))
+	cmd.AddCommand(newCmdPRCheckout(f))
 	cmd.AddCommand(newCmdViewIssues(f))
 	cmd.AddCommand(newCmdLinkIssues(f))
 	cmd.AddCommand(newCmdUnlinkIssues(f))

@@ -253,6 +253,7 @@ type Branch struct {
 	Ref                string       `json:"ref"`
 	SHA                string       `json:"sha"`
 	Repo               Repository   `json:"repo"`
+	User               User         `json:"user"`
 	Name               string       `json:"name"`
 	Commit             BranchCommit `json:"commit"`
 	Protected          FlexibleBool `json:"protected"`
