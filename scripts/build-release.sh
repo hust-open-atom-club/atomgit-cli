@@ -3,9 +3,9 @@
 #   - Linux/macOS: ag_<os>_<arch>.tar.gz（包内可执行文件名为 ag）
 #   - Windows:     ag_windows_<arch>.zip（包内为 ag.exe）
 #   - 包管理器:    package-managers/ag_<os>_<arch>_<source>.<ext>
-#   - npm:         六个平台二进制子包和一个主启动包，以及独立的 npm/checksums.txt
-#   - SHA-256:     根 checksums.txt 仅覆盖六个普通归档和两个安装脚本；
-#                  package-managers-checksums.txt 仅覆盖 14 个 managed 归档
+#   - npm:         七个平台二进制子包和一个主启动包，以及独立的 npm/checksums.txt
+#   - SHA-256:     根 checksums.txt 仅覆盖七个普通归档和两个安装脚本；
+#                  package-managers-checksums.txt 仅覆盖 15 个 managed 归档
 #
 # 用法:
 #   ./scripts/build-release.sh              # 版本来自 git describe，或环境变量 TAG
@@ -110,6 +110,7 @@ ag_darwin_amd64.tar.gz
 ag_darwin_arm64.tar.gz
 ag_linux_amd64.tar.gz
 ag_linux_arm64.tar.gz
+ag_linux_loong64.tar.gz
 ag_windows_amd64.zip
 ag_windows_arm64.zip
 "
@@ -125,6 +126,7 @@ ag_darwin_amd64_npm.tar.gz
 ag_darwin_arm64_npm.tar.gz
 ag_linux_amd64_npm.tar.gz
 ag_linux_arm64_npm.tar.gz
+ag_linux_loong64_npm.tar.gz
 ag_windows_amd64_npm.zip
 ag_windows_arm64_npm.zip
 ag_windows_amd64_scoop.zip
@@ -313,8 +315,8 @@ verify_managed_metadata() {
 
   filename_count=$(grep -c '"filename":' "$manifest")
   disabled_count=$(grep -c '"selfUpdate": false' "$manifest")
-  if [ "$filename_count" -ne 14 ] || [ "$disabled_count" -ne 14 ]; then
-    echo "错误: managed manifest 必须恰好包含 14 个 selfUpdate=false 条目。" >&2
+  if [ "$filename_count" -ne 15 ] || [ "$disabled_count" -ne 15 ]; then
+    echo "错误: managed manifest 必须恰好包含 15 个 selfUpdate=false 条目。" >&2
     return 1
   fi
 
@@ -485,6 +487,7 @@ fi
 
 cp "$STAGING"/ag_linux_amd64.tar.gz "$OUT/"
 cp "$STAGING"/ag_linux_arm64.tar.gz "$OUT/"
+cp "$STAGING"/ag_linux_loong64.tar.gz "$OUT/"
 cp "$STAGING"/ag_darwin_amd64.tar.gz "$OUT/"
 cp "$STAGING"/ag_darwin_arm64.tar.gz "$OUT/"
 cp "$STAGING"/ag_windows_amd64.zip "$OUT/"
@@ -621,6 +624,6 @@ if [ "$RELEASE_MODE" = "snapshot" ]; then
   echo "试打包完成。制品位于 ${OUT}/，请勿将未校验的快照制品用于正式发布。"
 else
   echo "完成。按以上 basename 清单手动上传 ${OUT}/ 和 ${MANAGED_OUT}/ 中的独立附件到 AtomGit Release「${TAG}」。"
-  echo "npm 包位于 ${OUT}/npm/；发布时先发布六个平台包，再发布 atomgit-cli 主包。"
+  echo "npm 包位于 ${OUT}/npm/；发布时先发布七个平台包，再发布 atomgit-cli 主包。"
 fi
 echo "（Windows 也可：PowerShell 执行 install.ps1，或下载 ag_windows_*.zip 手动解压并加入 PATH。）"

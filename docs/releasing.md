@@ -17,16 +17,16 @@ make release VERSION="v${VERSION}"
 
 `make release` 会检查工作区干净、tag 存在且指向当前 HEAD，然后在 `dist/vX.Y.Z/` 生成以下文件：
 
-- 六个名称不变的普通归档；其中二进制报告 `selfUpdate=true, source=release`。
-- `package-managers/` 下 npm 的六个、Homebrew 的四个、Winget 的两个和 Scoop 的两个独立归档；文件名为 `ag_<os>_<arch>_<source>.<ext>`，二进制报告 `selfUpdate=false` 和对应来源。
+- 七个名称不变的普通归档；其中 Linux 支持 amd64、arm64 和 loong64，macOS 与 Windows 支持 amd64 和 arm64；二进制报告 `selfUpdate=true, source=release`。
+- `package-managers/` 下 npm 的七个、Homebrew 的四个、Winget 的两个和 Scoop 的两个独立归档；文件名为 `ag_<os>_<arch>_<source>.<ext>`，二进制报告 `selfUpdate=false` 和对应来源。
 - `package-managers/package-managers-manifest.json` 与只使用归档 basename 的 `package-managers-checksums.txt`。
 - 已绑定当前 tag 的 `install.sh` 和 `install.ps1`。
-- `npm/` 下的六个平台二进制包、一个主启动包和独立的 `npm/checksums.txt`。
-- 仅覆盖 AtomGit Release 附件（六个归档和两个安装脚本）的根 `checksums.txt`。
+- `npm/` 下的七个平台二进制包、一个主启动包和独立的 `npm/checksums.txt`。
+- 仅覆盖 AtomGit Release 附件（七个归档和两个安装脚本）的根 `checksums.txt`。
 
 npm 平台包从对应的 `_npm` 归档提取二进制；Homebrew formula、Winget manifest 和 Scoop bucket manifest 应分别消费匹配的 `_homebrew`、`_winget` 与 `_scoop` 归档及校验和。Nix 不生成 `_nix` 归档。
 
-发布 npm 制品时，先发布 `npm/` 下六个名称带平台和架构的包；确认它们可用后，再发布 `atomgit-cli` 主包。主包和平台包必须使用相同版本。
+发布 npm 制品时，先发布 `npm/` 下七个名称带平台和架构的包；确认它们可用后，再发布 `atomgit-cli` 主包。主包和平台包必须使用相同版本。
 
 上传 Release 附件前可校验所有制品：
 
@@ -50,7 +50,7 @@ npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registr
 (cd dist/vX.Y.Z/package-managers && shasum -a 256 -c package-managers-checksums.txt)
 ```
 
-`scripts/build-release.sh` 始终使用 GoReleaser 的 `--skip=publish`，只在本地准备并验证制品，然后打印完整的附件 basename 清单。维护者按该清单手工上传六个普通归档、安装脚本、十四个包管理器归档、manifest 和包管理器校验文件；脚本不会创建 AtomGit Release 或上传附件。
+`scripts/build-release.sh` 始终使用 GoReleaser 的 `--skip=publish`，只在本地准备并验证制品，然后打印完整的附件 basename 清单。维护者按该清单手工上传七个普通归档、安装脚本、十五个包管理器归档、manifest 和包管理器校验文件；脚本不会创建 AtomGit Release 或上传附件。
 
 未创建 tag 时，可使用 `make release-snapshot VERSION=vX.Y.Z` 进行本地试打包。Snapshot 允许脏工作区，其制品仅用于验证，不应上传到正式 Release。
 

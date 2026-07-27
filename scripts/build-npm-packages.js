@@ -21,6 +21,12 @@ const TARGETS = [
     archive: "ag_linux_arm64_npm.tar.gz",
   },
   {
+    platform: "linux",
+    arch: "loong64",
+    executable: "ag",
+    archive: "ag_linux_loong64_npm.tar.gz",
+  },
+  {
     platform: "darwin",
     arch: "x64",
     executable: "ag",

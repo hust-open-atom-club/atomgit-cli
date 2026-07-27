@@ -16,6 +16,12 @@ builds:
     goarch:
       - amd64
       - arm64
+      - loong64
+    ignore:
+      - goos: darwin
+        goarch: loong64
+      - goos: windows
+        goarch: loong64
     flags:
       - -trimpath
     mod_timestamp: "{{ .Env.AG_BUILD_TIMESTAMP }}"
@@ -38,6 +44,12 @@ builds:
     goarch:
       - amd64
       - arm64
+      - loong64
+    ignore:
+      - goos: darwin
+        goarch: loong64
+      - goos: windows
+        goarch: loong64
     flags:
       - -trimpath
     mod_timestamp: "{{ .Env.AG_BUILD_TIMESTAMP }}"
