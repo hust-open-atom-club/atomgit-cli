@@ -301,6 +301,13 @@ ag pr close owner/repo 123
 
 # 重新打开 PR
 ag pr reopen owner/repo 123
+
+# 检出 PR 到本地
+ag pr checkout owner/repo 42
+ag pr checkout owner/repo 42 --branch review-fix
+ag pr checkout owner/repo 42 --force
+ag pr checkout owner/repo 42 --detach
+ag pr checkout owner/repo 42 --recurse-submodules
 ```
 
 跨仓库创建 PR 时 `--head` 的写法请参阅[跨仓库 PR 示例](cross_repo_pr_demo.md)。
