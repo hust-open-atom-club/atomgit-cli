@@ -26,6 +26,7 @@
 - `test/`：npm 主包与平台包的集成测试。
 - `.goreleaser.yaml`：Linux、macOS 和 Windows 的 amd64/arm64 发布打包配置。
 - `scripts/build-release.sh`：GoReleaser 打包包装脚本，负责版本元数据、安装脚本、校验和和 npm 制品，输出到被忽略的 `dist/`。
+- `scripts/publish-atomgit-release.js`：校验正式制品并通过 `ag release`/`ag api` 创建、续传和回读验证 AtomGit Release。
 - `scripts/build-npm-packages.js`、`scripts/check-npm-version.js`、`scripts/set-npm-version.js`：npm 平台包生成与版本同步。
 - `flake.nix`、`scripts/update-nix-package.sh`：Nix `stable`/`latest` package 与固定输出哈希维护。
 - `README.md`：面向用户的简短项目入口；详细安装、配置、命令、发布和结构说明分别位于 `docs/installation.md`、`docs/configuration.md`、`docs/usage.md`、`docs/releasing.md` 和 `docs/project-structure.md`。
