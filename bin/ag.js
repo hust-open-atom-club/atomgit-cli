@@ -6,6 +6,7 @@ const PLATFORM_PACKAGES = {
   "darwin-arm64": "@hust-open-atom-club/atomgit-cli-darwin-arm64",
   "darwin-x64": "@hust-open-atom-club/atomgit-cli-darwin-x64",
   "linux-arm64": "@hust-open-atom-club/atomgit-cli-linux-arm64",
+  "linux-loong64": "@hust-open-atom-club/atomgit-cli-linux-loong64",
   "linux-x64": "@hust-open-atom-club/atomgit-cli-linux-x64",
   "win32-arm64": "@hust-open-atom-club/atomgit-cli-win32-arm64",
   "win32-x64": "@hust-open-atom-club/atomgit-cli-win32-x64",

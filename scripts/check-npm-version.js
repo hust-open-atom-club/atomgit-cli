@@ -5,6 +5,7 @@ const PLATFORM_PACKAGES = [
   { name: "@hust-open-atom-club/atomgit-cli-darwin-arm64", os: "darwin", cpu: "arm64" },
   { name: "@hust-open-atom-club/atomgit-cli-darwin-x64", os: "darwin", cpu: "x64" },
   { name: "@hust-open-atom-club/atomgit-cli-linux-arm64", os: "linux", cpu: "arm64" },
+  { name: "@hust-open-atom-club/atomgit-cli-linux-loong64", os: "linux", cpu: "loong64" },
   { name: "@hust-open-atom-club/atomgit-cli-linux-x64", os: "linux", cpu: "x64" },
   { name: "@hust-open-atom-club/atomgit-cli-win32-arm64", os: "win32", cpu: "arm64" },
   { name: "@hust-open-atom-club/atomgit-cli-win32-x64", os: "win32", cpu: "x64" },

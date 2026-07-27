@@ -39,6 +39,7 @@ detect_arch() {
   case "$arch" in
   x86_64 | amd64) echo amd64 ;;
   aarch64 | arm64) echo arm64 ;;
+  loongarch64 | loong64) echo loong64 ;;
   *) die "unsupported CPU: $arch" ;;
   esac
 }

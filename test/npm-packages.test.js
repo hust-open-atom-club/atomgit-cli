@@ -137,7 +137,7 @@ test("extracts binaries from release tar.gz and zip archives", async (t) => {
   assert.equal(await readFile(windowsDestination, "utf8"), "windows binary");
 });
 
-test("builds all six platform package directories from release archives", async (t) => {
+test("builds all seven platform package directories from release archives", async (t) => {
   const root = await mkdtemp(path.join(process.cwd(), ".ag-npm-test-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const releaseDir = path.join(root, "release");
@@ -191,6 +191,7 @@ test("all npm targets use managed archives instead of ordinary release archives"
     [
       "ag_linux_amd64_npm.tar.gz",
       "ag_linux_arm64_npm.tar.gz",
+      "ag_linux_loong64_npm.tar.gz",
       "ag_darwin_amd64_npm.tar.gz",
       "ag_darwin_arm64_npm.tar.gz",
       "ag_windows_amd64_npm.zip",
