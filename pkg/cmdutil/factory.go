@@ -12,4 +12,6 @@ type Factory struct {
 	HttpClient         func() (*http.Client, error)
 	BrowserOpener      browser.Opener
 	RepositoryResolver RepositoryResolver
+	// GitConfig runs Git configuration operations for auth identity sync.
+	GitConfig func(args ...string) (string, error)
 }

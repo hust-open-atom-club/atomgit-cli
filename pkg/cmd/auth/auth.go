@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
@@ -22,34 +23,80 @@ func NewCmdAuth(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdAuthLogin(f))
 	cmd.AddCommand(newCmdAuthLogout())
 	cmd.AddCommand(newCmdAuthRefresh())
+	cmd.AddCommand(newCmdAuthList())
+	cmd.AddCommand(newCmdAuthSwitch(f))
 	cmd.AddCommand(newCmdAuthStatus(f))
 	cmd.AddCommand(newCmdAuthToken(f))
+	for _, child := range cmd.Commands() {
+		child.PreRunE = migrateLegacyCredentials
+	}
 
 	return cmd
 }
 
+func migrateLegacyCredentials(*cobra.Command, []string) error {
+	_, err := config.MigrateCredentialStore()
+	if errors.Is(err, config.ErrTokenNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("migrate credential store: %w", err)
+	}
+	return nil
+}
+
 func newCmdAuthLogout() *cobra.Command {
-	return &cobra.Command{
+	var account string
+	var all bool
+	cmd := &cobra.Command{
 		Use:   "logout",
-		Short: "Remove stored token and user (delete credential files)",
-		Args:  cobra.NoArgs,
+		Short: "Remove the active or a selected stored account",
+		Long: `Remove the active account or one selected with --account.
+An active account can only be removed when it is the last saved account;
+otherwise switch to another account first. Use --all to remove every account.`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			removed, err := config.ClearCredentials()
-			if err != nil {
-				return err
-			}
 			out := cmd.OutOrStdout()
-			if len(removed) == 0 {
+			if all {
+				removed, err := config.ClearCredentials()
+				if err != nil {
+					return err
+				}
+				if len(removed) == 0 {
+					fmt.Fprintln(out, "✗ No credential files found (already logged out)")
+					return nil
+				}
+				fmt.Fprintln(out, "✓ Logged out all accounts")
+				return nil
+			}
+			store, err := config.LoadCredentialStore()
+			if errors.Is(err, config.ErrTokenNotFound) {
 				fmt.Fprintln(out, "✗ No credential files found (already logged out)")
 				return nil
 			}
-			fmt.Fprintln(out, "✓ Logged out. Removed:")
-			for _, p := range removed {
-				fmt.Fprintf(out, "  %s\n", p)
+			if err != nil {
+				return err
+			}
+			selector := account
+			if selector == "" {
+				selector = store.Active
+			}
+			removed, empty, err := config.RemoveAccount(selector)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(out, "✓ Logged out %s\n", removed)
+			if empty {
+				path, _ := config.PrimaryTokenPath()
+				fmt.Fprintf(out, "  No saved accounts remain; removed %s\n", path)
 			}
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&account, "account", "", "Account username to remove")
+	cmd.Flags().BoolVar(&all, "all", false, "Remove all saved accounts")
+	cmd.MarkFlagsMutuallyExclusive("account", "all")
+	return cmd
 }
 
 func newCmdAuthLogin(f *cmdutil.Factory) *cobra.Command {
@@ -58,13 +105,15 @@ func newCmdAuthLogin(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdAuthLoginWithFunc(f *cmdutil.Factory, login func(context.Context) (*oauth.LoginResult, error)) *cobra.Command {
 	var force bool
+	var gitName, gitEmail string
 	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Log in with AtomGit OAuth (opens browser, saves token.json)",
 		Args:  cobra.NoArgs,
 		Long: `Opens a browser to authorize ag against atomgit.com, then writes
 access_token and user to the XDG config path (see README).
-If already logged in, skips the browser unless --force is set.`,
+If already logged in, skips the browser unless --force is set. The first saved
+account becomes active; later logins do not change the active account.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			out := cmd.OutOrStdout()
 			if !force {
@@ -90,12 +139,37 @@ If already logged in, skips the browser unless --force is set.`,
 			cred := &config.StoredCredentials{
 				AccessToken:  result.AccessToken,
 				User:         result.Login,
+				Name:         result.Name,
+				Email:        result.Email,
+				GitName:      strings.TrimSpace(gitName),
+				GitEmail:     strings.TrimSpace(gitEmail),
 				RefreshToken: result.RefreshToken,
 				ExpiresIn:    result.ExpiresIn,
 				TokenType:    result.TokenType,
 				CreatedAt:    time.Now().Unix(),
 			}
-			if err := config.SaveCredentials(cred); err != nil {
+			if !cmd.Flags().Changed("git-name") || !cmd.Flags().Changed("git-email") {
+				store, err := config.LoadCredentialStore()
+				if err == nil {
+					if existing, resolveErr := store.ResolveAccount(cred.Key()); resolveErr == nil {
+						if !cmd.Flags().Changed("git-name") {
+							cred.GitName = existing.GitName
+						}
+						if !cmd.Flags().Changed("git-email") {
+							cred.GitEmail = existing.GitEmail
+						}
+					}
+				} else if !errors.Is(err, config.ErrTokenNotFound) {
+					return err
+				}
+			}
+			// Logging in authenticates an account; selecting it is a separate,
+			// explicit operation once another active account already exists.
+			if err := config.SaveAccount(cred, false); err != nil {
+				return err
+			}
+			store, err := config.LoadCredentialStore()
+			if err != nil {
 				return err
 			}
 			path, err := config.PrimaryTokenPath()
@@ -104,10 +178,16 @@ If already logged in, skips the browser unless --force is set.`,
 			}
 			fmt.Fprintf(out, "✓ Logged in to atomgit.com as %s\n", result.Login)
 			fmt.Fprintf(out, "  Token saved to %s\n", path)
+			if store.Active != cred.Key() {
+				fmt.Fprintf(out, "  Active account remains %s\n", store.Active)
+				fmt.Fprintf(out, "  Run `ag auth switch %s` to use this account\n", cred.Key())
+			}
 			return nil
 		},
 	}
 	cmd.Flags().BoolVar(&force, "force", false, "Always run browser login even if already logged in")
+	cmd.Flags().StringVar(&gitName, "git-name", "", "Override the Git user.name stored for this account")
+	cmd.Flags().StringVar(&gitEmail, "git-email", "", "Override the Git user.email stored for this account")
 	return cmd
 }
 
@@ -144,7 +224,7 @@ func newCmdAuthRefresh() *cobra.Command {
 			cred.TokenType = tok.TokenType
 			cred.CreatedAt = time.Now().Unix()
 
-			if err := config.SaveCredentials(cred); err != nil {
+			if err := config.SaveAccount(cred, false); err != nil {
 				return err
 			}
 			path, err := config.PrimaryTokenPath()

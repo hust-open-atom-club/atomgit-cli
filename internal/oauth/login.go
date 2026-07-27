@@ -75,6 +75,8 @@ func redirectURI() string {
 type LoginResult struct {
 	AccessToken  string
 	Login        string
+	Name         string
+	Email        string
 	RefreshToken string
 	ExpiresIn    int64
 	TokenType    string
@@ -178,6 +180,8 @@ func Login(ctx context.Context) (*LoginResult, error) {
 		return &LoginResult{
 			AccessToken:  tok.AccessToken,
 			Login:        user.Login,
+			Name:         user.Name,
+			Email:        user.Email,
 			RefreshToken: tok.RefreshToken,
 			ExpiresIn:    tok.ExpiresIn,
 			TokenType:    tt,
