@@ -1,3 +1,5 @@
+// Package browser provides URL builders for AtomGit web pages and functions
+// to open URLs in the system browser.
 package browser
 
 import (
