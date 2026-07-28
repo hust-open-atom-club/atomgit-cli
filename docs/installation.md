@@ -20,8 +20,6 @@ npm 主包通过 `optionalDependencies` 声明七个平台二进制包。npm 根
 | Linux | x64 / amd64、arm64 / aarch64、loong64 / loongarch64 |
 | Windows | x64 / amd64、arm64 |
 
-npm 安装的二进制报告 `selfUpdate=false, source=npm`，升级由 npm 管理。
-
 安装完成后验证：
 
 ```bash
@@ -51,8 +49,6 @@ brew update
 brew upgrade atomgit-cli
 ```
 
-Homebrew 安装的二进制报告 `selfUpdate=false, source=homebrew`，升级由 Homebrew 管理。
-
 ## Scoop 安装
 
 Windows 用户可以通过组织维护的 scoop bucket 安装：
@@ -74,8 +70,6 @@ scoop install https://raw.githubusercontent.com/hust-open-atom-club/ScoopBucket/
 ```powershell
 scoop update atomgit-cli
 ```
-
-Scoop 安装的二进制报告 `selfUpdate=false, source=scoop`，升级由 Scoop 管理。
 
 ## Nix / NixOS 安装
 
@@ -156,8 +150,6 @@ Home Manager 中同样可以将 `unstable.atomgit-cli` 加入 `home.packages`。
 
 - `stable`：从固定版本的 AtomGit Release 源码归档构建。
 - `latest`：从当前 flake revision 的源码构建。
-
-两个 package 都由 Nix 管理；支持发行来源字段的版本会报告 `selfUpdate=false, source=nix`。
 
 默认 package 和兼容名称 `ag` 均指向 `stable`。安装稳定版：
 

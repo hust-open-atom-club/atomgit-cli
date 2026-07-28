@@ -7,8 +7,8 @@ atomgit-cli (v0.7.0) unstable; urgency=medium
     head checks, collaboration metadata, reopening, and body-file input.
   * Add AtomGit Actions run inspection, browser and --web support, and
     structured JSON resource output.
-  * Add Release metadata management and attachment upload/download, with
-    source-aware self-update policy and isolated package-manager artifacts.
+  * Add Release metadata management, attachment upload/download, and a command
+    that checks for newer stable AtomGit CLI releases.
   * Infer repository context from Git remotes, recognize gitcode.com aliases,
     and support explicit multi-account authentication workflows.
   * Add Linux LoongArch64 Release and npm packages, split stable/latest Nix
