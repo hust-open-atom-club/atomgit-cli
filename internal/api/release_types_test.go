@@ -67,6 +67,7 @@ func TestReleaseJSON(t *testing.T) {
 	raw := `{
 		"tag_name": "v0.2",
 		"target_commitish": "b635b9a8a2c27bd86a93801bb6835dfa5744288d",
+		"draft": true,
 		"prerelease": false,
 		"name": "v0.2",
 		"body": "## 更新内容\n",
@@ -88,6 +89,9 @@ func TestReleaseJSON(t *testing.T) {
 	}
 	if got.Prerelease {
 		t.Fatal("prerelease = true, want false")
+	}
+	if !got.Draft {
+		t.Fatal("draft = false, want true")
 	}
 	if got.TargetCommitish != "b635b9a8a2c27bd86a93801bb6835dfa5744288d" {
 		t.Fatalf("target_commitish = %q", got.TargetCommitish)

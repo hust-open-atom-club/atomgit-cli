@@ -517,6 +517,7 @@ type ReleaseAsset struct {
 type Release struct {
 	TagName         string         `json:"tag_name"`
 	TargetCommitish string         `json:"target_commitish"`
+	Draft           bool           `json:"draft"`
 	Prerelease      bool           `json:"prerelease"`
 	Name            string         `json:"name"`
 	Body            string         `json:"body"`
