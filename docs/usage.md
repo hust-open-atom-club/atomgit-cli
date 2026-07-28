@@ -214,7 +214,7 @@ ag branch protection delete owner/repo "release/*" --yes
 ag browse
 
 # 打开指定仓库
-ag browse -R owner/repo
+ag browse --repo owner/repo
 
 # 打开 Issue 或 PR
 ag browse 42
@@ -228,16 +228,25 @@ ag browse main.go:312-320
 ag browse main.go:312..320
 
 # 在指定分支上打开文件
-ag browse -b dev main.go:42
+ag browse --branch dev main.go:42
 
 # 在指定 commit 上打开文件
-ag browse -c abc1234 main.go
+ag browse --commit abc1234 main.go
 
 # 打开 Releases 页面
-ag browse -r
+ag browse --releases
+
+# 打开 Actions 页面
+ag browse --actions
+
+# 打开 Wiki 页面
+ag browse --wiki
+
+# 打开 Settings 页面
+ag browse --settings
 
 # 只打印 URL，不打开浏览器
-ag browse -n
+ag browse --no-browser
 ```
 
 ## Pull Request (pr)
