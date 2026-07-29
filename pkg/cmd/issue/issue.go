@@ -320,15 +320,33 @@ func formatIssueLabels(labels []api.Label) string {
 
 func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
-		Title string
-		Body  string
+		Title    string
+		Body     string
+		BodyFile string
 	}
 
 	cmd := &cobra.Command{
 		Use:   "create [<owner>/<repo>]",
 		Short: "Create an issue",
-		Args:  cobra.MaximumNArgs(1),
+		Example: `  ag issue create owner/repo --title "Bug report" --body "Description"
+  ag issue create owner/repo --title "Bug report" --body-file description.md
+  ag issue create owner/repo --title "Bug report" --body-file -`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.Title == "" {
+				return fmt.Errorf("title is required")
+			}
+			bodyText, err := cmdutil.ReadBody(
+				opts.Body,
+				opts.BodyFile,
+				cmd.Flags().Changed("body"),
+				cmd.Flags().Changed("body-file"),
+				cmd.InOrStdin(),
+			)
+			if err != nil {
+				return err
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
@@ -345,13 +363,9 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 			}
 			owner, repo := repository.Owner, repository.Name
 
-			if opts.Title == "" {
-				return fmt.Errorf("title is required")
-			}
-
 			body := map[string]interface{}{
 				"title": opts.Title,
-				"body":  opts.Body,
+				"body":  bodyText,
 			}
 
 			var issue api.Issue
@@ -368,6 +382,8 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "Issue title")
 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "Issue body")
+	cmd.Flags().StringVarP(&opts.BodyFile, "body-file", "F", "", "Read issue body from file (use - for stdin)")
+	cmd.MarkFlagsMutuallyExclusive("body", "body-file")
 
 	return cmd
 }

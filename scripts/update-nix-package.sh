@@ -2,7 +2,7 @@
 # 更新 flake.nix 中 stable 或 latest package 的固定输出哈希。
 #
 # 用法:
-#   ./scripts/update-nix-package.sh v0.6.0
+#   ./scripts/update-nix-package.sh vX.Y.Z
 #   ./scripts/update-nix-package.sh --latest
 #
 # 默认模式更新 stable 的版本、发布源码哈希和 vendorHash。
@@ -45,7 +45,7 @@ die() {
 usage() {
     cat >&2 <<EOF
 用法:
-  $0 <version>   更新 stable，例如 $0 v0.6.0
+  $0 <version>   更新 stable，例如 $0 vX.Y.Z
   $0 --latest    只更新 latestVendorHash
 EOF
 }

@@ -2,8 +2,11 @@
 # 仓库: https://atomgit.com/hust-open-atom-club/atomgit-cli
 #
 # 用法（在 PowerShell 中）:
-#   irm https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/v0.6.0/install.ps1 | iex
-#   $env:AG_VERSION = "v0.6.0"; .\install.ps1
+#   irm https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1 | iex
+#   $env:AG_VERSION = "vX.Y.Z"; .\install.ps1
+#
+# 安装完成后执行 `ag auth login` 完成 OAuth 认证。
+# 令牌文件默认路径: %USERPROFILE%\.config\ag-cli\token.json
 #
 # 若提示执行策略，可先: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
@@ -11,8 +14,8 @@
 
 $ErrorActionPreference = "Stop"
 
-# 随 Release 更新；或用 make release 生成到 dist/<tag>/install.ps1（已写入本次 TAG）
-$BundledTag = 'v0.6.0'
+# Release 构建会将占位符替换为当前 tag；直接运行源码模板时需设置 AG_VERSION。
+$BundledTag = '__AG_RELEASE_TAG__'
 
 function Die([string]$Msg) {
     $host.UI.WriteErrorLine("install.ps1: $Msg")
@@ -26,6 +29,10 @@ $BaseUrl = "https://atomgit.com/$RepoOwner/$RepoName"
 $Version = if ($env:AG_VERSION) { $env:AG_VERSION }
 elseif ($env:AG_DEFAULT_VERSION) { $env:AG_DEFAULT_VERSION }
 else { $BundledTag }
+
+if ($Version -eq '__AG_RELEASE_TAG__') {
+    Die '源码安装器模板尚未绑定发布版本；请设置 AG_VERSION=vX.Y.Z，或使用 AtomGit Release 中的 install.ps1'
+}
 
 function Get-GoArch {
     $proc = [Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")

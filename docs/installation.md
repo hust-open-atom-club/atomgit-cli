@@ -1,8 +1,8 @@
 # 安装指南
 
-AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、自动安装脚本、Nix、手动下载预编译文件或从源码构建进行安装。
+AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、Nix、go install、AtomGit Release 自动或手动安装，也可以从源码构建。
 
-## 使用 npm 安装
+## npm 安装
 
 npm 安装需要 Node.js 18 或更高版本。执行：
 
@@ -10,23 +10,17 @@ npm 安装需要 Node.js 18 或更高版本。执行：
 npm install --global @hust-open-atom-club/atomgit-cli
 ```
 
-npm 主包通过 `optionalDependencies` 声明六个平台二进制包。npm 根据当前操作系统和 CPU 架构只安装匹配的包，整个过程不使用 `postinstall`，运行 `ag` 时也不会额外联网下载或写入包目录。
+npm 主包通过 `optionalDependencies` 声明七个平台二进制包。npm 根据当前操作系统和 CPU 架构只安装匹配的包，整个过程不使用 `postinstall`，运行 `ag` 时也不会额外联网下载或写入包目录。
 
 请勿使用 `--omit=optional` 安装；该选项会跳过平台二进制包，使 `ag` 无法启动。
 
 | 操作系统 | 支持的处理器架构 |
 | --- | --- |
 | macOS | x64（Intel）、arm64（Apple Silicon） |
-| Linux | x64 / amd64、arm64 / aarch64 |
+| Linux | x64 / amd64、arm64 / aarch64、loong64 / loongarch64 |
 | Windows | x64 / amd64、arm64 |
 
-npm 主包、六个平台包与 AtomGit Release tag 一一对应，版本必须完全一致。执行 `make release VERSION=vX.Y.Z` 会在 `dist/vX.Y.Z/npm/` 生成七个 npm tarball 和独立的 `checksums.txt`，供发布前本地校验；这些 npm 文件不作为 AtomGit Release 附件上传。发布时必须先发布六个平台包，确认它们可从 npm registry 获取后，再发布主包。
-
-准备新版本时，先同步所有 npm 版本字段：
-
-```bash
-npm run version:npm -- X.Y.Z
-```
+npm 安装的二进制报告 `selfUpdate=false, source=npm`，升级由 npm 管理。
 
 安装完成后验证：
 
@@ -34,7 +28,7 @@ npm run version:npm -- X.Y.Z
 ag version
 ```
 
-## 使用 Homebrew 安装
+## Homebrew 安装
 
 macOS 或 Linux 用户可以通过项目维护的 Homebrew tap 安装：
 
@@ -57,43 +51,33 @@ brew update
 brew upgrade atomgit-cli
 ```
 
-## 自动化安装（推荐）
+Homebrew 安装的二进制报告 `selfUpdate=false, source=homebrew`，升级由 Homebrew 管理。
 
-安装脚本会识别当前操作系统（支持 Linux，Windows 和 macOS）与处理器架构（支持 amd64 和 arm64），下载匹配的预编译文件并安装 `ag`。
+## Scoop 安装
 
-### macOS 和 Linux
-
-请在终端执行：
-
-```bash
-curl -fsSL "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.sh" | sh
-```
-
-脚本默认将 `ag` 安装到 `/usr/local/bin`；该目录不可写时，会改用 `~/.local/bin`。如果安装目录不在 `PATH` 中，脚本会输出相应的配置提示。
-
-### Windows
-
-请在 Windows PowerShell 5.1 或 PowerShell 7+ 中执行：
+Windows 用户可以通过组织维护的 scoop bucket 安装：
 
 ```powershell
-irm "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1" | iex
+scoop bucket add hust-open-atom-club https://github.com/hust-open-atom-club/ScoopBucket
+scoop install atomgit-cli
+ag version
 ```
 
-`irm` 是 `Invoke-RestMethod` 的别名。若当前环境不支持该别名，可执行：
+或者直接运行：
 
 ```powershell
-Invoke-RestMethod -Uri "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1" | Invoke-Expression
+scoop install https://raw.githubusercontent.com/hust-open-atom-club/ScoopBucket/main/bucket/atomgit-cli.json
 ```
 
-如果系统禁止运行脚本，可先为当前用户设置执行策略（只需执行一次）：
+更新已安装的 AtomGit CLI:
 
 ```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+scoop update atomgit-cli
 ```
 
-脚本默认安装到 `%USERPROFILE%\.local\bin`，并将该目录加入当前用户的 `Path`。
+Scoop 安装的二进制报告 `selfUpdate=false, source=scoop`，升级由 Scoop 管理。
 
-## 使用 Nix 安装
+## Nix / NixOS 安装
 
 AtomGit CLI 已进入 `nixos-unstable`，nixpkgs 包名为 `atomgit-cli`，安装后提供 `ag` 命令。
 
@@ -173,6 +157,8 @@ Home Manager 中同样可以将 `unstable.atomgit-cli` 加入 `home.packages`。
 - `stable`：从固定版本的 AtomGit Release 源码归档构建。
 - `latest`：从当前 flake revision 的源码构建。
 
+两个 package 都由 Nix 管理；支持发行来源字段的版本会报告 `selfUpdate=false, source=nix`。
+
 默认 package 和兼容名称 `ag` 均指向 `stable`。安装稳定版：
 
 由于 nixos-unstable 已停止支持 Intel macOS，flake 对 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
@@ -227,7 +213,57 @@ nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#latest -- versio
 }
 ```
 
-## 手动安装
+## Go 安装
+
+Go 安装将自动下载源码包并进行编译，需要 Go 1.24.2 或更高版本：
+
+```bash
+go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
+```
+
+该方法将从 Go 模块代理下载该项目及其依赖的源码包，并在本机构建出二进制文件。项目正式支持并测试 macOS、Linux 和 Windows；其他 Go 目标平台可能能够编译，但不保证完整兼容。`ag auth login` 的浏览器 OAuth 流程仅支持上述三个操作系统，其他平台需要在功能可用的前提下手动配置 PAT。
+
+Go 模块代理提供的源码包不包含 `.git` 目录，因此这种安装方式构建的二进制只能可靠获得模块版本。执行 `ag version` 时，文本输出会省略无法获得的 commit 和构建时间；`ag version --json` 中对应字段为 `unknown`。这是预期行为，不影响 CLI 功能。如需同时包含版本、commit 和构建时间，请改用 npm、Homebrew，或通过 AtomGit Release 自动或手动安装预编译版本。
+
+## AtomGit Release 安装
+
+### 自动安装
+
+安装脚本会识别当前操作系统（支持 Linux、Windows 和 macOS）与处理器架构（Linux 支持 amd64、arm64 和 loong64，macOS 与 Windows 支持 amd64 和 arm64），下载匹配的预编译文件并安装 `ag`。
+
+#### macOS 和 Linux
+
+请在终端执行：
+
+```bash
+curl -fsSL "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.sh" | sh
+```
+
+脚本默认将 `ag` 安装到 `/usr/local/bin`；该目录不可写时，会改用 `~/.local/bin`。如果安装目录不在 `PATH` 中，脚本会输出相应的配置提示。
+
+#### Windows
+
+请在 Windows PowerShell 5.1 或 PowerShell 7+ 中执行：
+
+```powershell
+irm "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1" | iex
+```
+
+`irm` 是 `Invoke-RestMethod` 的别名。若当前环境不支持该别名，可执行：
+
+```powershell
+Invoke-RestMethod -Uri "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1" | Invoke-Expression
+```
+
+如果系统禁止运行脚本，可先为当前用户设置执行策略（只需执行一次）：
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+脚本默认安装到 `%USERPROFILE%\.local\bin`，并将该目录加入当前用户的 `Path`。
+
+### 手动安装
 
 从 [Release 页面](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)下载与操作系统和处理器架构匹配的文件：
 
@@ -236,13 +272,14 @@ nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#latest -- versio
 | macOS | Apple Silicon（arm64） | `ag_darwin_arm64.tar.gz` |
 | macOS | Intel（amd64） | `ag_darwin_amd64.tar.gz` |
 | Linux | arm64 / aarch64 | `ag_linux_arm64.tar.gz` |
+| Linux | LoongArch64（loong64 / loongarch64） | `ag_linux_loong64.tar.gz` |
 | Linux | x86-64 / amd64 | `ag_linux_amd64.tar.gz` |
 | Windows | ARM64 | `ag_windows_arm64.zip` |
 | Windows | 常见 64 位 PC（amd64） | `ag_windows_amd64.zip` |
 
-macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应 arm64，`x86_64` 对应 amd64。Windows 可在 PowerShell 中执行 `$env:PROCESSOR_ARCHITECTURE`；`ARM64` 对应 arm64，`AMD64` 对应 amd64。
+macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应 arm64，`x86_64` 对应 amd64，Linux 上的 `loongarch64` 或 `loong64` 对应 loong64。Windows 可在 PowerShell 中执行 `$env:PROCESSOR_ARCHITECTURE`；`ARM64` 对应 arm64，`AMD64` 对应 amd64。
 
-### macOS 和 Linux
+#### macOS 和 Linux
 
 1. 解压下载的 `.tar.gz` 文件，得到可执行文件 `ag`。例如：
 
@@ -265,14 +302,14 @@ macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应
    export PATH="$HOME/.local/bin:$PATH"
    ```
 
-### Windows
+#### Windows
 
 1. 解压下载的 `.zip` 文件，得到 `ag.exe`。
 2. 将 `ag.exe` 放入固定目录，例如 `C:\Users\<用户名>\.local\bin`。
 3. 打开系统“环境变量”，编辑当前用户的 `Path`，添加上述目录。
 4. 新开 PowerShell 或命令提示符。
 
-## 从源码构建
+## 源码安装
 
 源码构建支持 macOS、Linux 和 Windows，需要安装：
 
@@ -329,6 +366,6 @@ go install ./cmd/ag
 
 完成安装或构建后，新开一个终端并执行：
 
-```text
-ag --help
+```bash
+ag version
 ```

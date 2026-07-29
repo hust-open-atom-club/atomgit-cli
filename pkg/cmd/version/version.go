@@ -3,15 +3,37 @@ package version
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 	"github.com/spf13/cobra"
 )
 
 func Text() string {
-	info := version.Get()
-	return fmt.Sprintf("ag version %s (commit: %s, built: %s)\n",
-		info.Version, info.Commit, info.BuildDate)
+	return formatText(version.Get())
+}
+
+func formatText(info version.Info) string {
+	details := make([]string, 0, 4)
+	if commit := knownMetadata(info.Commit); commit != "" {
+		details = append(details, "commit: "+commit)
+	}
+	if buildDate := knownMetadata(info.BuildDate); buildDate != "" {
+		details = append(details, "built: "+buildDate)
+	}
+	details = append(details,
+		fmt.Sprintf("self-update: %t", info.SelfUpdate),
+		"source: "+info.Source,
+	)
+	return fmt.Sprintf("ag version %s (%s)\n", info.Version, strings.Join(details, ", "))
+}
+
+func knownMetadata(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" || strings.EqualFold(value, "unknown") {
+		return ""
+	}
+	return value
 }
 
 func NewCmdVersion() *cobra.Command {

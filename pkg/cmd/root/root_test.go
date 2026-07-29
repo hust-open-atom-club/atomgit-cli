@@ -36,16 +36,19 @@ type rootRoundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f rootRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
 
-func setVersionMetadata(t *testing.T) {
+func setVersionMetadata(t *testing.T, source string) {
 	t.Helper()
 	oldV, oldC, oldB := internalversion.Version, internalversion.Commit, internalversion.BuildDate
+	oldSource := internalversion.Source
 	internalversion.Version = "v1.2.3"
 	internalversion.Commit = "abc1234"
 	internalversion.BuildDate = "2026-07-15T00:00:00Z"
+	internalversion.Source = source
 	t.Cleanup(func() {
 		internalversion.Version = oldV
 		internalversion.Commit = oldC
 		internalversion.BuildDate = oldB
+		internalversion.Source = oldSource
 	})
 }
 
@@ -57,7 +60,7 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 
 	want := map[string]bool{
 		"api": false, "auth": false, "branch": false, "issue": false, "label": false, "license": false,
-		"pr": false, "release": false, "repo": false, "run": false, "ssh-key": false, "tag": false, "version": false,
+		"org": false, "pr": false, "release": false, "repo": false, "run": false, "ssh-key": false, "tag": false, "version": false,
 	}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
@@ -127,29 +130,46 @@ func TestAPIHelpDocumentsSafetyContract(t *testing.T) {
 	}
 }
 
-func TestNewCmdRootVersionMatchesVersionCommand(t *testing.T) {
-	setVersionMetadata(t)
-
-	rootCmd, err := NewCmdRoot(&cmdutil.Factory{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	var rootOut bytes.Buffer
-	rootCmd.SetOut(&rootOut)
-	rootCmd.SetArgs([]string{"--version"})
-	if err := rootCmd.Execute(); err != nil {
-		t.Fatalf("root Execute() error = %v", err)
-	}
-
-	versionCmd := versioncmd.NewCmdVersion()
-	var versionOut bytes.Buffer
-	versionCmd.SetOut(&versionOut)
-	if err := versionCmd.Execute(); err != nil {
-		t.Fatalf("version Execute() error = %v", err)
+func TestNewCmdRootVersionMatchesVersionCommandForEveryProfile(t *testing.T) {
+	tests := []struct{ name, source string }{
+		{name: "source", source: "source"},
+		{name: "release", source: "release"},
+		{name: "development", source: "development"},
+		{name: "npm", source: "npm"},
+		{name: "homebrew", source: "homebrew"},
+		{name: "winget", source: "winget"},
+		{name: "scoop", source: "scoop"},
+		{name: "nix", source: "nix"},
+		{name: "extension source", source: "corp-repo"},
+		{name: "invalid source", source: "unknown"},
 	}
 
-	if got, want := rootOut.String(), versionOut.String(); got != want {
-		t.Errorf("--version output = %q, version output = %q", got, want)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setVersionMetadata(t, tt.source)
+
+			rootCmd, err := NewCmdRoot(&cmdutil.Factory{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var rootOut bytes.Buffer
+			rootCmd.SetOut(&rootOut)
+			rootCmd.SetArgs([]string{"--version"})
+			if err := rootCmd.Execute(); err != nil {
+				t.Fatalf("root Execute() error = %v", err)
+			}
+
+			versionCmd := versioncmd.NewCmdVersion()
+			var versionOut bytes.Buffer
+			versionCmd.SetOut(&versionOut)
+			if err := versionCmd.Execute(); err != nil {
+				t.Fatalf("version Execute() error = %v", err)
+			}
+
+			if got, want := rootOut.String(), versionOut.String(); got != want {
+				t.Errorf("--version output = %q, version output = %q", got, want)
+			}
+		})
 	}
 }
 

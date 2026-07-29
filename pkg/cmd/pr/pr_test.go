@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -175,6 +177,97 @@ func TestPRCreateUsesRequestedOrRepositoryDefaultBase(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPRCreateBodyInput(t *testing.T) {
+	tests := []struct {
+		name      string
+		body      *string
+		bodyFile  *string
+		stdin     string
+		wantBody  string
+		wantError string
+	}{
+		{name: "inline body", body: prStringPointer("inline\nbody"), wantBody: "inline\nbody"},
+		{name: "UTF-8 file with trailing newlines", bodyFile: prStringPointer("file"), wantBody: "标题\n\n正文\n"},
+		{name: "empty file", bodyFile: prStringPointer("empty"), wantBody: ""},
+		{name: "stdin", bodyFile: prStringPointer("-"), stdin: "stdin body\n\n", wantBody: "stdin body\n\n"},
+		{name: "conflicting flags", body: prStringPointer("inline"), bodyFile: prStringPointer("-"), wantError: "mutually exclusive"},
+		{name: "missing file", bodyFile: prStringPointer("missing"), wantError: "failed to read body file"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requests := 0
+			factory := &cmdutil.Factory{
+				Config: prTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						requests++
+						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/pulls" {
+							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+						}
+						var body map[string]interface{}
+						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+							t.Fatal(err)
+						}
+						if got := body["body"]; got != tt.wantBody {
+							t.Fatalf("body = %q, want %q", got, tt.wantBody)
+						}
+						return prResponse(http.StatusCreated, `{"number":"7","web_url":"https://atomgit.com/alice/demo/merge_requests/7"}`), nil
+					})}, nil
+				},
+			}
+
+			cmd := newCmdPRCreate(factory)
+			_ = cmd.Flags().Set("title", "Test PR")
+			_ = cmd.Flags().Set("base", "main")
+			_ = cmd.Flags().Set("head", "feature")
+			if tt.body != nil {
+				_ = cmd.Flags().Set("body", *tt.body)
+			}
+			if tt.bodyFile != nil {
+				path := *tt.bodyFile
+				switch path {
+				case "file":
+					path = filepath.Join(t.TempDir(), "body.md")
+					if err := os.WriteFile(path, []byte(tt.wantBody), 0o600); err != nil {
+						t.Fatal(err)
+					}
+				case "empty":
+					path = filepath.Join(t.TempDir(), "empty.md")
+					if err := os.WriteFile(path, nil, 0o600); err != nil {
+						t.Fatal(err)
+					}
+				case "missing":
+					path = filepath.Join(t.TempDir(), "missing.md")
+				}
+				_ = cmd.Flags().Set("body-file", path)
+			}
+			cmd.SetIn(strings.NewReader(tt.stdin))
+
+			err := cmd.RunE(cmd, []string{"alice/demo"})
+			if tt.wantError != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+					t.Fatalf("error = %v, want containing %q", err, tt.wantError)
+				}
+				if requests != 0 {
+					t.Fatalf("requests = %d, want 0", requests)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if requests != 1 {
+				t.Fatalf("requests = %d, want 1", requests)
+			}
+		})
+	}
+}
+
+func prStringPointer(value string) *string {
+	return &value
 }
 
 func TestPRCreateFallsBackToBrowserURL(t *testing.T) {
@@ -1034,5 +1127,94 @@ func TestPRReopenWrapsAPIError(t *testing.T) {
 	err := cmd.RunE(cmd, []string{"alice/demo", "5"})
 	if err == nil || !strings.Contains(err.Error(), "failed to reopen PR") {
 		t.Fatalf("error = %v, want 'failed to reopen PR'", err)
+	}
+}
+
+func TestParsePRNumberRejectsInvalidInputs(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+		want    string
+	}{
+		{name: "zero", input: "0", wantErr: true},
+		{name: "negative", input: "-1", wantErr: true},
+		{name: "non_numeric", input: "not-a-number", wantErr: true},
+		{name: "decimal", input: "1.5", wantErr: true},
+		{name: "empty", input: "", wantErr: true},
+		{name: "whitespace_only", input: "   ", wantErr: true},
+		{name: "mixed_alphanumeric", input: "12abc", wantErr: true},
+		{name: "positive", input: "42", wantErr: false, want: "42"},
+		{name: "trimmed_positive", input: "  7  ", wantErr: false, want: "7"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parsePRNumber(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("parsePRNumber(%q) = %q, want error", tt.input, got)
+				}
+				if !strings.Contains(err.Error(), "invalid PR number") {
+					t.Fatalf("parsePRNumber(%q) err = %v, want 'invalid PR number' substring", tt.input, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("parsePRNumber(%q) unexpected err: %v", tt.input, err)
+			}
+			if got != tt.want {
+				t.Fatalf("parsePRNumber(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+type recordingConfig struct {
+	getTokenCalls int
+}
+
+func (r *recordingConfig) GetToken() (string, error) {
+	r.getTokenCalls++
+	return "token", nil
+}
+func (*recordingConfig) GetUser() (string, error) { return "alice", nil }
+func (*recordingConfig) GetHost() string          { return "atomgit.com" }
+
+func TestCmdPRCheckoutRejectsInvalidPRNumberBeforeAPI(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{name: "zero", input: "0"},
+		{name: "negative", input: "-1"},
+		{name: "non_numeric", input: "not-a-number"},
+		{name: "decimal", input: "1.5"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &recordingConfig{}
+			f := &cmdutil.Factory{Config: cfg}
+			cmd := newCmdPRCheckout(f)
+			// "--" prevents cobra from interpreting negative numbers as flags,
+			// so the value reaches parsePRNumber and exercises its validation.
+			cmd.SetArgs([]string{"--", "alice/demo", tt.input})
+			cmd.SetOut(io.Discard)
+			cmd.SetErr(io.Discard)
+			cmd.SilenceUsage = true
+			cmd.SilenceErrors = true
+
+			err := cmd.Execute()
+			if err == nil {
+				t.Fatalf("Execute() with number=%q returned nil error, want validation failure", tt.input)
+			}
+			if !strings.Contains(err.Error(), "invalid PR number") {
+				t.Fatalf("Execute() err = %v, want 'invalid PR number' substring", err)
+			}
+			if cfg.getTokenCalls != 0 {
+				t.Fatalf("GetToken was called %d times; parsePRNumber must reject invalid input before authentication", cfg.getTokenCalls)
+			}
+		})
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -78,7 +79,7 @@ func TestIsolateAuthConfigUsesTemporaryHome(t *testing.T) {
 
 func TestNewCmdAuthRegistersSubcommands(t *testing.T) {
 	cmd := NewCmdAuth(&cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated")}})
-	want := map[string]bool{"login": false, "logout": false, "refresh": false, "status": false, "token": false}
+	want := map[string]bool{"list": false, "login": false, "logout": false, "refresh": false, "status": false, "switch": false, "token": false}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
 			want[child.Name()] = true
@@ -89,12 +90,77 @@ func TestNewCmdAuthRegistersSubcommands(t *testing.T) {
 			t.Errorf("subcommand %q was not registered", name)
 		}
 	}
+	for _, child := range cmd.Commands() {
+		if child.PreRunE == nil {
+			t.Errorf("%s does not migrate credentials before running", child.Name())
+		}
+	}
 	login, _, err := cmd.Find([]string{"login"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if login.Flags().Lookup("force") == nil {
 		t.Fatal("login --force flag was not registered")
+	}
+	for _, flag := range []string{"git-name", "git-email"} {
+		if login.Flags().Lookup(flag) == nil {
+			t.Fatalf("login --%s flag was not registered", flag)
+		}
+	}
+	switchCmd, _, err := cmd.Find([]string{"switch"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, flag := range []string{"git-name", "git-email", "global", "no-git"} {
+		if switchCmd.Flags().Lookup(flag) == nil {
+			t.Fatalf("switch --%s flag was not registered", flag)
+		}
+	}
+}
+
+func TestAuthPreRunMigratesLegacyCredentialStore(t *testing.T) {
+	isolateAuthConfig(t)
+	path, err := config.PrimaryTokenPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	legacy := `{"access_token":"secret","user":"Alice","refresh_token":"refresh","expires_in":3600}`
+	if err := os.WriteFile(path, []byte(legacy), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewCmdAuth(&cmdutil.Factory{Config: testConfig{token: "secret", user: "Alice"}})
+	list, _, err := cmd.Find([]string{"list"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := list.PreRunE(list, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"version": 2`, `"active": "alice"`, `"refresh_token": "refresh"`} {
+		if !strings.Contains(string(data), want) {
+			t.Fatalf("migrated credential file missing %q:\n%s", want, data)
+		}
+	}
+}
+
+func TestAuthPreRunAllowsMissingCredentialFile(t *testing.T) {
+	isolateAuthConfig(t)
+	cmd := NewCmdAuth(&cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated")}})
+	login, _, err := cmd.Find([]string{"login"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := login.PreRunE(login, nil); err != nil {
+		t.Fatalf("pre-run error = %v", err)
 	}
 }
 
@@ -120,9 +186,16 @@ func TestAuthLoginSavesOAuthResult(t *testing.T) {
 			t.Fatal("login context has no timeout")
 		}
 		return &oauth.LoginResult{
-			AccessToken: "access", Login: "alice", RefreshToken: "refresh", ExpiresIn: 3600, TokenType: "Bearer",
+			AccessToken: "access", Login: "alice", Name: "Alice API", Email: "alice-api@example.com",
+			RefreshToken: "refresh", ExpiresIn: 3600, TokenType: "Bearer",
 		}, nil
 	})
+	if err := cmd.Flags().Set("git-name", "Alice Commit"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Flags().Set("git-email", "alice-commit@example.com"); err != nil {
+		t.Fatal(err)
+	}
 	cmd.SetContext(context.Background())
 
 	output, err := captureStdout(t, func() error { return cmd.RunE(cmd, nil) })
@@ -136,8 +209,122 @@ func TestAuthLoginSavesOAuthResult(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if credentials.AccessToken != "access" || credentials.User != "alice" || credentials.RefreshToken != "refresh" || credentials.ExpiresIn != 3600 {
+	if credentials.AccessToken != "access" || credentials.User != "alice" || credentials.Name != "Alice API" || credentials.Email != "alice-api@example.com" || credentials.GitName != "Alice Commit" || credentials.GitEmail != "alice-commit@example.com" || credentials.RefreshToken != "refresh" || credentials.ExpiresIn != 3600 {
 		t.Fatalf("credentials = %#v", credentials)
+	}
+}
+
+func TestAuthLoginPreservesUnspecifiedGitIdentityOverrides(t *testing.T) {
+	tests := []struct {
+		name         string
+		setGitName   bool
+		gitName      string
+		wantGitName  string
+		wantGitEmail string
+	}{
+		{
+			name:         "preserves both overrides",
+			wantGitName:  "Existing Name",
+			wantGitEmail: "existing@example.com",
+		},
+		{
+			name:         "replaces only explicit name",
+			setGitName:   true,
+			gitName:      "New Name",
+			wantGitName:  "New Name",
+			wantGitEmail: "existing@example.com",
+		},
+		{
+			name:         "explicit empty name clears override",
+			setGitName:   true,
+			wantGitName:  "",
+			wantGitEmail: "existing@example.com",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			isolateAuthConfig(t)
+			if err := config.SaveCredentials(&config.StoredCredentials{
+				AccessToken: "old-access",
+				User:        "alice",
+				GitName:     "Existing Name",
+				GitEmail:    "existing@example.com",
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			factory := &cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated")}}
+			cmd := newCmdAuthLoginWithFunc(factory, func(context.Context) (*oauth.LoginResult, error) {
+				return &oauth.LoginResult{AccessToken: "new-access", Login: "alice"}, nil
+			})
+			if test.setGitName {
+				if err := cmd.Flags().Set("git-name", test.gitName); err != nil {
+					t.Fatal(err)
+				}
+			}
+			cmd.SetContext(context.Background())
+			if _, err := captureStdout(t, func() error { return cmd.RunE(cmd, nil) }); err != nil {
+				t.Fatal(err)
+			}
+
+			credentials, err := config.LoadStoredCredentials()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if credentials.AccessToken != "new-access" || credentials.GitName != test.wantGitName || credentials.GitEmail != test.wantGitEmail {
+				t.Fatalf("credentials = %#v", credentials)
+			}
+		})
+	}
+}
+
+func TestAuthLoginAddsAccountWithoutChangingActiveAccount(t *testing.T) {
+	isolateAuthConfig(t)
+	if err := config.SaveCredentials(&config.StoredCredentials{
+		AccessToken: "alice-access",
+		User:        "alice",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	factory := &cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated")}}
+	cmd := newCmdAuthLoginWithFunc(factory, func(context.Context) (*oauth.LoginResult, error) {
+		return &oauth.LoginResult{
+			AccessToken: "bob-access",
+			Login:       "bob",
+			Name:        "Bob",
+			Email:       "bob@example.com",
+		}, nil
+	})
+	cmd.SetContext(context.Background())
+	output, err := captureStdout(t, func() error { return cmd.RunE(cmd, nil) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Active account remains alice",
+		"ag auth switch bob",
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("output %q does not contain %q", output, want)
+		}
+	}
+
+	accounts, active, err := config.ListAccounts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(accounts) != 2 || active != "alice" {
+		t.Fatalf("accounts = %#v, active = %q", accounts, active)
+	}
+	bob, err := config.LoadCredentialStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	saved, err := bob.ResolveAccount("bob")
+	if err != nil || saved.AccessToken != "bob-access" {
+		t.Fatalf("bob = %#v, error = %v", saved, err)
 	}
 }
 
@@ -330,7 +517,7 @@ func TestAuthRefreshValidation(t *testing.T) {
 
 func TestAuthCommandArgs(t *testing.T) {
 	cmd := NewCmdAuth(&cmdutil.Factory{Config: testConfig{token: "token", user: "alice"}})
-	for _, name := range []string{"login", "logout", "refresh", "status", "token"} {
+	for _, name := range []string{"list", "login", "logout", "refresh", "status", "token"} {
 		child, _, err := cmd.Find([]string{name})
 		if err != nil {
 			t.Fatal(err)
@@ -342,5 +529,18 @@ func TestAuthCommandArgs(t *testing.T) {
 		if err := child.Args(child, []string{"unexpected"}); err == nil {
 			t.Errorf("%s accepted an unexpected argument", name)
 		}
+	}
+	switchCmd, _, err := cmd.Find([]string{"switch"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := switchCmd.Args(switchCmd, nil); err == nil {
+		t.Fatal("switch accepted no account")
+	}
+	if err := switchCmd.Args(switchCmd, []string{"alice"}); err != nil {
+		t.Fatalf("switch rejected one account: %v", err)
+	}
+	if err := switchCmd.Args(switchCmd, []string{"alice", "bob"}); err == nil {
+		t.Fatal("switch accepted multiple accounts")
 	}
 }
