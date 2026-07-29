@@ -1,3 +1,24 @@
+atomgit-cli (v0.7.0) unstable; urgency=medium
+
+  * Add branch and protected-branch management, repository editing, webhooks,
+    collaborators, organization listing, labels, SSH keys, search, and generic
+    authenticated API commands.
+  * Add complete pull request workflows for checkout, merge, review, current
+    head checks, collaboration metadata, reopening, and body-file input.
+  * Add AtomGit Actions run inspection, browser and --web support, and
+    structured JSON resource output.
+  * Add Release metadata management and attachment upload/download, with
+    source-aware self-update policy and isolated package-manager artifacts.
+  * Infer repository context from Git remotes, recognize gitcode.com aliases,
+    and support explicit multi-account authentication workflows.
+  * Add Linux LoongArch64 Release and npm packages, split stable/latest Nix
+    packages, and document Homebrew and Scoop installation.
+  * Improve API client consistency, write-result identifiers and URLs, Actions
+    empty responses, repository creation, CI reliability, and Windows test
+    isolation.
+
+ -- Dongliang Mu <dzm91@hust.edu.cn>  Tue, 28 Jul 2026 00:09:08 +0800
+
 atomgit-cli (v0.6.0) unstable; urgency=medium
 
   * Add npm distribution through a launcher package and six platform-specific

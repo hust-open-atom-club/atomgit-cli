@@ -20,17 +20,19 @@ func NewCmdBranch(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "branch",
 		Short: "Manage remote branches",
-		Long:  `List, view, create, and delete AtomGit remote branches.`,
+		Long:  `List, view, create, delete, and protect AtomGit remote branches.`,
 		Example: `  ag branch list owner/repo
   ag branch view owner/repo main
   ag branch create owner/repo feature/foo --ref main
-  ag branch delete owner/repo feature/foo`,
+  ag branch delete owner/repo feature/foo
+  ag branch protection list owner/repo`,
 	}
 
 	cmd.AddCommand(newCmdBranchList(f))
 	cmd.AddCommand(newCmdBranchView(f))
 	cmd.AddCommand(newCmdBranchCreate(f))
 	cmd.AddCommand(newCmdBranchDelete(f))
+	cmd.AddCommand(newCmdBranchProtection(f))
 
 	return cmd
 }

@@ -1099,3 +1099,92 @@ func TestPRReopenWrapsAPIError(t *testing.T) {
 		t.Fatalf("error = %v, want 'failed to reopen PR'", err)
 	}
 }
+
+func TestParsePRNumberRejectsInvalidInputs(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+		want    string
+	}{
+		{name: "zero", input: "0", wantErr: true},
+		{name: "negative", input: "-1", wantErr: true},
+		{name: "non_numeric", input: "not-a-number", wantErr: true},
+		{name: "decimal", input: "1.5", wantErr: true},
+		{name: "empty", input: "", wantErr: true},
+		{name: "whitespace_only", input: "   ", wantErr: true},
+		{name: "mixed_alphanumeric", input: "12abc", wantErr: true},
+		{name: "positive", input: "42", wantErr: false, want: "42"},
+		{name: "trimmed_positive", input: "  7  ", wantErr: false, want: "7"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parsePRNumber(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("parsePRNumber(%q) = %q, want error", tt.input, got)
+				}
+				if !strings.Contains(err.Error(), "invalid PR number") {
+					t.Fatalf("parsePRNumber(%q) err = %v, want 'invalid PR number' substring", tt.input, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("parsePRNumber(%q) unexpected err: %v", tt.input, err)
+			}
+			if got != tt.want {
+				t.Fatalf("parsePRNumber(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+type recordingConfig struct {
+	getTokenCalls int
+}
+
+func (r *recordingConfig) GetToken() (string, error) {
+	r.getTokenCalls++
+	return "token", nil
+}
+func (*recordingConfig) GetUser() (string, error) { return "alice", nil }
+func (*recordingConfig) GetHost() string          { return "atomgit.com" }
+
+func TestCmdPRCheckoutRejectsInvalidPRNumberBeforeAPI(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{name: "zero", input: "0"},
+		{name: "negative", input: "-1"},
+		{name: "non_numeric", input: "not-a-number"},
+		{name: "decimal", input: "1.5"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &recordingConfig{}
+			f := &cmdutil.Factory{Config: cfg}
+			cmd := newCmdPRCheckout(f)
+			// "--" prevents cobra from interpreting negative numbers as flags,
+			// so the value reaches parsePRNumber and exercises its validation.
+			cmd.SetArgs([]string{"--", "alice/demo", tt.input})
+			cmd.SetOut(io.Discard)
+			cmd.SetErr(io.Discard)
+			cmd.SilenceUsage = true
+			cmd.SilenceErrors = true
+
+			err := cmd.Execute()
+			if err == nil {
+				t.Fatalf("Execute() with number=%q returned nil error, want validation failure", tt.input)
+			}
+			if !strings.Contains(err.Error(), "invalid PR number") {
+				t.Fatalf("Execute() err = %v, want 'invalid PR number' substring", err)
+			}
+			if cfg.getTokenCalls != 0 {
+				t.Fatalf("GetToken was called %d times; parsePRNumber must reject invalid input before authentication", cfg.getTokenCalls)
+			}
+		})
+	}
+}

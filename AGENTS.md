@@ -9,7 +9,7 @@
 - 当前 `go.mod` 指定 Go 1.24.2；不要无故降低或升级 Go 版本及依赖。
 - CLI 入口为 `cmd/ag/main.go`，执行流程为 `main` -> `internal/agcmd.Main` -> `pkg/cmd/root.NewCmdRoot`。
 - AtomGit API 基址和通用 HTTP 请求逻辑位于 `internal/api/client.go`，API 数据结构位于 `internal/api/types.go`。
-- 正式发布支持 Linux、macOS 和 Windows 的 amd64/arm64；其他 Go 目标平台可能能够编译，但不保证完整兼容。
+- 正式发布支持 Linux 的 amd64/arm64/loong64，以及 macOS 和 Windows 的 amd64/arm64；其他 Go 目标平台可能能够编译，但不保证完整兼容。
 
 ## 目录与职责
 
@@ -24,7 +24,7 @@
 - `pkg/cmd/<name>/`：各 Cobra 命令及子命令实现。
 - `bin/ag.js`：npm 主包入口，根据操作系统和架构调用对应的可选平台包。
 - `test/`：npm 主包与平台包的集成测试。
-- `.goreleaser.yaml`：Linux、macOS 和 Windows 的 amd64/arm64 发布打包配置。
+- `.goreleaser.yaml`：Linux 的 amd64/arm64/loong64，以及 macOS 和 Windows 的 amd64/arm64 发布打包配置。
 - `scripts/build-release.sh`：GoReleaser 打包包装脚本，负责版本元数据、安装脚本、校验和和 npm 制品，输出到被忽略的 `dist/`。
 - `scripts/build-npm-packages.js`、`scripts/check-npm-version.js`、`scripts/set-npm-version.js`：npm 平台包生成与版本同步。
 - `flake.nix`、`scripts/update-nix-package.sh`：Nix `stable`/`latest` package 与固定输出哈希维护。

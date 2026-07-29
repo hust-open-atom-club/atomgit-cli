@@ -15,6 +15,18 @@ ag pr create --help
 # 浏览器 OAuth 登录并写入令牌文件
 ag auth login
 # 已登录时会提示无需重复登录；若要重新走浏览器：ag auth login --force
+# 可为账号保存提交身份覆盖值
+ag auth login --force --git-name "Alice" --git-email alice@example.com
+
+# 列出账号（不会输出 token）并切换活动账号及 Git identity
+ag auth list
+ag auth list --json
+ag auth switch alice
+
+# 默认同步当前仓库，也可覆盖 identity、修改全局配置或禁用同步
+ag auth switch alice --git-name "Alice" --git-email alice@example.com
+ag auth switch alice --global
+ag auth switch alice --no-git
 
 # 用 refresh_token 刷新 access_token（需之前登录响应里包含 refresh_token）
 ag auth refresh
@@ -25,9 +37,17 @@ ag auth status
 # 显示当前 token
 ag auth token
 
-# 删除本地令牌文件
+# 删除非活动账号、最后一个活动账号，或全部账号
 ag auth logout
+ag auth logout --account alice
+ag auth logout --all
 ```
+
+`auth status`、`auth token` 和 `auth refresh` 始终使用活动账号。首次登录的账号会自动成为活动账号；后续 `auth login --force` 只新增或更新账号，不会隐式切换，需使用 `auth switch` 显式选择。
+
+`auth switch` 默认同时切换活动凭据并写入当前仓库的 `git config --local user.name/user.email`；只有 `--global` 才修改全局配置，`--no-git` 可明确禁用同步。API 邮箱缺失时 CLI 不会猜测邮箱，必须通过登录时的 `--git-email`、切换时的 `--git-email` 或 `--no-git` 明确处理。Git identity 写入失败不会切换活动凭据；凭据切换失败时会尝试恢复原 Git identity。该流程使用补偿式回滚降低半完成风险，但不承诺跨凭据文件和 Git 配置的完整原子性。
+
+`auth logout` 默认删除活动账号。为避免删除动作隐式选择另一个账号并造成 Git identity 错配，当仍有其他账号时不能删除活动账号；应先执行 `auth switch <account>`，再用 `auth logout --account <old-account>` 删除原账号。`--account` 可直接删除非活动账号，`--all` 明确删除全部账号。access token、refresh token 不会写入 Git 配置、remote URL、账号列表或错误信息。
 
 可选环境变量（覆盖默认 OAuth 应用）：`AG_OAUTH_CLIENT_ID`、`AG_OAUTH_CLIENT_SECRET`；若本机 **8765** 端口被占用，可设置 **`AG_OAUTH_REDIRECT_PORT`**（需与 AtomGit 应用配置的回调地址一致）。
 
@@ -95,6 +115,45 @@ ag repo delete owner/repo --yes
 
 该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。
 
+### 仓库协作者
+
+```bash
+# 列出协作者并查看有效权限及权限来源
+ag repo collaborator list owner/repo --limit 50
+ag repo collaborator view owner/repo octocat
+ag repo collaborator view owner/repo octocat --json
+
+# 添加、调整或移除直接协作者
+ag repo collaborator add owner/repo octocat --permission push
+ag repo collaborator edit owner/repo octocat --permission admin
+ag repo collaborator edit owner/repo octocat --permission pull --yes
+ag repo collaborator remove owner/repo octocat
+ag repo collaborator remove owner/repo octocat --yes
+```
+
+AtomGit 内置协作者权限为 `pull`（参与者）、`push`（开发者）和 `admin`（仓库维护者）。`list` 和 `view` 会明确标记直接权限或权限来源；组织继承权限不能通过仓库级命令修改。降权和移除操作默认要求确认，可使用 `--yes` 跳过确认。
+
+### 仓库 Webhook
+
+```bash
+# 列出和查看 Webhook（输出不包含 secret）
+ag repo webhook list owner/repo --limit 50
+ag repo webhook view owner/repo 42 --json
+
+# 从环境变量、文件或标准输入安全读取 secret
+ag repo webhook create owner/repo --url https://example.com/hook --events push,issues --secret-env WEBHOOK_SECRET
+ag repo webhook create owner/repo --url https://example.com/hook --events merge-requests --secret-file ./webhook-secret
+Get-Content ./webhook-secret | ag repo webhook edit owner/repo 42 --secret-stdin --encryption signature
+
+# 替换事件、删除或发送真实测试请求
+ag repo webhook edit owner/repo 42 --events push,tag-push,merge-requests
+ag repo webhook edit owner/repo 42 --events none
+ag repo webhook test owner/repo 42
+ag repo webhook delete owner/repo 42 --yes
+```
+
+支持的事件为 `push`、`tag-push`、`issues`、`note` 和 `merge-requests`。Webhook secret 不支持命令行明文参数，只能通过 `--secret-env`、`--secret-file` 或 `--secret-stdin` 三选一提供，也不会出现在列表、详情、JSON 或错误响应中。`test` 会向真实目标发送请求，和删除操作一样默认要求确认。AtomGit 当前公开 API 仅在响应中提供 `active`，因此 CLI 将启用状态作为只读信息展示，不发送未公开的修改字段。
+
 ## 组织 (org)
 
 ```bash
@@ -125,7 +184,26 @@ ag branch create owner/repo feature/foo --ref main
 # 删除远程分支（默认需要确认；不会删除本地 Git 分支）
 ag branch delete owner/repo feature/foo
 ag branch delete owner/repo feature/foo --yes
+
+# 查看保护分支规则（输出会区分 exact 与 wildcard）
+ag branch protection list owner/repo
+ag branch protection view owner/repo main
+ag branch protection view owner/repo "release/*"
+
+# 创建保护规则；新规则必须同时指定 push 与 merge 权限
+ag branch protection set owner/repo main --push admin --merge admin
+ag branch protection set owner/repo main --push maintainer --merge admin
+ag branch protection set owner/repo "release/*" --push "develop;alice" --merge admin
+
+# 仅修改已有规则的推送权限；未指定的合并权限保持不变
+ag branch protection set owner/repo main --push "" --yes
+
+# 删除规则（默认显示当前规则并要求确认）
+ag branch protection delete owner/repo "release/*"
+ag branch protection delete owner/repo "release/*" --yes
 ```
+
+保护规则的 `--push` 与 `--merge` 接受由英文分号分隔的 `develop`、`admin`、`maintainer` 或用户名；显式传入空字符串表示不允许任何人执行该操作。AtomGit 对精确分支规则的优先级高于匹配的 wildcard 规则。CLI 只管理官方 API 暴露的推送与合并白名单，不修改评审、流水线等其他保护设置。更新接口要求同时提交两类权限，因此 CLI 会先读取现有规则并保留未显式修改的一侧；若服务端返回无法无损表示的旧权限，命令会停止并要求显式提供该权限。
 
 ## Browse
 
@@ -199,6 +277,15 @@ ag pr merge owner/repo 123 --rebase --squash --admin --subject "Merge PR #123" -
 ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch
 ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature-branch
 cat description.md | ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature-branch
+ag pr create owner/repo --title "Fix bug" --head feature-branch \
+  --assignee alice --reviewer bob --tester carol --label Bug --milestone v1.0
+
+# 修改 PR 协作元数据
+ag pr edit owner/repo 123 --add-assignee alice --remove-assignee bob
+ag pr edit owner/repo 123 --add-reviewer carol --remove-reviewer dave
+ag pr edit owner/repo 123 --add-tester erin --add-label "Priority:High"
+ag pr edit owner/repo 123 --remove-label Bug --milestone v1.1
+ag pr edit owner/repo 123 --milestone none
 
 # 查看、关联或取消关联 PR 对应的 Issue
 ag pr issues owner/repo 123
@@ -214,9 +301,18 @@ ag pr close owner/repo 123
 
 # 重新打开 PR
 ag pr reopen owner/repo 123
+
+# 检出 PR 到本地
+ag pr checkout owner/repo 42
+ag pr checkout owner/repo 42 --branch review-fix
+ag pr checkout owner/repo 42 --force
+ag pr checkout owner/repo 42 --detach
+ag pr checkout owner/repo 42 --recurse-submodules
 ```
 
 跨仓库创建 PR 时 `--head` 的写法请参阅[跨仓库 PR 示例](cross_repo_pr_demo.md)。
+
+负责人（assignee）负责后续工作，批准审查人（approval reviewer）负责批准变更，测试人（tester）负责验证变更；三个 AtomGit 角色相互独立。用户账号、标签和里程碑会在修改 PR 前解析，标签和里程碑必须已存在。`pr edit` 只修改显式传入的字段，添加和移除参数可重复使用，也可用逗号一次传入多个值。
 
 #### PR 评审
 
@@ -560,4 +656,16 @@ ag --version
 ag version --json
 ```
 
-通过 `make build` 或 `make install` 从源码构建且未注入发布元数据时，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，`ag version` 会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。通过 `go install ...@latest` 从模块代理安装时，模块版本仍然可用，但由于源码包不包含 Git 历史，文本输出会省略无法获得的 commit 和构建时间，JSON 输出则将对应字段保留为 `unknown`。
+`ag version`、`ag --version` 和 `ag version --json` 同时显示 `selfUpdate` 与 `source`，用于说明当前二进制是否允许自替换以及其发行来源。`selfUpdate` 由 `source` 集中派生，不是独立的构建输入：`release`、`source` 和 `development` 允许自升级，包管理器、自定义和未知来源默认禁止。通过 `make build` 或 `make install` 从源码构建且未注入发布元数据时，默认报告 `selfUpdate=true, source=source`，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，命令会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
+
+通过 `go install ...@latest` 从模块代理安装时，模块版本仍然可用，但由于源码包不包含 Git 历史，文本输出会省略无法获得的 commit 和构建时间，JSON 输出则将对应字段保留为 `unknown`。
+
+下游源码打包方应显式注入自身来源；合法的自定义来源会自动禁用自升级，例如：
+
+```bash
+go build -trimpath -ldflags \
+  "-X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Source=example-manager" \
+  ./cmd/ag
+```
+
+`source` 必须是长度不超过 64 的小写 ASCII 标识符，可包含数字、点、下划线和连字符；`unknown` 为无效元数据的保守回退值，不能作为构建来源。

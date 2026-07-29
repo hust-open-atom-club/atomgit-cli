@@ -12,37 +12,43 @@ const TARGETS = [
     platform: "linux",
     arch: "x64",
     executable: "ag",
-    archive: "ag_linux_amd64.tar.gz",
+    archive: "ag_linux_amd64_npm.tar.gz",
   },
   {
     platform: "linux",
     arch: "arm64",
     executable: "ag",
-    archive: "ag_linux_arm64.tar.gz",
+    archive: "ag_linux_arm64_npm.tar.gz",
+  },
+  {
+    platform: "linux",
+    arch: "loong64",
+    executable: "ag",
+    archive: "ag_linux_loong64_npm.tar.gz",
   },
   {
     platform: "darwin",
     arch: "x64",
     executable: "ag",
-    archive: "ag_darwin_amd64.tar.gz",
+    archive: "ag_darwin_amd64_npm.tar.gz",
   },
   {
     platform: "darwin",
     arch: "arm64",
     executable: "ag",
-    archive: "ag_darwin_arm64.tar.gz",
+    archive: "ag_darwin_arm64_npm.tar.gz",
   },
   {
     platform: "win32",
     arch: "x64",
     executable: "ag.exe",
-    archive: "ag_windows_amd64.zip",
+    archive: "ag_windows_amd64_npm.zip",
   },
   {
     platform: "win32",
     arch: "arm64",
     executable: "ag.exe",
-    archive: "ag_windows_arm64.zip",
+    archive: "ag_windows_arm64_npm.zip",
   },
 ].map((target) => ({
   ...target,
@@ -133,7 +139,7 @@ async function buildNpmPackages({ root, releaseDir, version, pack = true }) {
     );
     await copyFile(path.join(root, "LICENSE"), path.join(packageDir, "LICENSE"));
     await extractBinary(
-      path.join(releaseDir, target.archive),
+      path.join(releaseDir, "package-managers", target.archive),
       target,
       path.join(binDir, target.executable),
     );
