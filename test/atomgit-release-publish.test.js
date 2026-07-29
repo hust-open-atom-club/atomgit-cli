@@ -18,8 +18,26 @@ const ARCHIVES = [
   "ag_darwin_arm64.tar.gz",
   "ag_linux_amd64.tar.gz",
   "ag_linux_arm64.tar.gz",
+  "ag_linux_loong64.tar.gz",
   "ag_windows_amd64.zip",
   "ag_windows_arm64.zip",
+];
+const MANAGED_ARCHIVES = [
+  "ag_darwin_amd64_homebrew.tar.gz",
+  "ag_darwin_arm64_homebrew.tar.gz",
+  "ag_linux_amd64_homebrew.tar.gz",
+  "ag_linux_arm64_homebrew.tar.gz",
+  "ag_darwin_amd64_npm.tar.gz",
+  "ag_darwin_arm64_npm.tar.gz",
+  "ag_linux_amd64_npm.tar.gz",
+  "ag_linux_arm64_npm.tar.gz",
+  "ag_linux_loong64_npm.tar.gz",
+  "ag_windows_amd64_npm.zip",
+  "ag_windows_arm64_npm.zip",
+  "ag_windows_amd64_scoop.zip",
+  "ag_windows_arm64_scoop.zip",
+  "ag_windows_amd64_winget.zip",
+  "ag_windows_arm64_winget.zip",
 ];
 
 function digest(buffer) {
@@ -31,26 +49,40 @@ async function createFixture(t, tag = "v1.2.3") {
   t.after(() => rm(root, { recursive: true, force: true }));
   const releaseDir = path.join(root, tag);
   await mkdir(releaseDir);
-  for (const [index, name] of ARCHIVES.entries()) {
+  async function createArchive(directory, name, index) {
     if (name.endsWith(".zip")) {
       const zip = new AdmZip();
       zip.addFile("LICENSE", Buffer.from("license"));
       zip.addFile("ag.exe", Buffer.from(`binary-${index}`));
-      zip.writeZip(path.join(releaseDir, name));
+      zip.writeZip(path.join(directory, name));
     } else {
       const source = path.join(root, `source-${index}`);
       await mkdir(source);
       await writeFile(path.join(source, "LICENSE"), "license");
       await writeFile(path.join(source, "ag"), `binary-${index}`);
-      await tar.c({ cwd: source, file: path.join(releaseDir, name), gzip: true }, ["LICENSE", "ag"]);
+      await tar.c({ cwd: source, file: path.join(directory, name), gzip: true }, ["LICENSE", "ag"]);
     }
   }
+  for (const [index, name] of ARCHIVES.entries()) await createArchive(releaseDir, name, index);
   await writeFile(path.join(releaseDir, "install.sh"), `_BUNDLED_TAG="${tag}"\n`);
   await writeFile(path.join(releaseDir, "install.ps1"), `$BundledTag = '${tag}'\n`);
   const checksumNames = [...ARCHIVES, "install.sh", "install.ps1"];
   const lines = [];
   for (const name of checksumNames) lines.push(`${digest(await readFile(path.join(releaseDir, name)))}  ${name}`);
   await writeFile(path.join(releaseDir, "checksums.txt"), `${lines.join("\n")}\n`);
+
+  const managedDir = path.join(releaseDir, "package-managers");
+  await mkdir(managedDir);
+  const managedArtifacts = [];
+  const managedLines = [];
+  for (const [index, name] of MANAGED_ARCHIVES.entries()) {
+    await createArchive(managedDir, name, ARCHIVES.length + index);
+    const sha256 = digest(await readFile(path.join(managedDir, name)));
+    managedLines.push(`${sha256}  ${name}`);
+    managedArtifacts.push({ filename: name, sha256, selfUpdate: false });
+  }
+  await writeFile(path.join(managedDir, "package-managers-checksums.txt"), `${managedLines.join("\n")}\n`);
+  await writeFile(path.join(managedDir, "package-managers-manifest.json"), `${JSON.stringify({ schemaVersion: 1, tag, artifacts: managedArtifacts }, null, 2)}\n`);
   const notesFile = path.join(root, "notes.md");
   await writeFile(notesFile, "Release notes\n");
   return { notesFile, releaseDir, tag };
@@ -158,10 +190,19 @@ test("validates explicit release inputs", () => {
 test("validates the release artifact set, checksums, archives, and installer tags", async (t) => {
   const fixture = await createFixture(t);
   const plan = await inspectArtifacts(fixture.releaseDir, fixture.tag);
-  assert.equal(plan.artifacts.length, 9);
+  assert.equal(plan.artifacts.length, 27);
 
   await writeFile(path.join(fixture.releaseDir, "extra.txt"), "extra");
   await assert.rejects(inspectArtifacts(fixture.releaseDir, fixture.tag), /extra: extra.txt/);
+});
+
+test("rejects a package-manager manifest that is not bound to the release tag", async (t) => {
+  const fixture = await createFixture(t);
+  const manifestPath = path.join(fixture.releaseDir, "package-managers", "package-managers-manifest.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  manifest.tag = "v9.9.9";
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  await assert.rejects(inspectArtifacts(fixture.releaseDir, fixture.tag), /not bound/);
 });
 
 test("dry run performs no AtomGit requests", async (t) => {
@@ -178,7 +219,7 @@ test("creates a release, uploads every attachment, and verifies downloads", asyn
   const options = optionsFor(fixture);
   const atomgit = fakeAtomGit(plan, options);
   await publishRelease(plan, { ...options, logger: () => {}, runAg: atomgit.runAg });
-  assert.equal(atomgit.contents.size, 9);
+  assert.equal(atomgit.contents.size, 27);
   assert.equal(atomgit.calls.filter((args) => args[0] === "release" && args[1] === "create").length, 1);
 });
 
@@ -189,8 +230,8 @@ test("resumes an existing partial release without re-uploading verified attachme
   const atomgit = fakeAtomGit(plan, options);
   await atomgit.seed(plan.artifacts.slice(0, 3).map(({ name }) => name));
   await publishRelease(plan, { ...options, logger: () => {}, runAg: atomgit.runAg });
-  assert.equal(atomgit.contents.size, 9);
-  assert.equal(atomgit.calls.filter((args) => args[0] === "release" && args[1] === "upload").length, 6);
+  assert.equal(atomgit.contents.size, 27);
+  assert.equal(atomgit.calls.filter((args) => args[0] === "release" && args[1] === "upload").length, 24);
 });
 
 test("upload failures report the remaining attachments and never claim success", async (t) => {

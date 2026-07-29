@@ -12,11 +12,30 @@ const REQUIRED_ARCHIVES = [
   "ag_darwin_arm64.tar.gz",
   "ag_linux_amd64.tar.gz",
   "ag_linux_arm64.tar.gz",
+  "ag_linux_loong64.tar.gz",
   "ag_windows_amd64.zip",
   "ag_windows_arm64.zip",
 ];
-const OPTIONAL_ARCHIVES = ["ag_linux_loong64.tar.gz"];
 const INSTALLERS = ["install.sh", "install.ps1"];
+const PACKAGE_MANAGER_ARCHIVES = [
+  "ag_darwin_amd64_homebrew.tar.gz",
+  "ag_darwin_arm64_homebrew.tar.gz",
+  "ag_linux_amd64_homebrew.tar.gz",
+  "ag_linux_arm64_homebrew.tar.gz",
+  "ag_darwin_amd64_npm.tar.gz",
+  "ag_darwin_arm64_npm.tar.gz",
+  "ag_linux_amd64_npm.tar.gz",
+  "ag_linux_arm64_npm.tar.gz",
+  "ag_linux_loong64_npm.tar.gz",
+  "ag_windows_amd64_npm.zip",
+  "ag_windows_arm64_npm.zip",
+  "ag_windows_amd64_scoop.zip",
+  "ag_windows_arm64_scoop.zip",
+  "ag_windows_amd64_winget.zip",
+  "ag_windows_arm64_winget.zip",
+];
+const PACKAGE_MANAGER_MANIFEST = "package-managers-manifest.json";
+const PACKAGE_MANAGER_CHECKSUMS = "package-managers-checksums.txt";
 
 function parseArguments(args) {
   const options = { dryRun: false, prerelease: false };
@@ -47,16 +66,47 @@ function parseArguments(args) {
   return options;
 }
 
-function parseChecksums(contents) {
+function parseChecksums(contents, source = "checksums.txt") {
   const result = new Map();
   for (const [index, raw] of contents.split(/\r?\n/).entries()) {
     if (!raw.trim()) continue;
     const match = /^([0-9a-fA-F]{64})\s+\*?(?:\.\/)?([^/\\]+)$/.exec(raw.trim());
-    if (!match) throw new Error(`invalid checksums.txt line ${index + 1}`);
+    if (!match) throw new Error(`invalid ${source} line ${index + 1}`);
     if (result.has(match[2])) throw new Error(`duplicate checksum entry for ${match[2]}`);
     result.set(match[2], match[1].toLowerCase());
   }
   return result;
+}
+
+function assertExactFiles(files, expectedFiles, label) {
+  if (JSON.stringify(files) === JSON.stringify(expectedFiles)) return;
+  const expected = new Set(expectedFiles);
+  const actual = new Set(files);
+  const missing = expectedFiles.filter((name) => !actual.has(name));
+  const extra = files.filter((name) => !expected.has(name));
+  throw new Error(`invalid ${label} artifact set; missing: ${missing.join(", ") || "none"}; extra: ${extra.join(", ") || "none"}`);
+}
+
+function validatePackageManagerManifest(contents, tag, checksums) {
+  let manifest;
+  try {
+    manifest = JSON.parse(contents);
+  } catch (error) {
+    throw new Error(`invalid ${PACKAGE_MANAGER_MANIFEST}: ${error.message}`);
+  }
+  if (manifest.schemaVersion !== 1) throw new Error(`${PACKAGE_MANAGER_MANIFEST} schemaVersion must be 1`);
+  if (manifest.tag !== tag) throw new Error(`${PACKAGE_MANAGER_MANIFEST} is not bound to ${tag}`);
+  if (!Array.isArray(manifest.artifacts)) throw new Error(`${PACKAGE_MANAGER_MANIFEST} artifacts must be an array`);
+
+  const entries = new Map();
+  for (const artifact of manifest.artifacts) {
+    if (!artifact || typeof artifact.filename !== "string") throw new Error(`${PACKAGE_MANAGER_MANIFEST} contains an invalid artifact entry`);
+    if (entries.has(artifact.filename)) throw new Error(`${PACKAGE_MANAGER_MANIFEST} contains duplicate artifact ${artifact.filename}`);
+    if (artifact.selfUpdate !== false) throw new Error(`${PACKAGE_MANAGER_MANIFEST} must set selfUpdate=false for ${artifact.filename}`);
+    if (artifact.sha256 !== checksums.get(artifact.filename)) throw new Error(`${PACKAGE_MANAGER_MANIFEST} checksum mismatch for ${artifact.filename}`);
+    entries.set(artifact.filename, artifact);
+  }
+  assertExactFiles([...entries.keys()].sort(), [...PACKAGE_MANAGER_ARCHIVES].sort(), "package-manager manifest");
 }
 
 function sha256(buffer) {
@@ -91,16 +141,9 @@ async function validateArchive(filePath) {
 async function inspectArtifacts(directory, tag) {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = entries.filter((entry) => entry.isFile()).map((entry) => entry.name).sort();
-  const optional = OPTIONAL_ARCHIVES.filter((name) => files.includes(name));
-  const checksumNames = [...REQUIRED_ARCHIVES, ...optional, ...INSTALLERS].sort();
+  const checksumNames = [...REQUIRED_ARCHIVES, ...INSTALLERS].sort();
   const expectedFiles = [...checksumNames, "checksums.txt"].sort();
-  if (JSON.stringify(files) !== JSON.stringify(expectedFiles)) {
-    const expected = new Set(expectedFiles);
-    const actual = new Set(files);
-    const missing = expectedFiles.filter((name) => !actual.has(name));
-    const extra = files.filter((name) => !expected.has(name));
-    throw new Error(`invalid release artifact set; missing: ${missing.join(", ") || "none"}; extra: ${extra.join(", ") || "none"}`);
-  }
+  assertExactFiles(files, expectedFiles, "release");
 
   const checksums = parseChecksums(await readFile(path.join(directory, "checksums.txt"), "utf8"));
   if (JSON.stringify([...checksums.keys()].sort()) !== JSON.stringify(checksumNames)) {
@@ -123,6 +166,33 @@ async function inspectArtifacts(directory, tag) {
 
   const checksumContents = await readFile(path.join(directory, "checksums.txt"));
   artifacts.push({ name: "checksums.txt", filePath: path.join(directory, "checksums.txt"), sha256: sha256(checksumContents) });
+
+  const packageManagerDirectory = path.join(directory, "package-managers");
+  const packageManagerEntries = await readdir(packageManagerDirectory, { withFileTypes: true });
+  const packageManagerFiles = packageManagerEntries.filter((entry) => entry.isFile()).map((entry) => entry.name).sort();
+  const expectedPackageManagerFiles = [...PACKAGE_MANAGER_ARCHIVES, PACKAGE_MANAGER_MANIFEST, PACKAGE_MANAGER_CHECKSUMS].sort();
+  assertExactFiles(packageManagerFiles, expectedPackageManagerFiles, "package-manager");
+
+  const packageManagerChecksumPath = path.join(packageManagerDirectory, PACKAGE_MANAGER_CHECKSUMS);
+  const packageManagerChecksumContents = await readFile(packageManagerChecksumPath);
+  const packageManagerChecksums = parseChecksums(packageManagerChecksumContents.toString("utf8"), PACKAGE_MANAGER_CHECKSUMS);
+  if (JSON.stringify([...packageManagerChecksums.keys()].sort()) !== JSON.stringify([...PACKAGE_MANAGER_ARCHIVES].sort())) {
+    throw new Error(`${PACKAGE_MANAGER_CHECKSUMS} entries do not match the package-manager attachment set`);
+  }
+  for (const name of PACKAGE_MANAGER_ARCHIVES) {
+    const filePath = path.join(packageManagerDirectory, name);
+    const contents = await readFile(filePath);
+    const digest = sha256(contents);
+    if (packageManagerChecksums.get(name) !== digest) throw new Error(`checksum mismatch for ${name}`);
+    await validateArchive(filePath);
+    artifacts.push({ name, filePath, sha256: digest });
+  }
+
+  const manifestPath = path.join(packageManagerDirectory, PACKAGE_MANAGER_MANIFEST);
+  const manifestContents = await readFile(manifestPath);
+  validatePackageManagerManifest(manifestContents.toString("utf8"), tag, packageManagerChecksums);
+  artifacts.push({ name: PACKAGE_MANAGER_MANIFEST, filePath: manifestPath, sha256: sha256(manifestContents) });
+  artifacts.push({ name: PACKAGE_MANAGER_CHECKSUMS, filePath: packageManagerChecksumPath, sha256: sha256(packageManagerChecksumContents) });
   return { artifacts, directory };
 }
 
