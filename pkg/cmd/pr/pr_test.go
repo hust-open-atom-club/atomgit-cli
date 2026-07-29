@@ -1181,6 +1181,49 @@ func (r *recordingConfig) GetToken() (string, error) {
 func (*recordingConfig) GetUser() (string, error) { return "alice", nil }
 func (*recordingConfig) GetHost() string          { return "atomgit.com" }
 
+func TestPRCommandsValidateBeforeAuthentication(t *testing.T) {
+	tests := []struct {
+		name      string
+		command   func(*cmdutil.Factory) *cobra.Command
+		args      []string
+		configure func(*cobra.Command)
+		wantError string
+	}{
+		{name: "list repository", command: newCmdPRList, args: []string{"demo"}, wantError: "invalid repository format"},
+		{
+			name: "create repository", command: newCmdPRCreate, args: []string{"demo"},
+			configure: func(cmd *cobra.Command) { _ = cmd.Flags().Set("title", "title") },
+			wantError: "invalid repository format",
+		},
+		{name: "view number", command: newCmdPRView, args: []string{"alice/demo", "bad"}, wantError: "invalid PR number"},
+		{name: "edit number", command: newCmdPREdit, args: []string{"alice/demo", "bad"}, wantError: "invalid PR number"},
+		{name: "edit fields", command: newCmdPREdit, args: []string{"alice/demo", "1"}, wantError: "at least one PR field"},
+		{name: "close number", command: newCmdPRClose, args: []string{"alice/demo", "bad"}, wantError: "invalid PR number"},
+		{name: "reopen number", command: newCmdPRReopen, args: []string{"alice/demo", "bad"}, wantError: "invalid PR number"},
+		{name: "diff number", command: newCmdPRDiff, args: []string{"alice/demo", "bad"}, wantError: "invalid PR number"},
+		{name: "merge number", command: newCmdPRMerge, args: []string{"alice/demo", "bad"}, wantError: "invalid PR number"},
+		{name: "issues number", command: newCmdViewIssues, args: []string{"alice/demo", "bad"}, wantError: "invalid PR number"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &recordingConfig{}
+			cmd := tt.command(&cmdutil.Factory{Config: cfg})
+			if tt.configure != nil {
+				tt.configure(cmd)
+			}
+
+			err := cmd.RunE(cmd, tt.args)
+			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+				t.Fatalf("error = %v, want containing %q", err, tt.wantError)
+			}
+			if cfg.getTokenCalls != 0 {
+				t.Fatalf("GetToken was called %d times; validation must finish before authentication", cfg.getTokenCalls)
+			}
+		})
+	}
+}
+
 func TestCmdPRCheckoutRejectsInvalidPRNumberBeforeAPI(t *testing.T) {
 	tests := []struct {
 		name  string

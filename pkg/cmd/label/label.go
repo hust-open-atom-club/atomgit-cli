@@ -37,15 +37,16 @@ func newCmdLabelList(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid limit: %d (must be positive)", limit)
 			}
 
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return cmdutil.AuthenticationError(err)
-			}
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
 			if err != nil {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
 
 			client, err := newAPIClient(f, token)
 			if err != nil {

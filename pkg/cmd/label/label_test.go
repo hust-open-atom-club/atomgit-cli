@@ -2,7 +2,6 @@ package label
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -18,6 +17,15 @@ type labelTestConfig struct{ tokenErr error }
 func (c labelTestConfig) GetToken() (string, error) { return "token", c.tokenErr }
 func (labelTestConfig) GetUser() (string, error)    { return "alice", nil }
 func (labelTestConfig) GetHost() string             { return "atomgit.com" }
+
+type recordingLabelConfig struct{ getTokenCalls int }
+
+func (c *recordingLabelConfig) GetToken() (string, error) {
+	c.getTokenCalls++
+	return "token", nil
+}
+func (*recordingLabelConfig) GetUser() (string, error) { return "alice", nil }
+func (*recordingLabelConfig) GetHost() string          { return "atomgit.com" }
 
 type labelRoundTripFunc func(*http.Request) (*http.Response, error)
 
@@ -106,10 +114,7 @@ func TestLabelListRejectsInvalidInput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := labelTestConfig{}
-			if tt.limit != "" {
-				config.tokenErr = errors.New("not authenticated")
-			}
+			config := &recordingLabelConfig{}
 			cmd := newCmdLabelList(&cmdutil.Factory{Config: config})
 			if tt.limit != "" {
 				if err := cmd.Flags().Set("limit", tt.limit); err != nil {
@@ -119,6 +124,9 @@ func TestLabelListRejectsInvalidInput(t *testing.T) {
 			err := cmd.RunE(cmd, tt.args)
 			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
 				t.Fatalf("error = %v, want containing %q", err, tt.wantError)
+			}
+			if config.getTokenCalls != 0 {
+				t.Fatalf("GetToken was called %d times; validation must finish before authentication", config.getTokenCalls)
 			}
 		})
 	}

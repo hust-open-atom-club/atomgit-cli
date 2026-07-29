@@ -15,17 +15,20 @@ func newCmdViewIssues(f *cmdutil.Factory) *cobra.Command {
 		Long:  `View all issues linked to a pull request.`,
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return cmdutil.AuthenticationError(err)
-			}
-
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-			prNumber := remaining[0]
+			prNumber, err := parsePRNumber(remaining[0])
+			if err != nil {
+				return err
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
 
 			client, err := newAPIClient(f, token)
 			if err != nil {
