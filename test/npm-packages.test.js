@@ -137,18 +137,21 @@ test("extracts binaries from release tar.gz and zip archives", async (t) => {
   assert.equal(await readFile(windowsDestination, "utf8"), "windows binary");
 });
 
-test("builds all six platform package directories from release archives", async (t) => {
+test("builds all seven platform package directories from release archives", async (t) => {
   const root = await mkdtemp(path.join(process.cwd(), ".ag-npm-test-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const releaseDir = path.join(root, "release");
+  const managedDir = path.join(releaseDir, "package-managers");
   const sourceDir = path.join(root, "source");
   await mkdir(releaseDir);
+  await mkdir(managedDir);
   await mkdir(sourceDir);
 
   for (const target of TARGETS) {
+    assert.match(target.archive, /_npm\.(?:tar\.gz|zip)$/);
     const contents = `${target.platform}/${target.arch}`;
     await writeFile(path.join(sourceDir, target.executable), contents);
-    const archivePath = path.join(releaseDir, target.archive);
+    const archivePath = path.join(managedDir, target.archive);
     if (target.archive.endsWith(".zip")) {
       const zip = new AdmZip();
       zip.addFile(target.executable, Buffer.from(contents));
@@ -178,6 +181,28 @@ test("builds all six platform package directories from release archives", async 
     assert.equal(
       await readFile(path.join(packageDir, "bin", target.executable), "utf8"),
       `${target.platform}/${target.arch}`,
+    );
+  }
+});
+
+test("all npm targets use managed archives instead of ordinary release archives", () => {
+  assert.deepEqual(
+    TARGETS.map(({ archive }) => archive),
+    [
+      "ag_linux_amd64_npm.tar.gz",
+      "ag_linux_arm64_npm.tar.gz",
+      "ag_linux_loong64_npm.tar.gz",
+      "ag_darwin_amd64_npm.tar.gz",
+      "ag_darwin_arm64_npm.tar.gz",
+      "ag_windows_amd64_npm.zip",
+      "ag_windows_arm64_npm.zip",
+    ],
+  );
+  for (const target of TARGETS) {
+    assert.notEqual(
+      target.archive,
+      target.archive.replace("_npm", ""),
+      `${target.platform}/${target.arch} must use the npm profile`,
     );
   }
 });

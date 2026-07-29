@@ -3,8 +3,8 @@
 # 仓库: https://atomgit.com/hust-open-atom-club/atomgit-cli
 #
 # 用法:
-#   curl -fsSL https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/v0.6.0/install.sh | sh
-#   AG_VERSION=v0.6.0 sh install.sh
+#   curl -fsSL https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.sh | sh
+#   AG_VERSION=vX.Y.Z sh install.sh
 #   AG_FROM_SOURCE=1 sh install.sh    # 从本仓库源码构建（需 git、Go）
 
 set -eu
@@ -12,8 +12,8 @@ set -eu
 REPO_OWNER="${AG_REPO_OWNER:-hust-open-atom-club}"
 REPO_NAME="${AG_REPO_NAME:-atomgit-cli}"
 BASE_URL="https://atomgit.com/${REPO_OWNER}/${REPO_NAME}"
-# 默认下载该 tag 下的预编译包。仓库内请随最新 Release 更新；也可用 make release 生成 dist/<tag>/install.sh（已写入本次 TAG）再上传。
-_BUNDLED_TAG="v0.6.0"
+# Release 构建会将占位符替换为当前 tag；直接运行源码模板时需设置 AG_VERSION，或使用 AG_FROM_SOURCE=1。
+_BUNDLED_TAG="__AG_RELEASE_TAG__"
 DEFAULT_VERSION="${AG_DEFAULT_VERSION:-${_BUNDLED_TAG}}"
 VERSION="${AG_VERSION:-$DEFAULT_VERSION}"
 
@@ -39,6 +39,7 @@ detect_arch() {
   case "$arch" in
   x86_64 | amd64) echo amd64 ;;
   aarch64 | arm64) echo arm64 ;;
+  loongarch64 | loong64) echo loong64 ;;
   *) die "unsupported CPU: $arch" ;;
   esac
 }
@@ -60,6 +61,10 @@ pick_install_dir() {
 }
 
 install_binary() {
+  if [ "$VERSION" = "__AG_RELEASE_TAG__" ]; then
+    die "源码安装器模板尚未绑定发布版本；请设置 AG_VERSION=vX.Y.Z，或使用 AG_FROM_SOURCE=1 从源码安装"
+  fi
+
   os=$(detect_os)
   arch=$(detect_arch)
   tmpdir=$(mktemp -d)

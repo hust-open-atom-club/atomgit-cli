@@ -10,15 +10,17 @@ npm 安装需要 Node.js 18 或更高版本。执行：
 npm install --global @hust-open-atom-club/atomgit-cli
 ```
 
-npm 主包通过 `optionalDependencies` 声明六个平台二进制包。npm 根据当前操作系统和 CPU 架构只安装匹配的包，整个过程不使用 `postinstall`，运行 `ag` 时也不会额外联网下载或写入包目录。
+npm 主包通过 `optionalDependencies` 声明七个平台二进制包。npm 根据当前操作系统和 CPU 架构只安装匹配的包，整个过程不使用 `postinstall`，运行 `ag` 时也不会额外联网下载或写入包目录。
 
 请勿使用 `--omit=optional` 安装；该选项会跳过平台二进制包，使 `ag` 无法启动。
 
 | 操作系统 | 支持的处理器架构 |
 | --- | --- |
 | macOS | x64（Intel）、arm64（Apple Silicon） |
-| Linux | x64 / amd64、arm64 / aarch64 |
+| Linux | x64 / amd64、arm64 / aarch64、loong64 / loongarch64 |
 | Windows | x64 / amd64、arm64 |
+
+npm 安装的二进制报告 `selfUpdate=false, source=npm`，升级由 npm 管理。
 
 安装完成后验证：
 
@@ -49,6 +51,8 @@ brew update
 brew upgrade atomgit-cli
 ```
 
+Homebrew 安装的二进制报告 `selfUpdate=false, source=homebrew`，升级由 Homebrew 管理。
+
 ## Scoop 安装
 
 Windows 用户可以通过组织维护的 scoop bucket 安装：
@@ -70,6 +74,8 @@ scoop install https://raw.githubusercontent.com/hust-open-atom-club/ScoopBucket/
 ```powershell
 scoop update atomgit-cli
 ```
+
+Scoop 安装的二进制报告 `selfUpdate=false, source=scoop`，升级由 Scoop 管理。
 
 ## Nix / NixOS 安装
 
@@ -151,6 +157,8 @@ Home Manager 中同样可以将 `unstable.atomgit-cli` 加入 `home.packages`。
 - `stable`：从固定版本的 AtomGit Release 源码归档构建。
 - `latest`：从当前 flake revision 的源码构建。
 
+两个 package 都由 Nix 管理；支持发行来源字段的版本会报告 `selfUpdate=false, source=nix`。
+
 默认 package 和兼容名称 `ag` 均指向 `stable`。安装稳定版：
 
 由于 nixos-unstable 已停止支持 Intel macOS，flake 对 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
@@ -221,7 +229,7 @@ Go 模块代理提供的源码包不包含 `.git` 目录，因此这种安装方
 
 ### 自动安装
 
-安装脚本会识别当前操作系统（支持 Linux，Windows 和 macOS）与处理器架构（支持 amd64 和 arm64），下载匹配的预编译文件并安装 `ag`。
+安装脚本会识别当前操作系统（支持 Linux、Windows 和 macOS）与处理器架构（Linux 支持 amd64、arm64 和 loong64，macOS 与 Windows 支持 amd64 和 arm64），下载匹配的预编译文件并安装 `ag`。
 
 #### macOS 和 Linux
 
@@ -264,11 +272,12 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 | macOS | Apple Silicon（arm64） | `ag_darwin_arm64.tar.gz` |
 | macOS | Intel（amd64） | `ag_darwin_amd64.tar.gz` |
 | Linux | arm64 / aarch64 | `ag_linux_arm64.tar.gz` |
+| Linux | LoongArch64（loong64 / loongarch64） | `ag_linux_loong64.tar.gz` |
 | Linux | x86-64 / amd64 | `ag_linux_amd64.tar.gz` |
 | Windows | ARM64 | `ag_windows_arm64.zip` |
 | Windows | 常见 64 位 PC（amd64） | `ag_windows_amd64.zip` |
 
-macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应 arm64，`x86_64` 对应 amd64。Windows 可在 PowerShell 中执行 `$env:PROCESSOR_ARCHITECTURE`；`ARM64` 对应 arm64，`AMD64` 对应 amd64。
+macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应 arm64，`x86_64` 对应 amd64，Linux 上的 `loongarch64` 或 `loong64` 对应 loong64。Windows 可在 PowerShell 中执行 `$env:PROCESSOR_ARCHITECTURE`；`ARM64` 对应 arm64，`AMD64` 对应 amd64。
 
 #### macOS 和 Linux
 

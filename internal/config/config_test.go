@@ -347,6 +347,46 @@ func TestSaveTokenPreservesOAuthFields(t *testing.T) {
 	if got.AccessToken != "new" || got.User != "new-user" || got.RefreshToken != "refresh" || got.ExpiresIn != 7200 {
 		t.Fatalf("credentials = %#v", got)
 	}
+	accounts, active, err := ListAccounts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(accounts) != 1 || active != "new-user" {
+		t.Fatalf("accounts = %#v, active = %q", accounts, active)
+	}
+	store, err := LoadCredentialStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.ResolveAccount("old-user"); err == nil {
+		t.Fatal("old account remained after SaveToken username change")
+	}
+}
+
+func TestSaveTokenRejectsRenameToExistingAccount(t *testing.T) {
+	isolateConfig(t)
+	if err := SaveAccount(&StoredCredentials{AccessToken: "alice-token", User: "alice"}, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveAccount(&StoredCredentials{AccessToken: "bob-token", User: "bob"}, false); err != nil {
+		t.Fatal(err)
+	}
+
+	err := SaveToken("replacement-token", "bob")
+	if err == nil || !strings.Contains(err.Error(), "account already exists") {
+		t.Fatalf("error = %v", err)
+	}
+	store, loadErr := LoadCredentialStore()
+	if loadErr != nil {
+		t.Fatal(loadErr)
+	}
+	if store.Active != "alice" || len(store.Accounts) != 2 {
+		t.Fatalf("store = %#v", store)
+	}
+	alice, resolveErr := store.ResolveAccount("alice")
+	if resolveErr != nil || alice.AccessToken != "alice-token" {
+		t.Fatalf("alice = %#v, error = %v", alice, resolveErr)
+	}
 }
 
 func TestNewConfigWithoutCredentials(t *testing.T) {

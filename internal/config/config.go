@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -111,6 +110,10 @@ func loadTokenFromFile() (string, string, error) {
 type StoredCredentials struct {
 	AccessToken  string `json:"access_token"`
 	User         string `json:"user"`
+	Name         string `json:"name,omitempty"`
+	Email        string `json:"email,omitempty"`
+	GitName      string `json:"git_name,omitempty"`
+	GitEmail     string `json:"git_email,omitempty"`
 	RefreshToken string `json:"refresh_token,omitempty"`
 	ExpiresIn    int64  `json:"expires_in,omitempty"`
 	CreatedAt    int64  `json:"created_at,omitempty"`
@@ -119,6 +122,18 @@ type StoredCredentials struct {
 
 // LoadStoredCredentials reads the first available token file and parses extended fields.
 func LoadStoredCredentials() (*StoredCredentials, error) {
+	store, err := LoadCredentialStore()
+	if err != nil {
+		return nil, err
+	}
+	account, err := store.ActiveAccount()
+	if err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+func readCredentialData() ([]byte, error) {
 	paths := getTokenFilePaths()
 
 	if len(paths) == 0 {
@@ -191,15 +206,7 @@ func LoadStoredCredentials() (*StoredCredentials, error) {
 			return nil, fmt.Errorf("read token file %s: %w", path, err)
 		}
 
-		var c StoredCredentials
-		if err := json.Unmarshal(data, &c); err != nil {
-			return nil, fmt.Errorf("failed to parse token file at %s: %w", path, err)
-		}
-		if c.AccessToken == "" {
-			return nil, fmt.Errorf("token file at %s has empty access_token", path)
-		}
-
-		return &c, nil
+		return data, nil
 	}
 
 	return nil, fmt.Errorf("%w.\nSearched locations:\n  - %s", ErrTokenNotFound, strings.Join(failedPaths, "\n  - "))
@@ -259,7 +266,7 @@ func SaveToken(accessToken, user string) error {
 	if accessToken == "" {
 		return fmt.Errorf("access_token is empty")
 	}
-	existing, err := LoadStoredCredentials()
+	store, err := LoadCredentialStore()
 	if err != nil {
 		if errors.Is(err, ErrTokenNotFound) {
 			return SaveCredentials(&StoredCredentials{
@@ -270,55 +277,19 @@ func SaveToken(accessToken, user string) error {
 		}
 		return err
 	}
+	existing, err := store.ActiveAccount()
+	if err != nil {
+		return err
+	}
 	existing.AccessToken = accessToken
 	existing.User = user
 	existing.CreatedAt = time.Now().Unix()
-	return SaveCredentials(existing)
+	return replaceActiveAccount(store, existing)
 }
 
-// SaveCredentials writes the full credential record to PrimaryTokenPath().
+// SaveCredentials adds or updates an account and makes it active.
 func SaveCredentials(c *StoredCredentials) error {
-	if c == nil {
-		return fmt.Errorf("credentials are nil")
-	}
-	if c.AccessToken == "" {
-		return fmt.Errorf("access_token is empty")
-	}
-	if c.User == "" {
-		return fmt.Errorf("user is empty")
-	}
-	w := *c
-	if w.CreatedAt == 0 {
-		w.CreatedAt = time.Now().Unix()
-	}
-	path, err := PrimaryTokenPath()
-	if err != nil {
-		return err
-	}
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		if isPermissionErr(err) {
-			return permissionError(
-				"cannot create config directory", dir, err,
-				"check the directory ownership and owner write permission",
-			)
-		}
-		return fmt.Errorf("create config directory: %w", err)
-	}
-	b, err := json.MarshalIndent(&w, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(path, b, 0o600); err != nil {
-		if isPermissionErr(err) {
-			return permissionError(
-				"cannot write token file", path, err,
-				"check the file and parent directory ownership and owner write permission",
-			)
-		}
-		return err
-	}
-	return nil
+	return SaveAccount(c, true)
 }
 
 func isPermissionErr(err error) bool {

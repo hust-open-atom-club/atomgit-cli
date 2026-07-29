@@ -54,6 +54,7 @@
               "-X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Version=${buildVersion}"
               "-X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Commit=${commit}"
               "-X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.BuildDate=${buildDate}"
+              "-X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Source=nix"
             ];
           };
         in
@@ -81,6 +82,26 @@
 
           ag = stable;
           default = stable;
+        });
+
+      checks = forAllSystems (system:
+        let
+          pkgs = import
+            (if system == "x86_64-darwin" then nixpkgs-darwin else nixpkgs)
+            { inherit system; };
+          latest = self.packages.${system}.latest;
+        in
+        {
+          latest-provenance = pkgs.runCommand "ag-latest-provenance-check"
+            {
+              nativeBuildInputs = [ pkgs.jq ];
+            }
+            ''
+              metadata="$(${latest}/bin/ag version --json)"
+              test "$(printf '%s' "$metadata" | jq -r '.selfUpdate')" = "false"
+              test "$(printf '%s' "$metadata" | jq -r '.source')" = "nix"
+              touch "$out"
+            '';
         });
 
       devShells = forAllSystems (system:

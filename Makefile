@@ -60,14 +60,14 @@ coverage:
 
 release:
 	@test -n "$(VERSION)" || { \
-		echo "VERSION is required (example: make release VERSION=v0.5.0)"; \
+		echo "VERSION is required (example: make release VERSION=vX.Y.Z)"; \
 		exit 1; \
 	}
 	GORELEASER=$(GORELEASER) TAG=$(VERSION) ./scripts/build-release.sh
 
 release-snapshot:
 	@test -n "$(VERSION)" || { \
-		echo "VERSION is required (example: make release-snapshot VERSION=v0.5.0)"; \
+		echo "VERSION is required (example: make release-snapshot VERSION=vX.Y.Z)"; \
 		exit 1; \
 	}
 	AG_RELEASE_SNAPSHOT=1 GORELEASER=$(GORELEASER) TAG=$(VERSION) ./scripts/build-release.sh
