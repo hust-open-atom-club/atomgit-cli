@@ -53,6 +53,23 @@ brew upgrade atomgit-cli
 
 Homebrew 安装的二进制报告 `selfUpdate=false, source=homebrew`，升级由 Homebrew 管理。
 
+## WinGet 安装
+
+Windows 用户可以通过 Windows Package Manager 安装：
+
+```powershell
+winget install hust-open-atom-club.atomgit-cli
+ag version
+```
+
+升级已安装的 AtomGit CLI：
+
+```powershell
+winget upgrade atomgit-cli
+```
+
+WinGet 安装的二进制报告 `selfUpdate=false, source=winget`，升级由 WinGet 管理。
+
 ## Scoop 安装
 
 Windows 用户可以通过组织维护的 scoop bucket 安装：
