@@ -184,10 +184,11 @@ func resolveNumber(client *api.Client, owner, repo string, num int) (string, err
 		return "", fmt.Errorf("failed to check issue #%d: %w", num, err)
 	}
 	defer issueResp.Body.Close()
-	io.Copy(io.Discard, issueResp.Body)
 	if issueResp.StatusCode == http.StatusOK {
 		return browser.BuildIssueURL(owner, repo, num), nil
 	}
+	// Drain body for connection reuse before issuing the PR check
+	io.Copy(io.Discard, issueResp.Body)
 	if issueResp.StatusCode != http.StatusNotFound {
 		return "", fmt.Errorf("unexpected status checking issue #%d: %s", num, issueResp.Status)
 	}
@@ -198,10 +199,10 @@ func resolveNumber(client *api.Client, owner, repo string, num int) (string, err
 		return "", fmt.Errorf("failed to check PR #%d: %w", num, err)
 	}
 	defer prResp.Body.Close()
-	io.Copy(io.Discard, prResp.Body)
 	if prResp.StatusCode == http.StatusOK {
 		return browser.BuildPRURL(owner, repo, num), nil
 	}
+	io.Copy(io.Discard, prResp.Body)
 	if prResp.StatusCode != http.StatusNotFound {
 		return "", fmt.Errorf("unexpected status checking PR #%d: %s", num, prResp.Status)
 	}
