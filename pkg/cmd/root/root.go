@@ -1,10 +1,14 @@
 package root
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/alias"
 	apiCmd "atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/auth"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/branch"
@@ -77,6 +81,33 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	cmd.AddCommand(org.NewCmdOrg(f))
 	cmd.AddCommand(search.NewCmdSearch(f))
 	cmd.AddCommand(version.NewCmdVersion())
+	cmd.AddCommand(alias.NewCmdAlias(f))
 
 	return cmd, nil
+}
+
+// ExpandAlias replaces the first invocation argument with its configured
+// alias expansion, if one exists. Built-in commands always take precedence
+// over aliases with the same name, and flag-style first arguments are left
+// untouched.
+func ExpandAlias(cmd *cobra.Command, args []string) ([]string, error) {
+	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
+		return args, nil
+	}
+	// A built-in command wins over an alias that happens to share its name.
+	if c, _, err := cmd.Find(args); err == nil && c != nil && c != cmd {
+		return args, nil
+	}
+	aliases, err := config.LoadAliases()
+	if err != nil {
+		return nil, err
+	}
+	expansion, ok := aliases[args[0]]
+	if !ok {
+		return args, nil
+	}
+	if strings.HasPrefix(expansion, "!") {
+		return nil, errors.New("shell-style aliases (starting with '!') are not supported")
+	}
+	return append(strings.Fields(expansion), args[1:]...), nil
 }

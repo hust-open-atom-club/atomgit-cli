@@ -648,3 +648,25 @@ go build -trimpath -ldflags \
 ```
 
 `source` 必须是长度不超过 64 的小写 ASCII 标识符，可包含数字、点、下划线和连字符；`unknown` 为无效元数据的保守回退值，不能作为构建来源。
+
+## 命令别名 (alias)
+
+为常用命令创建快捷方式。别名在调用时展开：`ag` 的第一个参数会在别名表中查找，命中后替换为对应的展开内容再执行。
+
+```bash
+# 设置别名（展开内容含空格时可加引号）
+ag alias set pl "pr list"
+ag alias set rv repo view
+ag alias set open-prs "pr list --state open"
+
+# 列出所有别名
+ag alias list
+
+# 删除别名
+ag alias delete pl
+```
+
+- 别名存储在 `~/.config/ag-cli/config.json`（或 `$XDG_CONFIG_HOME/ag-cli/config.json`），文件权限为 `0600`。
+- 别名不会覆盖内置命令：与内置命令同名的别名不会生效，内置命令始终优先。
+- 展开内容不能以 `!` 开头（不支持 shell 风格别名），也不能为空。
+- 展开内容包含 flag 时需要整体用引号包裹（与 GitHub CLI 行为一致）。
