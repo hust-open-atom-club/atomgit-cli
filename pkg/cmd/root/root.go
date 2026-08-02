@@ -106,9 +106,10 @@ func ExpandAlias(cmd *cobra.Command, args []string) ([]string, error) {
 	}
 	aliases, err := config.LoadAliases()
 	if err != nil {
-		// A corrupted alias file must not take the whole CLI down: fall
-		// back to no aliases so every other command keeps working. The
+		// A corrupted alias file must not take the whole CLI down: warn and
+		// fall back to no aliases so every other command keeps working. The
 		// alias subcommands still surface the underlying error.
+		fmt.Fprintf(cmd.ErrOrStderr(), "warning: failed to load aliases, continuing without them: %v\n", err)
 		return args, nil
 	}
 	expansion, ok := aliases[args[idx]]
@@ -120,7 +121,37 @@ func ExpandAlias(cmd *cobra.Command, args []string) ([]string, error) {
 	}
 	expanded := make([]string, 0, len(args)-1+idx)
 	expanded = append(expanded, args[:idx]...)
-	expanded = append(expanded, strings.Fields(expansion)...)
+	expanded = append(expanded, splitExpansion(expansion)...)
 	expanded = append(expanded, args[idx+1:]...)
 	return expanded, nil
+}
+
+// splitExpansion tokenizes an alias expansion on whitespace while honoring
+// backslash-escaped spaces and tabs, so Windows paths such as
+// "C:\Program\ Files" survive as a single token. Any other backslash
+// sequence is kept verbatim.
+func splitExpansion(s string) []string {
+	var fields []string
+	var cur strings.Builder
+	runes := []rune(s)
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+		if r == '\\' && i+1 < len(runes) && (runes[i+1] == ' ' || runes[i+1] == '\t') {
+			cur.WriteRune(runes[i+1])
+			i++
+			continue
+		}
+		if r == ' ' || r == '\t' || r == '\n' {
+			if cur.Len() > 0 {
+				fields = append(fields, cur.String())
+				cur.Reset()
+			}
+			continue
+		}
+		cur.WriteRune(r)
+	}
+	if cur.Len() > 0 {
+		fields = append(fields, cur.String())
+	}
+	return fields
 }

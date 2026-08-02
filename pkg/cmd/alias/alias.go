@@ -32,7 +32,11 @@ func newCmdAliasSet(f *cmdutil.Factory) *cobra.Command {
 
 Aliases are expanded at invocation time: the first argument of an ag
 invocation is looked up and replaced with the expansion. Aliases never
-override built-in commands.`,
+override built-in commands, so names that conflict with a built-in command
+are rejected.
+
+To include a literal space inside an expansion argument (for example a
+Windows path), escape it with a backslash: C:\Program\ Files.`,
 		Example: `  ag alias set pl "pr list"
   ag alias set rv repo view`,
 		Args: cobra.MinimumNArgs(2),
@@ -44,6 +48,13 @@ override built-in commands.`,
 			}
 			if err := validateAliasExpansion(expansion); err != nil {
 				return err
+			}
+			// Built-in commands always take precedence at expansion time, so
+			// an alias that shadows one would never run; reject it up front.
+			for _, c := range cmd.Root().Commands() {
+				if c.Name() == name {
+					return fmt.Errorf("alias name %q conflicts with the built-in command %q; built-in commands always take precedence", name, c.Name())
+				}
 			}
 			if err := config.SaveAlias(name, expansion); err != nil {
 				return fmt.Errorf("failed to save alias: %w", err)

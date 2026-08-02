@@ -7,6 +7,7 @@ import (
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
+	"github.com/spf13/cobra"
 )
 
 func TestValidateAliasName(t *testing.T) {
@@ -137,6 +138,30 @@ func TestAliasSetCommandRejectsShellAlias(t *testing.T) {
 	cmd.SetArgs([]string{"set", "hi", "!echo hi"})
 	if err := cmd.Execute(); err == nil {
 		t.Fatal("alias set with shell-style expansion succeeded, want error")
+	}
+}
+
+func TestAliasSetCommandRejectsBuiltinName(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	rootCmd := &cobra.Command{Use: "ag"}
+	rootCmd.AddCommand(&cobra.Command{Use: "repo"})
+	rootCmd.AddCommand(NewCmdAlias(&cmdutil.Factory{}))
+
+	buf := &bytes.Buffer{}
+	rootCmd.SetOut(buf)
+	rootCmd.SetErr(buf)
+	rootCmd.SetArgs([]string{"alias", "set", "repo", "repo list"})
+	if err := rootCmd.Execute(); err == nil {
+		t.Fatal("alias set with a built-in command name succeeded, want error")
+	}
+
+	aliases, err := config.LoadAliases()
+	if err != nil {
+		t.Fatalf("LoadAliases() error = %v", err)
+	}
+	if len(aliases) != 0 {
+		t.Errorf("len(aliases) = %d, want 0 (rejected alias must not be saved)", len(aliases))
 	}
 }
 
