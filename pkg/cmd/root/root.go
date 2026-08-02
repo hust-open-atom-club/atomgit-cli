@@ -88,10 +88,16 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 
 // ExpandAlias replaces the first invocation argument with its configured
 // alias expansion, if one exists. Built-in commands always take precedence
-// over aliases with the same name, and flag-style first arguments are left
-// untouched.
+// over aliases with the same name, and root-level flags (e.g. --raw-output,
+// --version) are skipped so that `ag --raw-output <alias>` still expands.
 func ExpandAlias(cmd *cobra.Command, args []string) ([]string, error) {
-	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
+	// Root-level flags precede the command word; skip them when locating
+	// the token that may be an alias.
+	idx := 0
+	for idx < len(args) && strings.HasPrefix(args[idx], "-") {
+		idx++
+	}
+	if idx >= len(args) {
 		return args, nil
 	}
 	// A built-in command wins over an alias that happens to share its name.
@@ -100,14 +106,21 @@ func ExpandAlias(cmd *cobra.Command, args []string) ([]string, error) {
 	}
 	aliases, err := config.LoadAliases()
 	if err != nil {
-		return nil, err
+		// A corrupted alias file must not take the whole CLI down: fall
+		// back to no aliases so every other command keeps working. The
+		// alias subcommands still surface the underlying error.
+		return args, nil
 	}
-	expansion, ok := aliases[args[0]]
+	expansion, ok := aliases[args[idx]]
 	if !ok {
 		return args, nil
 	}
 	if strings.HasPrefix(expansion, "!") {
 		return nil, errors.New("shell-style aliases (starting with '!') are not supported")
 	}
-	return append(strings.Fields(expansion), args[1:]...), nil
+	expanded := make([]string, 0, len(args)-1+idx)
+	expanded = append(expanded, args[:idx]...)
+	expanded = append(expanded, strings.Fields(expansion)...)
+	expanded = append(expanded, args[idx+1:]...)
+	return expanded, nil
 }

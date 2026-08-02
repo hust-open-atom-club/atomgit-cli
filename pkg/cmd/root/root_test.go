@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -325,5 +327,46 @@ func TestExpandAliasRejectsShellAlias(t *testing.T) {
 	cmd := newTestRoot(t)
 	if _, err := ExpandAlias(cmd, []string{"hi"}); err == nil {
 		t.Fatal("ExpandAlias() with shell-style alias succeeded, want error")
+	}
+}
+
+func TestExpandAliasAfterRootFlag(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if err := config.SaveAlias("pl", "pr list"); err != nil {
+		t.Fatalf("SaveAlias() error = %v", err)
+	}
+
+	cmd := newTestRoot(t)
+	got, err := ExpandAlias(cmd, []string{"--raw-output", "pl"})
+	if err != nil {
+		t.Fatalf("ExpandAlias() error = %v", err)
+	}
+	want := []string{"--raw-output", "pr", "list"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ExpandAlias() = %v, want %v", got, want)
+	}
+}
+
+func TestExpandAliasCorruptConfigFallsBack(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	path, err := config.AliasFilePath()
+	if err != nil {
+		t.Fatalf("AliasFilePath() error = %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(path, []byte("{not valid json"), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	cmd := newTestRoot(t)
+	got, err := ExpandAlias(cmd, []string{"repo", "view"})
+	if err != nil {
+		t.Fatalf("ExpandAlias() error = %v, want nil (fallback to no aliases)", err)
+	}
+	want := []string{"repo", "view"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ExpandAlias() = %v, want %v", got, want)
 	}
 }
