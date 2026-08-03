@@ -149,3 +149,22 @@ type ArtifactListResponse struct {
 	TotalCount int        `json:"total_count"`
 	Artifacts  []Artifact `json:"artifacts"`
 }
+
+type Workflow struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Path      string    `json:"path"`
+	State     string    `json:"state"`
+	CreatedAt Timestamp `json:"created_at"`
+	UpdatedAt Timestamp `json:"updated_at"`
+}
+
+type WorkflowListResponse struct {
+	TotalCount int        `json:"total_count"`
+	Workflows  []Workflow `json:"workflows"`
+}
+
+type WorkflowDispatchPayload struct {
+	Ref    string            `json:"ref"`
+	Inputs map[string]string `json:"inputs,omitempty"`
+}

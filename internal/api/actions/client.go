@@ -213,6 +213,34 @@ func (c *Client) DownloadArtifact(owner, repo, artifactID string) (*http.Respons
 	return c.download("download artifact", path)
 }
 
+func (c *Client) ListWorkflows(owner, repo string) (WorkflowListResponse, error) {
+	var result WorkflowListResponse
+	path := repositoryPath(owner, repo) + "/actions/workflows"
+	if err := c.getJSON("list repository workflows", path, &result); err != nil {
+		return WorkflowListResponse{}, err
+	}
+	return result, nil
+}
+
+func (c *Client) CreateWorkflowDispatch(owner, repo, workflowID string, payload WorkflowDispatchPayload) error {
+	path := repositoryPath(owner, repo) + "/actions/workflows/" + url.PathEscape(workflowID) + "/dispatches"
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("create workflow dispatch: marshal payload: %w", err)
+	}
+
+	resp, err := c.client.DoRequestRawWithBody(http.MethodPost, path, bodyBytes, "application/json", "application/json")
+	if err != nil {
+		return fmt.Errorf("create workflow dispatch: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusAccepted {
+		return responseError("create workflow dispatch", resp)
+	}
+	return nil
+}
+
 func (c *Client) getJSON(operation, path string, result interface{}) error {
 	resp, err := c.client.DoRequestRawWithAccept(http.MethodGet, path, "application/json")
 	if err != nil {
