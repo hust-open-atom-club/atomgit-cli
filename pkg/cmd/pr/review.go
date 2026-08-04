@@ -52,7 +52,7 @@ by the public API.`,
 				return fmt.Errorf("current user is empty in stored credentials")
 			}
 
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}

@@ -79,7 +79,7 @@ func authenticatedAPIClient(f *cmdutil.Factory) (*api.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("not authenticated: %w", err)
 	}
-	return newAPIClient(f, token)
+	return f.NewAPIClient(token)
 }
 
 func sshKeyFingerprint(sshKey api.SSHKey) string {
