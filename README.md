@@ -73,6 +73,7 @@ ag auth status
 ag repo view
 ag issue list
 ag pr list
+ag org list
 ag --help
 ```
 
