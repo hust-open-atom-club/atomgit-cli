@@ -37,6 +37,9 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdUnlinkIssues(f))
 	cmd.AddCommand(comment.NewCmdComment(f))
 	cmd.AddCommand(newCmdPRMerge(f))
+	cmd.AddCommand(newCmdPRCommits(f))
+	cmd.AddCommand(newCmdPRFiles(f))
+	cmd.AddCommand(newCmdPRReactions(f))
 	cmdutil.AddRepositoryContextHelp(cmd)
 
 	return cmd
@@ -181,7 +184,7 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 				labels = nil
 			}
 			if opts.json {
-				return cmdutil.WriteJSON(cmd.OutOrStdout(), newPullRequestJSON(pr, labels))
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), newPullRequestViewJSON(pr, labels))
 			}
 
 			out := cmd.OutOrStdout()
@@ -230,6 +233,34 @@ type pullRequestJSON struct {
 	Mergeable bool     `json:"mergeable"`
 }
 
+type pullRequestViewJSON struct {
+	ID                int64          `json:"id"`
+	Number            string         `json:"number"`
+	Title             string         `json:"title"`
+	Body              string         `json:"body"`
+	State             string         `json:"state"`
+	URL               string         `json:"url"`
+	Author            string         `json:"author"`
+	Head              string         `json:"head"`
+	Base              string         `json:"base"`
+	Labels            []string       `json:"labels"`
+	CreatedAt         string         `json:"createdAt"`
+	UpdatedAt         string         `json:"updatedAt"`
+	Merged            bool           `json:"merged"`
+	Mergeable         bool           `json:"mergeable"`
+	Assignees         []string       `json:"assignees"`
+	ApprovalReviewers []string       `json:"approvalReviewers"`
+	Testers           []string       `json:"testers"`
+	Milestone         *milestoneJSON `json:"milestone"`
+}
+
+type milestoneJSON struct {
+	Number string `json:"number"`
+	Title  string `json:"title"`
+	State  string `json:"state"`
+	URL    string `json:"url"`
+}
+
 func pullRequestsJSON(pullRequests []api.PullRequest) []pullRequestJSON {
 	result := make([]pullRequestJSON, len(pullRequests))
 	for index, pullRequest := range pullRequests {
@@ -248,6 +279,50 @@ func newPullRequestJSON(pullRequest api.PullRequest, labels []api.Label) pullReq
 	return pullRequestJSON{ID: pullRequest.ID, Number: pullRequest.GetNumber(), Title: pullRequest.Title, Body: pullRequest.Body, State: pullRequest.State, URL: pullRequest.HTMLURL, Author: pullRequest.User.Login, Head: pullRequest.Head.Ref, Base: pullRequest.Base.Ref, Labels: labelNames, CreatedAt: pullRequest.CreatedAt, UpdatedAt: pullRequest.UpdatedAt, Merged: pullRequest.Merged, Mergeable: pullRequest.Mergeable}
 }
 
+func newPullRequestViewJSON(pullRequest api.PullRequest, labels []api.Label) pullRequestViewJSON {
+	base := newPullRequestJSON(pullRequest, labels)
+
+	var ms *milestoneJSON
+	if pullRequest.Milestone != nil {
+		ms = &milestoneJSON{
+			Number: pullRequest.Milestone.GetNumber(),
+			Title:  pullRequest.Milestone.Title,
+			State:  pullRequest.Milestone.State,
+			URL:    pullRequest.Milestone.URL,
+		}
+	}
+
+	return pullRequestViewJSON{
+		ID:                base.ID,
+		Number:            base.Number,
+		Title:             base.Title,
+		Body:              base.Body,
+		State:             base.State,
+		URL:               base.URL,
+		Author:            base.Author,
+		Head:              base.Head,
+		Base:              base.Base,
+		Labels:            base.Labels,
+		CreatedAt:         base.CreatedAt,
+		UpdatedAt:         base.UpdatedAt,
+		Merged:            base.Merged,
+		Mergeable:         base.Mergeable,
+		Assignees:         extractLogins(pullRequest.Assignees),
+		ApprovalReviewers: extractLogins(pullRequest.ApprovalReviewers),
+		Testers:           extractLogins(pullRequest.Testers),
+		Milestone:         ms,
+	}
+}
+
+func extractLogins(users []api.User) []string {
+	result := make([]string, 0, len(users))
+	for _, u := range users {
+		if login := strings.TrimSpace(u.Login); login != "" {
+			result = append(result, login)
+		}
+	}
+	return result
+}
 func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
 		Title    string

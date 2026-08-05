@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -416,6 +417,47 @@ func TestPRViewJSON(t *testing.T) {
 	}
 }
 
+func TestPullRequestViewJSONReusesBaseMapping(t *testing.T) {
+	pullRequest := api.PullRequest{
+		ID:        42,
+		Number:    "17",
+		Title:     "Keep mappings aligned",
+		Body:      "Body",
+		State:     "open",
+		HTMLURL:   "https://atomgit.com/alice/demo/pull/17",
+		User:      api.User{Login: "alice"},
+		Head:      api.Branch{Ref: "feature"},
+		Base:      api.Branch{Ref: "main"},
+		CreatedAt: "2026-08-01T10:00:00+08:00",
+		UpdatedAt: "2026-08-02T11:00:00+08:00",
+		Merged:    true,
+		Mergeable: true,
+	}
+	labels := []api.Label{{Name: " ready "}, {Name: ""}, {Name: "reviewed"}}
+
+	want := newPullRequestJSON(pullRequest, labels)
+	view := newPullRequestViewJSON(pullRequest, labels)
+	got := pullRequestJSON{
+		ID:        view.ID,
+		Number:    view.Number,
+		Title:     view.Title,
+		Body:      view.Body,
+		State:     view.State,
+		URL:       view.URL,
+		Author:    view.Author,
+		Head:      view.Head,
+		Base:      view.Base,
+		Labels:    view.Labels,
+		CreatedAt: view.CreatedAt,
+		UpdatedAt: view.UpdatedAt,
+		Merged:    view.Merged,
+		Mergeable: view.Mergeable,
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("view base fields = %#v, want %#v", got, want)
+	}
+}
 func TestPRListRejectsInvalidLimit(t *testing.T) {
 	for _, limit := range []string{"0", "-1"} {
 		t.Run(limit, func(t *testing.T) {
@@ -1187,6 +1229,198 @@ func TestCmdPRCheckoutRejectsInvalidPRNumberBeforeAPI(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPRListJSONSchemaUnchanged(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		RepositoryResolver: func() (cmdutil.Repository, error) {
+			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+		},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				body := `[{"id":1,"number":9,"title":"change","body":"desc","state":"open","html_url":"https://u","user":{"login":"alice"},"head":{"ref":"feature"},"base":{"ref":"main"},"labels":[{"name":"bug"}],"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-02T00:00:00Z","merged":false,"mergeable":true}]`
+				return prResponse(http.StatusOK, body), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRList(factory)
+	_ = cmd.Flags().Set("json", "true")
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+	var items []map[string]any
+	if err := json.Unmarshal(output.Bytes(), &items); err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("len(items) = %d", len(items))
+	}
+	item := items[0]
+	expectedFields := []string{"id", "number", "title", "body", "state", "url", "author", "head", "base", "labels", "createdAt", "updatedAt", "merged", "mergeable"}
+	for _, f := range expectedFields {
+		if _, ok := item[f]; !ok {
+			t.Errorf("pr list --json missing field: %s", f)
+		}
+	}
+	collaborationFields := []string{"assignees", "approvalReviewers", "testers", "milestone"}
+	for _, f := range collaborationFields {
+		if _, ok := item[f]; ok {
+			t.Errorf("pr list --json should NOT contain field: %s", f)
+		}
+	}
+}
+
+func TestPRViewJSONCollaborationFields(t *testing.T) {
+	t.Run("collaboration fields present when populated", func(t *testing.T) {
+		factory := &cmdutil.Factory{
+			Config: prTestConfig{},
+			HttpClient: func() (*http.Client, error) {
+				return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+					if strings.HasSuffix(req.URL.Path, "/labels") {
+						return prResponse(http.StatusOK, `[{"name":"reviewed"}]`), nil
+					}
+					body := `{"id":2,"number":"10","title":"change","state":"open","html_url":"https://u","user":{"login":"alice"},"head":{"ref":"feature"},"base":{"ref":"main"},"merged":false,"mergeable":true,"assignees":[{"login":"bob"},{"login":"carol"}],"approval_reviewers":[{"login":"dave"}],"testers":[{"login":"eve"}],"milestone":{"number":1,"title":"v1.0","state":"open","url":"https://ms"}}`
+					return prResponse(http.StatusOK, body), nil
+				})}, nil
+			},
+		}
+		cmd := newCmdPRView(factory)
+		_ = cmd.Flags().Set("json", "true")
+		var output bytes.Buffer
+		cmd.SetOut(&output)
+		if err := cmd.RunE(cmd, []string{"alice/demo", "10"}); err != nil {
+			t.Fatal(err)
+		}
+		var value map[string]any
+		if err := json.Unmarshal(output.Bytes(), &value); err != nil {
+			t.Fatal(err)
+		}
+		assignees, _ := value["assignees"].([]any)
+		if len(assignees) != 2 || assignees[0] != "bob" || assignees[1] != "carol" {
+			t.Fatalf("assignees = %#v", assignees)
+		}
+		reviewers, _ := value["approvalReviewers"].([]any)
+		if len(reviewers) != 1 || reviewers[0] != "dave" {
+			t.Fatalf("approvalReviewers = %#v", reviewers)
+		}
+		testers, _ := value["testers"].([]any)
+		if len(testers) != 1 || testers[0] != "eve" {
+			t.Fatalf("testers = %#v", testers)
+		}
+		ms, _ := value["milestone"].(map[string]any)
+		if ms == nil {
+			t.Fatal("milestone is nil")
+		}
+		if ms["number"] != "1" || ms["title"] != "v1.0" {
+			t.Fatalf("milestone = %#v", ms)
+		}
+	})
+
+	t.Run("milestone null when absent", func(t *testing.T) {
+		factory := &cmdutil.Factory{
+			Config: prTestConfig{},
+			HttpClient: func() (*http.Client, error) {
+				return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+					if strings.HasSuffix(req.URL.Path, "/labels") {
+						return prResponse(http.StatusOK, `[]`), nil
+					}
+					body := `{"id":2,"number":"10","title":"change","state":"open","html_url":"https://u","user":{"login":"alice"},"head":{"ref":"feature"},"base":{"ref":"main"},"merged":false,"mergeable":true}`
+					return prResponse(http.StatusOK, body), nil
+				})}, nil
+			},
+		}
+		cmd := newCmdPRView(factory)
+		_ = cmd.Flags().Set("json", "true")
+		var output bytes.Buffer
+		cmd.SetOut(&output)
+		if err := cmd.RunE(cmd, []string{"alice/demo", "10"}); err != nil {
+			t.Fatal(err)
+		}
+		var value map[string]any
+		if err := json.Unmarshal(output.Bytes(), &value); err != nil {
+			t.Fatal(err)
+		}
+		if value["milestone"] != nil {
+			t.Fatalf("milestone = %v, want null", value["milestone"])
+		}
+	})
+
+	t.Run("non-nil empty arrays for collaboration", func(t *testing.T) {
+		factory := &cmdutil.Factory{
+			Config: prTestConfig{},
+			HttpClient: func() (*http.Client, error) {
+				return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+					if strings.HasSuffix(req.URL.Path, "/labels") {
+						return prResponse(http.StatusOK, `[]`), nil
+					}
+					body := `{"id":2,"number":"10","title":"change","state":"open","html_url":"https://u","user":{"login":"alice"},"head":{"ref":"feature"},"base":{"ref":"main"},"merged":false,"mergeable":true,"assignees":[],"approval_reviewers":[],"testers":[]}`
+					return prResponse(http.StatusOK, body), nil
+				})}, nil
+			},
+		}
+		cmd := newCmdPRView(factory)
+		_ = cmd.Flags().Set("json", "true")
+		var output bytes.Buffer
+		cmd.SetOut(&output)
+		if err := cmd.RunE(cmd, []string{"alice/demo", "10"}); err != nil {
+			t.Fatal(err)
+		}
+		var value map[string]any
+		if err := json.Unmarshal(output.Bytes(), &value); err != nil {
+			t.Fatal(err)
+		}
+		for _, field := range []string{"assignees", "approvalReviewers", "testers"} {
+			arr, _ := value[field].([]any)
+			if arr == nil {
+				t.Errorf("%s is nil, want empty array []", field)
+			}
+		}
+	})
+
+	t.Run("pr view --json existing fields unchanged", func(t *testing.T) {
+		factory := &cmdutil.Factory{
+			Config: prTestConfig{},
+			HttpClient: func() (*http.Client, error) {
+				return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+					if strings.HasSuffix(req.URL.Path, "/labels") {
+						return prResponse(http.StatusOK, `[{"name":"reviewed"}]`), nil
+					}
+					return prResponse(http.StatusOK, `{"id":2,"number":"10","title":"change","state":"open","html_url":"https://u","user":{"login":"alice"},"head":{"ref":"feature"},"base":{"ref":"main"},"merged":false,"mergeable":true}`), nil
+				})}, nil
+			},
+		}
+		cmd := newCmdPRView(factory)
+		_ = cmd.Flags().Set("json", "true")
+		var output bytes.Buffer
+		cmd.SetOut(&output)
+		if err := cmd.RunE(cmd, []string{"alice/demo", "10"}); err != nil {
+			t.Fatal(err)
+		}
+		var value struct {
+			Number    string   `json:"number"`
+			Title     string   `json:"title"`
+			State     string   `json:"state"`
+			URL       string   `json:"url"`
+			Author    string   `json:"author"`
+			Head      string   `json:"head"`
+			Base      string   `json:"base"`
+			Labels    []string `json:"labels"`
+			Merged    bool     `json:"merged"`
+			Mergeable bool     `json:"mergeable"`
+		}
+		if err := json.Unmarshal(output.Bytes(), &value); err != nil {
+			t.Fatal(err)
+		}
+		if value.Number != "10" || value.Title != "change" || value.State != "open" || value.Author != "alice" {
+			t.Fatalf("existing fields changed: %#v", value)
+		}
+		if value.Head != "feature" || value.Base != "main" || !value.Mergeable {
+			t.Fatalf("existing fields changed: %#v", value)
+		}
+	})
 }
 
 func TestPRDiffRejectInvalidNumberBeforeAuth(t *testing.T) {
