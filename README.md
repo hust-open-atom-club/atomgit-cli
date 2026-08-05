@@ -82,15 +82,24 @@ go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 
 首次使用时运行 `ag auth login` 完成 OAuth 登录。凭据、输出安全和仓库推断参阅[配置指南](docs/configuration.md)。
 
+
+
 ## 常用命令
 
 ```bash
 ag repo view
+ag repo read-file owner/repo README.md
+ag repo read-dir owner/repo .
 ag repo collaborator list
 ag repo webhook list
 ag branch list owner/repo
 ag pr list
+ag pr commits owner/repo 42
+ag pr files owner/repo 42
 ag issue list
+ag issue create owner/repo --title "Bug report" --assignee alice
+ag issue prs owner/repo 42
+ag issue branches owner/repo 42 --add feature/fix
 ag label list
 ag milestone list
 ag tag list
