@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -435,6 +436,20 @@ func TestPostAcceptsNoContentWithResult(t *testing.T) {
 	}
 }
 
+func TestPostFormAcceptsNoContentWithResult(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	result := map[string]bool{"existing": true}
+	if err := client.PostForm("/resource", url.Values{"key": {"value"}}, &result); err != nil {
+		t.Fatalf("PostForm() error = %v", err)
+	}
+	if !result["existing"] {
+		t.Fatalf("PostForm() replaced the existing result: %#v", result)
+	}
+}
+
 func TestDeleteMethods(t *testing.T) {
 	t.Run("delete", func(t *testing.T) {
 		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -597,6 +612,367 @@ func TestClientRetryIdempotent(t *testing.T) {
 		}
 		if n := atomic.LoadInt32(calls); n != 2 {
 			t.Fatalf("expected 2 calls (1 fail + 1 retry fail), got %d", n)
+		}
+	})
+}
+
+func TestDoJSONRequestExactStatus(t *testing.T) {
+	tests := []struct {
+		name         string
+		allowed      []int
+		serverStatus int
+		wantError    bool
+	}{
+		{name: "exact 200 accepted", allowed: []int{http.StatusOK}, serverStatus: http.StatusOK},
+		{name: "201 rejected when only 200 allowed", allowed: []int{http.StatusOK}, serverStatus: http.StatusCreated, wantError: true},
+		{name: "200 rejected when only 201 allowed", allowed: []int{http.StatusCreated}, serverStatus: http.StatusOK, wantError: true},
+		{name: "multiple allowed statuses", allowed: []int{http.StatusOK, http.StatusCreated}, serverStatus: http.StatusCreated},
+		{name: "204 rejected when only 200 allowed", allowed: []int{http.StatusOK}, serverStatus: http.StatusNoContent, wantError: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.serverStatus)
+				_, _ = io.WriteString(w, `{"ok":true}`)
+			})
+
+			var result map[string]bool
+			err := client.doJSONRequest(http.MethodGet, "/resource", nil, "application/json", "application/json",
+				RequestPolicy{AllowedStatuses: tt.allowed, CanRetry: true}, &result)
+			if tt.wantError {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !strings.Contains(err.Error(), "API error") {
+					t.Fatalf("error = %v, want API error", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !result["ok"] {
+				t.Fatalf("result = %#v", result)
+			}
+		})
+	}
+}
+
+func TestDoJSONRequestRejectsEmptyJSONBody(t *testing.T) {
+	for _, status := range []int{http.StatusOK, http.StatusNoContent} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(status)
+			})
+
+			var result map[string]bool
+			err := client.doJSONRequest(http.MethodGet, "/resource", nil, "application/json", "application/json",
+				RequestPolicy{AllowedStatuses: []int{status}, CanRetry: true}, &result)
+			if !errors.Is(err, io.EOF) {
+				t.Fatalf("error = %v, want io.EOF", err)
+			}
+		})
+	}
+}
+
+func TestDoJSONRequestRetryPolicy(t *testing.T) {
+	t.Run("CanRetry false does not retry on network error", func(t *testing.T) {
+		var calls int32
+		client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				atomic.AddInt32(&calls, 1)
+				return nil, errors.New("network failure")
+			}),
+		})
+
+		err := client.doJSONRequest(http.MethodPut, "/resource", bytes.NewReader([]byte("body")),
+			"application/json", "application/json",
+			RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: false}, nil)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "API request PUT /resource") {
+			t.Fatalf("error = %v, want wrapped transport error", err)
+		}
+		if !errors.Is(err, errors.New("network failure")) {
+			if !strings.Contains(err.Error(), "network failure") {
+				t.Fatalf("error does not preserve cause: %v", err)
+			}
+		}
+		if n := atomic.LoadInt32(&calls); n != 1 {
+			t.Fatalf("calls = %d, want 1 (no retry)", n)
+		}
+	})
+
+	t.Run("CanRetry true retries once on network error", func(t *testing.T) {
+		var calls int32
+		client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				n := atomic.AddInt32(&calls, 1)
+				if n == 1 {
+					return nil, errors.New("network failure")
+				}
+				recorder := httptest.NewRecorder()
+				recorder.Header().Set("Content-Type", "application/json")
+				_, _ = recorder.WriteString("{}")
+				return recorder.Result(), nil
+			}),
+		})
+
+		var result map[string]any
+		err := client.doJSONRequest(http.MethodPut, "/resource", bytes.NewReader([]byte("body")),
+			"application/json", "application/json",
+			RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: true}, &result)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if n := atomic.LoadInt32(&calls); n != 2 {
+			t.Fatalf("calls = %d, want 2 (1 fail + 1 retry)", n)
+		}
+	})
+}
+
+func TestAPIErrorBoundedBody(t *testing.T) {
+	largeBody := strings.Repeat("A", maxErrorBodyBytes+1000)
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, largeBody, http.StatusForbidden)
+	})
+
+	err := client.Get("/fail", &map[string]string{})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if len(err.Error()) > maxErrorBodyBytes+200 {
+		t.Fatalf("error message too long: %d bytes", len(err.Error()))
+	}
+	if !strings.HasSuffix(err.Error(), "...") {
+		t.Fatalf("error should be truncated, got suffix: ...%s", err.Error()[len(err.Error())-20:])
+	}
+}
+
+func TestAPIErrorRedactsCredentials(t *testing.T) {
+	tests := []struct {
+		name   string
+		body   string
+		secret string
+	}{
+		{
+			name:   "bearer token",
+			body:   `{"error":"Authorization: Bearer bearer-secret-123 failed"}`,
+			secret: "bearer-secret-123",
+		},
+		{
+			name:   "JSON access token",
+			body:   `{"access_token":"access-secret-123","message":"failed"}`,
+			secret: "access-secret-123",
+		},
+		{
+			name:   "JSON refresh token",
+			body:   `{"refresh_token":"refresh-secret-123"}`,
+			secret: "refresh-secret-123",
+		},
+		{
+			name:   "JSON client secret",
+			body:   `{"client_secret":"client-secret-123"}`,
+			secret: "client-secret-123",
+		},
+		{
+			name:   "JSON authorization",
+			body:   `{"authorization":"Basic authorization-secret-123"}`,
+			secret: "authorization-secret-123",
+		},
+		{
+			name:   "JSON password",
+			body:   `{"password":"password-secret-123"}`,
+			secret: "password-secret-123",
+		},
+		{
+			name:   "JSON token",
+			body:   `{"token":"generic-secret-123"}`,
+			secret: "generic-secret-123",
+		},
+		{
+			name:   "equals key value",
+			body:   "access_token=equals-secret-123",
+			secret: "equals-secret-123",
+		},
+		{
+			name:   "colon key value",
+			body:   "refresh_token: colon-secret-123",
+			secret: "colon-secret-123",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+				http.Error(w, tt.body, http.StatusForbidden)
+			})
+
+			err := client.Get("/fail", &map[string]string{})
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if strings.Contains(err.Error(), tt.secret) {
+				t.Fatalf("error leaked credential: %s", err.Error())
+			}
+			if !strings.Contains(err.Error(), "<redacted>") {
+				t.Fatalf("error did not redact credential: %s", err.Error())
+			}
+		})
+	}
+}
+
+func TestAPIErrorRedactsCredentialTruncatedMidValue(t *testing.T) {
+	const visibleSecret = "truncated"
+	const credentialPrefix = `","access_token":"`
+	const bodyPrefix = `{"padding":"`
+	paddingLength := maxErrorBodyBytes - len(bodyPrefix) - len(credentialPrefix) - len(visibleSecret)
+	body := bodyPrefix + strings.Repeat("A", paddingLength) +
+		credentialPrefix + visibleSecret + "-secret-value\"}"
+
+	resp := &http.Response{
+		Status: http.StatusText(http.StatusForbidden),
+		Body:   io.NopCloser(strings.NewReader(body)),
+	}
+	err := newAPIError(resp)
+	if strings.Contains(err.Error(), visibleSecret) {
+		t.Fatalf("error leaked truncated credential prefix: %s", err.Error())
+	}
+	if !strings.Contains(err.Error(), "<redacted>") {
+		t.Fatalf("error did not redact truncated credential: %s", err.Error())
+	}
+}
+
+func TestAPIErrorSanitizesControlChars(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "error \x1b[31mred\x1b[0m text", http.StatusForbidden)
+	})
+
+	err := client.Get("/fail", &map[string]string{})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if strings.Contains(err.Error(), "\x1b") {
+		t.Fatalf("error contained raw escape: %q", err.Error())
+	}
+	if !strings.Contains(err.Error(), `\x1b`) {
+		t.Fatalf("error did not sanitize escape: %q", err.Error())
+	}
+}
+
+func TestAPIErrorSanitizesUnicodeDirectionControls(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "error \u202ereversed\u2066isolated", http.StatusForbidden)
+	})
+
+	err := client.Get("/fail", &map[string]string{})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	for _, control := range []string{"\u202e", "\u2066"} {
+		if strings.Contains(err.Error(), control) {
+			t.Fatalf("error contained raw direction control %q: %q", control, err.Error())
+		}
+	}
+	for _, escaped := range []string{`\u202e`, `\u2066`} {
+		if !strings.Contains(err.Error(), escaped) {
+			t.Fatalf("error did not expose sanitized control %q: %q", escaped, err.Error())
+		}
+	}
+}
+
+func TestAPIErrorWrapsTransportError(t *testing.T) {
+	originalErr := errors.New("connection reset by peer")
+	client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return nil, originalErr
+		}),
+	})
+
+	err := client.Get("/resource", &map[string]string{})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "API request GET /resource") {
+		t.Fatalf("error missing context: %v", err)
+	}
+	if !errors.Is(err, originalErr) {
+		t.Fatalf("error does not wrap cause: %v", err)
+	}
+}
+
+func TestLegacyHelpersPreserveStatuses(t *testing.T) {
+	t.Run("Get accepts 200 and 201", func(t *testing.T) {
+		for _, status := range []int{http.StatusOK, http.StatusCreated} {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(status)
+				_, _ = io.WriteString(w, `{"ok":true}`)
+			})
+			var result map[string]bool
+			if err := client.Get("/resource", &result); err != nil {
+				t.Fatalf("Get with status %d: %v", status, err)
+			}
+		}
+	})
+
+	t.Run("Get rejects 204", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		})
+		err := client.Get("/resource", &map[string]bool{})
+		if err == nil {
+			t.Fatal("Get with 204 should fail")
+		}
+	})
+
+	t.Run("Post accepts 200 201 204", func(t *testing.T) {
+		for _, status := range []int{http.StatusOK, http.StatusCreated, http.StatusNoContent} {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(status)
+				if status != http.StatusNoContent {
+					_, _ = io.WriteString(w, `{"ok":true}`)
+				}
+			})
+			if err := client.Post("/resource", map[string]string{"k": "v"}, nil); err != nil {
+				t.Fatalf("Post with status %d: %v", status, err)
+			}
+		}
+	})
+
+	t.Run("Put accepts only 200", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusCreated)
+		})
+		err := client.Put("/resource", map[string]string{"k": "v"}, nil)
+		if err == nil {
+			t.Fatal("Put with 201 should fail")
+		}
+	})
+
+	t.Run("Patch accepts 200 and 204", func(t *testing.T) {
+		for _, status := range []int{http.StatusOK, http.StatusNoContent} {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(status)
+				if status != http.StatusNoContent {
+					_, _ = io.WriteString(w, `{"ok":true}`)
+				}
+			})
+			if err := client.Patch("/resource", map[string]string{"k": "v"}, nil); err != nil {
+				t.Fatalf("Patch with status %d: %v", status, err)
+			}
+		}
+	})
+
+	t.Run("Delete accepts 200 and 204", func(t *testing.T) {
+		for _, status := range []int{http.StatusOK, http.StatusNoContent} {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(status)
+			})
+			if err := client.Delete("/resource"); err != nil {
+				t.Fatalf("Delete with status %d: %v", status, err)
+			}
 		}
 	})
 }

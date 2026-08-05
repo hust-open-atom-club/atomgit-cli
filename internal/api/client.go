@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -166,13 +167,12 @@ func (c *Client) doRequestWithPolicyContext(
 func (c *Client) Get(path string, result interface{}) error {
 	resp, err := c.doRequest("GET", path, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("API request GET %s: %w", path, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+		return newAPIError(resp)
 	}
 
 	return json.NewDecoder(resp.Body).Decode(result)
@@ -190,13 +190,12 @@ func (c *Client) Post(path string, body, result interface{}) error {
 
 	resp, err := c.doRequest("POST", path, bodyReader)
 	if err != nil {
-		return err
+		return fmt.Errorf("API request POST %s: %w", path, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+		return newAPIError(resp)
 	}
 
 	if result == nil || resp.StatusCode == http.StatusNoContent {
@@ -210,13 +209,12 @@ func (c *Client) PostForm(path string, fields url.Values, result interface{}) er
 	body := strings.NewReader(fields.Encode())
 	resp, err := c.doRequestWithContentType(http.MethodPost, path, body, "application/x-www-form-urlencoded")
 	if err != nil {
-		return err
+		return fmt.Errorf("API request POST %s: %w", path, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		responseBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(responseBody))
+		return newAPIError(resp)
 	}
 
 	if result == nil || resp.StatusCode == http.StatusNoContent {
@@ -237,13 +235,12 @@ func (c *Client) Put(path string, body, result interface{}) error {
 
 	resp, err := c.doRequest("PUT", path, bodyReader)
 	if err != nil {
-		return err
+		return fmt.Errorf("API request PUT %s: %w", path, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+		return newAPIError(resp)
 	}
 
 	if result != nil {
@@ -264,13 +261,12 @@ func (c *Client) Patch(path string, body, result interface{}) error {
 
 	resp, err := c.doRequest("PATCH", path, bodyReader)
 	if err != nil {
-		return err
+		return fmt.Errorf("API request PATCH %s: %w", path, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+		return newAPIError(resp)
 	}
 
 	if result != nil {
@@ -296,13 +292,12 @@ func (c *Client) PatchForm(path string, fields map[string]string, result interfa
 
 	resp, err := c.doRequestWithContentType(http.MethodPatch, path, &body, writer.FormDataContentType())
 	if err != nil {
-		return err
+		return fmt.Errorf("API request PATCH %s: %w", path, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		responseBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(responseBody))
+		return newAPIError(resp)
 	}
 
 	if result != nil {
@@ -314,13 +309,12 @@ func (c *Client) PatchForm(path string, fields map[string]string, result interfa
 func (c *Client) Delete(path string) error {
 	resp, err := c.doRequest("DELETE", path, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("API request DELETE %s: %w", path, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+		return newAPIError(resp)
 	}
 
 	return nil
@@ -338,13 +332,12 @@ func (c *Client) DeleteWithBody(path string, body interface{}) error {
 
 	resp, err := c.doRequest("DELETE", path, bodyReader)
 	if err != nil {
-		return err
+		return fmt.Errorf("API request DELETE %s: %w", path, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+		return newAPIError(resp)
 	}
 
 	return nil
@@ -371,4 +364,124 @@ func (c *Client) DoRequestRawWithBody(method, path string, body []byte, contentT
 		bodyReader = bytes.NewReader(body)
 	}
 	return c.doRequestWithContentTypeAndAccept(method, path, bodyReader, contentType, accept)
+}
+
+// maxErrorBodyBytes caps how much of a non-success response body is included
+// in the error message. Larger bodies are truncated so a hostile or buggy
+// server cannot flood the terminal or logs.
+const maxErrorBodyBytes = 4096
+
+var (
+	// bearerTokenPattern matches Authorization header values embedded in error
+	// bodies so they are never surfaced to the user.
+	bearerTokenPattern = regexp.MustCompile(`(?i)(Bearer\s+)[A-Za-z0-9\-._~+/]+=*`)
+
+	// quotedCredentialPattern matches complete JSON string values for common
+	// credential fields, including escaped characters inside the value.
+	quotedCredentialPattern = regexp.MustCompile(`(?i)("(?:access_token|refresh_token|client_secret|authorization|password|token)"\s*:\s*")(?:\\.|[^"\\])*(")`)
+
+	// unterminatedQuotedCredentialPattern catches a credential value cut off
+	// by the bounded error excerpt before its closing quote.
+	unterminatedQuotedCredentialPattern = regexp.MustCompile(`(?i)("(?:access_token|refresh_token|client_secret|authorization|password|token)"\s*:\s*")(?:\\.|[^"\\])*$`)
+
+	// credentialKeyValuePattern covers non-JSON excerpts such as
+	// "access_token=..." and "refresh_token: ...".
+	credentialKeyValuePattern = regexp.MustCompile(`(?i)(\b(?:access_token|refresh_token|client_secret|authorization|password|token)\b\s*[:=]\s*)[^,;&}\]\r\n]+`)
+)
+
+// sanitizeAPIString neutralizes terminal control characters in an API error
+// excerpt so a hostile server cannot inject escape sequences (CWE-150).
+func sanitizeAPIString(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		switch {
+		case r == '\n' || r == '\t':
+			b.WriteRune(r)
+		case r < 0x20:
+			fmt.Fprintf(&b, "\\x%02x", r)
+		case r == 0x7f:
+			b.WriteString("\\x7f")
+		case r >= 0x80 && r <= 0x9f:
+			fmt.Fprintf(&b, "\\u%04x", r)
+		case isUnicodeDirectionControl(r):
+			fmt.Fprintf(&b, "\\u%04x", r)
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+func isUnicodeDirectionControl(r rune) bool {
+	return (r >= 0x202a && r <= 0x202e) ||
+		(r >= 0x2066 && r <= 0x2069) ||
+		r == 0x2028 || r == 0x2029 ||
+		r == 0x061c ||
+		r == 0x200e || r == 0x200f
+}
+
+// redactCredentials replaces common structured and bearer credential values
+// in an error excerpt so authentication data is never surfaced to the user.
+func redactCredentials(s string) string {
+	s = quotedCredentialPattern.ReplaceAllString(s, "${1}<redacted>${2}")
+	s = unterminatedQuotedCredentialPattern.ReplaceAllString(s, "${1}<redacted>")
+	s = bearerTokenPattern.ReplaceAllString(s, "${1}<redacted>")
+	return credentialKeyValuePattern.ReplaceAllString(s, "${1}<redacted>")
+}
+
+// newAPIError reads a bounded excerpt of the response body and returns a
+// terminal-safe, credential-redacted error preserving the established
+// "API error: <status> - <context>" prefix.
+func newAPIError(resp *http.Response) error {
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes+1))
+	if len(body) > maxErrorBodyBytes {
+		body = append(body[:maxErrorBodyBytes], []byte("...")...)
+	}
+	excerpt := sanitizeAPIString(string(body))
+	excerpt = redactCredentials(excerpt)
+	return fmt.Errorf("API error: %s - %s", resp.Status, excerpt)
+}
+
+// RequestPolicy configures how a single API request is dispatched.
+// AllowedStatuses is the exact set of HTTP status codes treated as success;
+// any other status produces a bounded, redacted API error. CanRetry controls
+// whether the request is retried once on a network error.
+type RequestPolicy struct {
+	AllowedStatuses []int
+	CanRetry        bool
+}
+
+func statusAllowed(code int, allowed []int) bool {
+	for _, a := range allowed {
+		if a == code {
+			return true
+		}
+	}
+	return false
+}
+
+// doJSONRequest performs an HTTP request with caller-selected retry policy
+// and exact success statuses, decoding a JSON result when one is expected.
+// Domain integrations use this primitive instead of the legacy helpers so
+// they can request only their contracted 200 or 201 status and disable retry
+// for state-sensitive operations such as related-branch PUT.
+func (c *Client) doJSONRequest(method, path string, body io.Reader, contentType, accept string, policy RequestPolicy, result interface{}) error {
+	resp, err := c.doRequestWithPolicyContext(context.Background(), c.httpClient, method, path, body, contentType, accept, policy.CanRetry)
+	if err != nil {
+		return fmt.Errorf("API request %s %s: %w", method, path, err)
+	}
+	defer resp.Body.Close()
+
+	if len(policy.AllowedStatuses) > 0 && !statusAllowed(resp.StatusCode, policy.AllowedStatuses) {
+		return newAPIError(resp)
+	}
+
+	if result == nil {
+		return nil
+	}
+	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+		return fmt.Errorf("decode API response: %w", err)
+	}
+	return nil
 }
