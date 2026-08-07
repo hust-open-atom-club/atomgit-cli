@@ -3,6 +3,7 @@ package issue
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -20,6 +21,12 @@ type issueTestConfig struct{}
 func (issueTestConfig) GetToken() (string, error) { return "token", nil }
 func (issueTestConfig) GetUser() (string, error)  { return "alice", nil }
 func (issueTestConfig) GetHost() string           { return "atomgit.com" }
+
+type issueAuthErrorConfig struct{ issueTestConfig }
+
+func (issueAuthErrorConfig) GetToken() (string, error) {
+	return "", errors.New("not authenticated: run `ag auth login`")
+}
 
 type issueRoundTripFunc func(*http.Request) (*http.Response, error)
 
@@ -181,6 +188,14 @@ func TestIssueListInfersRepositoryAndHonorsLimit(t *testing.T) {
 	}
 	if requests != 1 {
 		t.Fatalf("requests = %d, want 1", requests)
+	}
+}
+
+func TestIssueListReturnsCanonicalAuthenticationError(t *testing.T) {
+	cmd := newCmdIssueList(&cmdutil.Factory{Config: issueAuthErrorConfig{}})
+	err := cmd.RunE(cmd, []string{"alice/demo"})
+	if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
+		t.Fatalf("error = %v", err)
 	}
 }
 

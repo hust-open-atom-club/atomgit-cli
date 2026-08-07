@@ -502,3 +502,15 @@ func TestRepoCommandsReportAuthenticationErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestRepoViewReturnsCanonicalAuthenticationError(t *testing.T) {
+	factory := repoFactory(repoCommandConfig{
+		tokenErr: errors.New("not authenticated: run `ag auth login`"),
+		user:     "alice",
+	}, nil)
+	cmd := newCmdRepoView(factory)
+	err := cmd.RunE(cmd, []string{"alice/demo"})
+	if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
+		t.Fatalf("error = %v", err)
+	}
+}

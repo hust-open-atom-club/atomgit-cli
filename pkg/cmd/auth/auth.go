@@ -204,7 +204,7 @@ func newCmdAuthRefresh() *cobra.Command {
 			cred, err := config.LoadStoredCredentials()
 			if err != nil {
 				if errors.Is(err, config.ErrTokenNotFound) {
-					return fmt.Errorf("not logged in; run `ag auth login`")
+					return fmt.Errorf("not authenticated: run `ag auth login`")
 				}
 				return err
 			}
@@ -284,7 +284,7 @@ func newCmdAuthToken(f *cmdutil.Factory) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return err
 			}
 
 			fmt.Fprintln(cmd.OutOrStdout(), token)
