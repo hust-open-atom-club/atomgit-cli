@@ -396,9 +396,9 @@ func TestAuthToken(t *testing.T) {
 	})
 
 	t.Run("not authenticated", func(t *testing.T) {
-		cmd := newCmdAuthToken(&cmdutil.Factory{Config: testConfig{tokenErr: errors.New("missing")}})
+		cmd := newCmdAuthToken(&cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated: run `ag auth login`")}})
 		err := cmd.RunE(cmd, nil)
-		if err == nil || !strings.Contains(err.Error(), "not authenticated: missing") {
+		if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
 			t.Fatalf("error = %v", err)
 		}
 	})
@@ -491,12 +491,12 @@ func TestAuthRefresh(t *testing.T) {
 }
 
 func TestAuthRefreshValidation(t *testing.T) {
-	t.Run("not logged in", func(t *testing.T) {
+	t.Run("not authenticated", func(t *testing.T) {
 		isolateAuthConfig(t)
 		cmd := newCmdAuthRefresh()
 		cmd.SetContext(context.Background())
 		err := cmd.RunE(cmd, nil)
-		if err == nil || !strings.Contains(err.Error(), "not logged in") {
+		if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
 			t.Fatalf("error = %v", err)
 		}
 	})

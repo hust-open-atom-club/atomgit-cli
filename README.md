@@ -89,6 +89,7 @@ ag repo view
 ag issue list
 ag pr list
 ag check-update
+ag org list
 ag --help
 ```
 

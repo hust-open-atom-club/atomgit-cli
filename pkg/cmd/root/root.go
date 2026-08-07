@@ -32,10 +32,11 @@ func NewCmdRoot(f *cmdutil.Factory) (*cobra.Command, error) {
 
 func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra.Command, error) {
 	cmd := &cobra.Command{
-		Use:     "ag <command> <subcommand> [flags]",
-		Short:   "AtomGit CLI",
-		Long:    `Work seamlessly with AtomGit from the command line.`,
-		Version: version.Text(),
+		Use:           "ag <command> <subcommand> [flags]",
+		Short:         "AtomGit CLI",
+		Long:          `Work seamlessly with AtomGit from the command line.`,
+		Version:       version.Text(),
+		SilenceErrors: true,
 	}
 	cmd.SetVersionTemplate(`{{.Version}}`)
 	cmd.Flags().Bool("version", false, "Show version information")

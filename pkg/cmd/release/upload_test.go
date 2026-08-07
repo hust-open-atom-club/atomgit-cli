@@ -193,10 +193,6 @@ func TestReleaseUploadValidatesInputsBeforeAnyRequest(t *testing.T) {
 	if err := os.WriteFile(regularFile, []byte("payload"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	whitespaceFile := filepath.Join(dir, "   ")
-	if err := os.WriteFile(whitespaceFile, []byte("payload"), 0o600); err != nil {
-		t.Fatal(err)
-	}
 
 	cases := []struct {
 		name      string
@@ -215,7 +211,7 @@ func TestReleaseUploadValidatesInputsBeforeAnyRequest(t *testing.T) {
 		},
 		{
 			name:      "default whitespace name",
-			args:      []string{"alice/demo", "v1.0.0", whitespaceFile},
+			args:      []string{"alice/demo", "v1.0.0", dirPath, "--name", "   "},
 			wantError: "must not be empty",
 		},
 		{
