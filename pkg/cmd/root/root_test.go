@@ -2,6 +2,7 @@ package root
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -72,6 +73,32 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 	}
 	if versionFlag.Shorthand != "" {
 		t.Fatalf("version shorthand = %q, want none", versionFlag.Shorthand)
+	}
+}
+
+func TestRootReturnsErrorsWithoutPrintingThem(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "fail",
+		RunE: func(*cobra.Command, []string) error {
+			return errors.New("boom")
+		},
+	})
+	cmd.SetArgs([]string{"fail"})
+
+	err = cmd.Execute()
+	if err == nil || err.Error() != "boom" {
+		t.Fatalf("Execute() error = %v, want boom", err)
+	}
+	if err := cmdutil.FlushWriter(cmd.ErrOrStderr()); err != nil {
+		t.Fatal(err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want no Cobra error output", stderr.String())
 	}
 }
 
