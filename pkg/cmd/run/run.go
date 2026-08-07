@@ -2,7 +2,6 @@ package run
 
 import (
 	"fmt"
-	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api/actions"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -37,12 +36,11 @@ func newActionsClient(f *cmdutil.Factory, token string) (*actions.Client, error)
 }
 
 func parseRepository(value string) (string, string, error) {
-	value = strings.TrimSpace(value)
-	owner, repo, ok := strings.Cut(value, "/")
-	if !ok || owner == "" || repo == "" || strings.Contains(repo, "/") {
-		return "", "", fmt.Errorf("invalid repository format: %s (expected owner/repo)", value)
+	parsed, err := cmdutil.ParseRepository(value)
+	if err != nil {
+		return "", "", err
 	}
-	return owner, repo, nil
+	return parsed.Owner, parsed.Name, nil
 }
 
 func requireToken(f *cmdutil.Factory) (string, error) {

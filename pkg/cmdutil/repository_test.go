@@ -72,6 +72,28 @@ func TestResolveRepositoryExplicitDoesNotUseResolver(t *testing.T) {
 	}
 }
 
+func TestParseRepositoryRejectsUnsafePathCharacters(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{name: "query delimiter", value: "owner/repo?state=all"},
+		{name: "fragment delimiter", value: "owner/repo#readme"},
+		{name: "backslash", value: `owner/repo\\name`},
+		{name: "escaped slash", value: `owner/repo%2Fother`},
+		{name: "dot segment", value: "owner/.."},
+		{name: "control character", value: "owner/repo\nname"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := ParseRepository(tt.value); err == nil {
+				t.Fatalf("ParseRepository(%q) accepted an unsafe path", tt.value)
+			}
+		})
+	}
+}
+
 func TestResolveRepositoryFromArgs(t *testing.T) {
 	factory := &Factory{RepositoryResolver: func() (Repository, error) {
 		return Repository{Owner: "inferred", Name: "repo"}, nil

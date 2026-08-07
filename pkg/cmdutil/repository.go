@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/spf13/cobra"
 )
@@ -80,7 +81,22 @@ func ParseRepository(value string) (Repository, error) {
 	if repository.Owner == "" || repository.Name == "" {
 		return Repository{}, fmt.Errorf("invalid repository format: %s (expected owner/repo)", value)
 	}
+	if invalidRepositoryPart(repository.Owner) || invalidRepositoryPart(repository.Name) {
+		return Repository{}, fmt.Errorf("invalid repository format: %s (repository names contain an unsafe path character)", value)
+	}
 	return repository, nil
+}
+
+func invalidRepositoryPart(value string) bool {
+	if value == "." || value == ".." || strings.ContainsAny(value, `\\?#%`) {
+		return true
+	}
+	for _, r := range value {
+		if unicode.IsControl(r) {
+			return true
+		}
+	}
+	return false
 }
 
 // ResolveRepository uses an explicit repository when provided and otherwise
