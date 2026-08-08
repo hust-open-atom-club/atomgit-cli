@@ -48,7 +48,10 @@ func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
+			number, err := parseIssueNumber(remaining[0])
+			if err != nil {
+				return err
+			}
 
 			client, err := newAPIClient(f, token)
 			if err != nil {
@@ -109,7 +112,10 @@ func newCmdIssueReopen(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
+			number, err := parseIssueNumber(remaining[0])
+			if err != nil {
+				return err
+			}
 
 			issuePath := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
 			var current api.Issue
@@ -217,7 +223,10 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
+			number, err := parseIssueNumber(remaining[0])
+			if err != nil {
+				return err
+			}
 
 			if opts.web {
 				num, err := strconv.Atoi(number)
@@ -386,4 +395,16 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("body", "body-file")
 
 	return cmd
+}
+
+// parseIssueNumber validates that number is a positive integer and returns its
+// canonical decimal form. Rejecting non-numeric values before they are
+// interpolated into an API request path prevents path traversal or query
+// injection via the issue number argument.
+func parseIssueNumber(value string) (string, error) {
+	number, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil || number <= 0 {
+		return "", fmt.Errorf("invalid issue number %q (expected a positive integer)", value)
+	}
+	return strconv.Itoa(number), nil
 }

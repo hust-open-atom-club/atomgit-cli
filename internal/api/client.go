@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 )
 
 const (
@@ -141,7 +143,7 @@ func (c *Client) doRequestWithPolicyContext(
 		if c.token != "" {
 			req.Header.Set("Authorization", "Bearer "+c.token)
 		}
-		req.Header.Set("User-Agent", "AtomCode-CLI-v0.4")
+		req.Header.Set("User-Agent", "AtomCode-CLI/"+version.Get().Version)
 		if contentType != "" {
 			req.Header.Set("Content-Type", contentType)
 		}
@@ -171,7 +173,7 @@ func (c *Client) Get(path string, result interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
 	}
 

@@ -76,7 +76,7 @@ func TestGetSendsHeadersAndDecodesResponse(t *testing.T) {
 		if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
 			t.Fatalf("Authorization = %q", got)
 		}
-		if got := r.Header.Get("User-Agent"); got != "AtomCode-CLI-v0.4" {
+		if got := r.Header.Get("User-Agent"); !strings.HasPrefix(got, "AtomCode-CLI/") {
 			t.Fatalf("User-Agent = %q", got)
 		}
 		if got := r.Header.Get("Accept"); got != "application/json" {
@@ -163,7 +163,7 @@ func TestDoRequestRawWithBody(t *testing.T) {
 				if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
 					t.Fatalf("Authorization = %q", got)
 				}
-				if got := r.Header.Get("User-Agent"); got != "AtomCode-CLI-v0.4" {
+				if got := r.Header.Get("User-Agent"); !strings.HasPrefix(got, "AtomCode-CLI/") {
 					t.Fatalf("User-Agent = %q", got)
 				}
 				w.WriteHeader(http.StatusAccepted)

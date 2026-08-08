@@ -343,8 +343,12 @@ func responseError(operation string, resp *http.Response, token string) error {
 	return result
 }
 
+// redact replaces an access token in an error message with a placeholder.
+// Values shorter than 4 characters are left untouched: replacing a very short
+// token would mangle ordinary words in the message while providing little
+// protection, since such a short value cannot meaningfully be a credential.
 func redact(err error, token string) error {
-	if err == nil || token == "" || !strings.Contains(err.Error(), token) {
+	if err == nil || token == "" || len(token) < 4 || !strings.Contains(err.Error(), token) {
 		return err
 	}
 	return &redactedError{message: strings.ReplaceAll(err.Error(), token, "[REDACTED]"), cause: err}
