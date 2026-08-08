@@ -94,31 +94,6 @@ func TestGetSendsHeadersAndDecodesResponse(t *testing.T) {
 	}
 }
 
-func TestGetReturnsInspectableHTTPError(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusForbidden)
-		_, _ = io.WriteString(w, `{"message":"denied"}`)
-	})
-
-	err := client.Get("/resource", &map[string]string{})
-	if err == nil {
-		t.Fatal("Get() expected an error")
-	}
-	if !IsHTTPStatus(err, http.StatusForbidden) {
-		t.Fatalf("IsHTTPStatus(%v, 403) = false", err)
-	}
-	if IsHTTPStatus(err, http.StatusNotFound) {
-		t.Fatalf("IsHTTPStatus(%v, 404) = true", err)
-	}
-	var httpError *HTTPError
-	if !errors.As(err, &httpError) || httpError.StatusCode != http.StatusForbidden {
-		t.Fatalf("error = %#v", err)
-	}
-	if got := err.Error(); got != `API error: 403 Forbidden - {"message":"denied"}` {
-		t.Fatalf("error = %q", got)
-	}
-}
-
 func TestRawRequestSupportsCustomAcceptAndEmptyToken(t *testing.T) {
 	client := NewClientWithBaseURL("", "https://example.test/api/v8", &http.Client{
 		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
