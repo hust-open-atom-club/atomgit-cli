@@ -515,3 +515,35 @@ func TestRepoViewReturnsCanonicalAuthenticationError(t *testing.T) {
 		t.Fatalf("error = %v", err)
 	}
 }
+
+// TestRunCreateRejectsMutuallyExclusiveVisibility guards against regressing the
+// mutual exclusion check on --public/--private. It pins two invariants the reviewer
+// asked for in PR #151:
+//  1. The conflicting combination is rejected (returns a non-nil error whose
+//     message mentions both flags).
+//  2. Validation runs *before* any config/auth/client initialization: even with a
+//     factory whose GetUser() and GetToken() would error, those errors must NOT
+//     surface — proving the check short-circuits ahead of config/auth work.
+func TestRunCreateRejectsMutuallyExclusiveVisibility(t *testing.T) {
+	errs := errors.New("simulated config failure")
+	factory := repoFactory(repoCommandConfig{
+		token:    "",
+		tokenErr: errs,
+		user:     "",
+		userErr:  errs,
+	}, nil)
+
+	err := runCreate(strings.NewReader(""), io.Discard, io.Discard, factory,
+		&CreateOptions{Name: "demo", Public: true, Private: true})
+	if err == nil {
+		t.Fatal("runCreate() expected an error for --public --private")
+	}
+	if !strings.Contains(err.Error(), "--public") || !strings.Contains(err.Error(), "--private") {
+		t.Fatalf("error = %q, want message mentioning both --public and --private", err.Error())
+	}
+	// The mutual-exclusion check must fire before any config/auth work: a simulated
+	// config failure must not leak into the returned error.
+	if strings.Contains(err.Error(), "simulated config failure") {
+		t.Fatalf("error = %q, config/auth layer was reached before visibility validation", err.Error())
+	}
+}
