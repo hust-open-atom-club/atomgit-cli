@@ -3,7 +3,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 )
@@ -32,11 +31,7 @@ func validateAndFixTokenFilePerm(f *os.File, path string, info os.FileInfo) erro
 
 	fixed, err := validateTokenFilePerm(perm)
 	if err != nil {
-		if errors.Is(err, ErrTokenFileUnreadable) {
-			return &TokenPermissionError{Path: path, Err: err}
-		}
-
-		return fmt.Errorf("cannot read %s: %w", path, err)
+		return &TokenPermissionError{Path: path, Err: err}
 	}
 	if fixed != perm {
 		if err := f.Chmod(fixed); err != nil {
