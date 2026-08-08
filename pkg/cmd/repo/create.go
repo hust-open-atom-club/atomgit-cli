@@ -88,6 +88,9 @@ func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory,
 	}
 
 	// Determine visibility
+	if opts.Public && opts.Private {
+		return fmt.Errorf("--public and --private are mutually exclusive")
+	}
 	visibility := "private"
 	if opts.Public {
 		visibility = "public"
