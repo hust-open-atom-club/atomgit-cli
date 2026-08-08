@@ -20,6 +20,9 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 		commit    string
 		repo      string
 		releases  bool
+		actions   bool
+		wiki      bool
+		settings  bool
 		noBrowser bool
 	}
 
@@ -38,6 +41,12 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 
 			if opts.releases {
 				targetURL = browser.BuildReleasesURL(owner, repo)
+			} else if opts.actions {
+				targetURL = browser.BuildActionsURL(owner, repo)
+			} else if opts.wiki {
+				targetURL = browser.BuildWikiURL(owner, repo)
+			} else if opts.settings {
+				targetURL = browser.BuildSettingsURL(owner, repo)
 			} else if opts.commit != "" && len(args) == 0 {
 				targetURL = browser.BuildCommitURL(owner, repo, opts.commit)
 			} else if len(args) == 0 {
@@ -106,6 +115,9 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.commit, "commit", "c", "", "Select another commit by passing in the commit SHA, default is the last commit")
 	cmd.Flags().StringVarP(&opts.repo, "repo", "R", "", "Select another repository using the OWNER/REPO format")
 	cmd.Flags().BoolVarP(&opts.releases, "releases", "r", false, "Open repository releases")
+	cmd.Flags().BoolVarP(&opts.actions, "actions", "a", false, "Open repository actions")
+	cmd.Flags().BoolVarP(&opts.wiki, "wiki", "w", false, "Open repository wiki")
+	cmd.Flags().BoolVarP(&opts.settings, "settings", "s", false, "Open repository settings")
 	cmd.Flags().BoolVarP(&opts.noBrowser, "no-browser", "n", false, "Print destination URL instead of opening the browser")
 
 	cmdutil.AddRepositoryContextHelp(cmd)
