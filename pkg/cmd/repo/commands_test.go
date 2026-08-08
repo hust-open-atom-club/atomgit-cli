@@ -45,6 +45,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 		"edit":   {"default-branch", "description", "name", "private", "public", "visibility", "yes"},
 		"fork":   {"clone", "description", "name", "private", "public"},
 		"list":   {"limit"},
+		"sync":   {"branch", "force", "yes"},
 		"view":   {"web"},
 	}
 	for name, flags := range want {
@@ -71,7 +72,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	if err := edit.Args(edit, []string{"owner/repo", "extra"}); err == nil {
 		t.Fatal("edit accepted too many repositories")
 	}
-	for _, name := range []string{"view", "edit", "fork", "delete"} {
+	for _, name := range []string{"view", "edit", "fork", "sync", "delete"} {
 		child, _, _ := cmd.Find([]string{name})
 		if !strings.Contains(child.Long, cmdutil.RepositoryContextHelp) {
 			t.Errorf("%s help does not explain repository inference", name)

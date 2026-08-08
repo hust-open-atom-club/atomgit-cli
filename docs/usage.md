@@ -106,6 +106,15 @@ ag repo fork
 ag repo fork owner/repo
 ag repo fork owner/repo --name my-fork --public
 
+# 将 Fork 的默认分支与上游同步（不修改本地 Git 工作区）
+ag repo sync
+ag repo sync owner/fork
+
+# 同步指定分支；强制覆盖分叉提交需确认或显式 --yes
+ag repo sync owner/fork --branch develop
+ag repo sync owner/fork --branch develop --force
+ag repo sync owner/fork --branch develop --force --yes
+
 # 删除仓库
 ag repo delete --yes
 ag repo delete owner/repo --yes
@@ -114,6 +123,8 @@ ag repo delete owner/repo --yes
 `ag repo edit` 仅发送命令行中明确指定的字段，支持 `--name`、`--description`、`--default-branch` 和 `--visibility public|private`。`--public`、`--private` 是可见性的便利选项；它们与 `--visibility` 三者互斥。名称或可见性修改需要交互确认，可使用 `--yes` 跳过确认。成功后命令会显示更新后的仓库名称和浏览器 URL。
 
 该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。
+
+`ag repo sync` 仅更新 AtomGit 上的远端 Fork。命令会先验证仓库确为 Fork、上游存在且目标分支在两端都可读取；未指定 `--branch` 时使用 Fork 的默认分支。默认同步不会覆盖分叉提交，冲突时返回非零退出码。`--force` 可能覆盖 Fork 上的分叉提交，因此需要交互确认；仅在已审查目标后才应结合 `--yes` 使用。
 
 ### 仓库协作者
 

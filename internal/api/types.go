@@ -35,6 +35,18 @@ type Repository struct {
 	} `json:"owner"`
 }
 
+// RepositorySyncRequest selects the fork branch to synchronize. Force permits
+// the server to overwrite commits that cannot be fast-forwarded.
+type RepositorySyncRequest struct {
+	Branch string `json:"branch"`
+	Force  bool   `json:"force,omitempty"`
+}
+
+// RepositorySyncResponse is returned by the fork synchronization endpoint.
+type RepositorySyncResponse struct {
+	Result bool `json:"repo_sync_result"`
+}
+
 // PullRequest represents an AtomGit pull request
 type PullRequest struct {
 	ID                int64       `json:"id"`
