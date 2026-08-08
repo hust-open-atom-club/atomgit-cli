@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -24,6 +25,23 @@ type Client struct {
 	baseURL    string
 	token      string
 	httpClient *http.Client
+}
+
+// HTTPError describes a non-successful response returned by Client.Get.
+type HTTPError struct {
+	StatusCode int
+	Status     string
+	Body       string
+}
+
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("API error: %s - %s", e.Status, e.Body)
+}
+
+// IsHTTPStatus reports whether err contains an AtomGit API response with statusCode.
+func IsHTTPStatus(err error, statusCode int) bool {
+	var httpError *HTTPError
+	return errors.As(err, &httpError) && httpError.StatusCode == statusCode
 }
 
 func NewClient(token string) *Client {
@@ -174,7 +192,7 @@ func (c *Client) Get(path string, result interface{}) error {
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-		return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+		return &HTTPError{StatusCode: resp.StatusCode, Status: resp.Status, Body: string(body)}
 	}
 
 	return json.NewDecoder(resp.Body).Decode(result)
