@@ -37,7 +37,7 @@ winget install hust-open-atom-club.atomgit-cli
 winget upgrade atomgit-cli
 ```
 
-WinGet 安装的二进制由 WinGet 管理升级，并报告 `selfUpdate=false, source=winget`。
+WinGet 安装的二进制由 WinGet 管理升级。
 
 ### Scoop
 
