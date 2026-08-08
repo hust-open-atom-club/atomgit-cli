@@ -1,14 +1,11 @@
 package root
 
 import (
-	"fmt"
-	"io"
-	"os"
-
 	apiCmd "atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/auth"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/branch"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/browse"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/checkupdate"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/issue"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/label"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/license"
@@ -23,7 +20,10 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/tag"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/version"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
+	"fmt"
 	"github.com/spf13/cobra"
+	"io"
+	"os"
 )
 
 func NewCmdRoot(f *cmdutil.Factory) (*cobra.Command, error) {
@@ -79,6 +79,7 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	cmd.AddCommand(license.NewCmdLicense(f))
 	cmd.AddCommand(org.NewCmdOrg(f))
 	cmd.AddCommand(search.NewCmdSearch(f))
+	cmd.AddCommand(checkupdate.NewCmdCheckUpdate(f))
 	cmd.AddCommand(version.NewCmdVersion())
 
 	return cmd, nil

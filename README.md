@@ -22,6 +22,7 @@ macOS 或 Linux 用户可以通过项目维护的 Homebrew tap 安装：
 brew install hust-open-atom-club/tap/atomgit-cli
 ```
 
+
 ### WinGet
 
 Windows 用户可以通过 Windows Package Manager 安装：
@@ -36,7 +37,7 @@ winget install hust-open-atom-club.atomgit-cli
 winget upgrade atomgit-cli
 ```
 
-WinGet 安装的二进制由 WinGet 管理升级，并报告 `selfUpdate=false, source=winget`。
+WinGet 安装的二进制由 WinGet 管理升级。
 
 ### Scoop
 
@@ -45,8 +46,6 @@ Windows 用户可以通过组织维护的 scoop bucket 安装：
 ```powershell
 scoop install https://raw.githubusercontent.com/hust-open-atom-club/ScoopBucket/main/bucket/atomgit-cli.json
 ```
-
-Scoop 安装的二进制由 Scoop 管理升级，并报告 `selfUpdate=false, source=scoop`。
 
 ### Nix / NixOS
 
@@ -89,6 +88,7 @@ ag auth status
 ag repo view
 ag issue list
 ag pr list
+ag check-update
 ag org list
 ag --help
 ```

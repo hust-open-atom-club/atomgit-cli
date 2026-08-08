@@ -2,10 +2,8 @@
 # 使用 GoReleaser 生成预编译包到 dist/<版本>/：
 #   - Linux/macOS: ag_<os>_<arch>.tar.gz（包内可执行文件名为 ag）
 #   - Windows:     ag_windows_<arch>.zip（包内为 ag.exe）
-#   - 包管理器:    package-managers/ag_<os>_<arch>_<source>.<ext>
 #   - npm:         七个平台二进制子包和一个主启动包，以及独立的 npm/checksums.txt
-#   - SHA-256:     根 checksums.txt 仅覆盖七个普通归档和两个安装脚本；
-#                  package-managers-checksums.txt 仅覆盖 15 个 managed 归档
+#   - SHA-256:     checksums.txt 仅覆盖七个归档和两个安装脚本
 #
 # 用法:
 #   ./scripts/build-release.sh              # 版本来自 git describe，或环境变量 TAG
@@ -103,7 +101,6 @@ LINK_FLAGS="-s -w"
 LINK_FLAGS="${LINK_FLAGS} -X 'atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Version=${TAG}'"
 LINK_FLAGS="${LINK_FLAGS} -X 'atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Commit=${COMMIT}'"
 LINK_FLAGS="${LINK_FLAGS} -X 'atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.BuildDate=${BUILD_DATE}'"
-LINK_FLAGS="${LINK_FLAGS} -X 'atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Source=release'"
 
 ORDINARY_ARCHIVES="
 ag_darwin_amd64.tar.gz
@@ -114,38 +111,6 @@ ag_linux_loong64.tar.gz
 ag_windows_amd64.zip
 ag_windows_arm64.zip
 "
-
-# Manifest order is source, OS, architecture. The checksum file uses the same
-# stable order; filenames remain flat Release attachment basenames.
-MANAGED_ARCHIVES="
-ag_darwin_amd64_homebrew.tar.gz
-ag_darwin_arm64_homebrew.tar.gz
-ag_linux_amd64_homebrew.tar.gz
-ag_linux_arm64_homebrew.tar.gz
-ag_darwin_amd64_npm.tar.gz
-ag_darwin_arm64_npm.tar.gz
-ag_linux_amd64_npm.tar.gz
-ag_linux_arm64_npm.tar.gz
-ag_linux_loong64_npm.tar.gz
-ag_windows_amd64_npm.zip
-ag_windows_arm64_npm.zip
-ag_windows_amd64_scoop.zip
-ag_windows_arm64_scoop.zip
-ag_windows_amd64_winget.zip
-ag_windows_arm64_winget.zip
-"
-
-sha256_file() {
-  file=$1
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$file" | awk '{print $1}'
-  elif command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$file" | awk '{print $1}'
-  else
-    echo "错误: 生成发布校验和需要 sha256sum 或 shasum。" >&2
-    return 1
-  fi
-}
 
 generate_checksum_file() {
   directory=$1
@@ -175,162 +140,6 @@ validate_archive_matrix() {
     printf '%s\n' "$actual" >&2
     return 1
   fi
-}
-
-extract_archive_binary() {
-  archive=$1
-  destination=$2
-  case "$archive" in
-    *.zip)
-      command -v unzip >/dev/null 2>&1 || {
-        echo "错误: 验证 Windows 归档需要 unzip。" >&2
-        return 1
-      }
-      unzip -p "$archive" ag.exe >"$destination"
-      ;;
-    *.tar.gz)
-      tar -xOf "$archive" ag >"$destination"
-      ;;
-    *)
-      echo "错误: 不支持的归档格式: $archive" >&2
-      return 1
-      ;;
-  esac
-  chmod +x "$destination"
-}
-
-verify_profile_metadata() {
-  profile=$1
-  archive=$2
-  expected_self_update=$3
-  expected_source=$4
-  archive_os=$5
-  archive_arch=$6
-
-  verify_dir=$(mktemp -d)
-  verify_binary="${verify_dir}/ag"
-  host_os=$(go env GOHOSTOS)
-  host_arch=$(go env GOHOSTARCH)
-  if [ "$host_os" = "windows" ]; then
-    verify_binary="${verify_binary}.exe"
-  fi
-
-  if [ "$archive_os" = "$host_os" ] && [ "$archive_arch" = "$host_arch" ]; then
-    extract_archive_binary "$archive" "$verify_binary" || {
-      rm -rf "$verify_dir"
-      return 1
-    }
-    verification_kind="归档"
-  else
-    profile_flags="-s -w"
-    profile_flags="${profile_flags} -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Version=${TAG}"
-    profile_flags="${profile_flags} -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Commit=${COMMIT}"
-    profile_flags="${profile_flags} -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.BuildDate=${BUILD_DATE}"
-    profile_flags="${profile_flags} -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Source=${expected_source}"
-    GOOS="$host_os" GOARCH="$host_arch" CGO_ENABLED=0 \
-      go build -trimpath -ldflags="$profile_flags" -o "$verify_binary" ./cmd/ag || {
-        rm -rf "$verify_dir"
-        echo "错误: 无法构建 ${profile} 宿主元数据 probe。" >&2
-        return 1
-      }
-    verification_kind="宿主 probe"
-  fi
-
-  json_out=$("$verify_binary" version --json 2>&1) || {
-    rm -rf "$verify_dir"
-    echo "错误: ${profile} ${verification_kind}二进制无法执行: $json_out" >&2
-    return 1
-  }
-  json_self_update=$(printf '%s' "$json_out" | sed -n 's/.*"selfUpdate": *\([^,}]*\).*/\1/p')
-  json_source=$(printf '%s' "$json_out" | sed -n 's/.*"source": *"\([^"]*\)".*/\1/p')
-  if [ "$json_self_update" != "$expected_self_update" ] || [ "$json_source" != "$expected_source" ]; then
-    rm -rf "$verify_dir"
-    echo "错误: ${profile} ${verification_kind}元数据为 ${json_self_update}/${json_source}，期望 ${expected_self_update}/${expected_source}" >&2
-    return 1
-  fi
-  echo "==> ${profile} ${verification_kind}元数据通过: selfUpdate=${expected_self_update}, source=${expected_source}"
-
-  rm -rf "$verify_dir"
-}
-
-generate_managed_manifest() {
-  directory=$1
-  manifest="${directory}/package-managers-manifest.json"
-  tmp="${manifest}.tmp"
-  {
-    printf '{\n'
-    printf '  "schemaVersion": 1,\n'
-    printf '  "tag": "%s",\n' "$TAG"
-    printf '  "artifacts": [\n'
-    first=1
-    for filename in $MANAGED_ARCHIVES; do
-      stem=${filename%.tar.gz}
-      stem=${stem%.zip}
-      source=${stem##*_}
-      target=${stem%_*}
-      goarch=${target##*_}
-      goos=${target#ag_}
-      goos=${goos%_*}
-      case "$filename" in
-        *.zip) format=zip ;;
-        *) format=tar.gz ;;
-      esac
-      digest=$(sha256_file "${directory}/${filename}") || exit 1
-      if [ "$first" = "0" ]; then
-        printf ',\n'
-      fi
-      first=0
-      printf '    {\n'
-      printf '      "source": "%s",\n' "$source"
-      printf '      "selfUpdate": false,\n'
-      printf '      "goos": "%s",\n' "$goos"
-      printf '      "goarch": "%s",\n' "$goarch"
-      printf '      "format": "%s",\n' "$format"
-      printf '      "filename": "%s",\n' "$filename"
-      printf '      "sha256": "%s"\n' "$digest"
-      printf '    }'
-    done
-    printf '\n  ]\n'
-    printf '}\n'
-  } >"$tmp"
-  mv "$tmp" "$manifest"
-}
-
-verify_managed_metadata() {
-  directory=$1
-  checksum_file="${directory}/package-managers-checksums.txt"
-  manifest="${directory}/package-managers-manifest.json"
-  expected_names=$(printf '%s\n' $MANAGED_ARCHIVES)
-  checksum_names=$(awk '{print $2}' "$checksum_file")
-  if [ "$checksum_names" != "$expected_names" ]; then
-    echo "错误: managed checksum basename 顺序与声明矩阵不一致。" >&2
-    return 1
-  fi
-
-  if command -v sha256sum >/dev/null 2>&1; then
-    (cd "$directory" && sha256sum -c package-managers-checksums.txt >/dev/null)
-  else
-    (cd "$directory" && shasum -a 256 -c package-managers-checksums.txt >/dev/null)
-  fi
-
-  filename_count=$(grep -c '"filename":' "$manifest")
-  disabled_count=$(grep -c '"selfUpdate": false' "$manifest")
-  if [ "$filename_count" -ne 15 ] || [ "$disabled_count" -ne 15 ]; then
-    echo "错误: managed manifest 必须恰好包含 15 个 selfUpdate=false 条目。" >&2
-    return 1
-  fi
-
-  for filename in $MANAGED_ARCHIVES; do
-    digest=$(sha256_file "${directory}/${filename}") || return 1
-    grep -Fq "\"filename\": \"${filename}\"" "$manifest" || {
-      echo "错误: managed manifest 缺少 ${filename}" >&2
-      return 1
-    }
-    grep -Fq "\"sha256\": \"${digest}\"" "$manifest" || {
-      echo "错误: managed manifest 中 ${filename} 的 SHA-256 不匹配。" >&2
-      return 1
-    }
-  done
 }
 
 # ---------------------------------------------------------------------------
@@ -374,8 +183,6 @@ verify_injection() {
   json_version=$(echo "$json_out" | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p')
   json_commit=$(echo "$json_out"  | sed -n 's/.*"commit": *"\([^"]*\)".*/\1/p')
   json_build_date=$(echo "$json_out" | sed -n 's/.*"buildDate": *"\([^"]*\)".*/\1/p')
-  json_self_update=$(echo "$json_out" | sed -n 's/.*"selfUpdate": *\([^,}]*\).*/\1/p')
-  json_source=$(echo "$json_out" | sed -n 's/.*"source": *"\([^"]*\)".*/\1/p')
 
   if [ "$json_version" != "$TAG" ]; then
     echo "错误: JSON version=\"$json_version\", 期望 \"$TAG\"" >&2
@@ -389,12 +196,7 @@ verify_injection() {
     echo "错误: JSON buildDate=\"$json_build_date\", 期望 \"$BUILD_DATE\"" >&2
     exit 1
   fi
-  if [ "$json_self_update" != "true" ] || [ "$json_source" != "release" ]; then
-    echo "错误: JSON policy=${json_self_update}/${json_source}, 期望 true/release" >&2
-    exit 1
-  fi
-
-  echo "==> 注入校验通过 (tag=$TAG, commit=$COMMIT, buildDate=$BUILD_DATE, selfUpdate=true, source=release)"
+  echo "==> 注入校验通过 (tag=$TAG, commit=$COMMIT, buildDate=$BUILD_DATE)"
   echo ""
   rm -f "$tmpbin"
   trap - EXIT
@@ -454,8 +256,7 @@ OUT_ROOT="${AG_RELEASE_OUT:-${ROOT}/dist}"
 OUT="${OUT_ROOT}/${TAG}"
 STAGING="${ROOT}/dist/.goreleaser"
 rm -rf "$OUT"
-MANAGED_OUT="${OUT}/package-managers"
-mkdir -p "$MANAGED_OUT"
+mkdir -p "$OUT"
 
 echo "输出目录: $OUT"
 echo "版本标识: $TAG"
@@ -492,88 +293,8 @@ cp "$STAGING"/ag_darwin_amd64.tar.gz "$OUT/"
 cp "$STAGING"/ag_darwin_arm64.tar.gz "$OUT/"
 cp "$STAGING"/ag_windows_amd64.zip "$OUT/"
 cp "$STAGING"/ag_windows_arm64.zip "$OUT/"
-for archive in $MANAGED_ARCHIVES; do
-  cp "${STAGING}/${archive}" "$MANAGED_OUT/"
-done
 
 validate_archive_matrix "$OUT" "$ORDINARY_ARCHIVES"
-validate_archive_matrix "$MANAGED_OUT" "$MANAGED_ARCHIVES"
-generate_checksum_file "$MANAGED_OUT" "${MANAGED_OUT}/package-managers-checksums.txt" $MANAGED_ARCHIVES
-generate_managed_manifest "$MANAGED_OUT"
-verify_managed_metadata "$MANAGED_OUT"
-
-verify_os=$(go env GOHOSTOS)
-verify_arch=$(go env GOHOSTARCH)
-case "${verify_os}/${verify_arch}" in
-  linux/amd64|linux/arm64|darwin/amd64|darwin/arm64|windows/amd64|windows/arm64)
-    ordinary_verify="${OUT}/ag_${verify_os}_${verify_arch}"
-    npm_verify="${MANAGED_OUT}/ag_${verify_os}_${verify_arch}_npm"
-    case "$verify_os" in
-      windows)
-        ordinary_verify="${ordinary_verify}.zip"
-        npm_verify="${npm_verify}.zip"
-        ;;
-      *)
-        ordinary_verify="${ordinary_verify}.tar.gz"
-        npm_verify="${npm_verify}.tar.gz"
-        ;;
-    esac
-    verify_profile_metadata ordinary "$ordinary_verify" true release "$verify_os" "$verify_arch"
-    verify_profile_metadata npm "$npm_verify" false npm "$verify_os" "$verify_arch"
-    ;;
-  *)
-    verify_profile_metadata ordinary "${OUT}/ag_linux_amd64.tar.gz" true release linux amd64
-    verify_profile_metadata npm "${MANAGED_OUT}/ag_linux_amd64_npm.tar.gz" false npm linux amd64
-    ;;
-esac
-
-case "$verify_os" in
-  linux|darwin)
-    case "$verify_arch" in
-      amd64|arm64)
-        verify_profile_metadata homebrew \
-          "${MANAGED_OUT}/ag_${verify_os}_${verify_arch}_homebrew.tar.gz" \
-          false homebrew "$verify_os" "$verify_arch"
-        ;;
-      *)
-        verify_profile_metadata homebrew \
-          "${MANAGED_OUT}/ag_linux_amd64_homebrew.tar.gz" \
-          false homebrew linux amd64
-        ;;
-    esac
-    ;;
-  *)
-    verify_profile_metadata homebrew \
-      "${MANAGED_OUT}/ag_linux_amd64_homebrew.tar.gz" \
-      false homebrew linux amd64
-    ;;
-esac
-
-case "$verify_os/$verify_arch" in
-  windows/amd64|windows/arm64)
-    verify_profile_metadata winget \
-      "${MANAGED_OUT}/ag_windows_${verify_arch}_winget.zip" \
-      false winget windows "$verify_arch"
-    ;;
-  *)
-    verify_profile_metadata winget \
-      "${MANAGED_OUT}/ag_windows_amd64_winget.zip" \
-      false winget windows amd64
-    ;;
-esac
-
-case "$verify_os/$verify_arch" in
-  windows/amd64|windows/arm64)
-    verify_profile_metadata scoop \
-      "${MANAGED_OUT}/ag_windows_${verify_arch}_scoop.zip" \
-      false scoop windows "$verify_arch"
-    ;;
-  *)
-    verify_profile_metadata scoop \
-      "${MANAGED_OUT}/ag_windows_amd64_scoop.zip" \
-      false scoop windows amd64
-    ;;
-esac
 
 rm -rf "$STAGING"
 
@@ -601,33 +322,21 @@ echo "==> 生成 npm 平台包 ..."
 node scripts/build-npm-packages.js "$OUT" "${TAG#v}"
 echo ""
 
-# GoReleaser 的全局 checksum 会包含 managed profiles，因此在最终布局中
-# 明确重建普通根校验和，保持原有六归档加两个安装脚本的契约。
+# 将安装脚本加入七个 Release 归档的校验文件。
 generate_checksum_file "$OUT" "${OUT}/checksums.txt" $ORDINARY_ARCHIVES install.sh install.ps1
 if command -v sha256sum >/dev/null 2>&1; then
   (cd "$OUT/npm" && sha256sum ./*.tgz) >"${OUT}/npm/checksums.txt"
 else
   (cd "$OUT/npm" && shasum -a 256 ./*.tgz) >"${OUT}/npm/checksums.txt"
 fi
-echo "已生成普通归档与安装脚本校验文件 ${OUT}/checksums.txt"
-echo "已生成 managed 归档校验文件 ${MANAGED_OUT}/package-managers-checksums.txt"
-echo "已生成 managed manifest ${MANAGED_OUT}/package-managers-manifest.json"
+echo "已生成归档与安装脚本校验文件 ${OUT}/checksums.txt"
 echo "已生成 npm 包本地校验文件 ${OUT}/npm/checksums.txt"
-echo ""
-
-echo "AtomGit Release 手动上传 basename 清单:"
-for attachment in $ORDINARY_ARCHIVES checksums.txt install.sh install.ps1; do
-  echo "  $attachment"
-done
-for attachment in $MANAGED_ARCHIVES package-managers-manifest.json package-managers-checksums.txt; do
-  echo "  $attachment"
-done
 echo ""
 
 if [ "$RELEASE_MODE" = "snapshot" ]; then
   echo "试打包完成。制品位于 ${OUT}/，请勿将未校验的快照制品用于正式发布。"
 else
-  echo "完成。按以上 basename 清单手动上传 ${OUT}/ 和 ${MANAGED_OUT}/ 中的独立附件到 AtomGit Release「${TAG}」。"
+  echo "完成。将 ${OUT}/ 下各 .tar.gz / .zip、checksums.txt、install.sh 与 install.ps1 作为 AtomGit Release「${TAG}」的附件上传即可。"
   echo "npm 包位于 ${OUT}/npm/；发布时先发布七个平台包，再发布 atomgit-cli 主包。"
 fi
 echo "（Windows 也可：PowerShell 执行 install.ps1，或下载 ag_windows_*.zip 手动解压并加入 PATH。）"

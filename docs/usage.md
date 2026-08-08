@@ -106,9 +106,11 @@ ag repo fork
 ag repo fork owner/repo
 ag repo fork owner/repo --name my-fork --public
 
+
 # 将 Fork 的默认分支与上游同步（不修改本地 Git 工作区）
 ag repo sync
 ag repo sync owner/fork
+
 
 # 同步指定分支；强制覆盖分叉提交需确认或显式 --yes
 ag repo sync owner/fork --branch develop
@@ -247,11 +249,14 @@ ag browse --commit abc1234 main.go
 # 打开 Releases 页面
 ag browse --releases
 
+
 # 打开 Actions 页面
 ag browse --actions
 
+
 # 打开 Wiki 页面
 ag browse --wiki
+
 
 # 打开 Settings 页面
 ag browse --settings
@@ -351,12 +356,27 @@ ag pr review owner/repo 123 --approve --force
 #### PR 评论
 
 ```bash
+
+# 创建评论
+ag pr comment create owner/repo 123 --body "LGTM!"
+ag pr comment create owner/repo 123 --body-file review.md
+
 # 创建评论
 ag pr comment create owner/repo 123 --body "LGTM!"
 ag pr comment create owner/repo 123 --body-file review.md
 
 # 查看所有评论（树形结构显示）
 ag pr comment view owner/repo 123
+
+
+# 编辑评论（交互式编辑）
+ag pr comment edit owner/repo 123 456
+ag pr comment edit owner/repo 123 456 --body "Updated comment"
+
+
+# 删除评论
+ag pr comment delete owner/repo 123 456
+ag pr comment delete owner/repo 123 456 --yes
 
 # 编辑评论（交互式编辑）
 ag pr comment edit owner/repo 123 456
@@ -414,12 +434,28 @@ ag issue reopen owner/repo 42
 #### Issue 评论
 
 ```bash
+
+# 创建评论
+ag issue comment create owner/repo 42 --body "I can reproduce this issue"
+ag issue comment create owner/repo 42 --body-file details.md
+
 # 创建评论
 ag issue comment create owner/repo 42 --body "I can reproduce this issue"
 ag issue comment create owner/repo 42 --body-file details.md
 
 # 查看所有评论
 ag issue comment view owner/repo 42
+
+
+# 编辑评论（交互式编辑）
+ag issue comment edit owner/repo 42 789
+ag issue comment edit owner/repo 42 789 --body "Updated information"
+
+
+# 删除评论
+ag issue comment delete owner/repo 42 789
+ag issue comment delete owner/repo 42 789 --yes
+```
 
 # 编辑评论（交互式编辑）
 ag issue comment edit owner/repo 42 789
@@ -474,19 +510,23 @@ ag label delete owner/repo obsolete --yes
 
 AtomGit API v5 的标签创建和修改接口支持 `name` 与 `color`。`label list` 会在接口返回时显示标签描述，但创建和修改命令不会发送 API 未公开支持的 `description` 字段。颜色必须使用 `#RGB` 或 `#RRGGBB` 格式。
 
+
 ## Milestone
 
 Milestone 日期使用明确的 `YYYY-MM-DD` 格式。关闭 Milestone 会保留数据，删除则会永久移除并默认要求确认。AtomGit API 要求每次更新都包含 `title` 和 `due_on`，因此 edit、close 和 reopen 会先读取当前 Milestone 并原样保留这两个必填字段；其他未指定字段不会发送。
 
 ```bash
+
 # 列出和查看 Milestone
 ag milestone list owner/repo --state all --limit 50
 ag milestone view owner/repo 12
 ag milestone view owner/repo 12 --json
 
+
 # 创建和修改 Milestone
 ag milestone create owner/repo --title "Version 1.0" --description "Release scope" --due-on 2026-08-31
 ag milestone edit owner/repo 12 --title "Version 1.1" --due-on 2026-09-30
+
 
 # 关闭、重新打开或永久删除
 ag milestone close owner/repo 12
@@ -676,16 +716,14 @@ ag --version
 ag version --json
 ```
 
-`ag version`、`ag --version` 和 `ag version --json` 同时显示 `selfUpdate` 与 `source`，用于说明当前二进制是否允许自替换以及其发行来源。`selfUpdate` 由 `source` 集中派生，不是独立的构建输入：`release`、`source` 和 `development` 允许自升级，包管理器、自定义和未知来源默认禁止。通过 `make build` 或 `make install` 从源码构建且未注入发布元数据时，默认报告 `selfUpdate=true, source=source`，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，命令会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
+通过 `make build` 或 `make install` 从源码构建且未注入发布元数据时，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，命令会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
 
 通过 `go install ...@latest` 从模块代理安装时，模块版本仍然可用，但由于源码包不包含 Git 历史，文本输出会省略无法获得的 commit 和构建时间，JSON 输出则将对应字段保留为 `unknown`。
 
-下游源码打包方应显式注入自身来源；合法的自定义来源会自动禁用自升级，例如：
+## 检查 CLI 更新
 
 ```bash
-go build -trimpath -ldflags \
-  "-X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Source=example-manager" \
-  ./cmd/ag
+ag check-update
 ```
 
-`source` 必须是长度不超过 64 的小写 ASCII 标识符，可包含数字、点、下划线和连字符；`unknown` 为无效元数据的保守回退值，不能作为构建来源。
+`ag check-update` 公开查询 `hust-open-atom-club/atomgit-cli` 的稳定 Release，并按 SemVer 比较当前版本。命令不需要登录或仓库上下文，不下载制品，也不会修改当前安装。输出包含当前版本、最新稳定 Release 和比较状态；`dev`、dirty、提交哈希或其他无法比较的本地版本会返回清晰错误。
