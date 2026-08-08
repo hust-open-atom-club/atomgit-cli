@@ -52,7 +52,10 @@ func newCmdIssueEdit(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
+			number, err := parseIssueNumber(remaining[0])
+			if err != nil {
+				return err
+			}
 
 			token, err := f.Config.GetToken()
 			if err != nil {

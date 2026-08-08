@@ -25,7 +25,10 @@ func newCmdViewIssues(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-			prNumber := remaining[0]
+			prNumber, err := parsePRNumber(remaining[0])
+			if err != nil {
+				return err
+			}
 
 			client, err := newAPIClient(f, token)
 			if err != nil {
