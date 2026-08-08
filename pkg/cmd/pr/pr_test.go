@@ -1211,3 +1211,26 @@ func TestPRDiffRejectInvalidNumberBeforeAuth(t *testing.T) {
 		t.Fatalf("HttpClient created %d times; invalid input must not reach network initialization", requests)
 	}
 }
+
+func TestPRIssuesRejectInvalidNumberBeforeAuth(t *testing.T) {
+	cfg := &recordingConfig{}
+	factory := &cmdutil.Factory{Config: cfg}
+	var requests int
+	factory.HttpClient = func() (*http.Client, error) {
+		requests++
+		return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: 200, Status: "200 OK", Body: http.NoBody, Header: make(http.Header)}, nil
+		})}, nil
+	}
+	cmd := newCmdViewIssues(factory)
+	err := cmd.RunE(cmd, []string{"alice/demo", "1/../../evil"})
+	if err == nil || !strings.Contains(err.Error(), "invalid PR number") {
+		t.Fatalf("error = %v, want 'invalid PR number'", err)
+	}
+	if cfg.getTokenCalls != 0 {
+		t.Fatalf("GetToken was called %d times; parsePRNumber must reject invalid input before authentication", cfg.getTokenCalls)
+	}
+	if requests != 0 {
+		t.Fatalf("HttpClient created %d times; invalid input must not reach network initialization", requests)
+	}
+}

@@ -15,11 +15,8 @@ func newCmdViewIssues(f *cmdutil.Factory) *cobra.Command {
 		Long:  `View all issues linked to a pull request.`,
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
+			// Resolve and validate arguments before any authentication or
+			// network initialization so invalid input never reaches GetToken.
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
@@ -28,6 +25,11 @@ func newCmdViewIssues(f *cmdutil.Factory) *cobra.Command {
 			prNumber, err := parsePRNumber(remaining[0])
 			if err != nil {
 				return err
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
 			}
 
 			client, err := newAPIClient(f, token)
