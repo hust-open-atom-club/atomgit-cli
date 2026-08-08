@@ -13,9 +13,8 @@ func NewCmdRelease(f *cmdutil.Factory) *cobra.Command {
 		Short: "Manage repository releases",
 		Long: `List, view, create, and edit repository releases on AtomGit, and upload or download release attachments.
 
-This command group provides general Release management primitives. It does not
-validate tags, build artifacts, or run the atomgit-cli release pipeline tracked
-by #18.`,
+The repository's automated release pipeline validates tags and artifacts, then
+uses these primitives through "make publish VERSION=vX.Y.Z NOTES_FILE=notes.md".`,
 		Example: `  ag release list owner/repo
   ag release view owner/repo v1.0.0
   ag release create owner/repo v1.0.0 --name "Version 1.0.0" --body "Release notes"

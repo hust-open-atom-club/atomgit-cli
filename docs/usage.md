@@ -106,6 +106,17 @@ ag repo fork
 ag repo fork owner/repo
 ag repo fork owner/repo --name my-fork --public
 
+
+# 将 Fork 的默认分支与上游同步（不修改本地 Git 工作区）
+ag repo sync
+ag repo sync owner/fork
+
+
+# 同步指定分支；强制覆盖分叉提交需确认或显式 --yes
+ag repo sync owner/fork --branch develop
+ag repo sync owner/fork --branch develop --force
+ag repo sync owner/fork --branch develop --force --yes
+
 # 删除仓库
 ag repo delete --yes
 ag repo delete owner/repo --yes
@@ -114,6 +125,8 @@ ag repo delete owner/repo --yes
 `ag repo edit` 仅发送命令行中明确指定的字段，支持 `--name`、`--description`、`--default-branch` 和 `--visibility public|private`。`--public`、`--private` 是可见性的便利选项；它们与 `--visibility` 三者互斥。名称或可见性修改需要交互确认，可使用 `--yes` 跳过确认。成功后命令会显示更新后的仓库名称和浏览器 URL。
 
 该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。
+
+`ag repo sync` 仅更新 AtomGit 上的远端 Fork。命令会先验证仓库确为 Fork、上游存在且目标分支在两端都可读取；未指定 `--branch` 时使用 Fork 的默认分支。默认同步不会覆盖分叉提交，冲突时返回非零退出码。`--force` 可能覆盖 Fork 上的分叉提交，因此需要交互确认；仅在已审查目标后才应结合 `--yes` 使用。
 
 ### 仓库协作者
 
@@ -214,7 +227,7 @@ ag branch protection delete owner/repo "release/*" --yes
 ag browse
 
 # 打开指定仓库
-ag browse -R owner/repo
+ag browse --repo owner/repo
 
 # 打开 Issue 或 PR
 ag browse 42
@@ -228,16 +241,28 @@ ag browse main.go:312-320
 ag browse main.go:312..320
 
 # 在指定分支上打开文件
-ag browse -b dev main.go:42
+ag browse --branch dev main.go:42
 
 # 在指定 commit 上打开文件
-ag browse -c abc1234 main.go
+ag browse --commit abc1234 main.go
 
 # 打开 Releases 页面
-ag browse -r
+ag browse --releases
+
+
+# 打开 Actions 页面
+ag browse --actions
+
+
+# 打开 Wiki 页面
+ag browse --wiki
+
+
+# 打开 Settings 页面
+ag browse --settings
 
 # 只打印 URL，不打开浏览器
-ag browse -n
+ag browse --no-browser
 ```
 
 ## Pull Request (pr)
@@ -331,12 +356,27 @@ ag pr review owner/repo 123 --approve --force
 #### PR 评论
 
 ```bash
+
+# 创建评论
+ag pr comment create owner/repo 123 --body "LGTM!"
+ag pr comment create owner/repo 123 --body-file review.md
+
 # 创建评论
 ag pr comment create owner/repo 123 --body "LGTM!"
 ag pr comment create owner/repo 123 --body-file review.md
 
 # 查看所有评论（树形结构显示）
 ag pr comment view owner/repo 123
+
+
+# 编辑评论（交互式编辑）
+ag pr comment edit owner/repo 123 456
+ag pr comment edit owner/repo 123 456 --body "Updated comment"
+
+
+# 删除评论
+ag pr comment delete owner/repo 123 456
+ag pr comment delete owner/repo 123 456 --yes
 
 # 编辑评论（交互式编辑）
 ag pr comment edit owner/repo 123 456
@@ -394,12 +434,28 @@ ag issue reopen owner/repo 42
 #### Issue 评论
 
 ```bash
+
+# 创建评论
+ag issue comment create owner/repo 42 --body "I can reproduce this issue"
+ag issue comment create owner/repo 42 --body-file details.md
+
 # 创建评论
 ag issue comment create owner/repo 42 --body "I can reproduce this issue"
 ag issue comment create owner/repo 42 --body-file details.md
 
 # 查看所有评论
 ag issue comment view owner/repo 42
+
+
+# 编辑评论（交互式编辑）
+ag issue comment edit owner/repo 42 789
+ag issue comment edit owner/repo 42 789 --body "Updated information"
+
+
+# 删除评论
+ag issue comment delete owner/repo 42 789
+ag issue comment delete owner/repo 42 789 --yes
+```
 
 # 编辑评论（交互式编辑）
 ag issue comment edit owner/repo 42 789
@@ -453,6 +509,31 @@ ag label delete owner/repo obsolete --yes
 ```
 
 AtomGit API v5 的标签创建和修改接口支持 `name` 与 `color`。`label list` 会在接口返回时显示标签描述，但创建和修改命令不会发送 API 未公开支持的 `description` 字段。颜色必须使用 `#RGB` 或 `#RRGGBB` 格式。
+
+
+## Milestone
+
+Milestone 日期使用明确的 `YYYY-MM-DD` 格式。关闭 Milestone 会保留数据，删除则会永久移除并默认要求确认。AtomGit API 要求每次更新都包含 `title` 和 `due_on`，因此 edit、close 和 reopen 会先读取当前 Milestone 并原样保留这两个必填字段；其他未指定字段不会发送。
+
+```bash
+
+# 列出和查看 Milestone
+ag milestone list owner/repo --state all --limit 50
+ag milestone view owner/repo 12
+ag milestone view owner/repo 12 --json
+
+
+# 创建和修改 Milestone
+ag milestone create owner/repo --title "Version 1.0" --description "Release scope" --due-on 2026-08-31
+ag milestone edit owner/repo 12 --title "Version 1.1" --due-on 2026-09-30
+
+
+# 关闭、重新打开或永久删除
+ag milestone close owner/repo 12
+ag milestone reopen owner/repo 12
+ag milestone delete owner/repo 12
+ag milestone delete owner/repo 12 --yes
+```
 
 ## Actions 运行记录 (run)
 

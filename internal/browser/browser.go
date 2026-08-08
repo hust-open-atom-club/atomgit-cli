@@ -1,3 +1,5 @@
+// Package browser provides URL builders for AtomGit web pages and functions
+// to open URLs in the system browser.
 package browser
 
 import (
@@ -85,6 +87,17 @@ func BuildRepoURL(owner, repo string) string {
 	return u.String()
 }
 
+// buildPageURL is a shared helper for page-level URLs that follow the
+// pattern https://atomgit.com/{owner}/{repo}/{suffix}.
+func buildPageURL(owner, repo, suffix string) string {
+	u := &url.URL{
+		Scheme: "https",
+		Host:   host,
+		Path:   fmt.Sprintf("/%s/%s/%s", owner, repo, suffix),
+	}
+	return u.String()
+}
+
 func BuildFileURL(owner, repo, branch, filePath string, lineStart, lineEnd int) string {
 	u := &url.URL{
 		Scheme: "https",
@@ -129,10 +142,17 @@ func BuildCommitURL(owner, repo, sha string) string {
 }
 
 func BuildReleasesURL(owner, repo string) string {
-	u := &url.URL{
-		Scheme: "https",
-		Host:   host,
-		Path:   fmt.Sprintf("/%s/%s/releases", owner, repo),
-	}
-	return u.String()
+	return buildPageURL(owner, repo, "releases")
+}
+
+func BuildActionsURL(owner, repo string) string {
+	return buildPageURL(owner, repo, "actions")
+}
+
+func BuildWikiURL(owner, repo string) string {
+	return buildPageURL(owner, repo, "wiki")
+}
+
+func BuildSettingsURL(owner, repo string) string {
+	return buildPageURL(owner, repo, "setting")
 }

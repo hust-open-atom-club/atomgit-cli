@@ -14,16 +14,17 @@ func Text() string {
 }
 
 func formatText(info version.Info) string {
-	details := make([]string, 0, 2)
+	details := make([]string, 0, 4)
 	if commit := knownMetadata(info.Commit); commit != "" {
 		details = append(details, "commit: "+commit)
 	}
 	if buildDate := knownMetadata(info.BuildDate); buildDate != "" {
 		details = append(details, "built: "+buildDate)
 	}
-	if len(details) == 0 {
-		return fmt.Sprintf("ag version %s\n", info.Version)
-	}
+	details = append(details,
+		fmt.Sprintf("self-update: %t", info.SelfUpdate),
+		"source: "+info.Source,
+	)
 	return fmt.Sprintf("ag version %s (%s)\n", info.Version, strings.Join(details, ", "))
 }
 

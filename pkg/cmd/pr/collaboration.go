@@ -185,7 +185,7 @@ func resolvePREditMetadata(client *api.Client, owner, repo, number string, opts 
 				return resolvedPREditMetadata{}, err
 			}
 		}
-		if (current.Milestone == nil && result.Milestone == 0) || (current.Milestone != nil && current.Milestone.Number == result.Milestone) {
+		if (current.Milestone == nil && result.Milestone == 0) || (current.Milestone != nil && current.Milestone.GetNumber() == strconv.Itoa(result.Milestone)) {
 			result.MilestoneIsSet = false
 		}
 	}
@@ -298,7 +298,7 @@ func resolvePRMilestone(client *api.Client, owner, repo, value string) (int, err
 	}
 	if number, parseErr := strconv.Atoi(value); parseErr == nil && number > 0 {
 		for _, milestone := range milestones {
-			if milestone.Number == number {
+			if milestone.GetNumber() == strconv.Itoa(number) {
 				return number, nil
 			}
 		}
@@ -316,7 +316,11 @@ func resolvePRMilestone(client *api.Client, owner, repo, value string) (int, err
 	if len(matches) > 1 {
 		return 0, fmt.Errorf("milestone title %q is ambiguous; use its number", value)
 	}
-	return matches[0].Number, nil
+	number, err := strconv.Atoi(matches[0].GetNumber())
+	if err != nil || number <= 0 {
+		return 0, fmt.Errorf("milestone %q has invalid number %q", value, matches[0].GetNumber())
+	}
+	return number, nil
 }
 
 func normalizeUnique(values []string, kind string) ([]string, error) {

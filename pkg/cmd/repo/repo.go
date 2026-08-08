@@ -40,7 +40,7 @@ func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "repo",
 		Short: "Manage repositories",
-		Long:  "Create, clone, edit, fork, view, and manage repository collaborators and webhooks.\n\nFor repository-scoped commands, OWNER/REPO may be omitted and inferred from the current Git repository.",
+		Long:  "Create, clone, edit, fork, sync, view, and manage repository collaborators and webhooks.\n\nFor repository-scoped commands, OWNER/REPO may be omitted and inferred from the current Git repository.",
 	}
 
 	cmd.AddCommand(newCmdRepoList(f))
@@ -50,6 +50,7 @@ func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdRepoClone(f))
 	cmd.AddCommand(newCmdRepoDelete(f))
 	cmd.AddCommand(newCmdRepoFork(f))
+	cmd.AddCommand(newCmdRepoSync(f))
 	cmd.AddCommand(newCmdRepoCollaborator(f))
 	cmd.AddCommand(newCmdRepoWebhook(f))
 
