@@ -26,6 +26,12 @@ npm 主包通过 `optionalDependencies` 声明七个平台二进制包。npm 根
 ag version
 ```
 
+升级已安装的 AtomGit CLI：
+
+```bash
+npm update --global @hust-open-atom-club/atomgit-cli
+```
+
 ## Homebrew 安装
 
 macOS 或 Linux 用户可以通过项目维护的 Homebrew tap 安装：
@@ -67,6 +73,7 @@ winget upgrade HUSTOpenAtomClub.AtomGitCLI
 ```
 
 WinGet 安装的二进制由 WinGet 管理升级。
+
 ## Scoop 安装
 
 Windows 用户可以通过组织维护的 scoop bucket 安装：
@@ -77,13 +84,7 @@ scoop install atomgit-cli
 ag version
 ```
 
-或者直接运行：
-
-```powershell
-scoop install https://raw.githubusercontent.com/hust-open-atom-club/ScoopBucket/main/bucket/atomgit-cli.json
-```
-
-更新已安装的 AtomGit CLI:
+升级已安装的 AtomGit CLI：
 
 ```powershell
 scoop update atomgit-cli
