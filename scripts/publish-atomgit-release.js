@@ -241,23 +241,22 @@ async function ensureRelease(runAg, options, env) {
       release = await getRelease(runAg, options.repo, options.version, env);
       if (!release) throw commandError(`failed to create release ${options.version}`, created, env);
     } else release = await getRelease(runAg, options.repo, options.version, env);
-  } else {
-    if (release.target_commitish !== options.target) throw new Error(`existing release target ${release.target_commitish} does not match ${options.target}`);
-    const desiredStatus = expectedStatus(options);
-    if (release.name !== options.name || release.body !== options.notes || release.release_status !== desiredStatus) {
-      const editArgs = ["release", "edit", options.repo, options.version, "--name", options.name, "--body-file", options.notesFile, options.prerelease ? "--prerelease" : "--latest"];
-      const edited = await callAg(runAg, editArgs);
-      release = await getRelease(runAg, options.repo, options.version, env);
-      if (edited.status !== 0) {
-        try {
-          assertReleaseMetadata(release, options);
-        } catch {
-          throw commandError(`failed to update release ${options.version}`, edited, env);
-        }
+  }
+  if (!release) throw new Error(`release ${options.version} was not visible after creation`);
+  if (release.target_commitish !== options.target) throw new Error(`existing release target ${release.target_commitish} does not match ${options.target}`);
+  const desiredStatus = expectedStatus(options);
+  if (release.name !== options.name || release.body !== options.notes || release.release_status !== desiredStatus) {
+    const editArgs = ["release", "edit", options.repo, options.version, "--name", options.name, "--body-file", options.notesFile, options.prerelease ? "--prerelease" : "--latest"];
+    const edited = await callAg(runAg, editArgs);
+    release = await getRelease(runAg, options.repo, options.version, env);
+    if (edited.status !== 0) {
+      try {
+        assertReleaseMetadata(release, options);
+      } catch {
+        throw commandError(`failed to update release ${options.version}`, edited, env);
       }
     }
   }
-  if (!release) throw new Error(`release ${options.version} was not visible after creation`);
   assertReleaseMetadata(release, options);
   return release;
 }
