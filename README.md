@@ -30,6 +30,10 @@ AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 | 🔐 认证与 SSH Key | OAuth 登录、刷新和切换账号，查看认证状态，管理 SSH 公钥 |
 | 🌐 API | 调用 AtomGit API v5，支持分页、JSON 请求体和 GET、POST、PATCH、PUT、DELETE 方法 |
 
+## AI Agent Skills
+
+[AtomGit Skills](https://atomgit.com/hust-open-atom-club/atomgit-skills) 提供由 `ag` 驱动的可复用 Codex Skills，可用于规划和实现 Issue、审查与合并 Pull Request、发布 AtomGit CLI Release，以及将 AtomGit 仓库镜像到 GitHub。各 Skill 包含相应的 `ag` 命令参考；安装和使用方法以该仓库文档为准。
+
 ## 安装
 
 ### npm
@@ -123,7 +127,7 @@ CLI 的主要执行流程为 `cmd/ag` → `internal/agcmd` → `pkg/cmd/root` �
 
 Actions 运行检查使用独立的 AtomGit API v8：`https://api.atomgit.com/api/v8`。
 
-## 参考
+### 参考
 
 - [AtomGit API 文档](https://docs.atomgit.com/docs/apis/)
 - [GitHub CLI](https://cli.github.com/)
