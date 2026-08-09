@@ -341,9 +341,11 @@ func TestAuthLoginReportsOAuthError(t *testing.T) {
 
 func TestAuthStatus(t *testing.T) {
 	tests := []struct {
-		name   string
-		config testConfig
-		want   []string
+		name           string
+		config         testConfig
+		want           []string
+		wantErr        string
+		wantNotContain string
 	}{
 		{
 			name:   "authenticated",
@@ -356,9 +358,18 @@ func TestAuthStatus(t *testing.T) {
 			want:   []string{"Token: short"},
 		},
 		{
-			name:   "missing token",
-			config: testConfig{tokenErr: errors.New("missing token")},
-			want:   []string{"Not authenticated", "missing token"},
+			name:    "missing token",
+			config:  testConfig{tokenErr: errors.New("missing token")},
+			wantErr: "missing token",
+		},
+		{
+			// The production GetToken error already carries the
+			// "not authenticated" prefix; auth status must return it unchanged
+			// instead of wrapping it into a duplicated prefix.
+			name:           "missing token production error shape",
+			config:         testConfig{tokenErr: errors.New("not authenticated: run `ag auth login`")},
+			wantErr:        "not authenticated: run `ag auth login`",
+			wantNotContain: "not authenticated: not authenticated",
 		},
 		{
 			name:   "missing user",
@@ -371,6 +382,15 @@ func TestAuthStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := newCmdAuthStatus(&cmdutil.Factory{Config: tt.config})
 			output, err := captureStdout(t, func() error { return cmd.RunE(cmd, nil) })
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("error = %v, want containing %q", err, tt.wantErr)
+				}
+				if tt.wantNotContain != "" && strings.Contains(err.Error(), tt.wantNotContain) {
+					t.Fatalf("error = %v, must not contain %q", err, tt.wantNotContain)
+				}
+				return
+			}
 			if err != nil {
 				t.Fatal(err)
 			}

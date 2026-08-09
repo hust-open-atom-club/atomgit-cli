@@ -247,10 +247,10 @@ func newCmdAuthStatus(f *cmdutil.Factory) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
-				out := cmd.OutOrStdout()
-				fmt.Fprintln(out, "✗ Not authenticated")
-				fmt.Fprintf(out, "  Token file error: %s\n", err)
-				return nil
+				// GetToken already returns "not authenticated: run `ag auth login`"
+				// for a missing token; returning it unchanged avoids a duplicated
+				// "not authenticated: not authenticated:" prefix.
+				return err
 			}
 
 			user, err := f.Config.GetUser()
