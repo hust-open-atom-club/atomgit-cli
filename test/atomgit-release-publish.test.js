@@ -22,24 +22,6 @@ const ARCHIVES = [
   "ag_windows_amd64.zip",
   "ag_windows_arm64.zip",
 ];
-const MANAGED_ARCHIVES = [
-  "ag_darwin_amd64_homebrew.tar.gz",
-  "ag_darwin_arm64_homebrew.tar.gz",
-  "ag_linux_amd64_homebrew.tar.gz",
-  "ag_linux_arm64_homebrew.tar.gz",
-  "ag_darwin_amd64_npm.tar.gz",
-  "ag_darwin_arm64_npm.tar.gz",
-  "ag_linux_amd64_npm.tar.gz",
-  "ag_linux_arm64_npm.tar.gz",
-  "ag_linux_loong64_npm.tar.gz",
-  "ag_windows_amd64_npm.zip",
-  "ag_windows_arm64_npm.zip",
-  "ag_windows_amd64_scoop.zip",
-  "ag_windows_arm64_scoop.zip",
-  "ag_windows_amd64_winget.zip",
-  "ag_windows_arm64_winget.zip",
-];
-
 function digest(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
 }
@@ -70,19 +52,7 @@ async function createFixture(t, tag = "v1.2.3") {
   const lines = [];
   for (const name of checksumNames) lines.push(`${digest(await readFile(path.join(releaseDir, name)))}  ${name}`);
   await writeFile(path.join(releaseDir, "checksums.txt"), `${lines.join("\n")}\n`);
-
-  const managedDir = path.join(releaseDir, "package-managers");
-  await mkdir(managedDir);
-  const managedArtifacts = [];
-  const managedLines = [];
-  for (const [index, name] of MANAGED_ARCHIVES.entries()) {
-    await createArchive(managedDir, name, ARCHIVES.length + index);
-    const sha256 = digest(await readFile(path.join(managedDir, name)));
-    managedLines.push(`${sha256}  ${name}`);
-    managedArtifacts.push({ filename: name, sha256, selfUpdate: false });
-  }
-  await writeFile(path.join(managedDir, "package-managers-checksums.txt"), `${managedLines.join("\n")}\n`);
-  await writeFile(path.join(managedDir, "package-managers-manifest.json"), `${JSON.stringify({ schemaVersion: 1, tag, artifacts: managedArtifacts }, null, 2)}\n`);
+  await mkdir(path.join(releaseDir, "npm"));
   const notesFile = path.join(root, "notes.md");
   await writeFile(notesFile, "Release notes\n");
   return { notesFile, releaseDir, tag };
@@ -113,14 +83,16 @@ function fakeAtomGit(plan, options, behavior = {}) {
     return { status, stdout: raw ? value : typeof value === "string" ? value : JSON.stringify(value), stderr: "" };
   }
   function releaseJSON() {
+    const sourceAssets = [`${options.version}.zip`, `${options.version}.tar.gz`, `${options.version}.tar.bz2`, `${options.version}.tar`]
+      .map((name) => ({ id: null, name, type: "source", browser_download_url: `https://sources.example/${name}` }));
     return {
       ...release,
-      assets: [...contents.keys()].map((name, index) => ({
+      assets: [...sourceAssets, ...[...contents.keys()].map((name, index) => ({
         id: index + 1,
         name,
         type: "attach",
         browser_download_url: `https://downloads.example/${name}`,
-      })),
+      })), ...(behavior.extraAssets || [])],
     };
   }
   async function runAg(args, runOptions = {}) {
@@ -190,19 +162,16 @@ test("validates explicit release inputs", () => {
 test("validates the release artifact set, checksums, archives, and installer tags", async (t) => {
   const fixture = await createFixture(t);
   const plan = await inspectArtifacts(fixture.releaseDir, fixture.tag);
-  assert.equal(plan.artifacts.length, 27);
+  assert.equal(plan.artifacts.length, 10);
 
   await writeFile(path.join(fixture.releaseDir, "extra.txt"), "extra");
   await assert.rejects(inspectArtifacts(fixture.releaseDir, fixture.tag), /extra: extra.txt/);
 });
 
-test("rejects a package-manager manifest that is not bound to the release tag", async (t) => {
+test("rejects legacy package-manager artifact directories", async (t) => {
   const fixture = await createFixture(t);
-  const manifestPath = path.join(fixture.releaseDir, "package-managers", "package-managers-manifest.json");
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  manifest.tag = "v9.9.9";
-  await writeFile(manifestPath, JSON.stringify(manifest));
-  await assert.rejects(inspectArtifacts(fixture.releaseDir, fixture.tag), /not bound/);
+  await mkdir(path.join(fixture.releaseDir, "package-managers"));
+  await assert.rejects(inspectArtifacts(fixture.releaseDir, fixture.tag), /extra: package-managers/);
 });
 
 test("dry run performs no AtomGit requests", async (t) => {
@@ -219,7 +188,7 @@ test("creates a release, uploads every attachment, and verifies downloads", asyn
   const options = optionsFor(fixture);
   const atomgit = fakeAtomGit(plan, options);
   await publishRelease(plan, { ...options, logger: () => {}, runAg: atomgit.runAg });
-  assert.equal(atomgit.contents.size, 27);
+  assert.equal(atomgit.contents.size, 10);
   assert.equal(atomgit.calls.filter((args) => args[0] === "release" && args[1] === "create").length, 1);
 });
 
@@ -230,8 +199,19 @@ test("resumes an existing partial release without re-uploading verified attachme
   const atomgit = fakeAtomGit(plan, options);
   await atomgit.seed(plan.artifacts.slice(0, 3).map(({ name }) => name));
   await publishRelease(plan, { ...options, logger: () => {}, runAg: atomgit.runAg });
-  assert.equal(atomgit.contents.size, 27);
-  assert.equal(atomgit.calls.filter((args) => args[0] === "release" && args[1] === "upload").length, 24);
+  assert.equal(atomgit.contents.size, 10);
+  assert.equal(atomgit.calls.filter((args) => args[0] === "release" && args[1] === "upload").length, 7);
+});
+
+test("rejects unexpected AtomGit source archives", async (t) => {
+  const fixture = await createFixture(t);
+  const plan = await inspectArtifacts(fixture.releaseDir, fixture.tag);
+  const options = optionsFor(fixture);
+  const atomgit = fakeAtomGit(plan, options, { extraAssets: [{ id: null, name: "unexpected.tar.gz", type: "source" }] });
+  await assert.rejects(
+    publishRelease(plan, { ...options, logger: () => {}, runAg: atomgit.runAg }),
+    /unexpected source archive/,
+  );
 });
 
 test("upload failures report the remaining attachments and never claim success", async (t) => {

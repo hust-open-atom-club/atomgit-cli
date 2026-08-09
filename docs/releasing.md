@@ -26,6 +26,8 @@ make release VERSION="v${VERSION}"
 
 npm 平台包复用对应操作系统和架构的普通 Release 归档。
 
+AtomGit Release 只上传七个普通平台归档、两个安装脚本和根 `checksums.txt`，共十个项目附件。AtomGit 还会自动展示四个源码归档，因此保留 LoongArch64 支持的 Release 页面通常共显示十四个 artifacts。Homebrew、Scoop 和 WinGet 复用普通平台归档，不再发布按 distribution 重复打包的专用附件。
+
 发布 npm 制品时，先发布 `npm/` 下七个名称带平台和架构的包；确认它们可用后，再发布 `atomgit-cli` 主包。主包和平台包必须使用相同版本。
 
 上传 Release 附件前可校验所有制品：
@@ -42,12 +44,6 @@ npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registr
 
 ```bash
 (cd dist/vX.Y.Z/npm && shasum -a 256 -c checksums.txt)
-```
-
-包管理器归档使用独立校验文件：
-
-```bash
-(cd dist/vX.Y.Z/package-managers && shasum -a 256 -c package-managers-checksums.txt)
 ```
 
 `scripts/build-release.sh` 始终使用 GoReleaser 的 `--skip=publish`，只在本地准备并验证制品，然后打印完整的附件 basename 清单。发布上传由下述 `make publish` 入口调用独立脚本完成；单独执行构建脚本不会创建 AtomGit Release 或上传附件。
@@ -74,7 +70,7 @@ make publish \
 
 发布入口要求 tag 存在、指向当前提交且工作区干净，并通过 `ag` 的现有认证配置访问 AtomGit。CI 中应从 secret 写入权限受限的临时 token 文件，格式和位置见[配置与认证](configuration.md)；不得把 PAT 写入仓库、制品或日志。
 
-自动化流程会验证固定附件集合、归档内容、安装脚本版本和 SHA-256，然后创建或安全补齐 Release。重复执行时，已有附件必须下载后与本地 checksum 一致才会跳过；目标提交冲突、未知附件、同名内容不一致或 API/上传失败都会停止。上传中断后可用相同 tag、发布说明和 `dist/<tag>/` 制品重新执行命令，脚本会列出尚未完成的附件。已发布且内容冲突的附件不会被自动覆盖；需要人工确认 Release 状态后再决定回滚。
+自动化流程会验证固定的十个项目附件、归档内容、安装脚本版本和 SHA-256，然后创建或安全补齐 Release，并确认 AtomGit 自动生成的四个源码归档存在。重复执行时，已有附件必须下载后与本地 checksum 一致才会跳过；目标提交冲突、未知附件、同名内容不一致或 API/上传失败都会停止。上传中断后可用相同 tag、发布说明和 `dist/<tag>/` 制品重新执行命令，脚本会列出尚未完成的附件。已发布且内容冲突的附件不会被自动覆盖；需要人工确认 Release 状态后再决定回滚。
 
 发布完成前会再次校验 tag、目标提交、名称、说明、发布状态、全部附件下载 URL，并下载每个附件核对 SHA-256。Homebrew Formula 更新仍由独立流程处理。
 
