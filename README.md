@@ -1,5 +1,13 @@
 # AtomGit CLI (ag)
 
+[![License](https://img.shields.io/badge/license-MulanPSL--2.0-blue.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/%40hust-open-atom-club%2Fatomgit-cli?logo=npm)](https://www.npmjs.com/package/@hust-open-atom-club/atomgit-cli)
+[![Latest Release](https://img.shields.io/github/v/release/hust-open-atom-club/atomgit-cli?display_name=tag)](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)
+[![Build](https://atomgit.com/hust-open-atom-club/atomgit-cli/badges/CI/pipeline.svg)](https://atomgit.com/hust-open-atom-club/atomgit-cli/actions)
+[![Homebrew](https://img.shields.io/badge/homebrew-tap-FBB040?logo=homebrew&logoColor=white)](https://github.com/hust-open-atom-club/homebrew-tap)
+[![Go Reference](https://pkg.go.dev/badge/atomgit.com/hust-open-atom-club/atomgit-cli.svg)](https://pkg.go.dev/atomgit.com/hust-open-atom-club/atomgit-cli)
+[![GoReleaser](https://img.shields.io/badge/powered_by-GoReleaser-69D7E4?logo=goreleaser&logoColor=white)](https://goreleaser.com/)
+
 AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 
 ## 安装
@@ -105,3 +113,9 @@ Actions 运行检查使用独立的 AtomGit API v8：`https://api.atomgit.com/ap
 [木兰宽松许可证第2版](LICENSE) (Mulan Permissive Software License, Version 2)
 
 Copyright (c) 2026 HUST OpenAtom Club, AtomGit, and the AtomGit CLI contributors
+
+## Contributors
+
+<a href="https://github.com/hust-open-atom-club/atomgit-cli/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=hust-open-atom-club/atomgit-cli" alt="AtomGit CLI contributors" />
+</a>
