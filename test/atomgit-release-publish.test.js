@@ -115,7 +115,7 @@ function fakeAtomGit(plan, options, behavior = {}) {
         target_commitish: options.target,
         name: options.name,
         body: options.notes,
-        release_status: options.prerelease ? "pre" : "latest",
+        release_status: behavior.createdReleaseStatus ?? (options.prerelease ? "pre" : "latest"),
       };
       return response("created");
     }
@@ -190,6 +190,20 @@ test("creates a release, uploads every attachment, and verifies downloads", asyn
   await publishRelease(plan, { ...options, logger: () => {}, runAg: atomgit.runAg });
   assert.equal(atomgit.contents.size, 10);
   assert.equal(atomgit.calls.filter((args) => args[0] === "release" && args[1] === "create").length, 1);
+});
+
+test("normalizes a newly created release from none to latest", async (t) => {
+  const fixture = await createFixture(t);
+  const plan = await inspectArtifacts(fixture.releaseDir, fixture.tag);
+  const options = optionsFor(fixture);
+  const atomgit = fakeAtomGit(plan, options, { createdReleaseStatus: "none" });
+  await publishRelease(plan, { ...options, logger: () => {}, runAg: atomgit.runAg });
+  assert.equal(atomgit.contents.size, 10);
+  assert.equal(atomgit.calls.filter((args) => args[0] === "release" && args[1] === "create").length, 1);
+  const editIndex = atomgit.calls.findIndex((args) => args[0] === "release" && args[1] === "edit");
+  const uploadIndex = atomgit.calls.findIndex((args) => args[0] === "release" && args[1] === "upload");
+  assert.ok(editIndex >= 0 && editIndex < uploadIndex);
+  assert.ok(atomgit.calls[editIndex].includes("--latest"));
 });
 
 test("resumes an existing partial release without re-uploading verified attachments", async (t) => {
