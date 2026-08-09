@@ -343,6 +343,10 @@ func responseError(operation string, resp *http.Response, token string) error {
 	return result
 }
 
+// redact replaces an access token in an error message with a placeholder.
+// Redaction is unconditional for every accepted non-empty token so that even
+// short tokens cannot be exposed verbatim; if short tokens should be invalid,
+// that is enforced at the credential boundary, not here.
 func redact(err error, token string) error {
 	if err == nil || token == "" || !strings.Contains(err.Error(), token) {
 		return err
