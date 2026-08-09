@@ -113,3 +113,9 @@ Actions 运行检查使用独立的 AtomGit API v8：`https://api.atomgit.com/ap
 [木兰宽松许可证第2版](LICENSE) (Mulan Permissive Software License, Version 2)
 
 Copyright (c) 2026 HUST OpenAtom Club, AtomGit, and the AtomGit CLI contributors
+
+## Contributors
+
+<a href="https://github.com/hust-open-atom-club/atomgit-cli/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=hust-open-atom-club/atomgit-cli" alt="AtomGit CLI contributors" />
+</a>
