@@ -56,14 +56,14 @@ Homebrew 安装的二进制由 Homebrew 管理升级。
 Windows 用户可以通过 Windows Package Manager 安装：
 
 ```powershell
-winget install hust-open-atom-club.atomgit-cli
+winget install HUSTOpenAtomClub.AtomGitCLI
 ag version
 ```
 
 升级已安装的 AtomGit CLI：
 
 ```powershell
-winget upgrade atomgit-cli
+winget upgrade HUSTOpenAtomClub.AtomGitCLI
 ```
 
 WinGet 安装的二进制由 WinGet 管理升级。
