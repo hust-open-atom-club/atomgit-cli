@@ -37,7 +37,7 @@ AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 需要 Node.js 18 或更高版本：
 
 ```bash
-npm install --global @hust-open-atom-club/atomgit-cli
+npm install -g @hust-open-atom-club/atomgit-cli
 ```
 
 npm 会通过当前操作系统和 CPU 对应的可选依赖安装预编译二进制，不需要运行 `postinstall` 脚本。

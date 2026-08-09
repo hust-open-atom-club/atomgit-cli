@@ -7,7 +7,7 @@ AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、Nix、
 npm 安装需要 Node.js 18 或更高版本。执行：
 
 ```bash
-npm install --global @hust-open-atom-club/atomgit-cli
+npm install -g @hust-open-atom-club/atomgit-cli
 ```
 
 npm 主包通过 `optionalDependencies` 声明七个平台二进制包。npm 根据当前操作系统和 CPU 架构只安装匹配的包，整个过程不使用 `postinstall`，运行 `ag` 时也不会额外联网下载或写入包目录。
@@ -29,7 +29,7 @@ ag version
 升级已安装的 AtomGit CLI：
 
 ```bash
-npm update --global @hust-open-atom-club/atomgit-cli
+npm update -g @hust-open-atom-club/atomgit-cli
 ```
 
 ## Homebrew 安装
