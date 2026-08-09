@@ -10,6 +10,26 @@
 
 AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 
+## 功能
+
+| 类别 | 能力 |
+| --- | --- |
+| 📦 仓库 | 列出、查看、创建、编辑、克隆、删除、复刻和同步仓库 |
+| 👥 协作者 | 列出、查看、添加、修改和移除仓库协作者 |
+| 🔔 Webhook | 列出、查看、创建、编辑、删除和测试仓库 Webhook |
+| 🌿 分支 | 列出、查看、创建和删除分支，管理分支保护规则 |
+| 🔀 Pull Request | 列出、查看、创建、编辑、关闭、重开、审查、合并和检出 PR，查看差异与检查结果，管理评论和关联 Issue |
+| 🐛 Issue | 列出、查看、创建、编辑、关闭和重开 Issue，管理标签和评论 |
+| 🔖 标签 | 列出、创建、编辑和删除仓库标签 |
+| 🎯 里程碑 | 列出、查看、创建、编辑、关闭、重开和删除里程碑 |
+| 🏷️ Tag | 列出、创建和删除 Git tag |
+| 🚀 Release | 列出、查看、创建和编辑 Release，上传和下载附件 |
+| ⚙️ Actions | 列出和查看 workflow 运行、job、日志与 artifact，并下载日志和 artifact |
+| 🏢 组织 | 列出当前账号加入的组织 |
+| 🔍 搜索 | 搜索仓库、用户和 Issue |
+| 🔐 认证与 SSH Key | OAuth 登录、刷新和切换账号，查看认证状态，管理 SSH 公钥 |
+| 🌐 API | 调用 AtomGit API v5，支持分页、JSON 请求体和 GET、POST、PATCH、PUT、DELETE 方法 |
+
 ## 安装
 
 ### npm
@@ -17,7 +37,7 @@ AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 需要 Node.js 18 或更高版本：
 
 ```bash
-npm install --global @hust-open-atom-club/atomgit-cli
+npm install -g @hust-open-atom-club/atomgit-cli
 ```
 
 npm 会通过当前操作系统和 CPU 对应的可选依赖安装预编译二进制，不需要运行 `postinstall` 脚本。
