@@ -22,7 +22,6 @@ macOS 或 Linux 用户可以通过项目维护的 Homebrew tap 安装：
 brew install hust-open-atom-club/tap/atomgit-cli
 ```
 
-
 ### WinGet
 
 Windows 用户可以通过 Windows Package Manager 安装：
@@ -31,20 +30,13 @@ Windows 用户可以通过 Windows Package Manager 安装：
 winget install HUSTOpenAtomClub.AtomGitCLI
 ```
 
-升级已安装的 AtomGit CLI：
-
-```powershell
-winget upgrade HUSTOpenAtomClub.AtomGitCLI
-```
-
-WinGet 安装的二进制由 WinGet 管理升级。
-
 ### Scoop
 
 Windows 用户可以通过组织维护的 scoop bucket 安装：
 
 ```powershell
-scoop install https://raw.githubusercontent.com/hust-open-atom-club/ScoopBucket/main/bucket/atomgit-cli.json
+scoop bucket add hust-open-atom-club https://github.com/hust-open-atom-club/ScoopBucket
+scoop install atomgit-cli
 ```
 
 ### Nix / NixOS
@@ -57,12 +49,6 @@ AtomGit CLI 已进入 `nixos-unstable`，包名为 `atomgit-cli`，安装后提�
 nix profile install nixpkgs#atomgit-cli
 ```
 
-如果你使用的是稳定版 nixpkgs，可以显式从 `nixos-unstable` 安装：
-
-```bash
-nix profile install github:NixOS/nixpkgs/nixos-unstable#atomgit-cli
-```
-
 ### Go
 
 需要 Go 1.24.2 或更高版本。项目正式支持 macOS、Linux 和 Windows；其他 Go 目标平台的兼容性不作保证：
@@ -73,7 +59,7 @@ go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 
 **注意：** 通过 Go 模块代理安装时，`ag version` 能显示模块版本，但由于模块代理提供的源码包不包含 Git 历史，文本输出会省略无法获得的 commit 和构建时间；`ag version --json` 中对应字段为 `unknown`。这不影响 CLI 功能；如需完整的版本元数据，请使用 npm、Homebrew 或 Release 页面提供的预编译版本。
 
-其他安装方式请参阅[完整安装指南](docs/installation.md)。
+升级命令和其他安装方式请参阅[完整安装指南](docs/installation.md)。
 
 ## 配置
 
