@@ -570,6 +570,23 @@ ag run view owner/repo <run-id> --artifact <artifact-id> --artifact-file build.z
 
 `--log` 会先把 AtomGit 返回的日志 ZIP 流式写入临时文件，再逐项输出其中的日志文本；若服务端返回纯文本也会直接兼容。`--log-file` 保留服务端原始 ZIP。日志和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
 
+## Actions 工作流管理 (workflow)
+
+`ag workflow` 用于查看 AtomGit Actions 工作流列表以及手动触发工作流运行（`workflow_dispatch`）。
+
+```bash
+# 列出仓库下的工作流及其 ID
+ag workflow list owner/repo
+ag workflow list owner/repo --json
+
+# 手动触发工作流运行（按工作流 ID 或名称/路径）
+ag workflow run owner/repo 12345 --ref main
+ag workflow run owner/repo ci.yml --ref feature-branch -f env=production -F debug=true
+```
+
+`ag workflow run` 可以按工作流 ID、名称或相对路径（basename）选择目标；名称或 basename 同时匹配多个工作流时会报错并要求改用精确的 workflow ID 或完整路径。`--ref` 缺省时使用仓库的默认分支（而非假定为 `main`），无法确定默认分支时需显式传入 `--ref`。`-f/--raw-field` 与 `-F/--field` 均为 `key=value` 格式，参数值会作为 `workflow_dispatch` 的 inputs 传递。
+
+
 ## 通用 API 请求
 
 `ag api` 向 AtomGit API v5 的相对路径发送认证请求，适合调用尚无专用命令的接口。默认方法为 GET；POST、PATCH、PUT 和 DELETE 必须用 `--method` 显式选择。通用命令不会推断接口影响，也不会在可能修改远程资源前要求确认。
