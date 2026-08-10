@@ -434,6 +434,91 @@ func TestRepoDeleteCommand(t *testing.T) {
 	}
 }
 
+func TestRepoDeleteConfirmationCancels(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{name: "empty line", input: "\n"},
+		{name: "EOF without input", input: ""},
+		{name: "explicit no", input: "n\n"},
+		{name: "other input", input: "maybe\n"},
+		{name: "unrecognized yes", input: "yes\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requests := 0
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				requests++
+				t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+				return nil, nil
+			})
+			factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+			cmd := newCmdRepoDelete(factory)
+			cmd.SetIn(strings.NewReader(tt.input))
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, []string{"demo"}); err != nil {
+				t.Fatal(err)
+			}
+			if requests != 0 {
+				t.Fatalf("request count = %d, want 0 (deletion must not be called)", requests)
+			}
+			if !strings.Contains(output.String(), "Deletion cancelled.") {
+				t.Fatalf("output = %q, want 'Deletion cancelled.'", output.String())
+			}
+		})
+	}
+}
+
+func TestRepoDeleteConfirmationProceeds(t *testing.T) {
+	for _, input := range []string{"y\n", "Y\n"} {
+		t.Run(strings.TrimSpace(input), func(t *testing.T) {
+			requests := 0
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				requests++
+				if req.Method != http.MethodDelete || req.URL.Path != "/api/v5/repos/alice/demo" {
+					t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+				}
+				return forkResponse(http.StatusNoContent, ""), nil
+			})
+			factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+			cmd := newCmdRepoDelete(factory)
+			cmd.SetIn(strings.NewReader(input))
+			if err := cmd.RunE(cmd, []string{"demo"}); err != nil {
+				t.Fatal(err)
+			}
+			if requests != 1 {
+				t.Fatalf("request count = %d, want 1", requests)
+			}
+		})
+	}
+}
+
+type errorReader struct{}
+
+func (errorReader) Read([]byte) (int, error) { return 0, errors.New("simulated read failure") }
+
+func TestRepoDeleteConfirmationReadError(t *testing.T) {
+	requests := 0
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		requests++
+		t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+		return nil, nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+	cmd := newCmdRepoDelete(factory)
+	cmd.SetIn(errorReader{})
+	if err := cmd.RunE(cmd, []string{"demo"}); err == nil {
+		t.Fatal("expected confirmation read error")
+	} else if !strings.Contains(err.Error(), "failed to read confirmation") {
+		t.Fatalf("error = %v, want 'failed to read confirmation'", err)
+	}
+	if requests != 0 {
+		t.Fatalf("request count = %d, want 0 (deletion must not be called)", requests)
+	}
+}
+
 func TestRepoViewWebFlag(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
