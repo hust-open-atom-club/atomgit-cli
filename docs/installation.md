@@ -1,6 +1,6 @@
 # 安装指南
 
-AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、Nix、go install、AtomGit Release 自动或手动安装，也可以从源码构建。
+AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、WinGet、Scoop、Nix 或 Go 安装，也可以通过 AtomGit Release 自动或手动安装，或从源码构建。
 
 ## npm 安装
 
@@ -20,32 +20,31 @@ npm 主包通过 `optionalDependencies` 声明七个平台二进制包。npm 根
 | Linux | x64 / amd64、arm64 / aarch64、loong64 / loongarch64 |
 | Windows | x64 / amd64、arm64 |
 
-安装完成后验证：
-
-```bash
-ag version
-```
-
 升级已安装的 AtomGit CLI：
 
 ```bash
 npm update -g @hust-open-atom-club/atomgit-cli
 ```
 
+卸载：
+
+```bash
+npm uninstall -g @hust-open-atom-club/atomgit-cli
+```
+
 ## Homebrew 安装
 
-macOS 或 Linux 用户可以通过项目维护的 Homebrew tap 安装：
+`atomgit-cli` 目前尚未进入 Homebrew Core。macOS 或 Linux 用户需要通过项目维护的 Homebrew tap 安装：
+
+```bash
+brew install hust-open-atom-club/tap/atomgit-cli
+```
+
+也可以先添加 tap，再使用简短的 formula 名称安装：
 
 ```bash
 brew tap hust-open-atom-club/tap
 brew install atomgit-cli
-ag version
-```
-
-也可以使用一条命令直接安装：
-
-```bash
-brew install hust-open-atom-club/tap/atomgit-cli
 ```
 
 升级已安装的 AtomGit CLI：
@@ -57,13 +56,18 @@ brew upgrade atomgit-cli
 
 Homebrew 安装的二进制由 Homebrew 管理升级。
 
+卸载：
+
+```bash
+brew uninstall atomgit-cli
+```
+
 ## WinGet 安装
 
 Windows 用户可以通过 Windows Package Manager 安装：
 
 ```powershell
 winget install HUSTOpenAtomClub.AtomGitCLI
-ag version
 ```
 
 升级已安装的 AtomGit CLI：
@@ -74,6 +78,12 @@ winget upgrade HUSTOpenAtomClub.AtomGitCLI
 
 WinGet 安装的二进制由 WinGet 管理升级。
 
+卸载：
+
+```powershell
+winget uninstall HUSTOpenAtomClub.AtomGitCLI
+```
+
 ## Scoop 安装
 
 Windows 用户可以通过组织维护的 scoop bucket 安装：
@@ -81,13 +91,18 @@ Windows 用户可以通过组织维护的 scoop bucket 安装：
 ```powershell
 scoop bucket add hust-open-atom-club https://github.com/hust-open-atom-club/ScoopBucket
 scoop install atomgit-cli
-ag version
 ```
 
 升级已安装的 AtomGit CLI：
 
 ```powershell
 scoop update atomgit-cli
+```
+
+卸载：
+
+```powershell
+scoop uninstall atomgit-cli
 ```
 
 ## Nix / NixOS 安装
@@ -98,14 +113,12 @@ AtomGit CLI 已进入 `nixos-unstable`，nixpkgs 包名为 `atomgit-cli`，安�
 
 ```bash
 nix profile install nixpkgs#atomgit-cli
-ag version
 ```
 
 如果你使用的是稳定版 nixpkgs，可以显式从 `nixos-unstable` 安装：
 
 ```bash
 nix profile install github:NixOS/nixpkgs/nixos-unstable#atomgit-cli
-ag version
 ```
 
 也可以在不安装的情况下临时运行：
@@ -113,6 +126,22 @@ ag version
 ```bash
 nix run github:NixOS/nixpkgs/nixos-unstable#atomgit-cli -- version
 ```
+
+升级通过 Nix profile 安装的 AtomGit CLI：
+
+```bash
+nix profile upgrade atomgit-cli
+```
+
+卸载通过 Nix profile 安装的 AtomGit CLI：
+
+```bash
+nix profile remove atomgit-cli
+```
+
+如果 profile 中显示的名称不同，可先运行 `nix profile list` 确认名称，再将其传给 `nix profile upgrade` 或 `nix profile remove`。
+
+如果通过 Home Manager 或 NixOS 配置安装，请从 `home.packages` 或 `environment.systemPackages` 中移除对应条目，然后重新应用配置。
 
 ### 使用 Home Manager 或 NixOS 安装
 
@@ -176,7 +205,6 @@ Home Manager 中同样可以将 `unstable.atomgit-cli` 加入 `home.packages`。
 
 ```bash
 nix profile install git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag
-ag version
 ```
 
 跟随仓库 revision 安装 latest：
@@ -234,7 +262,15 @@ go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 
 该方法将从 Go 模块代理下载该项目及其依赖的源码包，并在本机构建出二进制文件。项目正式支持并测试 macOS、Linux 和 Windows；其他 Go 目标平台可能能够编译，但不保证完整兼容。`ag auth login` 的浏览器 OAuth 流程仅支持上述三个操作系统，其他平台需要在功能可用的前提下手动配置 PAT。
 
-Go 模块代理提供的源码包不包含 `.git` 目录，因此这种安装方式构建的二进制只能可靠获得模块版本。执行 `ag version` 时，文本输出会省略无法获得的 commit 和构建时间；`ag version --json` 中对应字段为 `unknown`。这是预期行为，不影响 CLI 功能。如需同时包含版本、commit 和构建时间，请改用 npm、Homebrew，或通过 AtomGit Release 自动或手动安装预编译版本。
+升级通过 Go 安装的 AtomGit CLI 时，重新执行相同命令即可：
+
+```bash
+go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
+```
+
+**注意：** Go 模块代理提供的源码包不包含 `.git` 目录，因此这种安装方式构建的二进制只能可靠获得模块版本。执行 `ag version` 时，文本输出会省略无法获得的 commit 和构建时间；`ag version --json` 中对应字段为 `unknown`。这是预期行为，不影响 CLI 功能。如需同时包含版本、commit 和构建时间，请改用其他安装方法（如 npm、Homebrew），或通过 AtomGit Release 安装预编译版本。
+
+Go 本身不记录通过 `go install` 安装的软件包。卸载时，删除 `GOBIN` 中的 `ag` 或 `ag.exe`；未设置 `GOBIN` 时，对应文件位于 `$(go env GOPATH)/bin`。
 
 ## AtomGit Release 安装
 
@@ -349,7 +385,7 @@ git checkout vX.Y.Z
 make build
 ```
 
-也可以安装到 `$(go env GOPATH)/bin`：
+也可以安装到 `GOBIN` 指定的目录；未设置 `GOBIN` 时，默认目录为 `$(go env GOPATH)/bin`：
 
 ```bash
 make install
@@ -371,9 +407,9 @@ go build -trimpath -o ag.exe ./cmd/ag
 go install ./cmd/ag
 ```
 
-可执行文件会安装到 `go env GOPATH` 所显示目录下的 `bin` 子目录。请确保该目录已加入 `PATH`。
+可执行文件会安装到 `GOBIN` 指定的目录；未设置 `GOBIN` 时，默认目录为 `go env GOPATH` 所显示目录下的 `bin` 子目录。请确保该目录已加入 `PATH`。
 
-## 验证安装
+## 安装验证
 
 完成安装或构建后，新开一个终端并执行：
 
