@@ -99,3 +99,29 @@ nix develop
 ```
 
 也可以不进入开发环境直接运行，但需要预先安装 Nix 和 Git，并要求 `tar` 支持以 NUL 分隔的文件列表；Linux 上的 GNU tar 和 macOS 默认的 bsdtar 均受支持。脚本使用 `nix store prefetch-file` 计算 stable 源码 hash，并通过 `buildGoModule` 校验对应的 `vendorHash`。更新后会构建目标 package 并执行 `ag version --json`；验证失败时自动恢复原始 `flake.nix`，且不会提交、打标签或推送。
+
+## 维护 WinGet
+
+WinGet 清单托管在社区仓库 [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs)，包 ID 为 `HUSTOpenAtomClub.AtomGitCLI`。每个版本在 `manifests/h/HUSTOpenAtomClub/AtomGitCLI/<version>/` 下包含三个 YAML 清单文件（主清单、installer 和 locale），其中 installer 清单固定各平台安装包的下载 URL 和 SHA-256。
+
+> [!NOTE]
+> WinGet 仓库审核需要时间。如果 WinGet 暂时获取不到最新版本，请在进行下面的操作前检查仓库的 [Pull Request](https://github.com/microsoft/winget-pkgs/pulls?q=is%3Apr+is%3Aopen+New+version%3A+HUSTOpenAtomClub.AtomGitCLI+version) 页面中是否存在已经提交但仍处于 Open 状态的合并请求，避免重复提交。
+
+发布新版本后，使用 [Komac](https://github.com/russellbanks/Komac) 生成并提交清单更新：
+
+```powershell
+komac update HUSTOpenAtomClub.AtomGitCLI --version X.Y.Z --urls <Windows ARM64 归档 URL> <Windows AMD64 归档 URL>
+```
+
+Komac 将自动根据传入的 URL 下载包，计算 SHA-256 并更新清单。确认无误后，选择 `Submit` 即可自动向 microsoft/winget-pkgs 发起合并请求。
+
+> [!NOTE]
+> Komac 需要配置 Personal access tokens(classic) 才能正常发起合并请求，参阅 [Komac: GitHub Token Setup](https://github.com/russellbanks/Komac#github-token-setup).
+
+发起合并请求后，前往对应页面同意 CLA 后等待合并即可。
+
+## 维护 Scoop
+
+Scoop bucket 位于 [hust-open-atom-club/ScoopBucket](https://github.com/hust-open-atom-club/ScoopBucket)，使用 Excavator GitHub Actions 工作流自动维护。Excavator 每 4 个小时检测一次新版本。如果检测到新版本，将自动更新清单中的版本号、下载链接和 SHA-256 并提交合并请求。
+
+如果距离版本发布超过 4 个小时仍没能正确更新，请[发起一个 Issue](https://github.com/hust-open-atom-club/ScoopBucket/issues)，或者手动更新 [bucket/atomgit-cli.json](https://github.com/hust-open-atom-club/ScoopBucket/blob/main/bucket/atomgit-cli.json) 清单中的相应字段后发起合并请求。
