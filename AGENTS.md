@@ -93,7 +93,8 @@ test -z "$(gofmt -l .)"
 
 ## 文档与提交
 
-- README 保持简短，只保留 npm、Homebrew、Nix、Go 的安装入口、OAuth 快速入口、常用命令和详细文档链接；安装顺序保持 npm、Homebrew、Nix、Go。
+- `docs/installation.md` 是安装方式和平台支持的事实来源；当前完整覆盖 npm、Homebrew、WinGet、Scoop、Nix/NixOS、Go、AtomGit Release 自动或手动安装，以及源码构建。
+- README 保持简短，快速安装入口按 npm、Homebrew、WinGet、Scoop、Nix、Go 排列；AtomGit Release 和源码安装等详细步骤通过完整安装指南承载。安装方式发生增删或顺序变化时，先更新 `docs/installation.md`，再同步 README 中受影响的快速入口和链接。
 - 新增、删除或改变用户可见命令、参数和输出时更新 `docs/usage.md`；只有影响 README 快速入口时才同步修改 README。
 - 安装方式和平台支持变化更新 `docs/installation.md`；认证、凭据、输出安全或仓库推断变化更新 `docs/configuration.md`。
 - GoReleaser、npm 发布、安装脚本、校验和或 Nix package 维护变化更新 `docs/releasing.md`；目录职责变化更新 `docs/project-structure.md`。
