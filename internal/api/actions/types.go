@@ -151,9 +151,9 @@ type ArtifactListResponse struct {
 }
 
 type Workflow struct {
-	ID        string    `json:"id"`
+	ID        string    `json:"workflow_id"`
 	Name      string    `json:"name"`
-	Path      string    `json:"path"`
+	Path      string    `json:"file_path"`
 	State     string    `json:"state"`
 	CreatedAt Timestamp `json:"created_at"`
 	UpdatedAt Timestamp `json:"updated_at"`

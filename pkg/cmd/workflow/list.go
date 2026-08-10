@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"text/tabwriter"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api/actions"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -37,9 +38,13 @@ func newCmdList(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			res, err := client.ListWorkflows(repository.Owner, repository.Name)
+			workflows, err := listAllWorkflows(client, repository.Owner, repository.Name)
 			if err != nil {
 				return fmt.Errorf("failed to list workflows for %s/%s: %w", repository.Owner, repository.Name, err)
+			}
+			res := actions.WorkflowListResponse{
+				TotalCount: len(workflows),
+				Workflows:  workflows,
 			}
 
 			if opts.JSON {

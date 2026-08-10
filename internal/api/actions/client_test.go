@@ -328,12 +328,15 @@ func TestListWorkflows(t *testing.T) {
 		if req.Method != http.MethodGet || req.URL.Path != "/api/v8/repos/team/demo/actions/workflows" {
 			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 		}
-		body := `{"total_count":1,"workflows":[{"id":"wf-123","name":"CI","path":".atomgit/workflows/ci.yml","state":"active"}]}`
+		if got := req.URL.Query().Encode(); got != "page=2&per_page=50" {
+			t.Fatalf("query = %q", got)
+		}
+		body := `{"total_count":1,"workflows":[{"workflow_id":"wf-123","name":"CI","file_path":".atomgit/workflows/ci.yml","state":"active"}]}`
 		return response(req, http.StatusOK, body), nil
 	})
 
 	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
-	res, err := client.ListWorkflows("team", "demo")
+	res, err := client.ListWorkflows("team", "demo", ListWorkflowsOptions{Page: 2, PerPage: 50})
 	if err != nil {
 		t.Fatalf("ListWorkflows failed: %v", err)
 	}
@@ -342,6 +345,20 @@ func TestListWorkflows(t *testing.T) {
 	}
 	if res.Workflows[0].ID != "wf-123" || res.Workflows[0].Name != "CI" {
 		t.Fatalf("unexpected workflow: %#v", res.Workflows[0])
+	}
+}
+
+func TestListWorkflowsDefaultsToNoQuery(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.RawQuery != "" {
+			t.Fatalf("query = %q, want empty", req.URL.RawQuery)
+		}
+		return response(req, http.StatusOK, `{"total_count":0,"workflows":[]}`), nil
+	})
+
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+	if _, err := client.ListWorkflows("team", "demo", ListWorkflowsOptions{}); err != nil {
+		t.Fatalf("ListWorkflows failed: %v", err)
 	}
 }
 

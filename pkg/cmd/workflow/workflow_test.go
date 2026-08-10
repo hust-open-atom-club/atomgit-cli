@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -50,7 +51,7 @@ func newTestFactory(transport http.RoundTripper, token string) *cmdutil.Factory 
 func TestWorkflowList(t *testing.T) {
 	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		if req.Method == http.MethodGet && req.URL.Path == "/api/v8/repos/owner/repo/actions/workflows" {
-			body := `{"total_count":2,"workflows":[{"id":"wf-1","name":"CI","path":".atomgit/workflows/ci.yml","state":"active"},{"id":"wf-2","name":"Deploy","path":".atomgit/workflows/deploy.yml","state":"active"}]}`
+			body := `{"total_count":2,"workflows":[{"workflow_id":"wf-1","name":"CI","file_path":".atomgit/workflows/ci.yml","state":"active"},{"workflow_id":"wf-2","name":"Deploy","file_path":".atomgit/workflows/deploy.yml","state":"active"}]}`
 			return response(req, http.StatusOK, body), nil
 		}
 		return response(req, http.StatusNotFound, `{"message":"not found"}`), nil
@@ -89,10 +90,51 @@ func TestWorkflowList(t *testing.T) {
 		}
 
 		output := out.String()
-		if !strings.Contains(output, `"total_count": 2`) || !strings.Contains(output, `"id": "wf-1"`) {
+		if !strings.Contains(output, `"total_count": 2`) || !strings.Contains(output, `"workflow_id": "wf-1"`) {
 			t.Fatalf("unexpected json output: %q", output)
 		}
 	})
+}
+
+func TestWorkflowListPaginatesAcrossPages(t *testing.T) {
+	const total = 250
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodGet || req.URL.Path != "/api/v8/repos/owner/repo/actions/workflows" {
+			return response(req, http.StatusNotFound, `{"message":"not found"}`), nil
+		}
+		page, _ := strconv.Atoi(req.URL.Query().Get("page"))
+		perPage, _ := strconv.Atoi(req.URL.Query().Get("per_page"))
+		if perPage != maxWorkflowsPerPage {
+			t.Fatalf("per_page = %d, want %d", perPage, maxWorkflowsPerPage)
+		}
+		start := (page - 1) * perPage
+		end := min(start+perPage, total)
+		var workflows []string
+		for i := start; i < end; i++ {
+			workflows = append(workflows, fmt.Sprintf(`{"workflow_id":"wf-%d","name":"WF %d","file_path":".atomgit/workflows/wf-%d.yml","state":"active"}`, i, i, i))
+		}
+		body := fmt.Sprintf(`{"total_count":%d,"workflows":[%s]}`, total, strings.Join(workflows, ","))
+		return response(req, http.StatusOK, body), nil
+	})
+
+	f := newTestFactory(transport, "test-token")
+	cmd := NewCmdWorkflow(f)
+
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{"list", "owner/repo", "--json"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, `"total_count": 250`) ||
+		!strings.Contains(output, `"workflow_id": "wf-0"`) ||
+		!strings.Contains(output, `"workflow_id": "wf-249"`) {
+		t.Fatalf("unexpected json output: %q", output)
+	}
 }
 
 func TestWorkflowListEmpty(t *testing.T) {
@@ -122,7 +164,7 @@ func TestWorkflowRunSuccess(t *testing.T) {
 	var postedBody string
 	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		if req.Method == http.MethodGet && req.URL.Path == "/api/v8/repos/owner/repo/actions/workflows" {
-			body := `{"total_count":1,"workflows":[{"id":"wf-123","name":"CI","path":".atomgit/workflows/ci.yml","state":"active"}]}`
+			body := `{"total_count":1,"workflows":[{"workflow_id":"wf-123","name":"CI","file_path":".atomgit/workflows/ci.yml","state":"active"}]}`
 			return response(req, http.StatusOK, body), nil
 		}
 		if req.Method == http.MethodPost && req.URL.Path == "/api/v8/repos/owner/repo/actions/workflows/wf-123/dispatches" {
@@ -196,7 +238,10 @@ func TestWorkflowRunErrors(t *testing.T) {
 	})
 
 	t.Run("invalid field format", func(t *testing.T) {
-		f := newTestFactory(nil, "token")
+		transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return nil, fmt.Errorf("unexpected network request for %s %s", req.Method, req.URL.Path)
+		})
+		f := newTestFactory(transport, "token")
 		cmd := NewCmdWorkflow(f)
 
 		out := &bytes.Buffer{}
@@ -209,4 +254,116 @@ func TestWorkflowRunErrors(t *testing.T) {
 			t.Fatalf("expected invalid field format error, got: %v", err)
 		}
 	})
+}
+
+func TestWorkflowRunResolvesDefaultBranch(t *testing.T) {
+	var postedBody string
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/owner/repo" {
+			return response(req, http.StatusOK, `{"full_name":"owner/repo","default_branch":"trunk"}`), nil
+		}
+		if req.Method == http.MethodGet && req.URL.Path == "/api/v8/repos/owner/repo/actions/workflows" {
+			body := `{"total_count":1,"workflows":[{"workflow_id":"wf-123","name":"CI","file_path":".atomgit/workflows/ci.yml","state":"active"}]}`
+			return response(req, http.StatusOK, body), nil
+		}
+		if req.Method == http.MethodPost && req.URL.Path == "/api/v8/repos/owner/repo/actions/workflows/wf-123/dispatches" {
+			body, _ := io.ReadAll(req.Body)
+			postedBody = string(body)
+			return response(req, http.StatusNoContent, ""), nil
+		}
+		return response(req, http.StatusNotFound, `{"message":"not found"}`), nil
+	})
+
+	f := newTestFactory(transport, "test-token")
+	cmd := NewCmdWorkflow(f)
+
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{"run", "owner/repo", "CI"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(postedBody, `"ref":"trunk"`) {
+		t.Fatalf("expected dispatch on default branch trunk, got body: %q", postedBody)
+	}
+}
+
+func TestWorkflowRunRejectsAmbiguousTarget(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method == http.MethodGet && req.URL.Path == "/api/v8/repos/owner/repo/actions/workflows" {
+			body := `{"total_count":2,"workflows":[{"workflow_id":"wf-1","name":"CI","file_path":".gitcode/workflows/ci.yml","state":"active"},{"workflow_id":"wf-2","name":"CI","file_path":".atomgit/workflows/ci.yml","state":"active"}]}`
+			return response(req, http.StatusOK, body), nil
+		}
+		return response(req, http.StatusNotFound, `{"message":"not found"}`), nil
+	})
+
+	f := newTestFactory(transport, "test-token")
+	cmd := NewCmdWorkflow(f)
+
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{"run", "owner/repo", "CI", "--ref", "main"})
+
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatalf("expected ambiguity error, got: %v", err)
+	}
+}
+
+func TestWorkflowRunListFailureIsSurfaced(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method == http.MethodGet && req.URL.Path == "/api/v8/repos/owner/repo/actions/workflows" {
+			return response(req, http.StatusInternalServerError, `{"message":"workflow listing failed"}`), nil
+		}
+		return response(req, http.StatusNotFound, `{"message":"not found"}`), nil
+	})
+
+	f := newTestFactory(transport, "test-token")
+	cmd := NewCmdWorkflow(f)
+
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{"run", "owner/repo", "ci.yml", "--ref", "main"})
+
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "failed to list workflows") {
+		t.Fatalf("expected workflow listing error, got: %v", err)
+	}
+}
+
+func TestWorkflowRunOpaqueTargetDispatchesDirectly(t *testing.T) {
+	var dispatchedPath string
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method == http.MethodGet && req.URL.Path == "/api/v8/repos/owner/repo/actions/workflows" {
+			body := `{"total_count":1,"workflows":[{"workflow_id":"wf-1","name":"CI","file_path":".atomgit/workflows/ci.yml","state":"active"}]}`
+			return response(req, http.StatusOK, body), nil
+		}
+		if req.Method == http.MethodPost && strings.HasPrefix(req.URL.Path, "/api/v8/repos/owner/repo/actions/workflows/") {
+			dispatchedPath = req.URL.Path
+			return response(req, http.StatusNoContent, ""), nil
+		}
+		return response(req, http.StatusNotFound, `{"message":"not found"}`), nil
+	})
+
+	f := newTestFactory(transport, "test-token")
+	cmd := NewCmdWorkflow(f)
+
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+	cmd.SetArgs([]string{"run", "owner/repo", "unknown-workflow", "--ref", "main"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := "/api/v8/repos/owner/repo/actions/workflows/unknown-workflow/dispatches"
+	if dispatchedPath != want {
+		t.Fatalf("dispatched path = %q, want %q", dispatchedPath, want)
+	}
 }

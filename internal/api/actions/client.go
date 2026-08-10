@@ -45,6 +45,11 @@ type ListArtifactsOptions struct {
 	PerPage   int
 }
 
+type ListWorkflowsOptions struct {
+	Page    int
+	PerPage int
+}
+
 type HTTPError struct {
 	Operation  string
 	StatusCode int
@@ -213,9 +218,13 @@ func (c *Client) DownloadArtifact(owner, repo, artifactID string) (*http.Respons
 	return c.download("download artifact", path)
 }
 
-func (c *Client) ListWorkflows(owner, repo string) (WorkflowListResponse, error) {
+func (c *Client) ListWorkflows(owner, repo string, opts ListWorkflowsOptions) (WorkflowListResponse, error) {
+	query := url.Values{}
+	setPositiveInt(query, "page", opts.Page)
+	setPositiveInt(query, "per_page", opts.PerPage)
+
 	var result WorkflowListResponse
-	path := repositoryPath(owner, repo) + "/actions/workflows"
+	path := repositoryPath(owner, repo) + "/actions/workflows" + encodeQuery(query)
 	if err := c.getJSON("list repository workflows", path, &result); err != nil {
 		return WorkflowListResponse{}, err
 	}

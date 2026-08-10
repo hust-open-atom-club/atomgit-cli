@@ -503,6 +503,8 @@ ag workflow run owner/repo 12345 --ref main
 ag workflow run owner/repo ci.yml --ref feature-branch -f env=production -F debug=true
 ```
 
+`ag workflow run` 可以按工作流 ID、名称或相对路径（basename）选择目标；名称或 basename 同时匹配多个工作流时会报错并要求改用精确的 workflow ID 或完整路径。`--ref` 缺省时使用仓库的默认分支（而非假定为 `main`），无法确定默认分支时需显式传入 `--ref`。`-f/--raw-field` 与 `-F/--field` 均为 `key=value` 格式，参数值会作为 `workflow_dispatch` 的 inputs 传递。
+
 
 ## 通用 API 请求
 

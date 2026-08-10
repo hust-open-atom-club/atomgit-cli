@@ -42,6 +42,11 @@ func newCmdRun(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("workflow_id is required")
 			}
 
+			inputs, err := parseInputFields(opts)
+			if err != nil {
+				return err
+			}
+
 			client, err := newActionsClient(f, token)
 			if err != nil {
 				return err
@@ -49,28 +54,15 @@ func newCmdRun(f *cmdutil.Factory) *cobra.Command {
 
 			ref := strings.TrimSpace(opts.Ref)
 			if ref == "" {
-				ref = "main"
-			}
-
-			workflowID := workflowTarget
-			workflowsRes, err := client.ListWorkflows(repository.Owner, repository.Name)
-			if err == nil && len(workflowsRes.Workflows) > 0 {
-				for _, wf := range workflowsRes.Workflows {
-					if wf.ID == workflowTarget || wf.Name == workflowTarget || wf.Path == workflowTarget || strings.HasSuffix(wf.Path, "/"+workflowTarget) {
-						workflowID = wf.ID
-						break
-					}
+				ref, err = resolveDefaultBranch(f, token, repository.Owner, repository.Name)
+				if err != nil {
+					return fmt.Errorf("could not determine the repository's default branch; pass --ref explicitly: %w", err)
 				}
 			}
 
-			inputs := make(map[string]string)
-			allFields := append(opts.RawFields, opts.Fields...)
-			for _, field := range allFields {
-				key, val, ok := strings.Cut(field, "=")
-				if !ok || strings.TrimSpace(key) == "" {
-					return fmt.Errorf("invalid field format %q (expected key=value)", field)
-				}
-				inputs[strings.TrimSpace(key)] = strings.TrimSpace(val)
+			workflowID, err := resolveWorkflowID(client, repository.Owner, repository.Name, workflowTarget)
+			if err != nil {
+				return err
 			}
 
 			payload := actions.WorkflowDispatchPayload{
@@ -93,4 +85,50 @@ func newCmdRun(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringArrayVarP(&opts.Fields, "field", "F", nil, "Add a string parameter in key=value format")
 
 	return cmd
+}
+
+func parseInputFields(opts *runOptions) (map[string]string, error) {
+	inputs := make(map[string]string)
+	allFields := append(opts.RawFields, opts.Fields...)
+	for _, field := range allFields {
+		key, val, ok := strings.Cut(field, "=")
+		if !ok || strings.TrimSpace(key) == "" {
+			return nil, fmt.Errorf("invalid field format %q (expected key=value)", field)
+		}
+		inputs[strings.TrimSpace(key)] = strings.TrimSpace(val)
+	}
+	return inputs, nil
+}
+
+func resolveWorkflowID(client *actions.Client, owner, repo, target string) (string, error) {
+	workflows, err := listAllWorkflows(client, owner, repo)
+	if err != nil {
+		return "", fmt.Errorf("failed to list workflows for %s/%s: %w", owner, repo, err)
+	}
+
+	for _, wf := range workflows {
+		if wf.ID == target {
+			return wf.ID, nil
+		}
+	}
+
+	var matches []actions.Workflow
+	for _, wf := range workflows {
+		if wf.Name == target || wf.Path == target || strings.HasSuffix(wf.Path, "/"+target) {
+			matches = append(matches, wf)
+		}
+	}
+
+	switch len(matches) {
+	case 1:
+		return matches[0].ID, nil
+	case 0:
+		return target, nil
+	default:
+		descriptions := make([]string, 0, len(matches))
+		for _, wf := range matches {
+			descriptions = append(descriptions, fmt.Sprintf("%q (%s)", wf.Name, wf.Path))
+		}
+		return "", fmt.Errorf("workflow target %q is ambiguous; it matches multiple workflows: %s (use the exact workflow ID or full path)", target, strings.Join(descriptions, ", "))
+	}
 }
