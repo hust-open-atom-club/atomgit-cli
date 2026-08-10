@@ -1,0 +1,60 @@
+name: Update Nix packages
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  repository: write
+
+concurrency:
+  enable: true
+  max: 1
+  exceed-action: QUEUE
+
+jobs:
+  update:
+    name: Update stable and latest
+    runs-on: [ubuntu-latest, x64, small]
+    steps:
+      - name: Check out default branch
+        uses: checkout
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSfL https://nixos.org/nix/install -o /tmp/install-nix.sh
+          sh /tmp/install-nix.sh --no-daemon
+          printf '%s\n' ". \"$HOME/.nix-profile/etc/profile.d/nix.sh\"" >> "$ATOMGIT_ENV"
+          mkdir -p "$HOME/.config/nix"
+          printf '%s\n' "experimental-features = nix-command flakes" >> "$HOME/.config/nix/nix.conf"
+
+      - name: Update stable and latest
+        run: |
+          set -eu
+
+          latest_release=$(curl --fail --silent --show-error \
+            https://api.atomgit.com/api/v5/repos/hust-open-atom-club/atomgit-cli/releases/latest)
+          stable_version=$(printf '%s' "$latest_release" | jq -er '.tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+([+-].*)?$")) | sub("^v"; "")')
+
+          latest_commit=$(git log -1 --format=%H --invert-grep --grep='^chore: update Nix packages$')
+          latest_version="unstable-${latest_commit}"
+
+          nix shell nixpkgs#nix-update -c nix-update stable --flake --version "$stable_version" --build
+          nix shell nixpkgs#nix-update -c nix-update latest --flake --version "$latest_version" --build
+
+      - name: Commit and push updates
+        run: |
+          set -eu
+          if git diff --quiet -- nix/stable.nix nix/latest.nix; then
+            echo "Nix packages are already current."
+            exit 0
+          fi
+
+          git config user.name "AtomGit Actions"
+          git config user.email "actions@atomgit.com"
+          git add nix/stable.nix nix/latest.nix
+          git commit -m "chore: update Nix packages"
+          git push origin "HEAD:${ATOMGIT_REF_NAME}"

@@ -80,25 +80,33 @@ make publish \
 
 ## 维护 Nix package
 
-仓库 flake 提供两种 package：
+仓库 flake 从 `nix/` 下的独立表达式提供两种 package：
 
-- `stable` 从对应版本的 AtomGit Release 源码归档构建，并固定源码 hash 和 `vendorHash`。
-- `latest` 从当前 flake revision 的源码构建，使用独立的 `vendorHash`。
+- `stable` 从上游仓库的最新正式 AtomGit Release 源码归档构建，并固定版本、源码 hash 和 `vendorHash`。
+- `latest` 直接从当前 flake revision 的源码构建，因此始终对应检出仓库的最新 commit；工作流只维护其 `vendorHash`。
 
-`default` 和兼容名称 `ag` 都指向 `stable`。更新 Nix package 时，推荐先进入 flake 提供的开发环境：
+两个 package 都由 Nix 管理；支持发行来源字段的版本会报告 `selfUpdate=false, source=nix`。`default` 和兼容名称 `ag` 都指向 `stable`。
 
-当前 nixos-unstable 已停止支持 Intel macOS，因此 flake 仅为 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
+`.gitcode/workflows/update-nix.yml` 每天在默认分支上运行，也支持手动触发。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；构建验证后在内容变化时直接提交到默认分支。工作流需要 `repository: write`，使用运行期间自动生成的 `ATOMGIT_TOKEN` 推送，不需要额外长期 token。
+
+可在本地复现相同更新；开发环境已包含 `nix-update`：
 
 ```bash
-# 默认更新 stable 的版本、Release 源码 hash 和 vendorHash
 nix develop
-./scripts/update-nix-package.sh vX.Y.Z
 
-# 只更新当前源码对应的 latestVendorHash
-./scripts/update-nix-package.sh --latest
+# stable：从 AtomGit 最新正式 Release 更新
+stable_version=$(curl --fail --silent --show-error \
+  https://api.atomgit.com/api/v5/repos/hust-open-atom-club/atomgit-cli/releases/latest \
+  | jq -er '.tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+([+-].*)?$")) | sub("^v"; "")')
+test -n "$stable_version"
+nix-update stable --flake --version "$stable_version" --build
+
+# latest：使用当前 flake revision，只刷新其 vendorHash
+nix-update latest --flake --version=skip --build
+rm -f result result-*
 ```
 
-也可以不进入开发环境直接运行，但需要预先安装 Nix 和 Git，并要求 `tar` 支持以 NUL 分隔的文件列表；Linux 上的 GNU tar 和 macOS 默认的 bsdtar 均受支持。脚本使用 `nix store prefetch-file` 计算 stable 源码 hash，并通过 `buildGoModule` 校验对应的 `vendorHash`。更新后会构建目标 package 并执行 `ag version --json`；验证失败时自动恢复原始 `flake.nix`，且不会提交、打标签或推送。
+`nix-update --build` 会创建 Nix 的 `result` 结果链接；上述本地流程在完成后删除它，仓库也忽略 `result` 和 `result-*`。`nix-update` 会同时维护源码 hash 和 Go `vendorHash`。当前 nixos-unstable 已停止支持 Intel macOS，因此 flake 仅为 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
 
 ## 维护 WinGet
 

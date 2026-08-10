@@ -20,65 +20,12 @@
           pkgs = import
             (if system == "x86_64-darwin" then nixpkgs-darwin else nixpkgs)
             { inherit system; };
-          stableVersion = "0.6.0";
-          stableCommit = "fc5d430239fd3b420cda2fd6bb5ebe1e2e50b85d";
-          stableBuildDate = "2026-07-19T00:40:02+08:00";
-          stableSrcHash = "sha256-rpPVg0u4T0bZbBYHxCTZQli5JVzA2+xPjzmSebsqf5I=";
-          stableVendorHash = "sha256-7K17JaXFsjf163g5PXCb5ng2gYdotnZ2IDKk8KFjNj0=";
-
-          latestCommit = self.rev or self.dirtyRev or "unknown";
-          latestVersion = self.shortRev or self.dirtyShortRev or "dev";
-          latestBuildDate =
-            let
-              d = self.lastModifiedDate or "19700101000000";
-            in
-            if builtins.stringLength d >= 14
-            then "${builtins.substring 0 4 d}-${builtins.substring 4 2 d}-${builtins.substring 6 2 d}T${builtins.substring 8 2 d}:${builtins.substring 10 2 d}:${builtins.substring 12 2 d}Z"
-            else "unknown";
-          latestVendorHash = "sha256-7K17JaXFsjf163g5PXCb5ng2gYdotnZ2IDKk8KFjNj0=";
-
-          mkAg = {
-            version,
-            buildVersion ? version,
-            src,
-            vendorHash,
-            commit,
-            buildDate,
-          }: pkgs.buildGoModule {
-            pname = "ag";
-            inherit version src vendorHash;
-            subPackages = [ "cmd/ag" ];
-            ldflags = [
-              "-s"
-              "-w"
-              "-X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Version=${buildVersion}"
-              "-X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Commit=${commit}"
-              "-X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.BuildDate=${buildDate}"
-            ];
-          };
+          mkAg = import ./nix/package.nix { inherit pkgs; };
+          stable = import ./nix/stable.nix { inherit pkgs mkAg; };
+          latest = import ./nix/latest.nix { inherit pkgs mkAg self; };
         in
-        rec {
-          stable = mkAg {
-            version = stableVersion;
-            buildVersion = "v${stableVersion}";
-            commit = stableCommit;
-            buildDate = stableBuildDate;
-            vendorHash = stableVendorHash;
-            src = pkgs.fetchurl {
-              url = "https://raw.atomgit.com/hust-open-atom-club/atomgit-cli/archive/refs/heads/v${stableVersion}.tar.gz";
-              hash = stableSrcHash;
-            };
-          };
-
-          latest = mkAg {
-            version = latestVersion;
-            buildVersion = latestVersion;
-            commit = latestCommit;
-            buildDate = latestBuildDate;
-            src = self;
-            vendorHash = latestVendorHash;
-          };
-
+        {
+          inherit stable latest;
           ag = stable;
           default = stable;
         });
@@ -99,6 +46,7 @@
               zip
               gnused
               xdg-utils
+              nix-update
             ];
 
             CGO_ENABLED = "0";
