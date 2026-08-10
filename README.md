@@ -27,6 +27,7 @@ AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 | ⚙️ Actions | 列出和查看 workflow 运行、job、日志与 artifact，并下载日志和 artifact |
 | 🏢 组织 | 列出当前账号加入的组织 |
 | 🔍 搜索 | 搜索仓库、用户和 Issue |
+| 💬 Discussion | 列出仓库 Discussion |
 | 🔐 认证与 SSH Key | OAuth 登录、刷新和切换账号，查看认证状态，管理 SSH 公钥 |
 | 🌐 API | 调用 AtomGit API v5，支持分页、JSON 请求体和 GET、POST、PATCH、PUT、DELETE 方法 |
 
@@ -95,6 +96,7 @@ ag milestone list
 ag tag list
 ag release list
 ag run list owner/repo
+ag discussion list
 ag org list
 ag search repositories atomgit
 ag auth status

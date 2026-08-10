@@ -583,3 +583,35 @@ type ReleaseUploadURL struct {
 	URL     string            `json:"url"`
 	Headers map[string]string `json:"headers"`
 }
+
+// Discussion represents a repository discussion returned by AtomGit API v5.
+type Discussion struct {
+	ID           string             `json:"id"`
+	Number       int                `json:"number"`
+	Title        string             `json:"title"`
+	Author       DiscussionAuthor   `json:"author"`
+	Category     DiscussionCategory `json:"category"`
+	IsClosed     FlexibleBool       `json:"is_closed"`
+	IsAnswered   FlexibleBool       `json:"is_answered"`
+	IsLocked     FlexibleBool       `json:"is_lock"`
+	IsPinned     FlexibleBool       `json:"is_pin"`
+	CommentTotal int                `json:"comment_total"`
+	CreatedAt    string             `json:"created_at"`
+	UpdatedAt    string             `json:"updated_at"`
+}
+
+// DiscussionAuthor is author of discussion
+type DiscussionAuthor struct {
+	ID        string `json:"id"`
+	Login     string `json:"login"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
+}
+
+type DiscussionCategory struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Icon        string `json:"icon"`
+	Description string `json:"description"`
+	Type        int    `json:"type"`
+}
