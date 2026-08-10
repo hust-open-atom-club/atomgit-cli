@@ -240,7 +240,7 @@ func exchangeCode(ctx context.Context, id, secret, redir, code string) (*tokenRe
 		return nil, err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("token endpoint %s: %s", resp.Status, strings.TrimSpace(string(b)))
+		return nil, fmt.Errorf("token endpoint %s (response body omitted; it may contain sensitive token material)", resp.Status)
 	}
 	var tr tokenResponse
 	if err := json.Unmarshal(b, &tr); err != nil {
@@ -287,7 +287,7 @@ func RefreshAccessToken(ctx context.Context, refreshToken string) (*RefreshedTok
 		return nil, err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("token endpoint %s: %s", resp.Status, strings.TrimSpace(string(b)))
+		return nil, fmt.Errorf("token endpoint %s (response body omitted; it may contain sensitive token material)", resp.Status)
 	}
 	var tr tokenResponse
 	if err := json.Unmarshal(b, &tr); err != nil {

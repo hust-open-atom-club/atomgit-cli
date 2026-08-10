@@ -99,6 +99,27 @@ func TestBuildReleasesURL(t *testing.T) {
 	}
 }
 
+func TestBuildActionsURL(t *testing.T) {
+	want := fmt.Sprintf("https://atomgit.com/%s/%s/actions", owner, repo)
+	if got := BuildActionsURL(owner, repo); got != want {
+		t.Errorf("BuildActionsURL() = %q, want %q", got, want)
+	}
+}
+
+func TestBuildWikiURL(t *testing.T) {
+	want := fmt.Sprintf("https://atomgit.com/%s/%s/wiki", owner, repo)
+	if got := BuildWikiURL(owner, repo); got != want {
+		t.Errorf("BuildWikiURL() = %q, want %q", got, want)
+	}
+}
+
+func TestBuildSettingsURL(t *testing.T) {
+	want := fmt.Sprintf("https://atomgit.com/%s/%s/setting", owner, repo)
+	if got := BuildSettingsURL(owner, repo); got != want {
+		t.Errorf("BuildSettingsURL() = %q, want %q", got, want)
+	}
+}
+
 func TestBuildFileURLLineRangeReversed(t *testing.T) {
 	want := fmt.Sprintf("https://atomgit.com/%s/%s/blob/main/main.go#L320", owner, repo)
 	if got := BuildFileURL(owner, repo, "main", "main.go", 320, 312); got != want {

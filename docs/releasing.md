@@ -17,16 +17,16 @@ make release VERSION="v${VERSION}"
 
 `make release` 会检查工作区干净、tag 存在且指向当前 HEAD，然后在 `dist/vX.Y.Z/` 生成以下文件：
 
-- 七个名称不变的普通归档；其中 Linux 支持 amd64、arm64 和 loong64，macOS 与 Windows 支持 amd64 和 arm64；二进制报告 `selfUpdate=true, source=release`。
-- `package-managers/` 下 npm 的七个、Homebrew 的四个、Winget 的两个和 Scoop 的两个独立归档；文件名为 `ag_<os>_<arch>_<source>.<ext>`，二进制报告 `selfUpdate=false` 和对应来源。
-- `package-managers/package-managers-manifest.json` 与只使用归档 basename 的 `package-managers-checksums.txt`。
+- 七个名称不变的归档；其中 Linux 支持 amd64、arm64 和 loong64，macOS 与 Windows 支持 amd64 和 arm64。
 - 已绑定当前 tag 的 `install.sh` 和 `install.ps1`。
 - `npm/` 下的七个平台二进制包、一个主启动包和独立的 `npm/checksums.txt`。
 - 仅覆盖 AtomGit Release 附件（七个归档和两个安装脚本）的根 `checksums.txt`。
 
 仓库根目录的 `install.sh` 和 `install.ps1` 是不绑定具体版本的源码模板，使用 `__AG_RELEASE_TAG__` 占位符。发布构建只替换安装器中的绑定变量，生成的 Release 附件默认下载本次 tag；模板中的使用示例始终保持为 `latest` 和 `vX.Y.Z`，无需随版本手工修改。
 
-npm 平台包从对应的 `_npm` 归档提取二进制；Homebrew formula、Winget manifest 和 Scoop bucket manifest 应分别消费匹配的 `_homebrew`、`_winget` 与 `_scoop` 归档及校验和。Nix 不生成 `_nix` 归档。
+npm 平台包复用对应操作系统和架构的普通 Release 归档。
+
+AtomGit Release 只上传七个普通平台归档、两个安装脚本和根 `checksums.txt`，共十个项目附件。AtomGit 还会自动展示四个源码归档，因此保留 LoongArch64 支持的 Release 页面通常共显示十四个 artifacts。Homebrew、Scoop 和 WinGet 复用普通平台归档，不再发布按 distribution 重复打包的专用附件。
 
 发布 npm 制品时，先发布 `npm/` 下七个名称带平台和架构的包；确认它们可用后，再发布 `atomgit-cli` 主包。主包和平台包必须使用相同版本。
 
@@ -46,13 +46,33 @@ npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registr
 (cd dist/vX.Y.Z/npm && shasum -a 256 -c checksums.txt)
 ```
 
-包管理器归档使用独立校验文件：
+`scripts/build-release.sh` 始终使用 GoReleaser 的 `--skip=publish`，只在本地准备并验证制品，然后打印完整的附件 basename 清单。发布上传由下述 `make publish` 入口调用独立脚本完成；单独执行构建脚本不会创建 AtomGit Release 或上传附件。
+
+
+## 自动发布 AtomGit Release
+
+正式 tag 所在提交准备好发布说明后，使用单一入口完成格式检查、Go 测试、构建、跨平台打包、附件上传和发布后回读验证：
 
 ```bash
-(cd dist/vX.Y.Z/package-managers && shasum -a 256 -c package-managers-checksums.txt)
+make publish VERSION=vX.Y.Z NOTES_FILE=notes.md
 ```
 
-`scripts/build-release.sh` 始终使用 GoReleaser 的 `--skip=publish`，只在本地准备并验证制品，然后打印完整的附件 basename 清单。维护者按该清单手工上传七个普通归档、安装脚本、十五个包管理器归档、manifest 和包管理器校验文件；脚本不会创建 AtomGit Release 或上传附件。
+默认仓库为 `hust-open-atom-club/atomgit-cli`。发布其他仓库、指定显示名称或创建预发布版本时可使用：
+
+```bash
+make publish \
+  VERSION=vX.Y.Z \
+  NOTES_FILE=notes.md \
+  REPOSITORY=owner/repo \
+  RELEASE_NAME="Version X.Y.Z" \
+  PRERELEASE=1
+```
+
+发布入口要求 tag 存在、指向当前提交且工作区干净，并通过 `ag` 的现有认证配置访问 AtomGit。CI 中应从 secret 写入权限受限的临时 token 文件，格式和位置见[配置与认证](configuration.md)；不得把 PAT 写入仓库、制品或日志。
+
+自动化流程会验证固定的十个项目附件、归档内容、安装脚本版本和 SHA-256，然后创建或安全补齐 Release，并确认 AtomGit 自动生成的四个源码归档存在。重复执行时，已有附件必须下载后与本地 checksum 一致才会跳过；目标提交冲突、未知附件、同名内容不一致或 API/上传失败都会停止。上传中断后可用相同 tag、发布说明和 `dist/<tag>/` 制品重新执行命令，脚本会列出尚未完成的附件。已发布且内容冲突的附件不会被自动覆盖；需要人工确认 Release 状态后再决定回滚。
+
+发布完成前会再次校验 tag、目标提交、名称、说明、发布状态、全部附件下载 URL，并下载每个附件核对 SHA-256。Homebrew Formula 更新仍由独立流程处理。
 
 未创建 tag 时，可使用 `make release-snapshot VERSION=vX.Y.Z` 进行本地试打包。Snapshot 允许脏工作区，其制品仅用于验证，不应上传到正式 Release。
 
@@ -64,8 +84,6 @@ npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registr
 
 - `stable` 从对应版本的 AtomGit Release 源码归档构建，并固定源码 hash 和 `vendorHash`。
 - `latest` 从当前 flake revision 的源码构建，使用独立的 `vendorHash`。
-
-两个 package 都由 Nix 管理；支持发行来源字段的版本会报告 `selfUpdate=false, source=nix`。
 
 `default` 和兼容名称 `ag` 都指向 `stable`。更新 Nix package 时，推荐先进入 flake 提供的开发环境：
 
@@ -81,3 +99,29 @@ nix develop
 ```
 
 也可以不进入开发环境直接运行，但需要预先安装 Nix 和 Git，并要求 `tar` 支持以 NUL 分隔的文件列表；Linux 上的 GNU tar 和 macOS 默认的 bsdtar 均受支持。脚本使用 `nix store prefetch-file` 计算 stable 源码 hash，并通过 `buildGoModule` 校验对应的 `vendorHash`。更新后会构建目标 package 并执行 `ag version --json`；验证失败时自动恢复原始 `flake.nix`，且不会提交、打标签或推送。
+
+## 维护 WinGet
+
+WinGet 清单托管在社区仓库 [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs)，包 ID 为 `HUSTOpenAtomClub.AtomGitCLI`。每个版本在 `manifests/h/HUSTOpenAtomClub/AtomGitCLI/<version>/` 下包含三个 YAML 清单文件（主清单、installer 和 locale），其中 installer 清单固定各平台安装包的下载 URL 和 SHA-256。
+
+> [!NOTE]
+> WinGet 仓库审核需要时间。如果 WinGet 暂时获取不到最新版本，请在进行下面的操作前检查仓库的 [Pull Request](https://github.com/microsoft/winget-pkgs/pulls?q=is%3Apr+is%3Aopen+New+version%3A+HUSTOpenAtomClub.AtomGitCLI+version) 页面中是否存在已经提交但仍处于 Open 状态的合并请求，避免重复提交。
+
+发布新版本后，使用 [Komac](https://github.com/russellbanks/Komac) 生成并提交清单更新：
+
+```powershell
+komac update HUSTOpenAtomClub.AtomGitCLI --version X.Y.Z --urls <Windows ARM64 归档 URL> <Windows AMD64 归档 URL>
+```
+
+Komac 将自动根据传入的 URL 下载包，计算 SHA-256 并更新清单。确认无误后，选择 `Submit` 即可自动向 microsoft/winget-pkgs 发起合并请求。
+
+> [!NOTE]
+> Komac 需要配置 Personal access tokens(classic) 才能正常发起合并请求，参阅 [Komac: GitHub Token Setup](https://github.com/russellbanks/Komac#github-token-setup).
+
+发起合并请求后，前往对应页面同意 CLA 后等待合并即可。
+
+## 维护 Scoop
+
+Scoop bucket 位于 [hust-open-atom-club/ScoopBucket](https://github.com/hust-open-atom-club/ScoopBucket)，使用 Excavator GitHub Actions 工作流自动维护。Excavator 每 4 个小时检测一次新版本。如果检测到新版本，将自动更新清单中的版本号、下载链接和 SHA-256 并提交合并请求。
+
+如果距离版本发布超过 4 个小时仍没能正确更新，请[发起一个 Issue](https://github.com/hust-open-atom-club/ScoopBucket/issues)，或者手动更新 [bucket/atomgit-cli.json](https://github.com/hust-open-atom-club/ScoopBucket/blob/main/bucket/atomgit-cli.json) 清单中的相应字段后发起合并请求。

@@ -70,6 +70,7 @@ atomgit-cli/
 │   ├── build-release.sh        # GoReleaser 打包包装脚本
 │   ├── build-npm-packages.js   # 生成 npm 主包与平台包
 │   ├── check-npm-version.js    # 校验发布版本与 npm 版本
+│   ├── publish-atomgit-release.js # 创建并验证 AtomGit Release
 │   ├── set-npm-version.js      # 同步 npm 包版本
 │   └── update-nix-package.sh   # 更新并验证 Nix package
 ├── test/                       # npm 平台包集成测试

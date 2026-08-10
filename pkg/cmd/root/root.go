@@ -13,9 +13,11 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/auth"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/branch"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/browse"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/checkupdate"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/issue"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/label"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/license"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/milestone"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/org"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/pr"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/release"
@@ -25,6 +27,7 @@ import (
 	key "atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/ssh-key"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/tag"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/version"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/workflow"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -35,10 +38,11 @@ func NewCmdRoot(f *cmdutil.Factory) (*cobra.Command, error) {
 
 func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra.Command, error) {
 	cmd := &cobra.Command{
-		Use:     "ag <command> <subcommand> [flags]",
-		Short:   "AtomGit CLI",
-		Long:    `Work seamlessly with AtomGit from the command line.`,
-		Version: version.Text(),
+		Use:           "ag <command> <subcommand> [flags]",
+		Short:         "AtomGit CLI",
+		Long:          `Work seamlessly with AtomGit from the command line.`,
+		Version:       version.Text(),
+		SilenceErrors: true,
 	}
 	cmd.SetVersionTemplate(`{{.Version}}`)
 	cmd.Flags().Bool("version", false, "Show version information")
@@ -71,8 +75,10 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	cmd.AddCommand(pr.NewCmdPR(f))
 	cmd.AddCommand(issue.NewCmdIssue(f))
 	cmd.AddCommand(label.NewCmdLabel(f))
+	cmd.AddCommand(milestone.NewCmdMilestone(f))
 	cmd.AddCommand(release.NewCmdRelease(f))
 	cmd.AddCommand(runcmd.NewCmdRun(f))
+	cmd.AddCommand(workflow.NewCmdWorkflow(f))
 	cmd.AddCommand(tag.NewCmdTag(f))
 	cmd.AddCommand(auth.NewCmdAuth(f))
 	cmd.AddCommand(browse.NewCmdBrowse(f))
@@ -80,6 +86,7 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	cmd.AddCommand(license.NewCmdLicense(f))
 	cmd.AddCommand(org.NewCmdOrg(f))
 	cmd.AddCommand(search.NewCmdSearch(f))
+	cmd.AddCommand(checkupdate.NewCmdCheckUpdate(f))
 	cmd.AddCommand(version.NewCmdVersion())
 	cmd.AddCommand(alias.NewCmdAlias(f))
 

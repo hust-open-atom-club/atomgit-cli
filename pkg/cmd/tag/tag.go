@@ -2,6 +2,7 @@ package tag
 
 import (
 	"fmt"
+	"net/url"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -177,7 +178,9 @@ func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
 			owner, repo := repository.Owner, repository.Name
 			tagName := remaining[0]
 
-			path := fmt.Sprintf("/repos/%s/%s/tags/%s", owner, repo, tagName)
+			// Tag names may contain slashes (e.g. v1.0/rc1), so escape the name
+			// before splicing it into the request path.
+			path := fmt.Sprintf("/repos/%s/%s/tags/%s", owner, repo, url.PathEscape(tagName))
 			if err := client.Delete(path); err != nil {
 				return err
 			}

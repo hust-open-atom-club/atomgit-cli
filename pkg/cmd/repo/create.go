@@ -67,6 +67,13 @@ func runCreate(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory, opts *Cr
 }
 
 func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory, opts *CreateOptions, clone cloneRepositoryFunc) error {
+	// Validate conflicting visibility flags before any config/auth/client work so
+	// the error is reported even when unauthenticated (e.g. missing token would
+	// otherwise surface first as "not authenticated").
+	if opts.Public && opts.Private {
+		return fmt.Errorf("--public and --private are mutually exclusive")
+	}
+
 	currentUser, err := f.Config.GetUser()
 	if err != nil {
 		return fmt.Errorf("failed to get current user: %w", err)

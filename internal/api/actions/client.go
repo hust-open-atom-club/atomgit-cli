@@ -45,6 +45,11 @@ type ListArtifactsOptions struct {
 	PerPage   int
 }
 
+type ListWorkflowsOptions struct {
+	Page    int
+	PerPage int
+}
+
 type HTTPError struct {
 	Operation  string
 	StatusCode int
@@ -211,6 +216,38 @@ func (c *Client) GetArtifact(owner, repo, artifactID string) (Artifact, error) {
 func (c *Client) DownloadArtifact(owner, repo, artifactID string) (*http.Response, error) {
 	path := repositoryPath(owner, repo) + "/actions/artifacts/" + url.PathEscape(artifactID) + "/zip"
 	return c.download("download artifact", path)
+}
+
+func (c *Client) ListWorkflows(owner, repo string, opts ListWorkflowsOptions) (WorkflowListResponse, error) {
+	query := url.Values{}
+	setPositiveInt(query, "page", opts.Page)
+	setPositiveInt(query, "per_page", opts.PerPage)
+
+	var result WorkflowListResponse
+	path := repositoryPath(owner, repo) + "/actions/workflows" + encodeQuery(query)
+	if err := c.getJSON("list repository workflows", path, &result); err != nil {
+		return WorkflowListResponse{}, err
+	}
+	return result, nil
+}
+
+func (c *Client) CreateWorkflowDispatch(owner, repo, workflowID string, payload WorkflowDispatchPayload) error {
+	path := repositoryPath(owner, repo) + "/actions/workflows/" + url.PathEscape(workflowID) + "/dispatches"
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("create workflow dispatch: marshal payload: %w", err)
+	}
+
+	resp, err := c.client.DoRequestRawWithBody(http.MethodPost, path, bodyBytes, "application/json", "application/json")
+	if err != nil {
+		return fmt.Errorf("create workflow dispatch: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusAccepted {
+		return responseError("create workflow dispatch", resp)
+	}
+	return nil
 }
 
 func (c *Client) getJSON(operation, path string, result interface{}) error {

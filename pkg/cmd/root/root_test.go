@@ -2,6 +2,7 @@ package root
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -51,8 +52,9 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 	}
 
 	want := map[string]bool{
-		"api": false, "auth": false, "branch": false, "issue": false, "label": false, "license": false,
-		"org": false, "pr": false, "release": false, "repo": false, "run": false, "ssh-key": false, "tag": false, "version": false,
+		"api": false, "auth": false, "branch": false, "issue": false, "label": false, "license": false, "milestone": false,
+		"check-update": false,
+		"org":          false, "pr": false, "release": false, "repo": false, "run": false, "ssh-key": false, "tag": false, "version": false,
 	}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
@@ -76,6 +78,32 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 	}
 	if versionFlag.Shorthand != "" {
 		t.Fatalf("version shorthand = %q, want none", versionFlag.Shorthand)
+	}
+}
+
+func TestRootReturnsErrorsWithoutPrintingThem(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "fail",
+		RunE: func(*cobra.Command, []string) error {
+			return errors.New("boom")
+		},
+	})
+	cmd.SetArgs([]string{"fail"})
+
+	err = cmd.Execute()
+	if err == nil || err.Error() != "boom" {
+		t.Fatalf("Execute() error = %v, want boom", err)
+	}
+	if err := cmdutil.FlushWriter(cmd.ErrOrStderr()); err != nil {
+		t.Fatal(err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want no Cobra error output", stderr.String())
 	}
 }
 

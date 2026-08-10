@@ -311,6 +311,63 @@ func TestBrowseReleases(t *testing.T) {
 	}
 }
 
+func TestBrowseActions(t *testing.T) {
+	var capturedURL string
+	f := &cmdutil.Factory{
+		Config: browseTestConfig{},
+		BrowserOpener: func(rawURL string) error {
+			capturedURL = rawURL
+			return nil
+		},
+	}
+	cmd := NewCmdBrowse(f)
+	cmd.SetArgs([]string{"-R", "alice/demo", "-a"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if capturedURL != "https://atomgit.com/alice/demo/actions" {
+		t.Fatalf("URL = %q", capturedURL)
+	}
+}
+
+func TestBrowseWiki(t *testing.T) {
+	var capturedURL string
+	f := &cmdutil.Factory{
+		Config: browseTestConfig{},
+		BrowserOpener: func(rawURL string) error {
+			capturedURL = rawURL
+			return nil
+		},
+	}
+	cmd := NewCmdBrowse(f)
+	cmd.SetArgs([]string{"-R", "alice/demo", "-w"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if capturedURL != "https://atomgit.com/alice/demo/wiki" {
+		t.Fatalf("URL = %q", capturedURL)
+	}
+}
+
+func TestBrowseSettings(t *testing.T) {
+	var capturedURL string
+	f := &cmdutil.Factory{
+		Config: browseTestConfig{},
+		BrowserOpener: func(rawURL string) error {
+			capturedURL = rawURL
+			return nil
+		},
+	}
+	cmd := NewCmdBrowse(f)
+	cmd.SetArgs([]string{"-R", "alice/demo", "-s"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if capturedURL != "https://atomgit.com/alice/demo/setting" {
+		t.Fatalf("URL = %q", capturedURL)
+	}
+}
+
 func TestBrowseNoBrowser(t *testing.T) {
 	openerCalled := false
 	f := &cmdutil.Factory{
