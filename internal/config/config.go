@@ -6,24 +6,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"syscall"
 	"time"
-)
-
-var (
-	// ErrTokenNotFound is returned when no token file exists in any search path.
-	ErrTokenNotFound = errors.New("token file not found")
-
-	// ErrTokenFileSymlink is returned when a token file is a symlink
-	ErrTokenFileSymlink = errors.New("token file is a symlink")
-
-	// ErrTokenFileChanged is returned when a token file was changed during open.
-	ErrTokenFileChanged = errors.New("token file was changed")
-
-	// ErrTokenFileUnreadable is returned when a token file is not owner-readable.
-	ErrTokenFileUnreadable = errors.New("token file is not owner-readable")
 )
 
 const (
@@ -149,7 +133,7 @@ func readCredentialData() ([]byte, error) {
 				continue
 			}
 			if isPermissionErr(err) {
-				return nil, tokenReadPermissionError(path, err)
+				return nil, &TokenPermissionError{Path: path, Err: err}
 			}
 			return nil, fmt.Errorf("lstat token file info %s: %w", path, err)
 		}
@@ -165,7 +149,7 @@ func readCredentialData() ([]byte, error) {
 				continue
 			}
 			if isPermissionErr(err) {
-				return nil, tokenReadPermissionError(path, err)
+				return nil, &TokenPermissionError{Path: path, Err: err}
 			}
 			return nil, fmt.Errorf("open token file %s: %w", path, err)
 		}
@@ -174,7 +158,7 @@ func readCredentialData() ([]byte, error) {
 		info, err := f.Stat()
 		if err != nil {
 			if isPermissionErr(err) {
-				return nil, tokenReadPermissionError(path, err)
+				return nil, &TokenPermissionError{Path: path, Err: err}
 			}
 			return nil, fmt.Errorf("stat token file info %s: %w", path, err)
 		}
@@ -183,22 +167,8 @@ func readCredentialData() ([]byte, error) {
 			return nil, fmt.Errorf("cannot read %s: %w", path, ErrTokenFileChanged)
 		}
 
-		if runtime.GOOS != "windows" {
-			perm := info.Mode().Perm()
-
-			fixed, err := validateTokenFilePerm(perm)
-			if err != nil {
-				if errors.Is(err, ErrTokenFileUnreadable) {
-					return nil, tokenReadPermissionError(path, err)
-				}
-
-				return nil, fmt.Errorf("cannot read %s: %w", path, err)
-			}
-			if fixed != perm {
-				if err := f.Chmod(fixed); err != nil {
-					return nil, tokenSecurePermissionError(path, err)
-				}
-			}
+		if err := validateAndFixTokenFilePerm(f, path, info); err != nil {
+			return nil, err
 		}
 
 		data, err := io.ReadAll(f)
@@ -292,37 +262,6 @@ func SaveCredentials(c *StoredCredentials) error {
 	return SaveAccount(c, true)
 }
 
-func isPermissionErr(err error) bool {
-	return errors.Is(err, os.ErrPermission) || errors.Is(err, syscall.EACCES) || errors.Is(err, syscall.EPERM)
-}
-
-func tokenReadPermissionError(path string, err error) error {
-	hint := "check ownership and file read permissions"
-	if runtime.GOOS != "windows" {
-		hint = fmt.Sprintf("check ownership and set permissions with `chmod 600 %q`", path)
-	}
-
-	return permissionError(
-		"cannot read token file", path, err, hint,
-	)
-}
-
-func tokenSecurePermissionError(path string, err error) error {
-	return permissionError(
-		"cannot secure token file", path, err,
-		"make sure the file is owned by the current user",
-	)
-}
-
-func permissionError(action, path string, err error, hint string) error {
-	var pathErr *os.PathError
-	if errors.As(err, &pathErr) {
-		err = pathErr.Err
-	}
-
-	return fmt.Errorf("%s %s: %w\nhint: %s", action, path, err, hint)
-}
-
 // ClearCredentials removes all known credential files (XDG token.json and legacy path).
 // Returns the list of paths that were deleted.
 func ClearCredentials() ([]string, error) {
@@ -344,20 +283,4 @@ func ClearCredentials() ([]string, error) {
 		removed = append(removed, p)
 	}
 	return removed, nil
-}
-
-// validateTokenFilePerm validates Unix permission bits for a credential file.
-//
-// It requires the owner read bit to be set and removes group and other
-// permission bits.
-//
-// Returns:
-//   - os.FileMode: the sanitized permissions containing only owner bits.
-//   - error: ErrTokenFileUnreadable if the file is not readable by the owner.
-func validateTokenFilePerm(perm os.FileMode) (os.FileMode, error) {
-	if perm&0o400 == 0 {
-		return 0, ErrTokenFileUnreadable
-	}
-
-	return perm & 0o700, nil
 }

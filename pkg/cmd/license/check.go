@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -33,6 +34,11 @@ func newCmdCheck(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("failed to check license: %w", err)
 			}
 			defer resp.Body.Close()
+
+			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+				body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+				return fmt.Errorf("license check failed: %s - %s", resp.Status, strings.TrimSpace(string(body)))
+			}
 
 			// Read response body
 			body, err := io.ReadAll(resp.Body)

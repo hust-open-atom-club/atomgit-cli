@@ -38,17 +38,22 @@ func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 		Short: "Close an issue",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
+			// Resolve and validate arguments before any authentication or
+			// network initialization so invalid input never reaches GetToken.
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
+			number, err := parseIssueNumber(remaining[0])
+			if err != nil {
+				return err
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
+			}
 
 			client, err := f.NewAPIClient(token)
 			if err != nil {
@@ -94,6 +99,18 @@ func newCmdIssueReopen(f *cmdutil.Factory) *cobra.Command {
 		Short: "Reopen an issue",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Resolve and validate arguments before any authentication or
+			// network initialization so invalid input never reaches GetToken.
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			number, err := parseIssueNumber(remaining[0])
+			if err != nil {
+				return err
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return fmt.Errorf("not authenticated: %w", err)
@@ -103,13 +120,6 @@ func newCmdIssueReopen(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
 
 			issuePath := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
 			var current api.Issue
@@ -158,7 +168,7 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return err
 			}
 
 			if opts.Limit <= 0 {
@@ -217,7 +227,10 @@ func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
+			number, err := parseIssueNumber(remaining[0])
+			if err != nil {
+				return err
+			}
 
 			if opts.web {
 				num, err := strconv.Atoi(number)
@@ -386,4 +399,16 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("body", "body-file")
 
 	return cmd
+}
+
+// parseIssueNumber validates that number is a positive integer and returns its
+// canonical decimal form. Rejecting non-numeric values before they are
+// interpolated into an API request path prevents path traversal or query
+// injection via the issue number argument.
+func parseIssueNumber(value string) (string, error) {
+	number, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil || number <= 0 {
+		return "", fmt.Errorf("invalid issue number %q (expected a positive integer)", value)
+	}
+	return strconv.Itoa(number), nil
 }

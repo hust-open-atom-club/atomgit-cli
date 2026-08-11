@@ -3,6 +3,7 @@ package issue
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -13,6 +14,7 @@ import (
 	"testing"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
+	"github.com/spf13/cobra"
 )
 
 type issueTestConfig struct{}
@@ -20,6 +22,12 @@ type issueTestConfig struct{}
 func (issueTestConfig) GetToken() (string, error) { return "token", nil }
 func (issueTestConfig) GetUser() (string, error)  { return "alice", nil }
 func (issueTestConfig) GetHost() string           { return "atomgit.com" }
+
+type issueAuthErrorConfig struct{ issueTestConfig }
+
+func (issueAuthErrorConfig) GetToken() (string, error) {
+	return "", errors.New("not authenticated: run `ag auth login`")
+}
 
 type issueRoundTripFunc func(*http.Request) (*http.Response, error)
 
@@ -181,6 +189,14 @@ func TestIssueListInfersRepositoryAndHonorsLimit(t *testing.T) {
 	}
 	if requests != 1 {
 		t.Fatalf("requests = %d, want 1", requests)
+	}
+}
+
+func TestIssueListReturnsCanonicalAuthenticationError(t *testing.T) {
+	cmd := newCmdIssueList(&cmdutil.Factory{Config: issueAuthErrorConfig{}})
+	err := cmd.RunE(cmd, []string{"alice/demo"})
+	if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
+		t.Fatalf("error = %v", err)
 	}
 }
 
@@ -558,5 +574,49 @@ func issueResponse(statusCode int, body string) *http.Response {
 		Status:     http.StatusText(statusCode),
 		Body:       io.NopCloser(strings.NewReader(body)),
 		Header:     make(http.Header),
+	}
+}
+
+type issueRecordingConfig struct {
+	issueTestConfig
+	getTokenCalls int
+}
+
+func (c *issueRecordingConfig) GetToken() (string, error) {
+	c.getTokenCalls++
+	return "token", nil
+}
+
+func TestIssueCloseReopenRejectInvalidNumberBeforeAuth(t *testing.T) {
+	tests := []struct {
+		name string
+		cmd  func(f *cmdutil.Factory) *cobra.Command
+	}{
+		{name: "close", cmd: newCmdIssueClose},
+		{name: "reopen", cmd: newCmdIssueReopen},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &issueRecordingConfig{}
+			factory := &cmdutil.Factory{Config: cfg}
+			var requests int
+			factory.HttpClient = func() (*http.Client, error) {
+				requests++
+				return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+					return issueResponse(200, `{}`), nil
+				})}, nil
+			}
+			cmd := tt.cmd(factory)
+			err := cmd.RunE(cmd, []string{"alice/demo", "1/../../evil"})
+			if err == nil || !strings.Contains(err.Error(), "invalid issue number") {
+				t.Fatalf("error = %v, want 'invalid issue number'", err)
+			}
+			if cfg.getTokenCalls != 0 {
+				t.Fatalf("GetToken was called %d times; parseIssueNumber must reject invalid input before authentication", cfg.getTokenCalls)
+			}
+			if requests != 0 {
+				t.Fatalf("HttpClient created %d times; invalid input must not reach network initialization", requests)
+			}
+		})
 	}
 }

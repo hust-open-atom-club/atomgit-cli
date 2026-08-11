@@ -322,3 +322,70 @@ func TestResponseErrorPreservesBodyReadFailure(t *testing.T) {
 		}
 	}
 }
+
+func TestListWorkflows(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodGet || req.URL.Path != "/api/v8/repos/team/demo/actions/workflows" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		if got := req.URL.Query().Encode(); got != "page=2&per_page=50" {
+			t.Fatalf("query = %q", got)
+		}
+		body := `{"total_count":1,"workflows":[{"workflow_id":"wf-123","name":"CI","file_path":".atomgit/workflows/ci.yml","state":"active"}]}`
+		return response(req, http.StatusOK, body), nil
+	})
+
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+	res, err := client.ListWorkflows("team", "demo", ListWorkflowsOptions{Page: 2, PerPage: 50})
+	if err != nil {
+		t.Fatalf("ListWorkflows failed: %v", err)
+	}
+	if res.TotalCount != 1 || len(res.Workflows) != 1 {
+		t.Fatalf("unexpected result: %#v", res)
+	}
+	if res.Workflows[0].ID != "wf-123" || res.Workflows[0].Name != "CI" {
+		t.Fatalf("unexpected workflow: %#v", res.Workflows[0])
+	}
+}
+
+func TestListWorkflowsDefaultsToNoQuery(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.RawQuery != "" {
+			t.Fatalf("query = %q, want empty", req.URL.RawQuery)
+		}
+		return response(req, http.StatusOK, `{"total_count":0,"workflows":[]}`), nil
+	})
+
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+	if _, err := client.ListWorkflows("team", "demo", ListWorkflowsOptions{}); err != nil {
+		t.Fatalf("ListWorkflows failed: %v", err)
+	}
+}
+
+func TestCreateWorkflowDispatch(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodPost || req.URL.Path != "/api/v8/repos/team/demo/actions/workflows/wf-123/dispatches" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		if contentType := req.Header.Get("Content-Type"); contentType != "application/json" {
+			t.Fatalf("Content-Type = %q", contentType)
+		}
+		bodyBytes, err := io.ReadAll(req.Body)
+		if err != nil {
+			t.Fatalf("read body: %v", err)
+		}
+		if !strings.Contains(string(bodyBytes), `"ref":"main"`) || !strings.Contains(string(bodyBytes), `"env":"prod"`) {
+			t.Fatalf("unexpected body: %s", string(bodyBytes))
+		}
+		return response(req, http.StatusNoContent, ""), nil
+	})
+
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+	err := client.CreateWorkflowDispatch("team", "demo", "wf-123", WorkflowDispatchPayload{
+		Ref:    "main",
+		Inputs: map[string]string{"env": "prod"},
+	})
+	if err != nil {
+		t.Fatalf("CreateWorkflowDispatch failed: %v", err)
+	}
+}

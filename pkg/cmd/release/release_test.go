@@ -57,8 +57,8 @@ func staticRepoFactory(owner, repo string) *cmdutil.Factory {
 
 func TestNewCmdReleaseRegistersCommands(t *testing.T) {
 	cmd := NewCmdRelease(&cmdutil.Factory{})
-	if !strings.Contains(cmd.Long, "#18") || !strings.Contains(cmd.Long, "does not") {
-		t.Fatalf("release Long does not explain the #18 boundary: %q", cmd.Long)
+	if !strings.Contains(cmd.Long, "make publish") || !strings.Contains(cmd.Long, "automated release pipeline") {
+		t.Fatalf("release Long does not reference the automated pipeline: %q", cmd.Long)
 	}
 	wantExample := `  ag release list owner/repo
   ag release view owner/repo v1.0.0

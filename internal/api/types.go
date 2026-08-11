@@ -35,6 +35,18 @@ type Repository struct {
 	} `json:"owner"`
 }
 
+// RepositorySyncRequest selects the fork branch to synchronize. Force permits
+// the server to overwrite commits that cannot be fast-forwarded.
+type RepositorySyncRequest struct {
+	Branch string `json:"branch"`
+	Force  bool   `json:"force,omitempty"`
+}
+
+// RepositorySyncResponse is returned by the fork synchronization endpoint.
+type RepositorySyncResponse struct {
+	Result bool `json:"repo_sync_result"`
+}
+
 // PullRequest represents an AtomGit pull request
 type PullRequest struct {
 	ID                int64       `json:"id"`
@@ -350,13 +362,25 @@ type Label struct {
 	Color       string `json:"color"`
 }
 
-// Milestone represents a repository milestone that can be assigned to a PR.
+// Milestone represents an AtomGit repository milestone.
 type Milestone struct {
-	Number      int    `json:"number"`
-	Title       string `json:"title"`
-	State       string `json:"state"`
-	Description string `json:"description"`
-	URL         string `json:"url"`
+	Number       interface{} `json:"number"`
+	Title        string      `json:"title"`
+	Description  string      `json:"description"`
+	State        string      `json:"state"`
+	DueOn        string      `json:"due_on"`
+	OpenIssues   int         `json:"open_issues"`
+	ClosedIssues int         `json:"closed_issues"`
+	RepositoryID int64       `json:"repository_id"`
+	URL          string      `json:"url"`
+	HTMLURL      string      `json:"html_url"`
+	CreatedAt    string      `json:"created_at"`
+	UpdatedAt    string      `json:"updated_at"`
+}
+
+// GetNumber returns the milestone number as a string.
+func (m *Milestone) GetNumber() string {
+	return formatIdentifier(m.Number)
 }
 
 // Comment represents a comment on an issue or pull request
@@ -517,6 +541,7 @@ type ReleaseAsset struct {
 type Release struct {
 	TagName         string         `json:"tag_name"`
 	TargetCommitish string         `json:"target_commitish"`
+	Draft           bool           `json:"draft"`
 	Prerelease      bool           `json:"prerelease"`
 	Name            string         `json:"name"`
 	Body            string         `json:"body"`

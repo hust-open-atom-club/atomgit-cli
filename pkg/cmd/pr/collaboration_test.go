@@ -23,7 +23,7 @@ func TestPRCreateCollaborationMetadataMappingAndOrder(t *testing.T) {
 		case req.URL.Path == "/api/v5/repos/alice/demo/labels":
 			return prResponse(http.StatusOK, `[{"name":"Bug"}]`), nil
 		case req.URL.Path == "/api/v5/repos/alice/demo/milestones":
-			return prResponse(http.StatusOK, `[{"number":7,"title":"v1.0"}]`), nil
+			return prResponse(http.StatusOK, `[{"number":"7","title":"v1.0"}]`), nil
 		case req.Method == http.MethodPost && req.URL.Path == "/api/v5/repos/alice/demo/pulls":
 			var body map[string]interface{}
 			decodePRRequest(t, req, &body)
@@ -104,7 +104,7 @@ func TestPREditCollaborationMetadataOrderAndBodies(t *testing.T) {
 		case req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/labels" && req.Method == http.MethodGet:
 			return prResponse(http.StatusOK, `[{"name":"Bug"}]`), nil
 		case req.URL.Path == "/api/v5/repos/alice/demo/milestones" && req.Method == http.MethodGet:
-			return prResponse(http.StatusOK, `[{"number":2,"title":"next"}]`), nil
+			return prResponse(http.StatusOK, `[{"number":"2","title":"next"}]`), nil
 		default:
 			mutations = append(mutations, req.Method+" "+req.URL.EscapedPath())
 			assertEditMutationBody(t, req)
@@ -146,11 +146,11 @@ func TestPREditCollaborationMetadataIsIdempotent(t *testing.T) {
 		case req.URL.Path == "/api/v5/repos/alice/demo/labels":
 			return prResponse(http.StatusOK, `[{"name":"Bug"}]`), nil
 		case req.URL.Path == "/api/v5/repos/alice/demo/pulls/42":
-			return prResponse(http.StatusOK, `{"number":42,"assignees":[{"login":"ann"}],"labels":[{"name":"Bug"}],"milestone":{"number":2}}`), nil
+			return prResponse(http.StatusOK, `{"number":42,"assignees":[{"login":"ann"}],"labels":[{"name":"Bug"}],"milestone":{"number":"2"}}`), nil
 		case req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/labels":
 			return prResponse(http.StatusOK, `[{"name":"Bug"}]`), nil
 		case req.URL.Path == "/api/v5/repos/alice/demo/milestones":
-			return prResponse(http.StatusOK, `[{"number":2,"title":"next"}]`), nil
+			return prResponse(http.StatusOK, `[{"number":"2","title":"next"}]`), nil
 		default:
 			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.RequestURI())
 			return nil, nil
