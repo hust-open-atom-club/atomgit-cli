@@ -107,7 +107,6 @@ rm -f result result-*
 ```
 
 `nix-update --build` 会创建 Nix 的 `result` 结果链接；上述本地流程在完成后删除它，仓库也忽略 `result` 和 `result-*`。`nix-update` 会同时维护源码 hash 和 Go `vendorHash`。当前 nixos-unstable 已停止支持 Intel macOS，因此 flake 仅为 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
-
 ## 维护 WinGet
 
 WinGet 清单托管在社区仓库 [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs)，包 ID 为 `HUSTOpenAtomClub.AtomGitCLI`。每个版本在 `manifests/h/HUSTOpenAtomClub/AtomGitCLI/<version>/` 下包含三个 YAML 清单文件（主清单、installer 和 locale），其中 installer 清单固定各平台安装包的下载 URL 和 SHA-256。

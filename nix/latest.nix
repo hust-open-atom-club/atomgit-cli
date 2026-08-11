@@ -1,23 +1,28 @@
 {
   pkgs,
   mkAg,
+  self,
 }:
 
 let
-  version = "unstable-baadf0a89a49b17c07f4f1bbfa37ef2da059b435";
-  commit = builtins.substring 9 40 version;
+  commit = self.rev or self.dirtyRev or "unknown";
+  version = self.shortRev or self.dirtyShortRev or "dev";
+  buildDate =
+    let
+      d = self.lastModifiedDate or "19700101000000";
+    in
+    if builtins.stringLength d >= 14
+    then "${builtins.substring 0 4 d}-${builtins.substring 4 2 d}-${builtins.substring 6 2 d}T${builtins.substring 8 2 d}:${builtins.substring 10 2 d}:${builtins.substring 12 2 d}Z"
+    else "unknown";
 in
 pkgs.buildGoModule (
   mkAg {
-    inherit commit;
-    buildVersion = builtins.substring 0 7 commit;
+    inherit commit buildDate;
+    buildVersion = version;
   }
   // {
     inherit version;
-    vendorHash = "sha256-iv1FSZyFaG2IL7DzI8UZp77OjfbQG6A4LGSR/TQFDQI=";
-    src = pkgs.fetchzip {
-      url = "https://raw.atomgit.com/hust-open-atom-club/atomgit-cli/archive/refs/heads/${commit}.tar.gz";
-      hash = "sha256-7wPLSW/3m1LSsu+i4fCJBZ1NS/OATbN5Np0nVlfrk/A=";
-    };
+    src = self;
+    vendorHash = "sha256-fddAzvfdUzVhR3APRVJP3FnNHJr/VAXGRNkbZoDucfo=";
   }
 )
