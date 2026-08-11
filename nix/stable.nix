@@ -4,7 +4,7 @@
 }:
 
 let
-  version = "0.7.1";
+  version = "0.7.0";
   commit = "v${version}";
 in
 pkgs.buildGoModule (
