@@ -33,7 +33,7 @@ jobs:
             -o /tmp/install-nix.sh \
             https://mirrors.tuna.tsinghua.edu.cn/nix/latest/install
           sh /tmp/install-nix.sh --no-daemon --no-channel-add
-          printf '%s\n' ". \"$HOME/.nix-profile/etc/profile.d/nix.sh\"" >> "$ATOMGIT_ENV"
+          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
 
           mkdir -p "$HOME/.config/nix"
           printf '%s\n' \
@@ -45,6 +45,7 @@ jobs:
       - name: Install nix-update from TUNA
         run: |
           set -eu
+          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
           nix-channel --add https://mirrors.tuna.tsinghua.edu.cn/nix-channels/nixpkgs-unstable nixpkgs
           nix-channel --list
           nix-channel --update
@@ -53,6 +54,7 @@ jobs:
       - name: Update stable and latest
         run: |
           set -eu
+          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
 
           stable_version=$(curl --fail --silent --show-error \
             https://api.atomgit.com/api/v5/repos/hust-open-atom-club/atomgit-cli/releases/latest \
