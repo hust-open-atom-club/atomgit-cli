@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - test
+      - nix-update
   workflow_dispatch:
   schedule:
     - cron: "17 3 * * *"
