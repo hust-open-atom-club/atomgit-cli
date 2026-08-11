@@ -46,6 +46,8 @@ jobs:
           nix shell nixpkgs#nix-update -c nix-update stable --flake --version "$stable_version" --build
           nix shell nixpkgs#nix-update -c nix-update latest --flake --version=skip --build
 
+          rm -f result result-*
+
       - name: Commit and push updates
         run: |
           set -eu
