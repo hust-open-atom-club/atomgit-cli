@@ -32,7 +32,7 @@ jobs:
           curl --proto '=https' --tlsv1.2 -fsSL \
             -o /tmp/install-nix.sh \
             https://mirrors.tuna.tsinghua.edu.cn/nix/latest/install
-          sh /tmp/install-nix.sh --no-daemon
+          sh /tmp/install-nix.sh --no-daemon --no-channel-add
           printf '%s\n' ". \"$HOME/.nix-profile/etc/profile.d/nix.sh\"" >> "$ATOMGIT_ENV"
 
           mkdir -p "$HOME/.config/nix"
@@ -46,6 +46,7 @@ jobs:
         run: |
           set -eu
           nix-channel --add https://mirrors.tuna.tsinghua.edu.cn/nix-channels/nixpkgs-unstable nixpkgs
+          nix-channel --list
           nix-channel --update
           nix-env -iA nixpkgs.nix-update
 
