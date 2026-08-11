@@ -25,6 +25,7 @@ jobs:
         uses: checkout
         with:
           fetch-depth: 0
+          persist-credentials: true
 
       - name: Install Nix
         run: |
