@@ -7,8 +7,6 @@ on:
       - test
       - nix-update
   workflow_dispatch:
-  schedule:
-    - cron: "0 3 * * *"
 
 permissions:
   repository: write
