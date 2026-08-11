@@ -8,13 +8,13 @@
         "rev": "f13ff45afd1bb73e640eaa08a7066dbed07e3238",
         "shallow": true,
         "type": "git",
-        "url": "https://mirrors.cernet.edu.cn/nixpkgs.git"
+        "url": "https://mirror.nju.edu.cn/git/nixpkgs.git"
       },
       "original": {
         "ref": "nixos-unstable",
         "shallow": true,
         "type": "git",
-        "url": "https://mirrors.cernet.edu.cn/nixpkgs.git"
+        "url": "https://mirror.nju.edu.cn/git/nixpkgs.git"
       }
     },
     "nixpkgs-darwin": {
@@ -25,13 +25,13 @@
         "rev": "6241c49fffa016352c8e757decbdb20541aa9cb2",
         "shallow": true,
         "type": "git",
-        "url": "https://mirrors.cernet.edu.cn/nixpkgs.git"
+        "url": "https://mirror.nju.edu.cn/git/nixpkgs.git"
       },
       "original": {
         "ref": "nixpkgs-26.05-darwin",
         "shallow": true,
         "type": "git",
-        "url": "https://mirrors.cernet.edu.cn/nixpkgs.git"
+        "url": "https://mirror.nju.edu.cn/git/nixpkgs.git"
       }
     },
     "root": {
