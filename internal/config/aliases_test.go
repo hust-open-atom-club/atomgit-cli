@@ -1,9 +1,12 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"testing"
 )
 
@@ -127,5 +130,66 @@ func TestAliasFilePermissions(t *testing.T) {
 	}
 	if got := dirInfo.Mode().Perm(); got != 0o700 {
 		t.Errorf("alias config dir permissions = %o, want 700", got)
+	}
+}
+
+// TestConcurrentAliasUpdatesHelper is the subprocess entry point for
+// TestConcurrentAliasUpdates. It saves a single alias in an isolated
+// environment and reports success or failure to the parent.
+func TestConcurrentAliasUpdatesHelper(t *testing.T) {
+	name := os.Getenv("ALIAS_HELPER_NAME")
+	if name == "" {
+		t.Skip("helper subprocess only")
+	}
+	if err := SaveAlias(name, "pr list"); err != nil {
+		t.Fatalf("SaveAlias(%q) error = %v", name, err)
+	}
+}
+
+// TestConcurrentAliasUpdates spawns many real processes that save aliases at
+// the same time and verifies none of the writes is lost. This is a
+// regression test for concurrent read-modify-write updates of the alias
+// config that previously silently overwrote each other.
+func TestConcurrentAliasUpdates(t *testing.T) {
+	if os.Getenv("ALIAS_HELPER_NAME") != "" {
+		t.Skip("helper subprocess only")
+	}
+	withTempConfig(t)
+
+	const n = 24
+	var wg sync.WaitGroup
+	errCh := make(chan error, n)
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			name := fmt.Sprintf("alias-%03d", i)
+			cmd := exec.Command(os.Args[0], "-test.run=^TestConcurrentAliasUpdatesHelper$")
+			cmd.Env = append(os.Environ(),
+				"XDG_CONFIG_HOME="+os.Getenv("XDG_CONFIG_HOME"),
+				"ALIAS_HELPER_NAME="+name,
+			)
+			if out, err := cmd.CombinedOutput(); err != nil {
+				errCh <- fmt.Errorf("helper for %s failed: %v: %s", name, err, out)
+			}
+		}(i)
+	}
+	wg.Wait()
+	close(errCh)
+	for err := range errCh {
+		t.Error(err)
+	}
+
+	aliases, err := LoadAliases()
+	if err != nil {
+		t.Fatalf("LoadAliases() error = %v", err)
+	}
+	if len(aliases) != n {
+		t.Errorf("len(aliases) = %d, want %d (concurrent updates lost)", len(aliases), n)
+	}
+	for i := 0; i < n; i++ {
+		if _, ok := aliases[fmt.Sprintf("alias-%03d", i)]; !ok {
+			t.Errorf("alias-%03d missing after concurrent saves", i)
+		}
 	}
 }

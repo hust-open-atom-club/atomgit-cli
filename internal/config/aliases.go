@@ -79,11 +79,26 @@ func DeleteAlias(name string) (bool, error) {
 
 // updateAliases loads the alias map, applies mutate, and persists the
 // result back to the configuration file with owner-only permissions.
+//
+// The whole read-modify-write transaction is serialized with a cross-process
+// lock, so concurrent `ag alias set/delete` processes cannot lose each
+// other's changes, and the result is persisted via a temporary file plus
+// atomic replacement so readers never observe a partial write.
 func updateAliases(mutate func(aliases map[string]string) error) error {
 	path, err := AliasFilePath()
 	if err != nil {
 		return err
 	}
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("create config directory: %w", err)
+	}
+	lock, err := lockFile(filepath.Join(dir, filepath.Base(path)+".lock"))
+	if err != nil {
+		return err
+	}
+	defer lock.release()
+
 	aliases, err := LoadAliases()
 	if err != nil {
 		return err
@@ -91,15 +106,45 @@ func updateAliases(mutate func(aliases map[string]string) error) error {
 	if err := mutate(aliases); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return fmt.Errorf("create config directory: %w", err)
-	}
+	return writeAliasesAtomic(path, aliases)
+}
+
+// writeAliasesAtomic persists aliases to path by writing a temporary file in
+// the same directory and atomically replacing the destination, so concurrent
+// readers never observe a truncated or half-written config file.
+func writeAliasesAtomic(path string, aliases map[string]string) error {
 	data, err := json.MarshalIndent(AliasConfig{Aliases: aliases}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode alias config: %w", err)
 	}
-	if err := os.WriteFile(path, append(data, '\n'), 0o600); err != nil {
-		return fmt.Errorf("write alias config %s: %w", path, err)
+	data = append(data, '\n')
+
+	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return fmt.Errorf("create temp alias config: %w", err)
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+	if err := tmp.Chmod(0o600); err != nil {
+		tmp.Close()
+		return fmt.Errorf("set temp alias config permissions: %w", err)
+	}
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return fmt.Errorf("write temp alias config: %w", err)
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return fmt.Errorf("sync temp alias config: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("close temp alias config: %w", err)
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		return fmt.Errorf("replace alias config %s: %w", path, err)
+	}
+	if err := syncDir(filepath.Dir(path)); err != nil {
+		return fmt.Errorf("sync alias config directory: %w", err)
 	}
 	return nil
 }
