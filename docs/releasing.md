@@ -91,6 +91,8 @@ make publish \
 
 工作流 runner 通过清华 TUNA 镜像执行 Nix 单用户安装，并禁用安装器默认添加的官方 channel，再从 TUNA 的 `nixpkgs-unstable` channel 安装 `nix-update`；Nix binary cache 使用显式优先级，依次尝试 TUNA、SJTU、USTC、CERNET，最后回退到官方 cache。项目 flake 的 nixpkgs inputs 通过 CERNET 的 NJU Git 镜像进行浅克隆，避免动态镜像调度因 runner 线路而选择不可用节点；两个 inputs 分别跟踪 `nixos-unstable` 和 `nixpkgs-26.05-darwin`。
 
+`nix-update --build` 的 Go 模块下载显式使用 `goproxy.cn`、阿里云和 direct 的故障转移链；代理之间使用 `|` 分隔，使连接超时等网络错误也会切换到下一个来源。
+
 可在本地复现相同更新；开发环境已包含 `nix-update`：
 
 ```bash

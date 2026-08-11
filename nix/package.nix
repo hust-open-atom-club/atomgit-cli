@@ -10,7 +10,7 @@
   pname = "ag";
   subPackages = [ "cmd/ag" ];
   proxyVendor = true;
-  env.GOPROXY = "https://goproxy.cn,direct";
+  env.GOPROXY = "https://goproxy.cn|https://mirrors.aliyun.com/goproxy/|direct";
   ldflags = [
     "-s"
     "-w"

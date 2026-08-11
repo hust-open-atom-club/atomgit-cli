@@ -55,6 +55,7 @@ jobs:
         run: |
           set -eu
           export PATH="$HOME/.nix-profile/bin:$PATH"
+          export GOPROXY="https://goproxy.cn|https://mirrors.aliyun.com/goproxy/|direct"
 
           stable_version=$(curl --fail --silent --show-error \
             https://api.atomgit.com/api/v5/repos/hust-open-atom-club/atomgit-cli/releases/latest \
