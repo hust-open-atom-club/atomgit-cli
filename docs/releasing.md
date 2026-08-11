@@ -87,7 +87,7 @@ make publish \
 
 两个 package 都由 Nix 管理；支持发行来源字段的版本会报告 `selfUpdate=false, source=nix`。`default` 和兼容名称 `ag` 都指向 `stable`。
 
-`.gitcode/workflows/update-nix.yml` 每天在默认分支上运行，也支持手动触发。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；构建验证后在内容变化时直接提交到默认分支。工作流需要 `repository: write`，并让 checkout 在 job 期间保留自动注入的短期凭据用于推送，不需要额外长期 token。
+`.gitcode/workflows/update-nix.yml` 每天在默认分支上运行，也支持手动触发。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；构建验证后在内容变化时直接提交到默认分支。工作流需要 `repository: write`，并在单次 `git push` 中使用自动生成的 `ATOMGIT_TOKEN`，不需要额外长期 token。
 
 工作流 runner 通过清华 TUNA 镜像执行 Nix 单用户安装，并禁用安装器默认添加的官方 channel，再从 TUNA 的 `nixpkgs-unstable` channel 安装 `nix-update`；Nix binary cache 使用显式优先级，依次尝试 TUNA、SJTU、USTC、CERNET，最后回退到官方 cache。项目 flake 的 nixpkgs inputs 通过 CERNET 的 NJU Git 镜像进行浅克隆，避免动态镜像调度因 runner 线路而选择不可用节点；两个 inputs 分别跟踪 `nixos-unstable` 和 `nixpkgs-26.05-darwin`。
 
