@@ -1,11 +1,8 @@
 package branch
 
 import (
-	"fmt"
 	"net/url"
-	"strings"
 
-	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
