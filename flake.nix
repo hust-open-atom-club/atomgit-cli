@@ -1,8 +1,8 @@
 {
   description = "Development environment for the AtomGit CLI";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-  inputs.nixpkgs-darwin.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
+  inputs.nixpkgs.url = "git+https://mirrors.cernet.edu.cn/nixpkgs.git?ref=nixos-unstable&shallow=1";
+  inputs.nixpkgs-darwin.url = "git+https://mirrors.cernet.edu.cn/nixpkgs.git?ref=nixpkgs-26.05-darwin&shallow=1";
 
   outputs = { self, nixpkgs, nixpkgs-darwin, ... }:
     let
