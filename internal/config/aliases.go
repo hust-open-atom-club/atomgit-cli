@@ -56,9 +56,9 @@ func LoadAliases() (map[string]string, error) {
 // SaveAlias stores an alias in the configuration file, replacing any
 // existing alias with the same name.
 func SaveAlias(name, expansion string) error {
-	return updateAliases(func(aliases map[string]string) error {
+	return updateAliases(func(aliases map[string]string) (bool, error) {
 		aliases[name] = expansion
-		return nil
+		return true, nil
 	})
 }
 
@@ -66,13 +66,13 @@ func SaveAlias(name, expansion string) error {
 // whether an alias with the given name existed and was removed.
 func DeleteAlias(name string) (bool, error) {
 	deleted := false
-	err := updateAliases(func(aliases map[string]string) error {
+	err := updateAliases(func(aliases map[string]string) (bool, error) {
 		if _, ok := aliases[name]; !ok {
-			return nil
+			return false, nil
 		}
 		delete(aliases, name)
 		deleted = true
-		return nil
+		return true, nil
 	})
 	return deleted, err
 }
@@ -84,7 +84,7 @@ func DeleteAlias(name string) (bool, error) {
 // lock, so concurrent `ag alias set/delete` processes cannot lose each
 // other's changes, and the result is persisted via a temporary file plus
 // atomic replacement so readers never observe a partial write.
-func updateAliases(mutate func(aliases map[string]string) error) error {
+func updateAliases(mutate func(aliases map[string]string) (bool, error)) error {
 	path, err := AliasFilePath()
 	if err != nil {
 		return err
@@ -103,8 +103,12 @@ func updateAliases(mutate func(aliases map[string]string) error) error {
 	if err != nil {
 		return err
 	}
-	if err := mutate(aliases); err != nil {
+	changed, err := mutate(aliases)
+	if err != nil {
 		return err
+	}
+	if !changed {
+		return nil
 	}
 	return writeAliasesAtomic(path, aliases)
 }

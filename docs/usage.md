@@ -747,10 +747,10 @@ ag check-update
 
 ## 命令别名 (alias)
 
-为常用命令创建快捷方式。别名在调用时展开：`ag` 的第一个参数会在别名表中查找，命中后替换为对应的展开内容再执行。
+为常用命令创建快捷方式。别名在调用时展开：`ag` 的第一个非 flag 参数会在别名表中查找，命中后替换为对应的展开内容再执行。
 
 ```bash
-# 设置别名（展开内容含空格时可加引号）
+# 设置别名（展开内容含空格时用引号让 shell 视为一个参数）
 ag alias set pl "pr list"
 ag alias set rv repo view
 ag alias set open-prs "pr list --state open"
@@ -762,9 +762,9 @@ ag alias list
 ag alias delete pl
 ```
 
-- 别名存储在 `~/.config/ag-cli/config.json`（或 `$XDG_CONFIG_HOME/ag-cli/config.json`），文件权限为 `0600`。
+- 别名存储在 `~/.config/ag-cli/config.json`（或 `$XDG_CONFIG_HOME/ag-cli/config.json`），文件权限为 `0600`；该文件只存放别名数据，凭据保存在独立的 `token.json` 中，两者不共用。
 - 别名不会覆盖内置命令：`alias set` 会直接拒绝与内置命令同名的别名名（内置命令始终优先）。
+- 展开内容的第一个命令必须是已有内置命令，`alias set` 会校验并拒绝未知命令或指向其他别名的展开（别名只展开一次）。
 - 展开内容不能以 `!` 开头（不支持 shell 风格别名），也不能为空。
-- 展开内容包含 flag 时需要整体用引号包裹（与 GitHub CLI 行为一致）。
-- 展开内容中的空格可用 `\ ` 转义，例如 Windows 路径 `C:\Program\ Files` 会作为单个参数传递。
+- 展开内容不支持 shell 引号解析，引号会被当作普通字符；单个参数内的空格需用 `\ ` 转义，例如 Windows 路径 `C:\Program\ Files` 会作为单个参数传递（这与 GitHub CLI 用 shlex 解析的规则不同）。
 - 别名配置文件损坏时，`ag` 会在 stderr 输出警告并忽略别名继续执行，不会阻塞其他命令。

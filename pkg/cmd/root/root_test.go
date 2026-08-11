@@ -425,33 +425,6 @@ func TestExpandAliasCorruptConfigWarnsOnStderr(t *testing.T) {
 	}
 }
 
-func TestSplitExpansion(t *testing.T) {
-	tests := []struct {
-		name string
-		in   string
-		want []string
-	}{
-		{name: "empty", in: "", want: nil},
-		{name: "single", in: "pr", want: []string{"pr"}},
-		{name: "multi", in: "pr list", want: []string{"pr", "list"}},
-		{name: "escaped space", in: "browse C:\\Program\\ Files\\x", want: []string{"browse", `C:\Program Files\x`}},
-		{name: "escaped tab", in: "go\\\tnow", want: []string{"go\tnow"}},
-		{name: "backslash letter kept verbatim", in: `C:\temp\x`, want: []string{`C:\temp\x`}},
-		{name: "unquoted windows path split", in: `C:\Program Files`, want: []string{`C:\Program`, `Files`}},
-		{name: "collapsed whitespace", in: "a   b", want: []string{"a", "b"}},
-		{name: "leading whitespace", in: "  a b", want: []string{"a", "b"}},
-		{name: "trailing whitespace", in: "a b  ", want: []string{"a", "b"}},
-		{name: "tab separator", in: "a\tb", want: []string{"a", "b"}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := splitExpansion(tt.in); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("splitExpansion(%q) = %v, want %v", tt.in, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestExpandAliasWithEscapedSpaceInExpansion(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	// Windows path with a space survives as a single token via `\ `.

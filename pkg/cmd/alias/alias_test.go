@@ -2,6 +2,7 @@ package alias
 
 import (
 	"bytes"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -9,6 +10,30 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
+
+// newAliasTestRoot returns a minimal command tree with the commands used in
+// alias set-tests registered alongside alias, so expansion-target validation
+// resolves them.
+func newAliasTestRoot() *cobra.Command {
+	rootCmd := &cobra.Command{Use: "ag"}
+	prCmd := &cobra.Command{Use: "pr"}
+	prCmd.AddCommand(&cobra.Command{Use: "list"})
+	rootCmd.AddCommand(prCmd)
+	rootCmd.AddCommand(&cobra.Command{Use: "repo"})
+	rootCmd.AddCommand(NewCmdAlias(&cmdutil.Factory{}))
+	return rootCmd
+}
+
+func runAliasSet(t *testing.T, args ...string) (string, error) {
+	t.Helper()
+	buf := &bytes.Buffer{}
+	rootCmd := newAliasTestRoot()
+	rootCmd.SetOut(buf)
+	rootCmd.SetErr(buf)
+	rootCmd.SetArgs(args)
+	err := rootCmd.Execute()
+	return buf.String(), err
+}
 
 func TestValidateAliasName(t *testing.T) {
 	tests := []struct {
@@ -62,17 +87,13 @@ func TestValidateAliasExpansion(t *testing.T) {
 func TestAliasSetCommand(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	buf := &bytes.Buffer{}
-	cmd := NewCmdAlias(&cmdutil.Factory{})
-	cmd.SetOut(buf)
-	cmd.SetErr(buf)
-	cmd.SetArgs([]string{"set", "pl", "pr list"})
-	if err := cmd.Execute(); err != nil {
+	out, err := runAliasSet(t, "alias", "set", "pl", "pr list")
+	if err != nil {
 		t.Fatalf("alias set error = %v", err)
 	}
 
-	if got := buf.String(); !strings.Contains(got, "Added alias pl: pr list") {
-		t.Errorf("output = %q, want to contain %q", got, "Added alias pl: pr list")
+	if !strings.Contains(out, "Added alias pl: pr list") {
+		t.Errorf("output = %q, want to contain %q", out, "Added alias pl: pr list")
 	}
 
 	aliases, err := config.LoadAliases()
@@ -87,12 +108,7 @@ func TestAliasSetCommand(t *testing.T) {
 func TestAliasSetCommandJoinsExpansion(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	buf := &bytes.Buffer{}
-	cmd := NewCmdAlias(&cmdutil.Factory{})
-	cmd.SetOut(buf)
-	cmd.SetErr(buf)
-	cmd.SetArgs([]string{"set", "open-prs", "pr", "list"})
-	if err := cmd.Execute(); err != nil {
+	if _, err := runAliasSet(t, "alias", "set", "open-prs", "pr", "list"); err != nil {
 		t.Fatalf("alias set error = %v", err)
 	}
 
@@ -108,14 +124,9 @@ func TestAliasSetCommandJoinsExpansion(t *testing.T) {
 func TestAliasSetCommandQuotedExpansionWithFlags(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	buf := &bytes.Buffer{}
-	cmd := NewCmdAlias(&cmdutil.Factory{})
-	cmd.SetOut(buf)
-	cmd.SetErr(buf)
 	// Flags inside an expansion must be quoted (same as GitHub CLI), so the
 	// whole expansion arrives as a single argument.
-	cmd.SetArgs([]string{"set", "open-prs", "pr list --state open"})
-	if err := cmd.Execute(); err != nil {
+	if _, err := runAliasSet(t, "alias", "set", "open-prs", "pr list --state open"); err != nil {
 		t.Fatalf("alias set error = %v", err)
 	}
 
@@ -131,12 +142,7 @@ func TestAliasSetCommandQuotedExpansionWithFlags(t *testing.T) {
 func TestAliasSetCommandRejectsShellAlias(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	buf := &bytes.Buffer{}
-	cmd := NewCmdAlias(&cmdutil.Factory{})
-	cmd.SetOut(buf)
-	cmd.SetErr(buf)
-	cmd.SetArgs([]string{"set", "hi", "!echo hi"})
-	if err := cmd.Execute(); err == nil {
+	if _, err := runAliasSet(t, "alias", "set", "hi", "!echo hi"); err == nil {
 		t.Fatal("alias set with shell-style expansion succeeded, want error")
 	}
 }
@@ -144,15 +150,7 @@ func TestAliasSetCommandRejectsShellAlias(t *testing.T) {
 func TestAliasSetCommandRejectsBuiltinName(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	rootCmd := &cobra.Command{Use: "ag"}
-	rootCmd.AddCommand(&cobra.Command{Use: "repo"})
-	rootCmd.AddCommand(NewCmdAlias(&cmdutil.Factory{}))
-
-	buf := &bytes.Buffer{}
-	rootCmd.SetOut(buf)
-	rootCmd.SetErr(buf)
-	rootCmd.SetArgs([]string{"alias", "set", "repo", "repo list"})
-	if err := rootCmd.Execute(); err == nil {
+	if _, err := runAliasSet(t, "alias", "set", "repo", "repo list"); err == nil {
 		t.Fatal("alias set with a built-in command name succeeded, want error")
 	}
 
@@ -162,6 +160,76 @@ func TestAliasSetCommandRejectsBuiltinName(t *testing.T) {
 	}
 	if len(aliases) != 0 {
 		t.Errorf("len(aliases) = %d, want 0 (rejected alias must not be saved)", len(aliases))
+	}
+}
+
+func TestAliasSetCommandRejectsUnknownExpansionTarget(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	if _, err := runAliasSet(t, "alias", "set", "bad", "bogus list"); err == nil {
+		t.Fatal("alias set with an unknown command word in the expansion succeeded, want error")
+	}
+	aliases, err := config.LoadAliases()
+	if err != nil {
+		t.Fatalf("LoadAliases() error = %v", err)
+	}
+	if len(aliases) != 0 {
+		t.Errorf("len(aliases) = %d, want 0 (rejected alias must not be saved)", len(aliases))
+	}
+}
+
+func TestAliasSetCommandRejectsRootNameExpansion(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	if _, err := runAliasSet(t, "alias", "set", "x", "ag pr list"); err == nil {
+		t.Fatal("alias set with an expansion starting with the root command succeeded, want error")
+	}
+}
+
+func TestAliasSetCommandRejectsAliasChain(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	// An expansion that points at another alias can never resolve (aliases
+	// expand only once), so it must be rejected at set time.
+	if _, err := runAliasSet(t, "alias", "set", "x", "pl"); err == nil {
+		t.Fatal("alias set with an alias-only expansion succeeded, want error")
+	}
+}
+
+func TestAliasSetCommandAcceptsLeafExpansion(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	// A leaf command accepts arbitrary trailing arguments, including paths
+	// with escaped spaces.
+	if _, err := runAliasSet(t, "alias", "set", "go", "repo view C:\\temp\\x"); err != nil {
+		t.Fatalf("alias set error = %v", err)
+	}
+}
+
+func TestSplitExpansion(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want []string
+	}{
+		{name: "empty", in: "", want: nil},
+		{name: "single", in: "pr", want: []string{"pr"}},
+		{name: "multi", in: "pr list", want: []string{"pr", "list"}},
+		{name: "escaped space", in: "browse C:\\Program\\ Files\\x", want: []string{"browse", `C:\Program Files\x`}},
+		{name: "escaped tab", in: "go\\\tnow", want: []string{"go\tnow"}},
+		{name: "backslash letter kept verbatim", in: `C:\temp\x`, want: []string{`C:\temp\x`}},
+		{name: "unquoted windows path split", in: `C:\Program Files`, want: []string{`C:\Program`, `Files`}},
+		{name: "collapsed whitespace", in: "a   b", want: []string{"a", "b"}},
+		{name: "leading whitespace", in: "  a b", want: []string{"a", "b"}},
+		{name: "trailing whitespace", in: "a b  ", want: []string{"a", "b"}},
+		{name: "tab separator", in: "a\tb", want: []string{"a", "b"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SplitExpansion(tt.in); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SplitExpansion(%q) = %v, want %v", tt.in, got, tt.want)
+			}
+		})
 	}
 }
 

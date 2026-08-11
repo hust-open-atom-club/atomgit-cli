@@ -30,10 +30,10 @@ func newCmdAliasSet(f *cmdutil.Factory) *cobra.Command {
 		Short: "Create a shortcut for an ag command",
 		Long: `Create a shortcut for an ag command.
 
-Aliases are expanded at invocation time: the first argument of an ag
+Aliases are expanded at invocation time: the first non-flag argument of an ag
 invocation is looked up and replaced with the expansion. Aliases never
 override built-in commands, so names that conflict with a built-in command
-are rejected.
+are rejected, and the expansion must start with a known built-in command.
 
 To include a literal space inside an expansion argument (for example a
 Windows path), escape it with a backslash: C:\Program\ Files.`,
@@ -55,6 +55,12 @@ Windows path), escape it with a backslash: C:\Program\ Files.`,
 				if c.Name() == name {
 					return fmt.Errorf("alias name %q conflicts with the built-in command %q; built-in commands always take precedence", name, c.Name())
 				}
+			}
+			// Expansion only ever fires through a real built-in command, so
+			// reject typos and alias chains at set time instead of failing on
+			// every invocation.
+			if err := validateExpansionTarget(cmd.Root(), expansion); err != nil {
+				return err
 			}
 			if err := config.SaveAlias(name, expansion); err != nil {
 				return fmt.Errorf("failed to save alias: %w", err)
@@ -141,4 +147,52 @@ func validateAliasExpansion(expansion string) error {
 		return fmt.Errorf("shell-style aliases (starting with '!') are not supported")
 	}
 	return nil
+}
+
+// validateExpansionTarget ensures the expansion begins with a real built-in
+// command, so a typo in the command word or an alias chain is rejected at
+// set time rather than failing on every invocation. Aliases expand only
+// once, so an expansion that refers to another alias would never resolve.
+func validateExpansionTarget(root *cobra.Command, expansion string) error {
+	fields := SplitExpansion(expansion)
+	if len(fields) == 0 {
+		return nil
+	}
+	// cobra's Find/Traverse are lenient about unknown deeper tokens, so
+	// validate the command word itself against the top-level commands.
+	c, _, err := root.Find([]string{fields[0]})
+	if err != nil || c == nil || c == root {
+		return fmt.Errorf("expansion %q does not start with a known ag command", expansion)
+	}
+	return nil
+}
+
+// SplitExpansion tokenizes an alias expansion on whitespace while honoring
+// backslash-escaped spaces and tabs, so Windows paths such as
+// "C:\Program\ Files" survive as a single token. Any other backslash
+// sequence is kept verbatim.
+func SplitExpansion(s string) []string {
+	var fields []string
+	var cur strings.Builder
+	runes := []rune(s)
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+		if r == '\\' && i+1 < len(runes) && (runes[i+1] == ' ' || runes[i+1] == '\t') {
+			cur.WriteRune(runes[i+1])
+			i++
+			continue
+		}
+		if r == ' ' || r == '\t' || r == '\n' {
+			if cur.Len() > 0 {
+				fields = append(fields, cur.String())
+				cur.Reset()
+			}
+			continue
+		}
+		cur.WriteRune(r)
+	}
+	if cur.Len() > 0 {
+		fields = append(fields, cur.String())
+	}
+	return fields
 }

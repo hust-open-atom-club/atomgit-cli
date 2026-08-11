@@ -134,13 +134,18 @@ func TestAliasFilePermissions(t *testing.T) {
 }
 
 // TestConcurrentAliasUpdatesHelper is the subprocess entry point for
-// TestConcurrentAliasUpdates. It saves a single alias in an isolated
-// environment and reports success or failure to the parent.
+// TestConcurrentAliasUpdates. It saves a single alias and reports success or
+// failure to the parent. It only runs when both env vars set by the parent
+// are present, and always redirects the config directory to the parent's
+// temp dir, so it can never touch a real user config even if these env vars
+// are accidentally set in the surrounding shell.
 func TestConcurrentAliasUpdatesHelper(t *testing.T) {
 	name := os.Getenv("ALIAS_HELPER_NAME")
-	if name == "" {
+	xdg := os.Getenv("ALIAS_HELPER_XDG")
+	if name == "" || xdg == "" {
 		t.Skip("helper subprocess only")
 	}
+	t.Setenv("XDG_CONFIG_HOME", xdg)
 	if err := SaveAlias(name, "pr list"); err != nil {
 		t.Fatalf("SaveAlias(%q) error = %v", name, err)
 	}
@@ -151,9 +156,6 @@ func TestConcurrentAliasUpdatesHelper(t *testing.T) {
 // regression test for concurrent read-modify-write updates of the alias
 // config that previously silently overwrote each other.
 func TestConcurrentAliasUpdates(t *testing.T) {
-	if os.Getenv("ALIAS_HELPER_NAME") != "" {
-		t.Skip("helper subprocess only")
-	}
 	withTempConfig(t)
 
 	const n = 24
@@ -166,7 +168,7 @@ func TestConcurrentAliasUpdates(t *testing.T) {
 			name := fmt.Sprintf("alias-%03d", i)
 			cmd := exec.Command(os.Args[0], "-test.run=^TestConcurrentAliasUpdatesHelper$")
 			cmd.Env = append(os.Environ(),
-				"XDG_CONFIG_HOME="+os.Getenv("XDG_CONFIG_HOME"),
+				"ALIAS_HELPER_XDG="+os.Getenv("XDG_CONFIG_HOME"),
 				"ALIAS_HELPER_NAME="+name,
 			)
 			if out, err := cmd.CombinedOutput(); err != nil {
