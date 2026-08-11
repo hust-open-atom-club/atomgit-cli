@@ -20,8 +20,6 @@ jobs:
   update:
     name: Update stable and latest
     runs-on: [ubuntu-latest, x64, small]
-    env:
-      NIX_REMOTE: local
     steps:
       - name: Check out default branch
         uses: checkout
@@ -31,10 +29,11 @@ jobs:
       - name: Install Nix
         run: |
           set -eu
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends nix-bin
-          sudo mkdir -p /nix
-          sudo chown -R "$(id -u):$(id -g)" /nix
+          curl --proto '=https' --tlsv1.2 -fsSL \
+            -o /tmp/install-nix.sh \
+            https://mirrors.tuna.tsinghua.edu.cn/nix/latest/install
+          sh /tmp/install-nix.sh --no-daemon
+          printf '%s\n' ". \"$HOME/.nix-profile/etc/profile.d/nix.sh\"" >> "$ATOMGIT_ENV"
 
           mkdir -p "$HOME/.config/nix"
           printf '%s\n' \

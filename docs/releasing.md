@@ -89,7 +89,7 @@ make publish \
 
 `.gitcode/workflows/update-nix.yml` 每天在默认分支上运行，也支持手动触发。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；构建验证后在内容变化时直接提交到默认分支。工作流需要 `repository: write`，使用运行期间自动生成的 `ATOMGIT_TOKEN` 推送，不需要额外长期 token。
 
-工作流 runner 通过 Ubuntu APT 安装 Nix，并从清华 TUNA 的 `nixpkgs-unstable` channel 安装 `nix-update`；Nix binary cache 优先使用 TUNA，官方 cache 作为回退。
+工作流 runner 通过清华 TUNA 镜像执行 Nix 单用户安装，并从 TUNA 的 `nixpkgs-unstable` channel 安装 `nix-update`；Nix binary cache 优先使用 TUNA，官方 cache 作为回退。
 
 可在本地复现相同更新；开发环境已包含 `nix-update`：
 
