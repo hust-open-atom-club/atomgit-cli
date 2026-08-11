@@ -20,6 +20,8 @@ jobs:
   update:
     name: Update stable and latest
     runs-on: [ubuntu-latest, x64, small]
+    env:
+      NIX_REMOTE: local
     steps:
       - name: Check out default branch
         uses: checkout
@@ -30,7 +32,9 @@ jobs:
         run: |
           set -eu
           sudo apt-get update
-          sudo apt-get install --yes nix-bin
+          sudo apt-get install --yes --no-install-recommends nix-bin
+          sudo mkdir -p /nix
+          sudo chown -R "$(id -u):$(id -g)" /nix
 
           mkdir -p "$HOME/.config/nix"
           printf '%s\n' \
