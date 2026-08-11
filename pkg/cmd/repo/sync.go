@@ -76,7 +76,7 @@ func runRepoSync(cmd *cobra.Command, f *cmdutil.Factory, opts *SyncOptions, repo
 	if err != nil {
 		return err
 	}
-	client, err := newAPIClient(f, token)
+	client, err := f.NewAPIClient(token)
 	if err != nil {
 		return fmt.Errorf("failed to synchronize %s: %w", repository, err)
 	}

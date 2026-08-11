@@ -142,7 +142,7 @@ branches. Use --force to override these safety checks.`,
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			apiClient, err := newAPIClient(f, token)
+			apiClient, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}

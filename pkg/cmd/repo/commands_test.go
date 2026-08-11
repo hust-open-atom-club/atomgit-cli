@@ -85,9 +85,9 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 
 func TestNewAPIClient(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
-		client, err := newAPIClient(&cmdutil.Factory{}, "token")
+		client, err := (&cmdutil.Factory{}).NewAPIClient("token")
 		if err != nil || client == nil {
-			t.Fatalf("newAPIClient() = %v, %v", client, err)
+			t.Fatalf("NewAPIClient() = %v, %v", client, err)
 		}
 	})
 
@@ -95,9 +95,9 @@ func TestNewAPIClient(t *testing.T) {
 		factory := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
 			return nil, errors.New("factory failed")
 		}}
-		client, err := newAPIClient(factory, "token")
+		client, err := factory.NewAPIClient("token")
 		if client != nil || err == nil || !strings.Contains(err.Error(), "factory failed") {
-			t.Fatalf("newAPIClient() = %v, %v", client, err)
+			t.Fatalf("NewAPIClient() = %v, %v", client, err)
 		}
 	})
 }

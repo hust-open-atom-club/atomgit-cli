@@ -63,7 +63,7 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 					if err != nil {
 						return fmt.Errorf("not authenticated: %w", err)
 					}
-					client, err := newAPIClient(f, token)
+					client, err := f.NewAPIClient(token)
 					if err != nil {
 						return err
 					}
@@ -175,7 +175,7 @@ func resolveDefaultBranch(f *cmdutil.Factory, owner, repo string) (string, error
 	if err != nil {
 		return "", err
 	}
-	client, err := newAPIClient(f, token)
+	client, err := f.NewAPIClient(token)
 	if err != nil {
 		return "", err
 	}
