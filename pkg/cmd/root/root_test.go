@@ -6,9 +6,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	internalversion "atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 	versioncmd "atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/version"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -269,5 +273,172 @@ func TestAPIOutputHonorsRootSanitization(t *testing.T) {
 				t.Fatalf("stdout = %q, want %q", stdout.String(), tt.want)
 			}
 		})
+	}
+}
+
+func newTestRoot(t *testing.T) *cobra.Command {
+	t.Helper()
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, io.Discard, io.Discard)
+	if err != nil {
+		t.Fatalf("newCmdRootWithWriters() error = %v", err)
+	}
+	return cmd
+}
+
+func TestExpandAlias(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{name: "no arguments", args: nil, want: nil},
+		{name: "flag first", args: []string{"--version"}, want: []string{"--version"}},
+		{name: "unknown command", args: []string{"unknown"}, want: []string{"unknown"}},
+		{name: "no alias configured", args: []string{"nope"}, want: []string{"nope"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := newTestRoot(t)
+			got, err := ExpandAlias(cmd, tt.args)
+			if err != nil {
+				t.Fatalf("ExpandAlias() error = %v", err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ExpandAlias(%v) = %v, want %v", tt.args, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExpandAliasExpandsConfiguredAlias(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if err := config.SaveAlias("pl", "pr list"); err != nil {
+		t.Fatalf("SaveAlias() error = %v", err)
+	}
+
+	cmd := newTestRoot(t)
+	got, err := ExpandAlias(cmd, []string{"pl", "--state", "open"})
+	if err != nil {
+		t.Fatalf("ExpandAlias() error = %v", err)
+	}
+	want := []string{"pr", "list", "--state", "open"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ExpandAlias() = %v, want %v", got, want)
+	}
+}
+
+func TestExpandAliasBuiltinTakesPrecedence(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	// A user could try to shadow a built-in command; the built-in must win.
+	if err := config.SaveAlias("repo", "pr list"); err != nil {
+		t.Fatalf("SaveAlias() error = %v", err)
+	}
+
+	cmd := newTestRoot(t)
+	got, err := ExpandAlias(cmd, []string{"repo", "view"})
+	if err != nil {
+		t.Fatalf("ExpandAlias() error = %v", err)
+	}
+	want := []string{"repo", "view"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ExpandAlias() = %v, want %v (built-in command must win)", got, want)
+	}
+}
+
+func TestExpandAliasRejectsShellAlias(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if err := config.SaveAlias("hi", "!echo hi"); err != nil {
+		t.Fatalf("SaveAlias() error = %v", err)
+	}
+
+	cmd := newTestRoot(t)
+	if _, err := ExpandAlias(cmd, []string{"hi"}); err == nil {
+		t.Fatal("ExpandAlias() with shell-style alias succeeded, want error")
+	}
+}
+
+func TestExpandAliasAfterRootFlag(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if err := config.SaveAlias("pl", "pr list"); err != nil {
+		t.Fatalf("SaveAlias() error = %v", err)
+	}
+
+	cmd := newTestRoot(t)
+	got, err := ExpandAlias(cmd, []string{"--raw-output", "pl"})
+	if err != nil {
+		t.Fatalf("ExpandAlias() error = %v", err)
+	}
+	want := []string{"--raw-output", "pr", "list"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ExpandAlias() = %v, want %v", got, want)
+	}
+}
+
+func TestExpandAliasCorruptConfigFallsBack(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	path, err := config.AliasFilePath()
+	if err != nil {
+		t.Fatalf("AliasFilePath() error = %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(path, []byte("{not valid json"), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	cmd := newTestRoot(t)
+	got, err := ExpandAlias(cmd, []string{"pl"})
+	if err != nil {
+		t.Fatalf("ExpandAlias() error = %v, want nil (fallback to no aliases)", err)
+	}
+	want := []string{"pl"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ExpandAlias() = %v, want %v", got, want)
+	}
+}
+
+func TestExpandAliasCorruptConfigWarnsOnStderr(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	path, err := config.AliasFilePath()
+	if err != nil {
+		t.Fatalf("AliasFilePath() error = %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(path, []byte("{not valid json"), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	var stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, io.Discard, &stderr)
+	if err != nil {
+		t.Fatalf("newCmdRootWithWriters() error = %v", err)
+	}
+	if _, err := ExpandAlias(cmd, []string{"pl"}); err != nil {
+		t.Fatalf("ExpandAlias() error = %v, want nil (fallback to no aliases)", err)
+	}
+	if !strings.Contains(stderr.String(), "warning: failed to load aliases") {
+		t.Errorf("stderr = %q, want warning about failed alias load", stderr.String())
+	}
+}
+
+func TestExpandAliasWithEscapedSpaceInExpansion(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	// Windows path with a space survives as a single token via `\ `.
+	if err := config.SaveAlias("go", "browse C:\\Program\\ Files\\x"); err != nil {
+		t.Fatalf("SaveAlias() error = %v", err)
+	}
+
+	cmd := newTestRoot(t)
+	got, err := ExpandAlias(cmd, []string{"go"})
+	if err != nil {
+		t.Fatalf("ExpandAlias() error = %v", err)
+	}
+	want := []string{"browse", `C:\Program Files\x`}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ExpandAlias() = %v, want %v", got, want)
 	}
 }
