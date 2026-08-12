@@ -31,6 +31,14 @@ func Main() int {
 		return 1
 	}
 
+	args := os.Args[1:]
+	expanded, err := root.ExpandAlias(rootCmd, args)
+	if err != nil {
+		fmt.Fprintf(rootCmd.ErrOrStderr(), "%s\n", err)
+		return 1
+	}
+	rootCmd.SetArgs(expanded)
+
 	executeErr := rootCmd.ExecuteContext(context.Background())
 	stdoutFlushErr := cmdutil.FlushWriter(rootCmd.OutOrStdout())
 	stderrFlushErr := cmdutil.FlushWriter(rootCmd.ErrOrStderr())

@@ -1,6 +1,6 @@
 # 发布指南
 
-本文档介绍 AtomGit CLI 的 GoReleaser 打包、npm 制品发布和 Nix package 维护流程。
+本文档介绍 AtomGit CLI 的 GoReleaser 打包、npm 制品发布、Homebrew tap 和 Nix package 维护流程。
 
 ## 发布打包
 
@@ -33,6 +33,23 @@ AtomGit Release 只上传七个普通平台归档、两个安装脚本和根 `ch
 上传 Release 附件前可校验所有制品：
 
 ```bash
+
+# Linux
+(cd dist/vX.Y.Z && sha256sum -c checksums.txt)
+
+
+# macOS
+(cd dist/vX.Y.Z && shasum -a 256 -c checksums.txt)
+```
+
+npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registry 前单独校验：
+
+```bash
+(cd dist/vX.Y.Z/npm && shasum -a 256 -c checksums.txt)
+```
+
+`scripts/build-release.sh` 始终使用 GoReleaser 的 `--skip=publish`，只在本地准备并验证制品，然后打印完整的附件 basename 清单。发布上传由下述 `make publish` 入口调用独立脚本完成；单独执行构建脚本不会创建 AtomGit Release 或上传附件。
+
 # Linux
 (cd dist/vX.Y.Z && sha256sum -c checksums.txt)
 
@@ -47,7 +64,6 @@ npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registr
 ```
 
 `scripts/build-release.sh` 始终使用 GoReleaser 的 `--skip=publish`，只在本地准备并验证制品，然后打印完整的附件 basename 清单。发布上传由下述 `make publish` 入口调用独立脚本完成；单独执行构建脚本不会创建 AtomGit Release 或上传附件。
-
 
 ## 自动发布 AtomGit Release
 
@@ -77,6 +93,52 @@ make publish \
 未创建 tag 时，可使用 `make release-snapshot VERSION=vX.Y.Z` 进行本地试打包。Snapshot 允许脏工作区，其制品仅用于验证，不应上传到正式 Release。
 
 底层 `scripts/build-release.sh` 也接受 `TAG`、`AG_RELEASE_SNAPSHOT=1` 和 `SOURCE_DATE_EPOCH` 环境变量。`SOURCE_DATE_EPOCH` 会同时固定二进制中的构建日期以及归档内文件的时间戳，用于生成可复现的发布制品；历史两段式 tag 仅保留给 snapshot 兼容。
+
+
+## 发布到 npm registry
+
+AtomGit Release 发布并验证完成后，再发布 `dist/vX.Y.Z/npm/` 中的 npm tarball。发布前确认当前 npm 账号有权发布 `@hust-open-atom-club` scope，并按 registry 的认证和双因素认证要求完成登录：
+
+```bash
+npm whoami
+
+
+# Linux
+(cd dist/vX.Y.Z/npm && sha256sum -c checksums.txt)
+
+
+# macOS
+(cd dist/vX.Y.Z/npm && shasum -a 256 -c checksums.txt)
+```
+
+目录中应包含七个平台包和一个 `@hust-open-atom-club/atomgit-cli` 主启动包。逐个使用 `npm pack <tarball> --dry-run --json` 检查包名、版本和文件清单，并检查包内元数据的平台限制，确保八个包的版本均为 `X.Y.Z`，且主包的 `optionalDependencies` 精确引用同版本的七个平台包。
+
+先依次发布七个平台包，每发布一个包都应等待精确版本能够从 registry 查询到，再继续发布下一个包：
+
+```bash
+npm publish <platform-package.tgz> --access public --ignore-scripts
+npm view <platform-package-name>@X.Y.Z version
+```
+
+确认七个平台包全部可见后，最后发布主启动包并回读版本：
+
+```bash
+npm publish <atomgit-cli-package.tgz> --access public --ignore-scripts
+npm view @hust-open-atom-club/atomgit-cli@X.Y.Z version
+```
+
+npm 版本不可覆盖。重新执行中断的发布流程时，先通过 `npm view <name>@X.Y.Z --json` 检查已存在包的名称、版本和 `dist.integrity` 或 `dist.shasum`；只有远端内容与本地 tarball 完全一致时才跳过，出现冲突或无法确认时应停止，不得尝试替换已发布版本。
+
+全部包可见后，在唯一的系统临时目录中安装主包的精确版本，确认 npm 自动选择了当前操作系统和架构对应的平台包，并执行 `ag version` 核对 tag。验证完成后删除该临时目录。
+
+npm tarball 只发布到 npm registry，不得作为 AtomGit Release 附件上传。
+
+
+## 维护 Homebrew tap
+
+Homebrew tap 位于 [hust-open-atom-club/homebrew-tap](https://github.com/hust-open-atom-club/homebrew-tap)，使用 GitHub Actions 自动维护。更新工作流每 4 个小时检测一次 AtomGit 最新稳定版本；发现新版本后，会下载 macOS 和 Linux 的 amd64/arm64 Release 归档，确认归档包含 `ag`，重新计算 SHA-256，并更新 [Formula/atomgit-cli.rb](https://github.com/hust-open-atom-club/homebrew-tap/blob/main/Formula/atomgit-cli.rb)。工作流只允许更新 Formula 文件，并在 macOS 和 Linux 测试通过后自动 squash 合并更新 PR。
+
+如果距离版本发布超过 4 个小时仍未正确更新，请先[手动运行更新工作流](https://github.com/hust-open-atom-club/homebrew-tap/actions/workflows/update-formula.yml)。如果工作流仍然失败，请[发起一个 Issue](https://github.com/hust-open-atom-club/homebrew-tap/issues)，或者手动更新 Formula 中的版本号、四个平台归档 URL 和 SHA-256 后发起 PR。
 
 ## 维护 Nix package
 

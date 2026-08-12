@@ -24,18 +24,6 @@ func NewCmdTag(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
-func newAPIClient(f *cmdutil.Factory, token string) (*api.Client, error) {
-	if f.HttpClient == nil {
-		return api.NewClient(token), nil
-	}
-
-	httpClient, err := f.HttpClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
-	}
-	return api.NewClientWithHTTPClient(token, httpClient), nil
-}
-
 func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 	var jsonOutput bool
 	cmd := &cobra.Command{
@@ -48,7 +36,7 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
@@ -119,7 +107,7 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
@@ -166,7 +154,7 @@ func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("not authenticated: %w", err)
 			}
 
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
