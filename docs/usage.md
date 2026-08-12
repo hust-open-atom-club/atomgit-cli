@@ -720,6 +720,18 @@ ag search users torvalds --json
 - `search repositories|repos`：`--owner`、`--language`、`--fork`、`--sort last_push_at|stars_count|forks_count`、`--order asc|desc`；
 - `search issues`：`--repo`、`--state open|closed`、`--sort created_at|last_push_at`、`--order asc|desc`。
 
+## 讨论
+
+```bash
+# 列举讨论的具体命令
+ag discussion list
+ag discussion list hust-open-atom-club/atomgit-cli
+ag discussion list hust-open-atom-club/atomgit-cli --limit 30
+ag discussion list hust-open-atom-club/atomgit-cli --json
+```
+
+公开仓库的 Discussion 可匿名读取；登录后会携带访问令牌，以便访问账号有权限查看的仓库。
+
 ## 版本
 
 ```bash

@@ -52,7 +52,7 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 	}
 
 	want := map[string]bool{
-		"api": false, "auth": false, "branch": false, "issue": false, "label": false, "license": false, "milestone": false,
+		"api": false, "auth": false, "branch": false, "discussion": false, "issue": false, "label": false, "license": false, "milestone": false,
 		"check-update": false,
 		"org":          false, "pr": false, "release": false, "repo": false, "run": false, "ssh-key": false, "tag": false, "version": false,
 	}
