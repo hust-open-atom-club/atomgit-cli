@@ -51,6 +51,13 @@ jobs:
           nix-channel --update
           nix-env -iA nixpkgs.nix-update
 
+      - name: Install jq
+        run: |
+          set -eu
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y jq
+          jq --version
+
       - name: Update stable and latest
         run: |
           set -eu
@@ -67,7 +74,7 @@ jobs:
 
           rm -f result result-*
 
-      - name: Commit and push updates
+      - name: Commit updates through Contents API
         run: |
           set -eu
           if git diff --quiet -- nix/stable.nix nix/latest.nix; then
@@ -75,12 +82,49 @@ jobs:
             exit 0
           fi
 
-          git config user.name "AtomGit Actions"
-          git config user.email "actions@atomgit.com"
-          git add nix/stable.nix nix/latest.nix
-          git commit -m "chore: update Nix packages"
+          NIX_UPDATE_TOKEN="${{ secrets.NIX_UPDATE_TOKEN }}"
+          token_length=${#NIX_UPDATE_TOKEN}
+          echo "NIX_UPDATE_TOKEN length: $token_length"
+          case "$token_length" in
+            0) echo "NIX_UPDATE_TOKEN is empty."; exit 1 ;;
+          esac
 
-          test -n "${ATOMGIT_TOKEN:-}"
-          git_basic_auth=$(printf 'x-access-token:%s' "$ATOMGIT_TOKEN" | base64 | tr -d '\n')
-          git -c "http.extraheader=AUTHORIZATION: basic $git_basic_auth" \
-            push origin "HEAD:${ATOMGIT_REF_NAME}"
+          target_branch=${ATOMGIT_REF_NAME:-nix-update}
+          for path in nix/stable.nix nix/latest.nix; do
+            if git diff --quiet -- "$path"; then
+              echo "$path is already current."
+              continue
+            fi
+
+            blob_sha=$(git rev-parse "HEAD:$path")
+            content=$(base64 < "$path" | tr -d '\n')
+            request_body=$(jq -cn \
+              --arg content "$content" \
+              --arg sha "$blob_sha" \
+              --arg branch "$target_branch" \
+              --arg message "chore: update Nix packages" \
+              '{content: $content, sha: $sha, branch: $branch, message: $message}')
+
+            set +e
+            http_status=$(curl --silent --show-error \
+              --output contents-api-response.json \
+              --write-out '%{http_code}' \
+              --request PUT \
+              --header "Accept: application/json" \
+              --header "Content-Type: application/json" \
+              --data "$request_body" \
+              "https://api.gitcode.com/api/v5/repos/$ATOMGIT_REPOSITORY/contents/$path?access_token=$NIX_UPDATE_TOKEN")
+            curl_exit=$?
+            set -e
+
+            echo "$path: curl exit code $curl_exit, HTTP status $http_status"
+            if test -s contents-api-response.json; then
+              cat contents-api-response.json
+              echo
+            fi
+            test "$curl_exit" -eq 0
+            case "$http_status" in
+              200) ;;
+              *) exit 1 ;;
+            esac
+          done
