@@ -128,6 +128,24 @@ ag repo delete owner/repo --yes
 
 `ag repo sync` 仅更新 AtomGit 上的远端 Fork。命令会先验证仓库确为 Fork、上游存在且目标分支在两端都可读取；未指定 `--branch` 时使用 Fork 的默认分支。默认同步不会覆盖分叉提交，冲突时返回非零退出码。`--force` 可能覆盖 Fork 上的分叉提交，因此需要交互确认；仅在已审查目标后才应结合 `--yes` 使用。
 
+### 仓库内容读取
+
+```bash
+# 读取默认分支上的文件内容
+ag repo read-file owner/repo README.md
+ag repo read-file owner/repo src/main.go --json
+
+# 在指定分支、tag 或 commit 上读取文件
+ag repo read-file owner/repo README.md --ref dev
+
+# 列出目录内容（使用 . 表示仓库根目录）
+ag repo read-dir owner/repo .
+ag repo read-dir owner/repo src --ref v1.0.0 --json
+```
+
+`read-file` 输出解码后的文件文本；`read-dir` 每行输出一个条目（类型、大小、路径）。`--json` 输出稳定的 lowerCamelCase 字段：文件对象包含 `name`、`path`、`sha`、`size`、`encoding`、`content`（base64）和 `ref`；目录条目数组包含 `name`、`path`、`type`、`sha`、`size`，空目录输出 `[]`。
+
+路径必须是仓库相对路径，不能以 `/` 开头或结尾，不能包含连续斜杠或 `.`/`..` 段（`read-dir .` 是唯一例外，映射到仓库根目录）。每个路径段独立转义。文件内容默认经过终端清理；如需保留原始字节，使用根级 `--raw-output`。这些命令只发送 GET 请求，不会修改仓库内容。
 ### 仓库协作者
 
 ```bash
@@ -333,7 +351,19 @@ ag pr checkout owner/repo 42 --branch review-fix
 ag pr checkout owner/repo 42 --force
 ag pr checkout owner/repo 42 --detach
 ag pr checkout owner/repo 42 --recurse-submodules
+
+# 查看 PR 的提交、文件变更和反应
+ag pr commits owner/repo 42
+ag pr commits owner/repo 42 --limit 50 --json
+ag pr files owner/repo 42
+ag pr files owner/repo 42 --json
+ag pr reactions owner/repo 42
+ag pr reactions owner/repo 42 --json
 ```
+
+`pr commits`、`pr files` 和 `pr reactions` 都是只读命令，只发送 GET 请求。`pr commits` 支持 `--limit`（默认 30，必须为正整数）控制返回数量。文本模式每行输出一个条目摘要；JSON 模式输出稳定的 lowerCamelCase 数组，无结果时输出 `[]`。
+
+`pr view --json` 在现有字段基础上新增 `assignees`、`approvalReviewers`、`testers`（均为字符串数组，空时为 `[]`）和 `milestone`（对象或 `null`）字段。`pr list --json` 的 schema 保持不变。
 
 跨仓库创建 PR 时 `--head` 的写法请参阅[跨仓库 PR 示例](cross_repo_pr_demo.md)。
 
@@ -419,6 +449,14 @@ ag issue edit owner/repo 42 --title "Updated title"
 ag issue edit owner/repo 42 --body "Updated description"
 ag issue edit owner/repo 42 --body-file details.md
 
+# 创建 Issue 时指派负责人
+ag issue create owner/repo --title "Bug report" --assignee alice
+
+# 修改已有 Issue 的负责人（需要确认，使用 --yes 跳过）
+ag issue edit owner/repo 42 --assignee alice
+ag issue edit owner/repo 42 --assignee alice --yes
+ag issue edit owner/repo 42 --remove-assignee --yes
+
 # 创建 Issue
 ag issue create owner/repo --title "Bug report" --body "Description"
 ag issue create owner/repo --title "Bug report" --body-file description.md
@@ -430,6 +468,34 @@ ag issue close owner/repo 42
 # 重新打开 Issue
 ag issue reopen owner/repo 42
 ```
+
+`--assignee` 接受一个非空用户登录名。`--assignee` 和 `--remove-assignee` 互斥。创建 Issue 时设置负责人是纯新增操作，不需要确认；修改已有 Issue 的负责人（设置或清除）默认需要确认，确认提示输出到 stderr 以保持 JSON stdout 清洁，`--yes` 可跳过确认。
+
+### Issue 关联 PR 与分支
+
+```bash
+# 列出与 Issue 关联的 Pull Request
+ag issue prs owner/repo 42
+ag issue prs owner/repo 42 --json
+
+# 列出 Issue 的关联分支
+ag issue branches owner/repo 42
+ag issue branches owner/repo 42 --json
+
+# 添加或移除关联分支（移除需要确认，--yes 跳过）
+ag issue branches owner/repo 42 --add feature/fix
+ag issue branches owner/repo 42 --add feature/fix --add feature/docs --yes
+ag issue branches owner/repo 42 --remove old-branch --yes
+ag issue branches owner/repo 42 --add new-feature --remove stale-feature --yes
+```
+
+`issue prs` 文本模式每行输出一个关联 PR（编号、标题、状态），JSON 模式输出稳定数组，无结果时输出 `[]`。
+
+`issue branches` 不带 `--add`/`--remove` 时列出当前关联分支。`--add` 和 `--remove` 可重复使用，可以同时添加和移除不同分支。空名称、重复名称、同一分支同时出现在添加和移除集合中都会在认证前被拒绝。移除操作默认需要确认，确认提示输出到 stderr，`--yes` 跳过确认。
+
+AtomGit 关联分支接口使用整列表替换语义，因此 CLI 采用读-改-写流程：先 GET 当前列表，计算目标列表（保留现有顺序，追加新分支，移除指定分支），仅在目标列表与当前列表不同时发送一次 PUT。PUT 不会自动重试。如果目标列表与当前列表相同，则只发送 GET，不发送 PUT。
+
+**并发注意**：由于接口没有提供条件写令牌或原子增删操作，如果在 GET 和 PUT 之间另一个客户端修改了关联列表，本次 PUT 可能覆盖其变更。CLI 只能保证保留 GET 快照中的关联，不能防止并发写入竞态。
 
 #### Issue 评论
 
