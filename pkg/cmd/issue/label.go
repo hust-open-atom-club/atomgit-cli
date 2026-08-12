@@ -42,7 +42,7 @@ backward compatibility. Use --add or --remove to make the operation explicit.`,
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
 			}
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}

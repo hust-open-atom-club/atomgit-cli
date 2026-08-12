@@ -133,3 +133,38 @@ func TestAPIBodyIsNotAddedToGET(t *testing.T) {
 }
 
 var _ io.ReadCloser = failingReader{}
+
+func TestRedactShortTokensUnconditionally(t *testing.T) {
+	tests := []struct {
+		name  string
+		token string
+		msg   string
+	}{
+		{name: "single char", token: "b", msg: "transport echoed token b"},
+		{name: "two chars", token: "bo", msg: "transport echoed token bo"},
+		{name: "three chars", token: "bob", msg: "transport echoed token bob"},
+		{name: "four chars", token: "bob1", msg: "transport echoed token bob1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := errors.New(tt.msg)
+			redacted := redact(err, tt.token)
+			if redacted == err {
+				t.Fatalf("redact(%q, %q) returned original error; short tokens must be redacted", tt.msg, tt.token)
+			}
+			if strings.Contains(redacted.Error(), tt.token) {
+				t.Fatalf("redact(%q, %q) still contains token: %q", tt.msg, tt.token, redacted.Error())
+			}
+			if !strings.Contains(redacted.Error(), "[REDACTED]") {
+				t.Fatalf("redact(%q, %q) = %q, want [REDACTED] placeholder", tt.msg, tt.token, redacted.Error())
+			}
+		})
+	}
+}
+
+func TestRedactEmptyTokenReturnsOriginal(t *testing.T) {
+	err := errors.New("some error")
+	if got := redact(err, ""); got != err {
+		t.Fatalf("redact with empty token changed the error: %v", got)
+	}
+}

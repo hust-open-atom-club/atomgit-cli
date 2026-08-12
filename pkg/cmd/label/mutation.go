@@ -40,7 +40,7 @@ func newCmdLabelCreate(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
 			}
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
@@ -109,7 +109,7 @@ func newCmdLabelEdit(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
 			}
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}

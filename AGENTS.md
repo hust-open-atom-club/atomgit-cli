@@ -26,6 +26,7 @@
 - `test/`：npm 主包与平台包的集成测试。
 - `.goreleaser.yaml`：Linux 的 amd64/arm64/loong64，以及 macOS 和 Windows 的 amd64/arm64 发布打包配置。
 - `scripts/build-release.sh`：GoReleaser 打包包装脚本，负责版本元数据、安装脚本、校验和和 npm 制品，输出到被忽略的 `dist/`。
+- `scripts/publish-atomgit-release.js`：校验正式制品并通过 `ag release`/`ag api` 创建、续传和回读验证 AtomGit Release。
 - `scripts/build-npm-packages.js`、`scripts/check-npm-version.js`、`scripts/set-npm-version.js`：npm 平台包生成与版本同步。
 - `flake.nix`、`scripts/update-nix-package.sh`：Nix `stable`/`latest` package 与固定输出哈希维护。
 - `README.md`：面向用户的简短项目入口；详细安装、配置、命令、发布和结构说明分别位于 `docs/installation.md`、`docs/configuration.md`、`docs/usage.md`、`docs/releasing.md` 和 `docs/project-structure.md`。
@@ -92,7 +93,8 @@ test -z "$(gofmt -l .)"
 
 ## 文档与提交
 
-- README 保持简短，只保留 npm、Homebrew、Nix、Go 的安装入口、OAuth 快速入口、常用命令和详细文档链接；安装顺序保持 npm、Homebrew、Nix、Go。
+- `docs/installation.md` 是安装方式和平台支持的事实来源；当前完整覆盖 npm、Homebrew、WinGet、Scoop、Nix/NixOS、Go、AtomGit Release 自动或手动安装，以及源码构建。
+- README 保持简短，快速安装入口按 npm、Homebrew、WinGet、Scoop、Nix、Go 排列；AtomGit Release 和源码安装等详细步骤通过完整安装指南承载。安装方式发生增删或顺序变化时，先更新 `docs/installation.md`，再同步 README 中受影响的快速入口和链接。
 - 新增、删除或改变用户可见命令、参数和输出时更新 `docs/usage.md`；只有影响 README 快速入口时才同步修改 README。
 - 安装方式和平台支持变化更新 `docs/installation.md`；认证、凭据、输出安全或仓库推断变化更新 `docs/configuration.md`。
 - GoReleaser、npm 发布、安装脚本、校验和或 Nix package 维护变化更新 `docs/releasing.md`；目录职责变化更新 `docs/project-structure.md`。

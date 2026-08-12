@@ -76,7 +76,7 @@ func runAdd(out io.Writer, f *cmdutil.Factory, opts *AddOptions) error {
 		return fmt.Errorf("failed to read key: %w", err)
 	}
 
-	client, err := newAPIClient(f, token)
+	client, err := f.NewAPIClient(token)
 	if err != nil {
 		return err
 	}

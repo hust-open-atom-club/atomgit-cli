@@ -106,6 +106,17 @@ ag repo fork
 ag repo fork owner/repo
 ag repo fork owner/repo --name my-fork --public
 
+
+# 将 Fork 的默认分支与上游同步（不修改本地 Git 工作区）
+ag repo sync
+ag repo sync owner/fork
+
+
+# 同步指定分支；强制覆盖分叉提交需确认或显式 --yes
+ag repo sync owner/fork --branch develop
+ag repo sync owner/fork --branch develop --force
+ag repo sync owner/fork --branch develop --force --yes
+
 # 删除仓库
 ag repo delete --yes
 ag repo delete owner/repo --yes
@@ -114,6 +125,8 @@ ag repo delete owner/repo --yes
 `ag repo edit` 仅发送命令行中明确指定的字段，支持 `--name`、`--description`、`--default-branch` 和 `--visibility public|private`。`--public`、`--private` 是可见性的便利选项；它们与 `--visibility` 三者互斥。名称或可见性修改需要交互确认，可使用 `--yes` 跳过确认。成功后命令会显示更新后的仓库名称和浏览器 URL。
 
 该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。
+
+`ag repo sync` 仅更新 AtomGit 上的远端 Fork。命令会先验证仓库确为 Fork、上游存在且目标分支在两端都可读取；未指定 `--branch` 时使用 Fork 的默认分支。默认同步不会覆盖分叉提交，冲突时返回非零退出码。`--force` 可能覆盖 Fork 上的分叉提交，因此需要交互确认；仅在已审查目标后才应结合 `--yes` 使用。
 
 ### 仓库协作者
 
@@ -214,7 +227,7 @@ ag branch protection delete owner/repo "release/*" --yes
 ag browse
 
 # 打开指定仓库
-ag browse -R owner/repo
+ag browse --repo owner/repo
 
 # 打开 Issue 或 PR
 ag browse 42
@@ -228,16 +241,28 @@ ag browse main.go:312-320
 ag browse main.go:312..320
 
 # 在指定分支上打开文件
-ag browse -b dev main.go:42
+ag browse --branch dev main.go:42
 
 # 在指定 commit 上打开文件
-ag browse -c abc1234 main.go
+ag browse --commit abc1234 main.go
 
 # 打开 Releases 页面
-ag browse -r
+ag browse --releases
+
+
+# 打开 Actions 页面
+ag browse --actions
+
+
+# 打开 Wiki 页面
+ag browse --wiki
+
+
+# 打开 Settings 页面
+ag browse --settings
 
 # 只打印 URL，不打开浏览器
-ag browse -n
+ag browse --no-browser
 ```
 
 ## Pull Request (pr)
@@ -331,12 +356,27 @@ ag pr review owner/repo 123 --approve --force
 #### PR 评论
 
 ```bash
+
+# 创建评论
+ag pr comment create owner/repo 123 --body "LGTM!"
+ag pr comment create owner/repo 123 --body-file review.md
+
 # 创建评论
 ag pr comment create owner/repo 123 --body "LGTM!"
 ag pr comment create owner/repo 123 --body-file review.md
 
 # 查看所有评论（树形结构显示）
 ag pr comment view owner/repo 123
+
+
+# 编辑评论（交互式编辑）
+ag pr comment edit owner/repo 123 456
+ag pr comment edit owner/repo 123 456 --body "Updated comment"
+
+
+# 删除评论
+ag pr comment delete owner/repo 123 456
+ag pr comment delete owner/repo 123 456 --yes
 
 # 编辑评论（交互式编辑）
 ag pr comment edit owner/repo 123 456
@@ -394,12 +434,28 @@ ag issue reopen owner/repo 42
 #### Issue 评论
 
 ```bash
+
+# 创建评论
+ag issue comment create owner/repo 42 --body "I can reproduce this issue"
+ag issue comment create owner/repo 42 --body-file details.md
+
 # 创建评论
 ag issue comment create owner/repo 42 --body "I can reproduce this issue"
 ag issue comment create owner/repo 42 --body-file details.md
 
 # 查看所有评论
 ag issue comment view owner/repo 42
+
+
+# 编辑评论（交互式编辑）
+ag issue comment edit owner/repo 42 789
+ag issue comment edit owner/repo 42 789 --body "Updated information"
+
+
+# 删除评论
+ag issue comment delete owner/repo 42 789
+ag issue comment delete owner/repo 42 789 --yes
+```
 
 # 编辑评论（交互式编辑）
 ag issue comment edit owner/repo 42 789
@@ -454,6 +510,31 @@ ag label delete owner/repo obsolete --yes
 
 AtomGit API v5 的标签创建和修改接口支持 `name` 与 `color`。`label list` 会在接口返回时显示标签描述，但创建和修改命令不会发送 API 未公开支持的 `description` 字段。颜色必须使用 `#RGB` 或 `#RRGGBB` 格式。
 
+
+## Milestone
+
+Milestone 日期使用明确的 `YYYY-MM-DD` 格式。关闭 Milestone 会保留数据，删除则会永久移除并默认要求确认。AtomGit API 要求每次更新都包含 `title` 和 `due_on`，因此 edit、close 和 reopen 会先读取当前 Milestone 并原样保留这两个必填字段；其他未指定字段不会发送。
+
+```bash
+
+# 列出和查看 Milestone
+ag milestone list owner/repo --state all --limit 50
+ag milestone view owner/repo 12
+ag milestone view owner/repo 12 --json
+
+
+# 创建和修改 Milestone
+ag milestone create owner/repo --title "Version 1.0" --description "Release scope" --due-on 2026-08-31
+ag milestone edit owner/repo 12 --title "Version 1.1" --due-on 2026-09-30
+
+
+# 关闭、重新打开或永久删除
+ag milestone close owner/repo 12
+ag milestone reopen owner/repo 12
+ag milestone delete owner/repo 12
+ag milestone delete owner/repo 12 --yes
+```
+
 ## Actions 运行记录 (run)
 
 `ag run` 目前只提供只读的运行检查能力，不会触发、重跑、取消或删除工作流运行。
@@ -488,6 +569,23 @@ ag run view owner/repo <run-id> --artifact <artifact-id> --artifact-file build.z
 ```
 
 `--log` 会先把 AtomGit 返回的日志 ZIP 流式写入临时文件，再逐项输出其中的日志文本；若服务端返回纯文本也会直接兼容。`--log-file` 保留服务端原始 ZIP。日志和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
+
+## Actions 工作流管理 (workflow)
+
+`ag workflow` 用于查看 AtomGit Actions 工作流列表以及手动触发工作流运行（`workflow_dispatch`）。
+
+```bash
+# 列出仓库下的工作流及其 ID
+ag workflow list owner/repo
+ag workflow list owner/repo --json
+
+# 手动触发工作流运行（按工作流 ID 或名称/路径）
+ag workflow run owner/repo 12345 --ref main
+ag workflow run owner/repo ci.yml --ref feature-branch -f env=production -F debug=true
+```
+
+`ag workflow run` 可以按工作流 ID、名称或相对路径（basename）选择目标；名称或 basename 同时匹配多个工作流时会报错并要求改用精确的 workflow ID 或完整路径。`--ref` 缺省时使用仓库的默认分支（而非假定为 `main`），无法确定默认分支时需显式传入 `--ref`。`-f/--raw-field` 与 `-F/--field` 均为 `key=value` 格式，参数值会作为 `workflow_dispatch` 的 inputs 传递。
+
 
 ## 通用 API 请求
 
@@ -635,16 +733,38 @@ ag --version
 ag version --json
 ```
 
-`ag version`、`ag --version` 和 `ag version --json` 同时显示 `selfUpdate` 与 `source`，用于说明当前二进制是否允许自替换以及其发行来源。`selfUpdate` 由 `source` 集中派生，不是独立的构建输入：`release`、`source` 和 `development` 允许自升级，包管理器、自定义和未知来源默认禁止。通过 `make build` 或 `make install` 从源码构建且未注入发布元数据时，默认报告 `selfUpdate=true, source=source`，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，命令会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
+通过 `make build` 或 `make install` 从源码构建且未注入发布元数据时，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，命令会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
 
 通过 `go install ...@latest` 从模块代理安装时，模块版本仍然可用，但由于源码包不包含 Git 历史，文本输出会省略无法获得的 commit 和构建时间，JSON 输出则将对应字段保留为 `unknown`。
 
-下游源码打包方应显式注入自身来源；合法的自定义来源会自动禁用自升级，例如：
+## 检查 CLI 更新
 
 ```bash
-go build -trimpath -ldflags \
-  "-X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.Source=example-manager" \
-  ./cmd/ag
+ag check-update
 ```
 
-`source` 必须是长度不超过 64 的小写 ASCII 标识符，可包含数字、点、下划线和连字符；`unknown` 为无效元数据的保守回退值，不能作为构建来源。
+`ag check-update` 公开查询 `hust-open-atom-club/atomgit-cli` 的稳定 Release，并按 SemVer 比较当前版本。命令不需要登录或仓库上下文，不下载制品，也不会修改当前安装。输出包含当前版本、最新稳定 Release 和比较状态；`dev`、dirty、提交哈希或其他无法比较的本地版本会返回清晰错误。
+
+## 命令别名 (alias)
+
+为常用命令创建快捷方式。别名在调用时展开：`ag` 的第一个非 flag 参数会在别名表中查找，命中后替换为对应的展开内容再执行。
+
+```bash
+# 设置别名（展开内容含空格时用引号让 shell 视为一个参数）
+ag alias set pl "pr list"
+ag alias set rv repo view
+ag alias set open-prs "pr list --state open"
+
+# 列出所有别名
+ag alias list
+
+# 删除别名
+ag alias delete pl
+```
+
+- 别名存储在 `~/.config/ag-cli/config.json`（或 `$XDG_CONFIG_HOME/ag-cli/config.json`），文件权限为 `0600`；该文件只存放别名数据，凭据保存在独立的 `token.json` 中，两者不共用。
+- 别名不会覆盖内置命令：`alias set` 会直接拒绝与内置命令同名的别名名（内置命令始终优先）。
+- 展开内容的第一个命令必须是已有内置命令，`alias set` 会校验并拒绝未知命令或指向其他别名的展开（别名只展开一次）。
+- 展开内容不能以 `!` 开头（不支持 shell 风格别名），也不能为空。
+- 展开内容不支持 shell 引号解析，引号会被当作普通字符；单个参数内的空格需用 `\ ` 转义，例如 Windows 路径 `C:\Program\ Files` 会作为单个参数传递（这与 GitHub CLI 用 shlex 解析的规则不同）。
+- 别名配置文件损坏时，`ag` 会在 stderr 输出警告并忽略别名继续执行，不会阻塞其他命令。

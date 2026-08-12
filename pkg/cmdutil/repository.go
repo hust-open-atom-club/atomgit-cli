@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/spf13/cobra"
 )
@@ -80,7 +81,27 @@ func ParseRepository(value string) (Repository, error) {
 	if repository.Owner == "" || repository.Name == "" {
 		return Repository{}, fmt.Errorf("invalid repository format: %s (expected owner/repo)", value)
 	}
+	if InvalidRepositoryPart(repository.Owner) || InvalidRepositoryPart(repository.Name) {
+		return Repository{}, fmt.Errorf("invalid repository format: %s (repository names contain an unsafe path character)", value)
+	}
 	return repository, nil
+}
+
+// InvalidRepositoryPart reports whether a single owner/repo path segment
+// contains characters that could alter the API request path (? # % backslash
+// or slash separators, control characters, or dot segments). Rejecting them
+// before the value is interpolated into a URL keeps callers safe from
+// request-path injection; a single segment must not contain a "/" separator.
+func InvalidRepositoryPart(value string) bool {
+	if value == "." || value == ".." || strings.ContainsAny(value, `\\/?#%`) {
+		return true
+	}
+	for _, r := range value {
+		if unicode.IsControl(r) {
+			return true
+		}
+	}
+	return false
 }
 
 // ResolveRepository uses an explicit repository when provided and otherwise

@@ -65,6 +65,15 @@ func runReleaseUpload(cmd *cobra.Command, f *cmdutil.Factory, opts uploadOptions
 	if tag == "" {
 		return fmt.Errorf("release tag is required")
 	}
+
+	remoteName := strings.TrimSpace(opts.Name)
+	if !cmd.Flags().Changed("name") {
+		remoteName = filepath.Base(file)
+	}
+	if strings.TrimSpace(remoteName) == "" {
+		return fmt.Errorf("invalid attachment name: %q (must not be empty)", remoteName)
+	}
+
 	info, err := os.Stat(file)
 	if err != nil {
 		return fmt.Errorf("failed to stat upload file: %w", err)
@@ -78,19 +87,11 @@ func runReleaseUpload(cmd *cobra.Command, f *cmdutil.Factory, opts uploadOptions
 	}
 	defer handle.Close()
 
-	remoteName := strings.TrimSpace(opts.Name)
-	if !cmd.Flags().Changed("name") {
-		remoteName = filepath.Base(file)
-	}
-	if strings.TrimSpace(remoteName) == "" {
-		return fmt.Errorf("invalid attachment name: %q (must not be empty)", remoteName)
-	}
-
 	token, err := f.Config.GetToken()
 	if err != nil {
 		return cmdutil.AuthenticationError(err)
 	}
-	client, err := newAPIClient(f, token)
+	client, err := f.NewAPIClient(token)
 	if err != nil {
 		return err
 	}

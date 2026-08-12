@@ -1,3 +1,21 @@
+atomgit-cli (v0.7.1) unstable; urgency=medium
+
+  * Add milestone management, repository fork synchronization, and direct
+    browser shortcuts for Actions, wiki, and repository settings.
+  * Add an explicit update-check command with installation-source-aware
+    guidance.
+  * Automate AtomGit Release publication while restoring the compact artifact
+    contract of seven platform archives, two installers, and one checksum file.
+  * Make installer templates version-neutral and document WinGet installation.
+  * Split credential permission handling by platform and remove unreachable
+    token-file repair logic.
+  * Harden repository and API path validation, redact tokens consistently, and
+    validate command arguments before authentication or configuration access.
+  * Make unauthenticated command failures and repository visibility validation
+    consistent across command families.
+
+ -- Dongliang Mu <dzm91@hust.edu.cn>  Sun, 09 Aug 2026 19:48:53 +0800
+
 atomgit-cli (v0.7.0) unstable; urgency=medium
 
   * Add branch and protected-branch management, repository editing, webhooks,

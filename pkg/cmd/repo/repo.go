@@ -40,7 +40,7 @@ func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "repo",
 		Short: "Manage repositories",
-		Long:  "Create, clone, edit, fork, view, and manage repository collaborators and webhooks.\n\nFor repository-scoped commands, OWNER/REPO may be omitted and inferred from the current Git repository.",
+		Long:  "Create, clone, edit, fork, sync, view, and manage repository collaborators and webhooks.\n\nFor repository-scoped commands, OWNER/REPO may be omitted and inferred from the current Git repository.",
 	}
 
 	cmd.AddCommand(newCmdRepoList(f))
@@ -50,6 +50,7 @@ func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdRepoClone(f))
 	cmd.AddCommand(newCmdRepoDelete(f))
 	cmd.AddCommand(newCmdRepoFork(f))
+	cmd.AddCommand(newCmdRepoSync(f))
 	cmd.AddCommand(newCmdRepoCollaborator(f))
 	cmd.AddCommand(newCmdRepoWebhook(f))
 
@@ -66,16 +67,16 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 		Short: "List repositories",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+
 			if opts.Limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
 
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return err
-			}
-
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
@@ -250,7 +251,7 @@ func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}

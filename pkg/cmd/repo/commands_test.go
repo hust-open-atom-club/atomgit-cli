@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
-	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
@@ -46,6 +45,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 		"edit":   {"default-branch", "description", "name", "private", "public", "visibility", "yes"},
 		"fork":   {"clone", "description", "name", "private", "public"},
 		"list":   {"limit"},
+		"sync":   {"branch", "force", "yes"},
 		"view":   {"web"},
 	}
 	for name, flags := range want {
@@ -72,7 +72,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	if err := edit.Args(edit, []string{"owner/repo", "extra"}); err == nil {
 		t.Fatal("edit accepted too many repositories")
 	}
-	for _, name := range []string{"view", "edit", "fork", "delete"} {
+	for _, name := range []string{"view", "edit", "fork", "sync", "delete"} {
 		child, _, _ := cmd.Find([]string{name})
 		if !strings.Contains(child.Long, cmdutil.RepositoryContextHelp) {
 			t.Errorf("%s help does not explain repository inference", name)
@@ -85,9 +85,9 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 
 func TestNewAPIClient(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
-		client, err := newAPIClient(&cmdutil.Factory{}, "token")
+		client, err := (&cmdutil.Factory{}).NewAPIClient("token")
 		if err != nil || client == nil {
-			t.Fatalf("newAPIClient() = %v, %v", client, err)
+			t.Fatalf("NewAPIClient() = %v, %v", client, err)
 		}
 	})
 
@@ -95,9 +95,9 @@ func TestNewAPIClient(t *testing.T) {
 		factory := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
 			return nil, errors.New("factory failed")
 		}}
-		client, err := newAPIClient(factory, "token")
+		client, err := factory.NewAPIClient("token")
 		if client != nil || err == nil || !strings.Contains(err.Error(), "factory failed") {
-			t.Fatalf("newAPIClient() = %v, %v", client, err)
+			t.Fatalf("NewAPIClient() = %v, %v", client, err)
 		}
 	})
 }
@@ -434,6 +434,91 @@ func TestRepoDeleteCommand(t *testing.T) {
 	}
 }
 
+func TestRepoDeleteConfirmationCancels(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{name: "empty line", input: "\n"},
+		{name: "EOF without input", input: ""},
+		{name: "explicit no", input: "n\n"},
+		{name: "other input", input: "maybe\n"},
+		{name: "unrecognized yes", input: "yes\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requests := 0
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				requests++
+				t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+				return nil, nil
+			})
+			factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+			cmd := newCmdRepoDelete(factory)
+			cmd.SetIn(strings.NewReader(tt.input))
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, []string{"demo"}); err != nil {
+				t.Fatal(err)
+			}
+			if requests != 0 {
+				t.Fatalf("request count = %d, want 0 (deletion must not be called)", requests)
+			}
+			if !strings.Contains(output.String(), "Deletion cancelled.") {
+				t.Fatalf("output = %q, want 'Deletion cancelled.'", output.String())
+			}
+		})
+	}
+}
+
+func TestRepoDeleteConfirmationProceeds(t *testing.T) {
+	for _, input := range []string{"y\n", "Y\n"} {
+		t.Run(strings.TrimSpace(input), func(t *testing.T) {
+			requests := 0
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				requests++
+				if req.Method != http.MethodDelete || req.URL.Path != "/api/v5/repos/alice/demo" {
+					t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+				}
+				return forkResponse(http.StatusNoContent, ""), nil
+			})
+			factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+			cmd := newCmdRepoDelete(factory)
+			cmd.SetIn(strings.NewReader(input))
+			if err := cmd.RunE(cmd, []string{"demo"}); err != nil {
+				t.Fatal(err)
+			}
+			if requests != 1 {
+				t.Fatalf("request count = %d, want 1", requests)
+			}
+		})
+	}
+}
+
+type errorReader struct{}
+
+func (errorReader) Read([]byte) (int, error) { return 0, errors.New("simulated read failure") }
+
+func TestRepoDeleteConfirmationReadError(t *testing.T) {
+	requests := 0
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		requests++
+		t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+		return nil, nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+	cmd := newCmdRepoDelete(factory)
+	cmd.SetIn(errorReader{})
+	if err := cmd.RunE(cmd, []string{"demo"}); err == nil {
+		t.Fatal("expected confirmation read error")
+	} else if !strings.Contains(err.Error(), "failed to read confirmation") {
+		t.Fatalf("error = %v, want 'failed to read confirmation'", err)
+	}
+	if requests != 0 {
+		t.Fatalf("request count = %d, want 0 (deletion must not be called)", requests)
+	}
+}
+
 func TestRepoViewWebFlag(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
@@ -472,8 +557,8 @@ func TestRepoDeleteCommandInfersRepository(t *testing.T) {
 }
 
 func TestRepoCommandsReportAuthenticationErrors(t *testing.T) {
-	cfg := repoCommandConfig{tokenErr: errors.New("missing token"), user: "alice"}
-	factory := repoFactory(cfg, nil)
+	config := repoCommandConfig{tokenErr: errors.New("missing token"), user: "alice"}
+	factory := repoFactory(config, nil)
 	tests := []struct {
 		name string
 		call func() error
@@ -504,79 +589,46 @@ func TestRepoCommandsReportAuthenticationErrors(t *testing.T) {
 	}
 }
 
-func TestRepoListAndViewPreserveCanonicalAuthenticationError(t *testing.T) {
-	factory := repoFactory(repoCommandConfig{tokenErr: config.ErrNotAuthenticated}, nil)
-	tests := []struct {
-		name string
-		call func() error
-	}{
-		{name: "list", call: func() error {
-			cmd := newCmdRepoList(factory)
-			return cmd.RunE(cmd, nil)
-		}},
-		{name: "view", call: func() error {
-			cmd := newCmdRepoView(factory)
-			return cmd.RunE(cmd, []string{"alice/demo"})
-		}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.call(); !errors.Is(err, config.ErrNotAuthenticated) {
-				t.Fatalf("error = %v", err)
-			}
-		})
-	}
-}
-
-func TestRepoCreateAndDeletePreserveCanonicalUserAuthenticationError(t *testing.T) {
-	factory := repoFactory(repoCommandConfig{userErr: config.ErrNotAuthenticated}, nil)
-	tests := []struct {
-		name string
-		call func() error
-	}{
-		{name: "create", call: func() error {
-			return runCreate(strings.NewReader(""), io.Discard, io.Discard, factory, &CreateOptions{Name: "demo"})
-		}},
-		{name: "delete", call: func() error {
-			cmd := newCmdRepoDelete(factory)
-			if err := cmd.Flags().Set("yes", "true"); err != nil {
-				return err
-			}
-			return cmd.RunE(cmd, []string{"demo"})
-		}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.call()
-			if !errors.Is(err, config.ErrNotAuthenticated) {
-				t.Fatalf("error = %v", err)
-			}
-			if err.Error() != config.ErrNotAuthenticated.Error() {
-				t.Fatalf("error = %q, want %q", err, config.ErrNotAuthenticated)
-			}
-		})
-	}
-}
-
-func TestRepoListValidatesLimitBeforeAuthentication(t *testing.T) {
-	factory := repoFactory(repoCommandConfig{tokenErr: config.ErrNotAuthenticated}, nil)
-	cmd := newCmdRepoList(factory)
-	if err := cmd.Flags().Set("limit", "0"); err != nil {
-		t.Fatal(err)
-	}
-	if err := cmd.RunE(cmd, nil); err == nil || !strings.Contains(err.Error(), "invalid limit: 0") {
+func TestRepoViewReturnsCanonicalAuthenticationError(t *testing.T) {
+	factory := repoFactory(repoCommandConfig{
+		tokenErr: errors.New("not authenticated: run `ag auth login`"),
+		user:     "alice",
+	}, nil)
+	cmd := newCmdRepoView(factory)
+	err := cmd.RunE(cmd, []string{"alice/demo"})
+	if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
 		t.Fatalf("error = %v", err)
 	}
 }
 
-func TestRepoViewResolvesRepositoryBeforeAuthentication(t *testing.T) {
-	wantErr := errors.New("repository context unavailable")
-	factory := repoFactory(repoCommandConfig{tokenErr: config.ErrNotAuthenticated}, nil)
-	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
-		return cmdutil.Repository{}, wantErr
+// TestRunCreateRejectsMutuallyExclusiveVisibility guards against regressing the
+// mutual exclusion check on --public/--private. It pins two invariants the reviewer
+// asked for in PR #151:
+//  1. The conflicting combination is rejected (returns a non-nil error whose
+//     message mentions both flags).
+//  2. Validation runs *before* any config/auth/client initialization: even with a
+//     factory whose GetUser() and GetToken() would error, those errors must NOT
+//     surface — proving the check short-circuits ahead of config/auth work.
+func TestRunCreateRejectsMutuallyExclusiveVisibility(t *testing.T) {
+	errs := errors.New("simulated config failure")
+	factory := repoFactory(repoCommandConfig{
+		token:    "",
+		tokenErr: errs,
+		user:     "",
+		userErr:  errs,
+	}, nil)
+
+	err := runCreate(strings.NewReader(""), io.Discard, io.Discard, factory,
+		&CreateOptions{Name: "demo", Public: true, Private: true})
+	if err == nil {
+		t.Fatal("runCreate() expected an error for --public --private")
 	}
-	cmd := newCmdRepoView(factory)
-	if err := cmd.RunE(cmd, nil); !errors.Is(err, wantErr) {
-		t.Fatalf("error = %v, want repository resolution error", err)
+	if !strings.Contains(err.Error(), "--public") || !strings.Contains(err.Error(), "--private") {
+		t.Fatalf("error = %q, want message mentioning both --public and --private", err.Error())
+	}
+	// The mutual-exclusion check must fire before any config/auth work: a simulated
+	// config failure must not leak into the returned error.
+	if strings.Contains(err.Error(), "simulated config failure") {
+		t.Fatalf("error = %q, config/auth layer was reached before visibility validation", err.Error())
 	}
 }

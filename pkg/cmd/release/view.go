@@ -31,7 +31,7 @@ func newCmdReleaseView(f *cmdutil.Factory) *cobra.Command {
 				return cmdutil.AuthenticationError(err)
 			}
 
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}

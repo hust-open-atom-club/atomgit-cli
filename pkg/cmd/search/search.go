@@ -98,7 +98,7 @@ func newCmdSearchUsers(f *cmdutil.Factory) *cobra.Command {
 
 			query := args[0]
 
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
@@ -175,7 +175,7 @@ func newCmdSearchRepositories(f *cmdutil.Factory) *cobra.Command {
 
 			query := args[0]
 
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
@@ -261,7 +261,7 @@ func newCmdSearchIssues(f *cmdutil.Factory) *cobra.Command {
 
 			query := args[0]
 
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}

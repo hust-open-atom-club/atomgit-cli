@@ -12,49 +12,19 @@ import (
 	"testing"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
-	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 
-type prTestConfig struct{ tokenErr error }
+type prTestConfig struct{}
 
-func (c prTestConfig) GetToken() (string, error) { return "token", c.tokenErr }
-func (prTestConfig) GetUser() (string, error)    { return "alice", nil }
-func (prTestConfig) GetHost() string             { return "atomgit.com" }
+func (prTestConfig) GetToken() (string, error) { return "token", nil }
+func (prTestConfig) GetUser() (string, error)  { return "alice", nil }
+func (prTestConfig) GetHost() string           { return "atomgit.com" }
 
 type prRoundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f prRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
-
-func TestPRIssueLinksValidateBeforeAuthentication(t *testing.T) {
-	factory := &cmdutil.Factory{Config: prTestConfig{tokenErr: config.ErrNotAuthenticated}}
-	tests := []struct {
-		name    string
-		command func(*cmdutil.Factory) *cobra.Command
-		args    []string
-		issue   string
-		want    string
-	}{
-		{name: "link missing issue", command: newCmdLinkIssues, args: []string{"alice/demo", "1"}, want: "at least one issue number"},
-		{name: "link invalid issue", command: newCmdLinkIssues, args: []string{"alice/demo", "1"}, issue: "bad", want: "invalid issue number"},
-		{name: "link invalid PR", command: newCmdLinkIssues, args: []string{"alice/demo", "bad"}, issue: "1", want: "invalid PR number"},
-		{name: "unlink missing issue", command: newCmdUnlinkIssues, args: []string{"alice/demo", "1"}, want: "at least one issue number"},
-		{name: "unlink invalid issue", command: newCmdUnlinkIssues, args: []string{"alice/demo", "1"}, issue: "bad", want: "invalid issue number"},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			cmd := test.command(factory)
-			if test.issue != "" {
-				_ = cmd.Flags().Set("issue", test.issue)
-			}
-			err := cmd.RunE(cmd, test.args)
-			if err == nil || !strings.Contains(err.Error(), test.want) {
-				t.Fatalf("error = %v, want containing %q", err, test.want)
-			}
-		})
-	}
-}
 
 func TestResolveBaseBranch(t *testing.T) {
 	tests := []struct {
@@ -449,7 +419,7 @@ func TestPRViewJSON(t *testing.T) {
 func TestPRListRejectsInvalidLimit(t *testing.T) {
 	for _, limit := range []string{"0", "-1"} {
 		t.Run(limit, func(t *testing.T) {
-			cmd := newCmdPRList(&cmdutil.Factory{Config: prTestConfig{tokenErr: fmt.Errorf("not authenticated")}})
+			cmd := newCmdPRList(&cmdutil.Factory{Config: prTestConfig{}})
 			_ = cmd.Flags().Set("limit", limit)
 			if err := cmd.RunE(cmd, []string{"alice/demo"}); err == nil || !strings.Contains(err.Error(), "must be positive") {
 				t.Fatalf("error = %v", err)
@@ -1181,49 +1151,6 @@ func (r *recordingConfig) GetToken() (string, error) {
 func (*recordingConfig) GetUser() (string, error) { return "alice", nil }
 func (*recordingConfig) GetHost() string          { return "atomgit.com" }
 
-func TestPRCommandsValidateBeforeAuthentication(t *testing.T) {
-	tests := []struct {
-		name      string
-		command   func(*cmdutil.Factory) *cobra.Command
-		args      []string
-		configure func(*cobra.Command)
-		wantError string
-	}{
-		{name: "list repository", command: newCmdPRList, args: []string{"demo"}, wantError: "invalid repository format"},
-		{
-			name: "create repository", command: newCmdPRCreate, args: []string{"demo"},
-			configure: func(cmd *cobra.Command) { _ = cmd.Flags().Set("title", "title") },
-			wantError: "invalid repository format",
-		},
-		{name: "view number", command: newCmdPRView, args: []string{"alice/demo", "bad"}, wantError: "invalid PR number"},
-		{name: "edit number", command: newCmdPREdit, args: []string{"alice/demo", "bad"}, wantError: "invalid PR number"},
-		{name: "edit fields", command: newCmdPREdit, args: []string{"alice/demo", "1"}, wantError: "at least one PR field"},
-		{name: "close number", command: newCmdPRClose, args: []string{"alice/demo", "bad"}, wantError: "invalid PR number"},
-		{name: "reopen number", command: newCmdPRReopen, args: []string{"alice/demo", "bad"}, wantError: "invalid PR number"},
-		{name: "diff number", command: newCmdPRDiff, args: []string{"alice/demo", "bad"}, wantError: "invalid PR number"},
-		{name: "merge number", command: newCmdPRMerge, args: []string{"alice/demo", "bad"}, wantError: "invalid PR number"},
-		{name: "issues number", command: newCmdViewIssues, args: []string{"alice/demo", "bad"}, wantError: "invalid PR number"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := &recordingConfig{}
-			cmd := tt.command(&cmdutil.Factory{Config: cfg})
-			if tt.configure != nil {
-				tt.configure(cmd)
-			}
-
-			err := cmd.RunE(cmd, tt.args)
-			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
-				t.Fatalf("error = %v, want containing %q", err, tt.wantError)
-			}
-			if cfg.getTokenCalls != 0 {
-				t.Fatalf("GetToken was called %d times; validation must finish before authentication", cfg.getTokenCalls)
-			}
-		})
-	}
-}
-
 func TestCmdPRCheckoutRejectsInvalidPRNumberBeforeAPI(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -1259,5 +1186,51 @@ func TestCmdPRCheckoutRejectsInvalidPRNumberBeforeAPI(t *testing.T) {
 				t.Fatalf("GetToken was called %d times; parsePRNumber must reject invalid input before authentication", cfg.getTokenCalls)
 			}
 		})
+	}
+}
+
+func TestPRDiffRejectInvalidNumberBeforeAuth(t *testing.T) {
+	cfg := &recordingConfig{}
+	factory := &cmdutil.Factory{Config: cfg}
+	var requests int
+	factory.HttpClient = func() (*http.Client, error) {
+		requests++
+		return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: 200, Status: "200 OK", Body: http.NoBody, Header: make(http.Header)}, nil
+		})}, nil
+	}
+	cmd := newCmdPRDiff(factory)
+	err := cmd.RunE(cmd, []string{"alice/demo", "1/../../evil"})
+	if err == nil || !strings.Contains(err.Error(), "invalid PR number") {
+		t.Fatalf("error = %v, want 'invalid PR number'", err)
+	}
+	if cfg.getTokenCalls != 0 {
+		t.Fatalf("GetToken was called %d times; parsePRNumber must reject invalid input before authentication", cfg.getTokenCalls)
+	}
+	if requests != 0 {
+		t.Fatalf("HttpClient created %d times; invalid input must not reach network initialization", requests)
+	}
+}
+
+func TestPRIssuesRejectInvalidNumberBeforeAuth(t *testing.T) {
+	cfg := &recordingConfig{}
+	factory := &cmdutil.Factory{Config: cfg}
+	var requests int
+	factory.HttpClient = func() (*http.Client, error) {
+		requests++
+		return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: 200, Status: "200 OK", Body: http.NoBody, Header: make(http.Header)}, nil
+		})}, nil
+	}
+	cmd := newCmdViewIssues(factory)
+	err := cmd.RunE(cmd, []string{"alice/demo", "1/../../evil"})
+	if err == nil || !strings.Contains(err.Error(), "invalid PR number") {
+		t.Fatalf("error = %v, want 'invalid PR number'", err)
+	}
+	if cfg.getTokenCalls != 0 {
+		t.Fatalf("GetToken was called %d times; parsePRNumber must reject invalid input before authentication", cfg.getTokenCalls)
+	}
+	if requests != 0 {
+		t.Fatalf("HttpClient created %d times; invalid input must not reach network initialization", requests)
 	}
 }

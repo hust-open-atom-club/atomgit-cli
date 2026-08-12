@@ -98,7 +98,7 @@ func runReleaseEdit(cmd *cobra.Command, f *cmdutil.Factory, opts editOptions, ar
 	if err != nil {
 		return cmdutil.AuthenticationError(err)
 	}
-	client, err := newAPIClient(f, token)
+	client, err := f.NewAPIClient(token)
 	if err != nil {
 		return err
 	}

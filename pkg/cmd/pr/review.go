@@ -52,7 +52,7 @@ by the public API.`,
 				return fmt.Errorf("current user is empty in stored credentials")
 			}
 
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
@@ -102,6 +102,9 @@ func parseReviewArgs(args []string) (string, string, int, error) {
 	repo := strings.TrimSpace(parts[1])
 	if owner == "" || repo == "" {
 		return "", "", 0, fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+	}
+	if cmdutil.InvalidRepositoryPart(owner) || cmdutil.InvalidRepositoryPart(repo) {
+		return "", "", 0, fmt.Errorf("invalid repository format: %s (repository names contain an unsafe path character)", args[0])
 	}
 
 	number, err := strconv.Atoi(args[1])

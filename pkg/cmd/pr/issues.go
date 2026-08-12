@@ -15,6 +15,8 @@ func newCmdViewIssues(f *cmdutil.Factory) *cobra.Command {
 		Long:  `View all issues linked to a pull request.`,
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Resolve and validate arguments before any authentication or
+			// network initialization so invalid input never reaches GetToken.
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
@@ -30,7 +32,7 @@ func newCmdViewIssues(f *cmdutil.Factory) *cobra.Command {
 				return cmdutil.AuthenticationError(err)
 			}
 
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}

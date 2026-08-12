@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 )
 
 const (
@@ -141,7 +143,7 @@ func (c *Client) doRequestWithPolicyContext(
 		if c.token != "" {
 			req.Header.Set("Authorization", "Bearer "+c.token)
 		}
-		req.Header.Set("User-Agent", "AtomCode-CLI-v0.4")
+		req.Header.Set("User-Agent", "AtomCode-CLI/"+version.Get().Version)
 		if contentType != "" {
 			req.Header.Set("Content-Type", contentType)
 		}

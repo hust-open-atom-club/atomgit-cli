@@ -300,7 +300,7 @@ func collaboratorAPIClient(f *cmdutil.Factory) (*api.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("not authenticated: %w", err)
 	}
-	return newAPIClient(f, token)
+	return f.NewAPIClient(token)
 }
 
 func collaboratorCollectionPath(repository cmdutil.Repository) string {

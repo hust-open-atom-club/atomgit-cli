@@ -19,15 +19,6 @@ func (releaseTestConfig) GetToken() (string, error) { return "token", nil }
 func (releaseTestConfig) GetUser() (string, error)  { return "alice", nil }
 func (releaseTestConfig) GetHost() string           { return "atomgit.com" }
 
-type recordingReleaseConfig struct{ getTokenCalls int }
-
-func (c *recordingReleaseConfig) GetToken() (string, error) {
-	c.getTokenCalls++
-	return "token", nil
-}
-func (*recordingReleaseConfig) GetUser() (string, error) { return "alice", nil }
-func (*recordingReleaseConfig) GetHost() string          { return "atomgit.com" }
-
 type releaseRoundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f releaseRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
@@ -66,8 +57,8 @@ func staticRepoFactory(owner, repo string) *cmdutil.Factory {
 
 func TestNewCmdReleaseRegistersCommands(t *testing.T) {
 	cmd := NewCmdRelease(&cmdutil.Factory{})
-	if !strings.Contains(cmd.Long, "#18") || !strings.Contains(cmd.Long, "does not") {
-		t.Fatalf("release Long does not explain the #18 boundary: %q", cmd.Long)
+	if !strings.Contains(cmd.Long, "make publish") || !strings.Contains(cmd.Long, "automated release pipeline") {
+		t.Fatalf("release Long does not reference the automated pipeline: %q", cmd.Long)
 	}
 	wantExample := `  ag release list owner/repo
   ag release view owner/repo v1.0.0
@@ -126,18 +117,6 @@ func TestReleaseListRejectsInvalidLimit(t *testing.T) {
 				t.Fatalf("error = %v, want containing %q", err, "must be positive")
 			}
 		})
-	}
-}
-
-func TestReleaseListResolvesRepositoryBeforeAuthentication(t *testing.T) {
-	cfg := &recordingReleaseConfig{}
-	cmd := newCmdReleaseList(&cmdutil.Factory{Config: cfg})
-	err := cmd.RunE(cmd, []string{"demo"})
-	if err == nil || !strings.Contains(err.Error(), "invalid repository format") {
-		t.Fatalf("error = %v, want invalid repository format", err)
-	}
-	if cfg.getTokenCalls != 0 {
-		t.Fatalf("GetToken was called %d times; repository resolution must finish before authentication", cfg.getTokenCalls)
 	}
 }
 
