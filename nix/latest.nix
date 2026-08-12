@@ -23,6 +23,6 @@ pkgs.buildGoModule (
   // {
     inherit version;
     src = self;
-    vendorHash = "sha256-iv1FSZyFaG2IL7DzI8UZp77OjfbQG6A4LGSR/TQFDQI=";
+    vendorHash = "sha256-6oqpz0iW3+G1zG7ClbBFO8lSkxxu3AeryUYyRs6HKG0=";
   }
 )
