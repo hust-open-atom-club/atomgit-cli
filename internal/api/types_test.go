@@ -300,7 +300,7 @@ func TestPullRequestCollaborationFields(t *testing.T) {
 		if len(pr.Testers) != 1 || pr.Testers[0].Login != "carol" {
 			t.Fatalf("testers = %#v", pr.Testers)
 		}
-		if pr.Milestone == nil || pr.Milestone.Number != 4 || pr.Milestone.Title != "v1.0" {
+		if pr.Milestone == nil || pr.Milestone.GetNumber() != "4" || pr.Milestone.Title != "v1.0" {
 			t.Fatalf("milestone = %#v", pr.Milestone)
 		}
 	})
