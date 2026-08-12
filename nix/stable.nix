@@ -5,11 +5,12 @@
 
 let
   version = "0.7.1";
-  commit = "v${version}";
+  commit = "783e32c68a4842d22a12882d3e11638828e101f7";
+  buildDate = "2026-08-09T20:02:22+08:00";
 in
 pkgs.buildGoModule (
   mkAg {
-    inherit commit;
+    inherit commit buildDate;
     buildVersion = "v${version}";
   }
   // {
