@@ -276,6 +276,149 @@ func TestAPIOutputHonorsRootSanitization(t *testing.T) {
 	}
 }
 
+func TestRootSanitizesDecodedFileContent(t *testing.T) {
+	payload := "Hello \x00 World\n"
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "read-file",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprint(cmd.OutOrStdout(), payload)
+			return err
+		},
+	})
+	cmd.SetArgs([]string{"read-file"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := stdout.String(), "Hello \\x00 World\n"; got != want {
+		t.Fatalf("stdout = %q, want %q", got, want)
+	}
+}
+
+func TestRootRawOutputPreservesDecodedFileContent(t *testing.T) {
+	payload := "Hello \x00 World\n"
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "read-file",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprint(cmd.OutOrStdout(), payload)
+			return err
+		},
+	})
+	cmd.SetArgs([]string{"--raw-output", "read-file"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+		t.Fatal(err)
+	}
+	if stdout.String() != payload {
+		t.Fatalf("stdout = %q, want raw %q", stdout.String(), payload)
+	}
+}
+
+func TestRootJSONOutputStillWorksWithSanitization(t *testing.T) {
+	payload := "{\n  \"name\": \"f.txt\",\n  \"content\": \"SGVsbG8=\"\n}\n"
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "read-file",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprint(cmd.OutOrStdout(), payload)
+			return err
+		},
+	})
+	cmd.SetArgs([]string{"read-file"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+		t.Fatal(err)
+	}
+	if got := stdout.String(); got != payload {
+		t.Fatalf("JSON output was corrupted: got %q, want %q", got, payload)
+	}
+}
+
+func TestRootFileContentWithNewlinesSanitized(t *testing.T) {
+	payload := "line1\ntab\there\x01\x02end\n"
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "read-file",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprint(cmd.OutOrStdout(), payload)
+			return err
+		},
+	})
+	cmd.SetArgs([]string{"read-file"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+		t.Fatal(err)
+	}
+	got := stdout.String()
+	if strings.Contains(got, "\x01") || strings.Contains(got, "\x02") {
+		t.Fatalf("control chars not sanitized: %q", got)
+	}
+	if !strings.Contains(got, "line1\n") {
+		t.Fatalf("printable chars corrupted: %q", got)
+	}
+	if !strings.Contains(got, "\t") {
+		t.Fatalf("tab removed: %q", got)
+	}
+	if !strings.Contains(got, "\\x01") {
+		t.Fatalf("C0 control not escaped: %q", got)
+	}
+	if !strings.Contains(got, "\\x02") {
+		t.Fatalf("C0 control not escaped: %q", got)
+	}
+}
+
+func TestRootFileContentRawPreservesAllBytes(t *testing.T) {
+	payload := "line1\ntab\there\x01\x02end\n"
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "read-file",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprint(cmd.OutOrStdout(), payload)
+			return err
+		},
+	})
+	cmd.SetArgs([]string{"--raw-output", "read-file"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+		t.Fatal(err)
+	}
+	if stdout.String() != payload {
+		t.Fatalf("raw stdou = %q, want %q", stdout.String(), payload)
+	}
+}
+
 func newTestRoot(t *testing.T) *cobra.Command {
 	t.Helper()
 	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, io.Discard, io.Discard)

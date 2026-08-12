@@ -53,6 +53,8 @@ func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdRepoSync(f))
 	cmd.AddCommand(newCmdRepoCollaborator(f))
 	cmd.AddCommand(newCmdRepoWebhook(f))
+	cmd.AddCommand(newCmdRepoReadFile(f))
+	cmd.AddCommand(newCmdRepoReadDir(f))
 
 	return cmd
 }
