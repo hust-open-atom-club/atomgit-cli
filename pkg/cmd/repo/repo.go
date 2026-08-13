@@ -67,13 +67,13 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 		Short: "List repositories",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.Limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
-			}
-
-			if opts.Limit <= 0 {
-				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
 
 			client, err := f.NewAPIClient(token)

@@ -40,6 +40,11 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("discussion ID cannot be empty")
 			}
 
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+
 			// Get body
 			body := opts.Body
 			if body == "" {
@@ -60,12 +65,10 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("reply body cannot be empty")
 			}
 
-			token, err := f.Config.GetToken()
+			client, err := f.NewAPIClient(token)
 			if err != nil {
-				return cmdutil.AuthenticationError(err)
+				return err
 			}
-
-			client := api.NewClient(token)
 
 			// Reply using discussions API. The response carries the discussion id
 			// as `id` and the new reply's comment id as `note_id`.
