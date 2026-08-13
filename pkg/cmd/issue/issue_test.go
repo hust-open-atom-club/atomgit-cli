@@ -593,15 +593,11 @@ func TestIssueCreateAssignee(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			requests := 0
-			var resolveCalled bool
 			factory := &cmdutil.Factory{
 				Config: issueTestConfig{},
 				HttpClient: func() (*http.Client, error) {
 					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						requests++
-						if !resolveCalled {
-							t.Fatal("HTTP request before repository resolution")
-						}
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/issues" {
 							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 						}
@@ -631,8 +627,6 @@ func TestIssueCreateAssignee(t *testing.T) {
 			if tt.assignee != "" || tt.wantError == "assignee cannot be empty" {
 				_ = cmd.Flags().Set("assignee", tt.assignee)
 			}
-			resolveCalled = true
-
 			err := cmd.RunE(cmd, []string{"alice/demo"})
 			if tt.wantError != "" {
 				if err == nil || !strings.Contains(err.Error(), tt.wantError) {

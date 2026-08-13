@@ -2,7 +2,9 @@ package issue
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -35,11 +37,12 @@ func newCmdIssueEdit(f *cmdutil.Factory) *cobra.Command {
 			bodyFileChanged := cmd.Flags().Changed("body-file")
 			assigneeChanged := cmd.Flags().Changed("assignee")
 			removeAssigneeChanged := cmd.Flags().Changed("remove-assignee")
+			removeAssignee := removeAssigneeChanged && opts.RemoveAssignee
 
-			if assigneeChanged && removeAssigneeChanged {
+			if assigneeChanged && removeAssignee {
 				return fmt.Errorf("--assignee and --remove-assignee cannot be used together")
 			}
-			if !titleChanged && !bodyChanged && !bodyFileChanged && !assigneeChanged && !removeAssigneeChanged {
+			if !titleChanged && !bodyChanged && !bodyFileChanged && !assigneeChanged && !removeAssignee {
 				return fmt.Errorf("at least one of --title, --body, --body-file, --assignee, or --remove-assignee must be provided")
 			}
 			if bodyChanged && bodyFileChanged {
@@ -63,9 +66,9 @@ func newCmdIssueEdit(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid issue number %q (must be a positive integer)", number)
 			}
 
-			if (assigneeChanged || removeAssigneeChanged) && !opts.Yes {
+			if (assigneeChanged || removeAssignee) && !opts.Yes {
 				action := "set assignee to " + assignee
-				if removeAssigneeChanged {
+				if removeAssignee {
 					action = "remove assignee"
 				}
 				prompt := fmt.Sprintf("Change assignee on issue #%s in %s/%s to %s? (y/N) ", number, owner, repo, action)
@@ -116,16 +119,16 @@ func newCmdIssueEdit(f *cmdutil.Factory) *cobra.Command {
 			if assigneeChanged {
 				fields["assignee"] = assignee
 			}
-			if removeAssigneeChanged {
+			if removeAssignee {
 				fields["assignee"] = ""
 			}
 
-			if assigneeChanged || removeAssigneeChanged {
+			if assigneeChanged || removeAssignee {
 				var bodyUpdate *string
 				if bodyChanged || bodyFileChanged {
 					bodyUpdate = &body
 				}
-				if err := api.EditIssueAssignee(client, owner, repo, number, title, bodyUpdate, assignee, removeAssigneeChanged); err != nil {
+				if err := api.EditIssueAssignee(client, owner, repo, number, title, bodyUpdate, assignee, removeAssignee); err != nil {
 					return fmt.Errorf("failed to edit issue: %w", err)
 				}
 			} else {
@@ -160,11 +163,13 @@ func newCmdIssueEdit(f *cmdutil.Factory) *cobra.Command {
 }
 
 func confirmPrompt(cmd *cobra.Command, prompt string) (bool, error) {
-	fmt.Fprint(cmd.ErrOrStderr(), prompt)
+	if _, err := fmt.Fprint(cmd.ErrOrStderr(), prompt); err != nil {
+		return false, fmt.Errorf("write confirmation prompt: %w", err)
+	}
 	reader := bufio.NewReader(cmd.InOrStdin())
 	line, err := reader.ReadString('\n')
-	if err != nil {
-		return false, nil
+	if err != nil && !errors.Is(err, io.EOF) {
+		return false, fmt.Errorf("read confirmation response: %w", err)
 	}
 	response := strings.TrimSpace(strings.ToLower(line))
 	return response == "y" || response == "yes", nil

@@ -7,15 +7,27 @@ import (
 	"strings"
 )
 
-func buildContentsPath(owner, repo, path string) (string, error) {
+func buildContentsPath(owner, repo, path string, allowRoot bool) (string, error) {
 	escapedOwner := url.PathEscape(owner)
 	escapedRepo := url.PathEscape(repo)
 	if path == "." {
+		if !allowRoot {
+			return "", fmt.Errorf("repository content path %q is only valid for directory listings", path)
+		}
 		return fmt.Sprintf("/repos/%s/%s/contents", escapedOwner, escapedRepo), nil
+	}
+	if path == "" {
+		return "", fmt.Errorf("repository content path cannot be empty")
+	}
+	if strings.HasPrefix(path, "/") || strings.HasSuffix(path, "/") || strings.Contains(path, "//") {
+		return "", fmt.Errorf("invalid repository content path %q", path)
 	}
 	segments := strings.Split(path, "/")
 	escapedSegments := make([]string, len(segments))
 	for i, seg := range segments {
+		if seg == "." || seg == ".." {
+			return "", fmt.Errorf("repository content path must not contain %q segments", seg)
+		}
 		escapedSegments[i] = url.PathEscape(seg)
 	}
 	return fmt.Sprintf("/repos/%s/%s/contents/%s", escapedOwner, escapedRepo, strings.Join(escapedSegments, "/")), nil
@@ -25,7 +37,7 @@ func buildContentsPath(owner, repo, path string) (string, error) {
 // path is a repository-relative content path.
 // ref, when non-empty, selects a branch, tag, or commit.
 func GetRepositoryContent(client *Client, owner, repo, path, ref string) (*RepositoryContent, error) {
-	contentPath, err := buildContentsPath(owner, repo, path)
+	contentPath, err := buildContentsPath(owner, repo, path, false)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +62,7 @@ func GetRepositoryContent(client *Client, owner, repo, path, ref string) (*Repos
 // path is a repository-relative content path; use "." for root.
 // ref, when non-empty, selects a branch, tag, or commit.
 func ListRepositoryContent(client *Client, owner, repo, path, ref string) ([]RepositoryContent, error) {
-	contentPath, err := buildContentsPath(owner, repo, path)
+	contentPath, err := buildContentsPath(owner, repo, path, true)
 	if err != nil {
 		return nil, err
 	}

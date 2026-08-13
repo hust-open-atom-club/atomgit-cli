@@ -205,7 +205,7 @@ func TestPRFilesTextOutput(t *testing.T) {
 		Config: prTestConfig{},
 		HttpClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-				return prResponse(http.StatusOK, `[{"sha":"a","filename":"main.go","status":"modified","additions":10,"deletions":2,"too_large":false,"blob_url":"https://b","raw_url":"https://r","patch":{"old_path":"main.go","new_path":"main.go","added_lines":10,"removed_lines":2,"too_large":false}},{"sha":"b","filename":"old.go","status":"renamed","additions":0,"deletions":0,"too_large":false,"blob_url":"https://b2","raw_url":"https://r2","patch":{"old_path":"old.go","new_path":"new.go","added_lines":0,"removed_lines":0,"too_large":false}}]`), nil
+				return prResponse(http.StatusOK, `[{"sha":"a","filename":"main.go","additions":10,"deletions":2,"too_large":false,"blob_url":"https://b","raw_url":"https://r","patch":{"old_path":"main.go","new_path":"main.go","added_lines":10,"removed_lines":2,"too_large":false,"new_file":false,"renamed_file":false,"deleted_file":false}},{"sha":"b","filename":"old.go","additions":0,"deletions":0,"too_large":false,"blob_url":"https://b2","raw_url":"https://r2","patch":{"old_path":"old.go","new_path":"new.go","added_lines":0,"removed_lines":0,"too_large":false,"new_file":false,"renamed_file":true,"deleted_file":false}}]`), nil
 			})}, nil
 		},
 	}
@@ -232,7 +232,7 @@ func TestPRFilesJSON(t *testing.T) {
 		Config: prTestConfig{},
 		HttpClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-				return prResponse(http.StatusOK, `[{"sha":"a","filename":"main.go","status":"modified","additions":10,"deletions":2,"too_large":false,"blob_url":"https://b","raw_url":"https://r","patch":{"old_path":"main.go","new_path":"main.go","added_lines":10,"removed_lines":2,"too_large":false}}]`), nil
+				return prResponse(http.StatusOK, `[{"sha":"a","filename":"main.go","additions":10,"deletions":2,"too_large":false,"blob_url":"https://b","raw_url":"https://r","patch":{"old_path":"main.go","new_path":"main.go","added_lines":10,"removed_lines":2,"too_large":false,"new_file":false,"renamed_file":false,"deleted_file":false}}]`), nil
 			})}, nil
 		},
 	}
