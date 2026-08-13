@@ -57,6 +57,10 @@ ag auth logout --all
 # 列出仓库（默认显示 30 条）
 ag repo list
 
+# 列出指定用户或组织的公开仓库
+ag repo list alice
+ag repo list hust-open-atom-club
+
 # 指定最多列出100条仓库
 ag repo list --limit 100
 

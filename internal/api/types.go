@@ -33,6 +33,13 @@ type Repository struct {
 		Login string `json:"login"`
 		Type  string `json:"type"`
 	} `json:"owner"`
+	// Namespace carries the owning group for organization-scoped responses
+	// (GET /orgs/:org/repos), where the response has no owner object and
+	// full_name is a localized display name. Path is the canonical namespace
+	// path, e.g. "hust-open-atom-club".
+	Namespace struct {
+		Path string `json:"path"`
+	} `json:"namespace"`
 }
 
 // RepositorySyncRequest selects the fork branch to synchronize. Force permits
