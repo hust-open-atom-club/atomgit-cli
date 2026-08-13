@@ -199,6 +199,22 @@ ag org list --limit 100
 ag org list --json
 ```
 
+## 用户 (user)
+
+```bash
+# 查看当前认证用户的资料
+ag user view
+
+# 查看公开用户资料（无需登录）
+ag user view alice
+
+# 输出 JSON
+ag user view alice --json
+
+# 在浏览器中打开资料页
+ag user view alice --web
+```
+
 ## Branch
 
 ```bash
