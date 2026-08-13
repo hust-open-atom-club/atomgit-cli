@@ -39,14 +39,16 @@ func repoFactory(config repoCommandConfig, transport forkRoundTripFunc) *cmdutil
 func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	cmd := NewCmdRepo(&cmdutil.Factory{})
 	want := map[string][]string{
-		"clone":  {"branch"},
-		"create": {"clone", "description", "private", "public"},
-		"delete": {"yes"},
-		"edit":   {"default-branch", "description", "name", "private", "public", "visibility", "yes"},
-		"fork":   {"clone", "description", "name", "private", "public"},
-		"list":   {"limit"},
-		"sync":   {"branch", "force", "yes"},
-		"view":   {"web"},
+		"clone":     {"branch"},
+		"create":    {"clone", "description", "private", "public"},
+		"delete":    {"yes"},
+		"edit":      {"default-branch", "description", "name", "private", "public", "visibility", "yes"},
+		"fork":      {"clone", "description", "name", "private", "public"},
+		"list":      {"limit"},
+		"read-dir":  {"json", "ref"},
+		"read-file": {"json", "ref"},
+		"sync":      {"branch", "force", "yes"},
+		"view":      {"web"},
 	}
 	for name, flags := range want {
 		child, _, err := cmd.Find([]string{name})

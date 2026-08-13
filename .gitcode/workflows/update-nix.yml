@@ -1,0 +1,157 @@
+name: Update Nix packages
+
+on:
+  push:
+    branches:
+      - main
+      - test
+      - nix-update
+  workflow_dispatch:
+
+permissions:
+  repository: write
+
+concurrency:
+  enable: true
+  max: 1
+  exceed-action: QUEUE
+
+jobs:
+  update:
+    name: Update stable and latest
+    runs-on: [ubuntu-latest, x64, small]
+    steps:
+      - name: Check out default branch
+        uses: checkout
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        run: |
+          set -eu
+          curl --proto '=https' --tlsv1.2 -fsSL \
+            -o /tmp/install-nix.sh \
+            https://mirrors.tuna.tsinghua.edu.cn/nix/latest/install
+          sh /tmp/install-nix.sh --no-daemon --no-channel-add
+          export PATH="$HOME/.nix-profile/bin:$PATH"
+
+          mkdir -p "$HOME/.config/nix"
+          printf '%s\n' \
+            "experimental-features = nix-command flakes" \
+            "substituters = https://mirrors.tuna.tsinghua.edu.cn/nix-channels/store?priority=10 https://mirror.sjtu.edu.cn/nix-channels/store?priority=20 https://mirrors.ustc.edu.cn/nix-channels/store?priority=30 https://mirrors.cernet.edu.cn/nix-channels/store?priority=40 https://cache.nixos.org/?priority=50" \
+            > "$HOME/.config/nix/nix.conf"
+          nix --version
+
+      - name: Install nix-update from TUNA
+        run: |
+          set -eu
+          export PATH="$HOME/.nix-profile/bin:$PATH"
+          nix-channel --add https://mirrors.tuna.tsinghua.edu.cn/nix-channels/nixpkgs-unstable nixpkgs
+          nix-channel --list
+          nix-channel --update
+          nix-env -iA nixpkgs.nix-update
+
+      - name: Install jq
+        run: |
+          set -eu
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y jq
+          jq --version
+
+      - name: Update stable and latest
+        run: |
+          set -eu
+          export PATH="$HOME/.nix-profile/bin:$PATH"
+          export GOPROXY="https://goproxy.cn|https://mirrors.aliyun.com/goproxy/|direct"
+
+          release_json=$(curl --fail --silent --show-error \
+            https://api.atomgit.com/api/v5/repos/hust-open-atom-club/atomgit-cli/releases/latest)
+          stable_version=$(printf '%s' "$release_json" \
+            | jq -er '.tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+([+-].*)?$")) | sub("^v"; "")')
+          stable_commit=$(printf '%s' "$release_json" \
+            | jq -er '.target_commitish | select(test("^[0-9a-f]{40}$"))')
+          test -n "$stable_version"
+          test -n "$stable_commit"
+
+          commit_json=$(curl --fail --silent --show-error \
+            "https://api.atomgit.com/api/v5/repos/hust-open-atom-club/atomgit-cli/commits/$stable_commit")
+          stable_build_date=$(printf '%s' "$commit_json" \
+            | jq -er '(.commit.committer.date // .commit.author.date) | select(test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T"))')
+          test -n "$stable_build_date"
+
+          sed -i \
+            -e "s|^  commit = \"[^\"]*\";|  commit = \"$stable_commit\";|" \
+            -e "s|^  buildDate = \"[^\"]*\";|  buildDate = \"$stable_build_date\";|" \
+            nix/stable.nix
+          test "$(sed -n 's/^  commit = "\([^"]*\)";/\1/p' nix/stable.nix)" = "$stable_commit"
+          test "$(sed -n 's/^  buildDate = "\([^"]*\)";/\1/p' nix/stable.nix)" = "$stable_build_date"
+
+          "$HOME/.nix-profile/bin/nix-update" stable --flake --version "$stable_version" --build
+          "$HOME/.nix-profile/bin/nix-update" latest --flake --version=skip --build
+
+          stable_out=$(nix build --no-link --print-out-paths .#stable | tail -n 1)
+          version_json=$("$stable_out/bin/ag" version --json)
+          printf '%s\n' "$version_json"
+          printf '%s' "$version_json" | jq -e \
+            --arg version "v$stable_version" \
+            --arg commit "$stable_commit" \
+            --arg build_date "$stable_build_date" \
+            '.version == $version and .commit == $commit and .buildDate == $build_date' \
+            >/dev/null
+
+          rm -f result result-*
+
+      - name: Commit updates through Contents API
+        run: |
+          set -eu
+          if git diff --quiet -- nix/stable.nix nix/latest.nix; then
+            echo "Nix packages are already current."
+            exit 0
+          fi
+
+          NIX_UPDATE_TOKEN="${{ secrets.NIX_UPDATE_TOKEN }}"
+          token_length=${#NIX_UPDATE_TOKEN}
+          echo "NIX_UPDATE_TOKEN length: $token_length"
+          case "$token_length" in
+            0) echo "NIX_UPDATE_TOKEN is empty."; exit 1 ;;
+          esac
+
+          target_branch=${ATOMGIT_REF_NAME:-nix-update}
+          for path in nix/stable.nix nix/latest.nix; do
+            if git diff --quiet -- "$path"; then
+              echo "$path is already current."
+              continue
+            fi
+
+            blob_sha=$(git rev-parse "HEAD:$path")
+            content=$(base64 < "$path" | tr -d '\n')
+            request_body=$(jq -cn \
+              --arg content "$content" \
+              --arg sha "$blob_sha" \
+              --arg branch "$target_branch" \
+              --arg message "chore: update Nix packages" \
+              '{content: $content, sha: $sha, branch: $branch, message: $message}')
+
+            set +e
+            http_status=$(curl --silent --show-error \
+              --output contents-api-response.json \
+              --write-out '%{http_code}' \
+              --request PUT \
+              --header "Accept: application/json" \
+              --header "Content-Type: application/json" \
+              --data "$request_body" \
+              "https://api.gitcode.com/api/v5/repos/$ATOMGIT_REPOSITORY/contents/$path?access_token=$NIX_UPDATE_TOKEN")
+            curl_exit=$?
+            set -e
+
+            echo "$path: curl exit code $curl_exit, HTTP status $http_status"
+            if test -s contents-api-response.json; then
+              cat contents-api-response.json
+              echo
+            fi
+            test "$curl_exit" -eq 0
+            case "$http_status" in
+              200) ;;
+              *) exit 1 ;;
+            esac
+          done

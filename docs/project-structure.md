@@ -44,6 +44,7 @@ atomgit-cli/
 │       ├── auth/               # 登录、刷新和凭据管理
 │       ├── branch/             # 分支管理
 │       ├── browse/             # 在浏览器中打开 AtomGit 资源
+│       ├── discussion/         # 讨论列举
 │       ├── issue/              # Issue 与 Issue 评论
 │       ├── label/              # 标签管理
 │       ├── license/            # License 检查
@@ -57,6 +58,7 @@ atomgit-cli/
 │       ├── ssh-key/            # SSH Key 管理
 │       ├── tag/                # Git tag 管理
 │       └── version/            # 版本输出命令
+├── nix/                        # stable/latest Nix package 表达式与共享构建参数
 ├── bin/
 │   └── ag.js                   # npm 主包的平台二进制启动器
 ├── docs/
@@ -71,8 +73,8 @@ atomgit-cli/
 │   ├── build-npm-packages.js   # 生成 npm 主包与平台包
 │   ├── check-npm-version.js    # 校验发布版本与 npm 版本
 │   ├── publish-atomgit-release.js # 创建并验证 AtomGit Release
-│   ├── set-npm-version.js      # 同步 npm 包版本
-│   └── update-nix-package.sh   # 更新并验证 Nix package
+│   └── set-npm-version.js      # 同步 npm 包版本
+├── .gitcode/workflows/        # AtomGit CI、Release 与定时 Nix 更新工作流
 ├── test/                       # npm 平台包集成测试
 ├── .goreleaser.yaml            # 跨平台发布打包配置
 ├── flake.nix                   # Nix package 和开发环境

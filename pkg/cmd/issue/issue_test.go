@@ -35,7 +35,7 @@ func (f issueRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error)
 
 func TestNewCmdIssueRegistersSubcommands(t *testing.T) {
 	cmd := NewCmdIssue(&cmdutil.Factory{})
-	want := map[string]bool{"close": false, "comment": false, "create": false, "edit": false, "label": false, "list": false, "view": false, "reopen": false}
+	want := map[string]bool{"close": false, "comment": false, "create": false, "edit": false, "label": false, "list": false, "view": false, "reopen": false, "prs": false, "branches": false}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
 			want[child.Name()] = true
@@ -65,7 +65,7 @@ func TestNewCmdIssueRegistersSubcommands(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"title", "body", "body-file"} {
+	for _, name := range []string{"title", "body", "body-file", "assignee", "remove-assignee", "yes"} {
 		if edit.Flags().Lookup(name) == nil {
 			t.Fatalf("edit flag %q was not registered", name)
 		}
@@ -575,6 +575,92 @@ func issueResponse(statusCode int, body string) *http.Response {
 		Body:       io.NopCloser(strings.NewReader(body)),
 		Header:     make(http.Header),
 	}
+}
+
+func TestIssueCreateAssignee(t *testing.T) {
+	tests := []struct {
+		name      string
+		assignee  string
+		wantField string
+		wantError string
+	}{
+		{name: "assignee set", assignee: "bob", wantField: "bob"},
+		{name: "assignee trimmed", assignee: "  alice  ", wantField: "alice"},
+		{name: "no assignee", assignee: "", wantField: ""},
+		{name: "empty assignee", assignee: "   ", wantError: "assignee cannot be empty"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requests := 0
+			factory := &cmdutil.Factory{
+				Config: issueTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						requests++
+						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/issues" {
+							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+						}
+						var body map[string]interface{}
+						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+							t.Fatal(err)
+						}
+						if body["title"] != "Test issue" {
+							t.Fatalf("title = %q", body["title"])
+						}
+						if tt.wantField != "" {
+							if got := body["assignee"]; got != tt.wantField {
+								t.Fatalf("assignee = %q, want %q", got, tt.wantField)
+							}
+						} else {
+							if _, ok := body["assignee"]; ok {
+								t.Fatal("assignee field present when not provided")
+							}
+						}
+						return issueResponse(http.StatusCreated, `{"number":"7","html_url":"https://atomgit.com/alice/demo/issues/7"}`), nil
+					})}, nil
+				},
+			}
+
+			cmd := newCmdIssueCreate(factory)
+			_ = cmd.Flags().Set("title", "Test issue")
+			if tt.assignee != "" || tt.wantError == "assignee cannot be empty" {
+				_ = cmd.Flags().Set("assignee", tt.assignee)
+			}
+			err := cmd.RunE(cmd, []string{"alice/demo"})
+			if tt.wantError != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+					t.Fatalf("error = %v, want containing %q", err, tt.wantError)
+				}
+				if requests != 0 {
+					t.Fatalf("requests = %d, want 0", requests)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if requests != 1 {
+				t.Fatalf("requests = %d, want 1", requests)
+			}
+		})
+	}
+}
+
+func TestIssueCreateRepoBeforeAuth(t *testing.T) {
+	badConfig := &issueEditAuthErrorConfig{}
+	factory := &cmdutil.Factory{Config: badConfig}
+	cmd := newCmdIssueCreate(factory)
+	_ = cmd.Flags().Set("title", "Test")
+	if err := cmd.Flags().Set("assignee", "bob"); err != nil {
+		t.Fatal(err)
+	}
+
+	err := cmd.RunE(cmd, []string{"bad/repo-format/extra"})
+	if err == nil || !strings.Contains(err.Error(), "expected") {
+		t.Fatalf("error = %v, want repo resolution error before auth", err)
+	}
+	// Auth should NOT have been called - repo format error comes first
 }
 
 type issueRecordingConfig struct {

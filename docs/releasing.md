@@ -33,6 +33,23 @@ AtomGit Release 只上传七个普通平台归档、两个安装脚本和根 `ch
 上传 Release 附件前可校验所有制品：
 
 ```bash
+
+# Linux
+(cd dist/vX.Y.Z && sha256sum -c checksums.txt)
+
+
+# macOS
+(cd dist/vX.Y.Z && shasum -a 256 -c checksums.txt)
+```
+
+npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registry 前单独校验：
+
+```bash
+(cd dist/vX.Y.Z/npm && shasum -a 256 -c checksums.txt)
+```
+
+`scripts/build-release.sh` 始终使用 GoReleaser 的 `--skip=publish`，只在本地准备并验证制品，然后打印完整的附件 basename 清单。发布上传由下述 `make publish` 入口调用独立脚本完成；单独执行构建脚本不会创建 AtomGit Release 或上传附件。
+
 # Linux
 (cd dist/vX.Y.Z && sha256sum -c checksums.txt)
 
@@ -77,6 +94,7 @@ make publish \
 
 底层 `scripts/build-release.sh` 也接受 `TAG`、`AG_RELEASE_SNAPSHOT=1` 和 `SOURCE_DATE_EPOCH` 环境变量。`SOURCE_DATE_EPOCH` 会同时固定二进制中的构建日期以及归档内文件的时间戳，用于生成可复现的发布制品；历史两段式 tag 仅保留给 snapshot 兼容。
 
+
 ## 发布到 npm registry
 
 AtomGit Release 发布并验证完成后，再发布 `dist/vX.Y.Z/npm/` 中的 npm tarball。发布前确认当前 npm 账号有权发布 `@hust-open-atom-club` scope，并按 registry 的认证和双因素认证要求完成登录：
@@ -84,8 +102,10 @@ AtomGit Release 发布并验证完成后，再发布 `dist/vX.Y.Z/npm/` 中的 n
 ```bash
 npm whoami
 
+
 # Linux
 (cd dist/vX.Y.Z/npm && sha256sum -c checksums.txt)
+
 
 # macOS
 (cd dist/vX.Y.Z/npm && shasum -a 256 -c checksums.txt)
@@ -113,6 +133,7 @@ npm 版本不可覆盖。重新执行中断的发布流程时，先通过 `npm v
 
 npm tarball 只发布到 npm registry，不得作为 AtomGit Release 附件上传。
 
+
 ## 维护 Homebrew tap
 
 Homebrew tap 位于 [hust-open-atom-club/homebrew-tap](https://github.com/hust-open-atom-club/homebrew-tap)，使用 GitHub Actions 自动维护。更新工作流每 4 个小时检测一次 AtomGit 最新稳定版本；发现新版本后，会下载 macOS 和 Linux 的 amd64/arm64 Release 归档，确认归档包含 `ag`，重新计算 SHA-256，并更新 [Formula/atomgit-cli.rb](https://github.com/hust-open-atom-club/homebrew-tap/blob/main/Formula/atomgit-cli.rb)。工作流只允许更新 Formula 文件，并在 macOS 和 Linux 测试通过后自动 squash 合并更新 PR。
@@ -121,26 +142,37 @@ Homebrew tap 位于 [hust-open-atom-club/homebrew-tap](https://github.com/hust-o
 
 ## 维护 Nix package
 
-仓库 flake 提供两种 package：
+仓库 flake 从 `nix/` 下的独立表达式提供两种 package：
 
-- `stable` 从对应版本的 AtomGit Release 源码归档构建，并固定源码 hash 和 `vendorHash`。
-- `latest` 从当前 flake revision 的源码构建，使用独立的 `vendorHash`。
+- `stable` 从上游仓库的最新正式 AtomGit Release 源码归档构建，并固定版本、源码 hash 和 `vendorHash`。
+- `latest` 直接从当前 flake revision 的源码构建，因此始终对应检出仓库的最新 commit；工作流只维护其 `vendorHash`。
 
-`default` 和兼容名称 `ag` 都指向 `stable`。更新 Nix package 时，推荐先进入 flake 提供的开发环境：
+两个 package 都由 Nix 管理；支持发行来源字段的版本会报告 `selfUpdate=false, source=nix`。`default` 和兼容名称 `ag` 都指向 `stable`。
 
-当前 nixos-unstable 已停止支持 Intel macOS，因此 flake 仅为 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
+`.gitcode/workflows/update-nix.yml` 每天在默认分支上运行，也支持手动触发。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；构建验证后在内容变化时直接提交到默认分支。工作流需要 `repository: write`，并在单次 `git push` 中使用自动生成的 `ATOMGIT_TOKEN`，不需要额外长期 token。
+
+工作流 runner 通过清华 TUNA 镜像执行 Nix 单用户安装，并禁用安装器默认添加的官方 channel，再从 TUNA 的 `nixpkgs-unstable` channel 安装 `nix-update`；Nix binary cache 使用显式优先级，依次尝试 TUNA、SJTU、USTC、CERNET，最后回退到官方 cache。项目 flake 的 nixpkgs inputs 通过 CERNET 的 NJU Git 镜像进行浅克隆，避免动态镜像调度因 runner 线路而选择不可用节点；两个 inputs 分别跟踪 `nixos-unstable` 和 `nixpkgs-26.05-darwin`。
+
+`nix-update --build` 的 Go 模块下载显式使用 `goproxy.cn`、阿里云和 direct 的故障转移链；代理之间使用 `|` 分隔，使连接超时等网络错误也会切换到下一个来源。
+
+可在本地复现相同更新；开发环境已包含 `nix-update`：
 
 ```bash
-# 默认更新 stable 的版本、Release 源码 hash 和 vendorHash
 nix develop
-./scripts/update-nix-package.sh vX.Y.Z
 
-# 只更新当前源码对应的 latestVendorHash
-./scripts/update-nix-package.sh --latest
+# stable：从 AtomGit 最新正式 Release 更新
+stable_version=$(curl --fail --silent --show-error \
+  https://api.atomgit.com/api/v5/repos/hust-open-atom-club/atomgit-cli/releases/latest \
+  | jq -er '.tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+([+-].*)?$")) | sub("^v"; "")')
+test -n "$stable_version"
+nix-update stable --flake --version "$stable_version" --build
+
+# latest：使用当前 flake revision，只刷新其 vendorHash
+nix-update latest --flake --version=skip --build
+rm -f result result-*
 ```
 
-也可以不进入开发环境直接运行，但需要预先安装 Nix 和 Git，并要求 `tar` 支持以 NUL 分隔的文件列表；Linux 上的 GNU tar 和 macOS 默认的 bsdtar 均受支持。脚本使用 `nix store prefetch-file` 计算 stable 源码 hash，并通过 `buildGoModule` 校验对应的 `vendorHash`。更新后会构建目标 package 并执行 `ag version --json`；验证失败时自动恢复原始 `flake.nix`，且不会提交、打标签或推送。
-
+`nix-update --build` 会创建 Nix 的 `result` 结果链接；上述本地流程在完成后删除它，仓库也忽略 `result` 和 `result-*`。`nix-update` 会同时维护源码 hash 和 Go `vendorHash`。当前 nixos-unstable 已停止支持 Intel macOS，因此 flake 仅为 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
 ## 维护 WinGet
 
 WinGet 清单托管在社区仓库 [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs)，包 ID 为 `HUSTOpenAtomClub.AtomGitCLI`。每个版本在 `manifests/h/HUSTOpenAtomClub/AtomGitCLI/<version>/` 下包含三个 YAML 清单文件（主清单、installer 和 locale），其中 installer 清单固定各平台安装包的下载 URL 和 SHA-256。

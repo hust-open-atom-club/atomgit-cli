@@ -26,6 +26,8 @@ func NewCmdIssue(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdIssueClose(f))
 	cmd.AddCommand(newCmdIssueLabel(f))
 	cmd.AddCommand(newCmdIssueReopen(f))
+	cmd.AddCommand(newCmdIssuePRS(f))
+	cmd.AddCommand(newCmdIssueBranches(f))
 	cmd.AddCommand(comment.NewCmdComment(f))
 	cmdutil.AddRepositoryContextHelp(cmd)
 
@@ -336,12 +338,14 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 		Title    string
 		Body     string
 		BodyFile string
+		Assignee string
 	}
 
 	cmd := &cobra.Command{
 		Use:   "create [<owner>/<repo>]",
 		Short: "Create an issue",
 		Example: `  ag issue create owner/repo --title "Bug report" --body "Description"
+  ag issue create owner/repo --title "Bug report" --assignee alice
   ag issue create owner/repo --title "Bug report" --body-file description.md
   ag issue create owner/repo --title "Bug report" --body-file -`,
 		Args: cobra.MaximumNArgs(1),
@@ -349,6 +353,11 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 			if opts.Title == "" {
 				return fmt.Errorf("title is required")
 			}
+			assignee := strings.TrimSpace(opts.Assignee)
+			if cmd.Flags().Changed("assignee") && assignee == "" {
+				return fmt.Errorf("assignee cannot be empty")
+			}
+
 			bodyText, err := cmdutil.ReadBody(
 				opts.Body,
 				opts.BodyFile,
@@ -360,6 +369,12 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
@@ -370,20 +385,8 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			issue, err := api.CreateIssueWithAssignee(client, owner, repo, opts.Title, bodyText, assignee)
 			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
-
-			body := map[string]interface{}{
-				"title": opts.Title,
-				"body":  bodyText,
-			}
-
-			var issue api.Issue
-			path := fmt.Sprintf("/repos/%s/%s/issues", owner, repo)
-			if err := client.Post(path, body, &issue); err != nil {
 				return err
 			}
 
@@ -396,6 +399,7 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "Issue title")
 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "Issue body")
 	cmd.Flags().StringVarP(&opts.BodyFile, "body-file", "F", "", "Read issue body from file (use - for stdin)")
+	cmd.Flags().StringVar(&opts.Assignee, "assignee", "", "Assign the issue to a user (login)")
 	cmd.MarkFlagsMutuallyExclusive("body", "body-file")
 
 	return cmd

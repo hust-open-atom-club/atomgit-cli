@@ -583,3 +583,163 @@ type ReleaseUploadURL struct {
 	URL     string            `json:"url"`
 	Headers map[string]string `json:"headers"`
 }
+
+// Discussion represents a repository discussion returned by AtomGit API v5.
+type Discussion struct {
+	ID           string             `json:"id"`
+	Number       int                `json:"number"`
+	Title        string             `json:"title"`
+	Author       DiscussionAuthor   `json:"author"`
+	Category     DiscussionCategory `json:"category"`
+	IsClosed     FlexibleBool       `json:"is_closed"`
+	IsAnswered   FlexibleBool       `json:"is_answered"`
+	IsLocked     FlexibleBool       `json:"is_lock"`
+	IsPinned     FlexibleBool       `json:"is_pin"`
+	CommentTotal int                `json:"comment_total"`
+	CreatedAt    string             `json:"created_at"`
+	UpdatedAt    string             `json:"updated_at"`
+}
+
+// DiscussionAuthor is author of discussion
+type DiscussionAuthor struct {
+	ID        string `json:"id"`
+	Login     string `json:"login"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
+}
+
+type DiscussionCategory struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Icon        string `json:"icon"`
+	Description string `json:"description"`
+	Type        int    `json:"type"`
+}
+
+// RepositoryContent represents one object returned by the repository contents
+// endpoint. A file carries base64-encoded content; a directory entry omits
+// encoding and content.
+type RepositoryContent struct {
+	Name            string `json:"name"`
+	Path            string `json:"path"`
+	SHA             string `json:"sha"`
+	Size            int64  `json:"size"`
+	Type            string `json:"type"`
+	Encoding        string `json:"encoding,omitempty"`
+	Content         string `json:"content,omitempty"`
+	ContentPresent  bool   `json:"-"`
+	URL             string `json:"url,omitempty"`
+	HTMLURL         string `json:"html_url,omitempty"`
+	DownloadURL     string `json:"download_url,omitempty"`
+	Target          string `json:"target,omitempty"`
+	SubmoduleGitURL string `json:"submodule_git_url,omitempty"`
+}
+
+func (c *RepositoryContent) UnmarshalJSON(data []byte) error {
+	type plainRepositoryContent RepositoryContent
+	var decoded struct {
+		plainRepositoryContent
+		Content *string `json:"content"`
+	}
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*c = RepositoryContent(decoded.plainRepositoryContent)
+	if decoded.Content != nil {
+		c.Content = *decoded.Content
+		c.ContentPresent = true
+	}
+	return nil
+}
+
+// IssueLinkedPullRequest represents a pull request linked to an issue.
+type IssueLinkedPullRequest struct {
+	ID        int64       `json:"id"`
+	Number    interface{} `json:"number"`
+	Title     string      `json:"title"`
+	Body      string      `json:"body"`
+	State     string      `json:"state"`
+	HTMLURL   string      `json:"html_url"`
+	URL       string      `json:"url"`
+	Head      *Branch     `json:"head"`
+	Base      *Branch     `json:"base"`
+	CreatedAt string      `json:"created_at"`
+	UpdatedAt string      `json:"updated_at"`
+}
+
+// GetNumber returns the linked pull request number as a string.
+func (pr *IssueLinkedPullRequest) GetNumber() string {
+	return formatIdentifier(pr.Number)
+}
+
+// RelatedBranchesRequest is the body for PUT /repos/.../issues/{number}/related_branches.
+// BranchNames is the complete desired association list.
+type RelatedBranchesRequest struct {
+	BranchNames []string `json:"branch_names"`
+}
+
+// PullRequestCommit represents a commit included in a pull request.
+type PullRequestCommit struct {
+	SHA     string `json:"sha"`
+	HTMLURL string `json:"html_url"`
+	Commit  struct {
+		Message string `json:"message"`
+		Author  struct {
+			Name  string `json:"name"`
+			Email string `json:"email"`
+			Date  string `json:"date"`
+			Login string `json:"login,omitempty"`
+		} `json:"author"`
+	} `json:"commit"`
+}
+
+// PullRequestFile represents a changed file in a pull request. Optional
+// fields fall back to nested patch metadata when the top-level value is absent.
+type PullRequestFile struct {
+	SHA       string `json:"sha"`
+	Filename  string `json:"filename"`
+	Status    string `json:"status"`
+	Additions int    `json:"additions"`
+	Deletions int    `json:"deletions"`
+	TooLarge  bool   `json:"too_large"`
+	BlobURL   string `json:"blob_url"`
+	RawURL    string `json:"raw_url"`
+	Patch     struct {
+		OldPath      string `json:"old_path"`
+		NewPath      string `json:"new_path"`
+		AddedLines   int    `json:"added_lines"`
+		RemovedLines int    `json:"removed_lines"`
+		TooLarge     bool   `json:"too_large"`
+		NewFile      bool   `json:"new_file"`
+		RenamedFile  bool   `json:"renamed_file"`
+		DeletedFile  bool   `json:"deleted_file"`
+	} `json:"patch"`
+}
+
+// GetChangeType normalizes the two response shapes returned by AtomGit's
+// pull-request files endpoint. Some responses provide a top-level status,
+// while others expose only boolean flags in the nested patch object.
+func (f *PullRequestFile) GetChangeType() string {
+	if f.Status != "" {
+		return f.Status
+	}
+	switch {
+	case f.Patch.DeletedFile:
+		return "deleted"
+	case f.Patch.RenamedFile:
+		return "renamed"
+	case f.Patch.NewFile:
+		return "added"
+	default:
+		return "modified"
+	}
+}
+
+// PullRequestReaction represents a read-only user reaction on a pull request.
+type PullRequestReaction struct {
+	ID        int64  `json:"id"`
+	User      User   `json:"user"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"created_at"`
+}

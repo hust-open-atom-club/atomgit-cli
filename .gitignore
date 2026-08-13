@@ -1,6 +1,10 @@
 # Release artifacts
 dist/
 
+# Nix build result symlinks
+/result
+/result-*
+
 # Local development build; keep the npm command wrapper tracked.
 /bin/*
 !/bin/ag.js
