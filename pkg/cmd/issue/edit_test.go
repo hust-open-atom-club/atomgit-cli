@@ -41,6 +41,14 @@ func TestIssueEditUpdatesOnlyRequestedFields(t *testing.T) {
 			},
 		},
 		{
+			name:         "false remove assignee is ignored",
+			flags:        map[string]string{"title": "Updated title", "remove-assignee": "false"},
+			wantRequests: 1,
+			wantFields: map[string]string{
+				"repo": "demo", "title": "Updated title",
+			},
+		},
+		{
 			name:         "body only",
 			flags:        map[string]string{"body": "Updated body"},
 			wantRequests: 2,
@@ -119,6 +127,11 @@ func TestIssueEditRejectsInvalidOptions(t *testing.T) {
 	}{
 		{
 			name:      "no updates",
+			wantError: "at least one of --title, --body, --body-file, --assignee, or --remove-assignee must be provided",
+		},
+		{
+			name:      "false remove assignee is not an update",
+			flags:     map[string]string{"remove-assignee": "false"},
 			wantError: "at least one of --title, --body, --body-file, --assignee, or --remove-assignee must be provided",
 		},
 		{
@@ -352,6 +365,7 @@ func TestIssueEditAssigneeConfirmation(t *testing.T) {
 	}{
 		{name: "set assignee with yes", flags: map[string]string{"assignee": "bob", "yes": "true"}, input: "", wantPrompt: false},
 		{name: "set assignee confirm yes", flags: map[string]string{"assignee": "bob"}, input: "yes\n", wantPrompt: true},
+		{name: "set assignee confirm yes at eof", flags: map[string]string{"assignee": "bob"}, input: "yes", wantPrompt: true},
 		{name: "set assignee confirm y", flags: map[string]string{"assignee": "bob"}, input: "y\n", wantPrompt: true},
 		{name: "set assignee decline no", flags: map[string]string{"assignee": "bob"}, input: "no\n", wantPrompt: true, wantDecl: true},
 		{name: "set assignee decline empty", flags: map[string]string{"assignee": "bob"}, input: "\n", wantPrompt: true, wantDecl: true},

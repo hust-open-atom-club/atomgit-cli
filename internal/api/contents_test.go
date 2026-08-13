@@ -144,6 +144,46 @@ func TestListRepositoryContentSubdirectory(t *testing.T) {
 	}
 }
 
+func TestRepositoryContentRejectsInvalidPathsBeforeRequest(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		list bool
+	}{
+		{name: "empty file path", path: ""},
+		{name: "file root path", path: "."},
+		{name: "leading slash", path: "/etc/passwd"},
+		{name: "trailing slash", path: "src/"},
+		{name: "repeated separator", path: "src//main.go"},
+		{name: "dot segment", path: "src/./main.go"},
+		{name: "dotdot segment", path: "src/../main.go"},
+		{name: "empty directory path", path: "", list: true},
+		{name: "directory dotdot segment", path: "src/../main.go", list: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var calls int
+			client := newTestClient(t, func(http.ResponseWriter, *http.Request) {
+				calls++
+			})
+
+			var err error
+			if tt.list {
+				_, err = ListRepositoryContent(client, "alice", "demo", tt.path, "")
+			} else {
+				_, err = GetRepositoryContent(client, "alice", "demo", tt.path, "")
+			}
+			if err == nil {
+				t.Fatal("expected path validation error")
+			}
+			if calls != 0 {
+				t.Fatalf("calls = %d, want 0", calls)
+			}
+		})
+	}
+}
+
 func TestListRepositoryContentEmptyDirectory(t *testing.T) {
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

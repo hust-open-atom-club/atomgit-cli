@@ -711,7 +711,29 @@ type PullRequestFile struct {
 		AddedLines   int    `json:"added_lines"`
 		RemovedLines int    `json:"removed_lines"`
 		TooLarge     bool   `json:"too_large"`
+		NewFile      bool   `json:"new_file"`
+		RenamedFile  bool   `json:"renamed_file"`
+		DeletedFile  bool   `json:"deleted_file"`
 	} `json:"patch"`
+}
+
+// GetChangeType normalizes the two response shapes returned by AtomGit's
+// pull-request files endpoint. Some responses provide a top-level status,
+// while others expose only boolean flags in the nested patch object.
+func (f *PullRequestFile) GetChangeType() string {
+	if f.Status != "" {
+		return f.Status
+	}
+	switch {
+	case f.Patch.DeletedFile:
+		return "deleted"
+	case f.Patch.RenamedFile:
+		return "renamed"
+	case f.Patch.NewFile:
+		return "added"
+	default:
+		return "modified"
+	}
 }
 
 // PullRequestReaction represents a read-only user reaction on a pull request.

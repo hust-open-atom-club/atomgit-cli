@@ -192,7 +192,7 @@ func newCmdPRFiles(f *cmdutil.Factory) *cobra.Command {
 					result = append(result, prFileJSON{
 						OldPath:    oldPath,
 						NewPath:    newPath,
-						ChangeType: pf.Status,
+						ChangeType: pf.GetChangeType(),
 						Additions:  additions,
 						Deletions:  deletions,
 						TooLarge:   tooLarge,
@@ -221,7 +221,7 @@ func newCmdPRFiles(f *cmdutil.Factory) *cobra.Command {
 				if deletions == 0 {
 					deletions = pf.Patch.RemovedLines
 				}
-				line := fmt.Sprintf("%s +%d -%d", pf.Status, additions, deletions)
+				line := fmt.Sprintf("%s +%d -%d", pf.GetChangeType(), additions, deletions)
 				if newPath != oldPath {
 					line += fmt.Sprintf(" %s -> %s", oldPath, newPath)
 				} else {

@@ -442,7 +442,8 @@ func newAPIError(resp *http.Response) error {
 	}
 	excerpt := sanitizeAPIString(string(body))
 	excerpt = redactCredentials(excerpt)
-	return fmt.Errorf("API error: %s - %s", resp.Status, excerpt)
+	status := redactCredentials(sanitizeAPIString(resp.Status))
+	return fmt.Errorf("API error: %s - %s", status, excerpt)
 }
 
 // RequestPolicy configures how a single API request is dispatched.
@@ -469,13 +470,17 @@ func statusAllowed(code int, allowed []int) bool {
 // they can request only their contracted 200 or 201 status and disable retry
 // for state-sensitive operations such as related-branch PUT.
 func (c *Client) doJSONRequest(method, path string, body io.Reader, contentType, accept string, policy RequestPolicy, result interface{}) error {
+	if len(policy.AllowedStatuses) == 0 {
+		return fmt.Errorf("API request %s %s: allowed statuses cannot be empty", method, path)
+	}
+
 	resp, err := c.doRequestWithPolicyContext(context.Background(), c.httpClient, method, path, body, contentType, accept, policy.CanRetry)
 	if err != nil {
 		return fmt.Errorf("API request %s %s: %w", method, path, err)
 	}
 	defer resp.Body.Close()
 
-	if len(policy.AllowedStatuses) > 0 && !statusAllowed(resp.StatusCode, policy.AllowedStatuses) {
+	if !statusAllowed(resp.StatusCode, policy.AllowedStatuses) {
 		return newAPIError(resp)
 	}
 

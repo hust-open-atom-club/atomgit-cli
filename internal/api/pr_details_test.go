@@ -178,7 +178,7 @@ func TestPullRequestDetailsFiles(t *testing.T) {
 				t.Errorf("method = %s, want GET", r.Method)
 			}
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = io.WriteString(w, `[{"sha":"abc","filename":"main.go","status":"modified","additions":10,"deletions":2,"too_large":false,"blob_url":"https://...","raw_url":"https://...","patch":{"old_path":"main.go","new_path":"main.go","added_lines":10,"removed_lines":2,"too_large":false}}]`)
+			_, _ = io.WriteString(w, `[{"sha":"abc","filename":"main.go","additions":10,"deletions":2,"too_large":false,"blob_url":"https://...","raw_url":"https://...","patch":{"old_path":"main.go","new_path":"main.go","added_lines":10,"removed_lines":2,"too_large":false,"new_file":false,"renamed_file":false,"deleted_file":false}}]`)
 		})
 		files, err := ListPullRequestFiles(client, "owner", "repo", "42")
 		if err != nil {
@@ -186,6 +186,9 @@ func TestPullRequestDetailsFiles(t *testing.T) {
 		}
 		if len(files) != 1 || files[0].Filename != "main.go" {
 			t.Fatalf("files = %#v", files)
+		}
+		if files[0].GetChangeType() != "modified" {
+			t.Fatalf("change type = %q, want modified", files[0].GetChangeType())
 		}
 	})
 

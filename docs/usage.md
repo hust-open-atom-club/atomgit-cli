@@ -143,9 +143,10 @@ ag repo read-dir owner/repo .
 ag repo read-dir owner/repo src --ref v1.0.0 --json
 ```
 
-`read-file` 输出解码后的文件文本；`read-dir` 每行输出一个条目（类型、大小、路径）。`--json` 输出稳定的 lowerCamelCase 字段：文件对象包含 `name`、`path`、`sha`、`size`、`encoding`、`content`（base64）和 `ref`；目录条目数组包含 `name`、`path`、`type`、`sha`、`size`，空目录输出 `[]`。
+`read-file` 输出解码后的文件文本；`read-dir` 每行输出一个条目（类型、大小、路径），字段中的反斜杠、制表符、换行和回车分别显示为 `\\`、`\t`、`\n` 和 `\r`。`--json` 输出稳定的 lowerCamelCase 字段：文件对象包含 `name`、`path`、`sha`、`size`、`encoding`、`content`（base64）和 `ref`；目录条目数组包含 `name`、`path`、`type`、`sha`、`size`，空目录输出 `[]`。
 
 路径必须是仓库相对路径，不能以 `/` 开头或结尾，不能包含连续斜杠或 `.`/`..` 段（`read-dir .` 是唯一例外，映射到仓库根目录）。每个路径段独立转义。文件内容默认经过终端清理；如需保留原始字节，使用根级 `--raw-output`。这些命令只发送 GET 请求，不会修改仓库内容。
+
 ### 仓库协作者
 
 ```bash
@@ -469,7 +470,7 @@ ag issue close owner/repo 42
 ag issue reopen owner/repo 42
 ```
 
-`--assignee` 接受一个非空用户登录名。`--assignee` 和 `--remove-assignee` 互斥。创建 Issue 时设置负责人是纯新增操作，不需要确认；修改已有 Issue 的负责人（设置或清除）默认需要确认，确认提示输出到 stderr 以保持 JSON stdout 清洁，`--yes` 可跳过确认。
+`--assignee` 接受一个非空用户登录名。`--assignee` 和 `--remove-assignee` 互斥。创建 Issue 时设置负责人是纯新增操作，不需要确认；修改已有 Issue 的负责人（设置或清除）默认需要确认，确认提示输出到 stderr 以免混入正常命令输出，`--yes` 可跳过确认。
 
 ### Issue 关联 PR 与分支
 

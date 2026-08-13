@@ -14,6 +14,10 @@ import (
 
 type contentTestConfig struct{}
 
+type failingContentWriter struct{ err error }
+
+func (w failingContentWriter) Write([]byte) (int, error) { return 0, w.err }
+
 func (contentTestConfig) GetToken() (string, error) { return "test-token", nil }
 func (contentTestConfig) GetUser() (string, error)  { return "alice", nil }
 func (contentTestConfig) GetHost() string           { return "atomgit.com" }
@@ -309,6 +313,37 @@ func TestReadDirOutputText(t *testing.T) {
 	want := "dir\t0\tsrc\nfile\t42\tREADME.md\n"
 	if out.String() != want {
 		t.Fatalf("output = %q, want %q", out.String(), want)
+	}
+}
+
+func TestReadDirOutputEscapesTSVFields(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		body := `[{"name":"odd","path":"dir\\name\tpart\nnext\rline","sha":"abc","size":1,"type":"fi\tle"}]`
+		return forkResponse(http.StatusOK, body), nil
+	})
+
+	cmd := newCmdRepoReadDir(repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport))
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "."}); err != nil {
+		t.Fatal(err)
+	}
+	want := `fi\tle` + "\t1\t" + `dir\\name\tpart\nnext\rline` + "\n"
+	if out.String() != want {
+		t.Fatalf("output = %q, want %q", out.String(), want)
+	}
+}
+
+func TestReadDirReportsOutputError(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return forkResponse(http.StatusOK, `[{"path":"README.md","size":42,"type":"file"}]`), nil
+	})
+	wantErr := errors.New("write failed")
+	cmd := newCmdRepoReadDir(repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport))
+	cmd.SetOut(failingContentWriter{err: wantErr})
+	err := cmd.RunE(cmd, []string{"alice/demo", "."})
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error = %v, want %v", err, wantErr)
 	}
 }
 
