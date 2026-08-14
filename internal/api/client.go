@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -25,6 +26,27 @@ type Client struct {
 	baseURL    string
 	token      string
 	httpClient *http.Client
+}
+
+// HTTPError describes a non-successful API response. The Error method keeps
+// the established "API error: <status> - <context>" message shape so existing
+// callers and tests that match on the message keep working, while callers can
+// still inspect the status code with IsHTTPStatus.
+type HTTPError struct {
+	StatusCode int
+	Status     string
+	Body       string
+}
+
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("API error: %s - %s", e.Status, e.Body)
+}
+
+// IsHTTPStatus reports whether err is (or wraps) an API error carrying the
+// given HTTP status code.
+func IsHTTPStatus(err error, statusCode int) bool {
+	var httpErr *HTTPError
+	return errors.As(err, &httpErr) && httpErr.StatusCode == statusCode
 }
 
 func NewClient(token string) *Client {
@@ -434,7 +456,8 @@ func redactCredentials(s string) string {
 
 // newAPIError reads a bounded excerpt of the response body and returns a
 // terminal-safe, credential-redacted error preserving the established
-// "API error: <status> - <context>" prefix.
+// "API error: <status> - <context>" prefix. The returned error is an
+// *HTTPError so callers can detect specific status codes with IsHTTPStatus.
 func newAPIError(resp *http.Response) error {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes+1))
 	if len(body) > maxErrorBodyBytes {
@@ -443,7 +466,11 @@ func newAPIError(resp *http.Response) error {
 	excerpt := sanitizeAPIString(string(body))
 	excerpt = redactCredentials(excerpt)
 	status := redactCredentials(sanitizeAPIString(resp.Status))
-	return fmt.Errorf("API error: %s - %s", status, excerpt)
+	return &HTTPError{
+		StatusCode: resp.StatusCode,
+		Status:     status,
+		Body:       excerpt,
+	}
 }
 
 // RequestPolicy configures how a single API request is dispatched.

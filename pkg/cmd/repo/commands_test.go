@@ -134,7 +134,7 @@ func TestListReposPaginatesAndHonorsLimit(t *testing.T) {
 	})
 	client := api.NewClientWithHTTPClient("token", &http.Client{Transport: transport})
 
-	repositories, err := listRepos(client, 101)
+	repositories, err := listRepos(client, "", 101)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,6 +143,109 @@ func TestListReposPaginatesAndHonorsLimit(t *testing.T) {
 	}
 	if requests != 2 {
 		t.Fatalf("request count = %d", requests)
+	}
+}
+
+func TestListReposOwnerScope(t *testing.T) {
+	tests := []struct {
+		name     string
+		owner    string
+		endpoint string
+		fallback bool
+	}{
+		{name: "specified user", owner: "alice", endpoint: "/api/v5/users/alice/repos"},
+		{name: "organization", owner: "team", endpoint: "/api/v5/orgs/team/repos", fallback: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if tt.fallback && req.URL.Path == "/api/v5/users/team/repos" {
+					if query := req.URL.Query(); query.Get("type") != "personal" {
+						t.Fatalf("user query = %q, want type=personal", req.URL.RawQuery)
+					}
+					return forkResponse(http.StatusNotFound, `{}`), nil
+				}
+				if req.URL.Path != tt.endpoint {
+					t.Fatalf("endpoint = %q, want %q", req.URL.Path, tt.endpoint)
+				}
+				return forkResponse(http.StatusOK, `[]`), nil
+			})
+			client := api.NewClientWithHTTPClient("token", &http.Client{Transport: transport})
+
+			repositories, err := listRepos(client, tt.owner, 30)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(repositories) != 0 {
+				t.Fatalf("repositories = %d, want 0", len(repositories))
+			}
+		})
+	}
+}
+
+func TestListReposUserEndpointRequestsTypePersonal(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path != "/api/v5/users/alice/repos" {
+			t.Fatalf("path = %q", req.URL.Path)
+		}
+		if query := req.URL.Query(); query.Get("type") != "personal" {
+			t.Fatalf("query = %q, want type=personal", req.URL.RawQuery)
+		}
+		return forkResponse(http.StatusOK, `[]`), nil
+	})
+	client := api.NewClientWithHTTPClient("token", &http.Client{Transport: transport})
+
+	if _, err := listRepos(client, "alice", 30); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestListReposOwnerNotFound(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return forkResponse(http.StatusNotFound, `{}`), nil
+	})
+	client := api.NewClientWithHTTPClient("token", &http.Client{Transport: transport})
+
+	_, err := listRepos(client, "missing", 30)
+	if err == nil || !strings.Contains(err.Error(), "was not found as a user or organization") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestListReposPermissionErrorDoesNotFallBack(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path == "/api/v5/orgs/alice/repos" {
+			t.Fatalf("unexpected fallback to organization endpoint")
+		}
+		return forkResponse(http.StatusForbidden, `{"message":"denied"}`), nil
+	})
+	client := api.NewClientWithHTTPClient("token", &http.Client{Transport: transport})
+
+	_, err := listRepos(client, "alice", 30)
+	if err == nil || !strings.Contains(err.Error(), "403 Forbidden") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestListReposPaginatedOrgResponseNormalizesOwner(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path == "/api/v5/users/team/repos" {
+			return forkResponse(http.StatusNotFound, `{}`), nil
+		}
+		body := `[{"full_name":"华中科技大学开放原子开源俱乐部 / atomgit-skills","namespace":{"path":"hust-open-atom-club"},"path":"atomgit-skills","name":"atomgit-skills"},{"full_name":"hust-open-atom-club/atomgit-cli","namespace":{"path":"hust-open-atom-club"},"path":"atomgit-cli","name":"atomgit-cli"}]`
+		return forkResponse(http.StatusOK, body), nil
+	})
+	client := api.NewClientWithHTTPClient("token", &http.Client{Transport: transport})
+
+	repositories, err := listRepos(client, "team", 30)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := repositoryListName(repositories[0]); got != "hust-open-atom-club/atomgit-skills" {
+		t.Fatalf("list name = %q, want namespace-path based name", got)
+	}
+	if got := repositoryOwner(repositories[0]); got != "hust-open-atom-club" {
+		t.Fatalf("owner = %q, want namespace path", got)
 	}
 }
 
@@ -155,6 +258,53 @@ func TestRepoListCommandRejectsInvalidLimit(t *testing.T) {
 	err := cmd.RunE(cmd, nil)
 	if err == nil || !strings.Contains(err.Error(), "must be positive") {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestRepoListCommandRejectsInvalidOwner(t *testing.T) {
+	tests := []struct {
+		name  string
+		owner string
+	}{
+		{name: "whitespace", owner: "   "},
+		{name: "slash", owner: "alice/team"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				t.Fatalf("unexpected request %s %s", req.Method, req.URL.Path)
+				return nil, nil
+			})
+			cmd := newCmdRepoList(repoFactory(repoCommandConfig{token: "token"}, transport))
+			err := cmd.RunE(cmd, []string{tt.owner})
+			if err == nil || !strings.Contains(err.Error(), "invalid owner") {
+				t.Fatalf("error = %v", err)
+			}
+		})
+	}
+}
+
+func TestRepoListCommandOwnerScope(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "user", args: []string{"alice"}},
+		{name: "organization", args: []string{"team"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.URL.Path == "/api/v5/users/team/repos" {
+					return forkResponse(http.StatusNotFound, `{}`), nil
+				}
+				return forkResponse(http.StatusOK, `[]`), nil
+			})
+			cmd := newCmdRepoList(repoFactory(repoCommandConfig{token: "token"}, transport))
+			if err := cmd.RunE(cmd, tt.args); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 

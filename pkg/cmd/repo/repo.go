@@ -2,6 +2,8 @@ package repo
 
 import (
 	"fmt"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -65,10 +67,23 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "list",
+		Use:   "list [<owner>]",
 		Short: "List repositories",
-		Args:  cobra.NoArgs,
+		Long:  "List repositories for the authenticated user, a specified user, or an organization. A specified owner is checked as a user first and retried as an organization only when the user is not found.",
+		Example: `  ag repo list
+  ag repo list alice
+  ag repo list my-organization --limit 100
+  ag repo list alice --json`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			owner := ""
+			if len(args) == 1 {
+				owner = strings.TrimSpace(args[0])
+				if owner == "" || strings.Contains(owner, "/") {
+					return fmt.Errorf("invalid owner: %q", args[0])
+				}
+			}
+
 			if opts.Limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
@@ -82,7 +97,7 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			repos, err := listRepos(client, opts.Limit)
+			repos, err := listRepos(client, owner, opts.Limit)
 			if err != nil {
 				return err
 			}
@@ -105,30 +120,76 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
-func listRepos(client *api.Client, limit int) ([]api.Repository, error) {
-	const maxPerPage = 100
+func listRepos(client *api.Client, owner string, limit int) ([]api.Repository, error) {
+	if owner == "" {
+		return listReposAtEndpoint(client, "/user/repos", limit)
+	}
 
-	var repos []api.Repository
-	for page := 1; len(repos) < limit; page++ {
-		var pageRepos []api.Repository
-		path := fmt.Sprintf("/user/repos?page=%d&per_page=%d", page, maxPerPage)
-		if err := client.Get(path, &pageRepos); err != nil {
+	escapedOwner := url.PathEscape(owner)
+	userEndpoint := "/users/" + escapedOwner + "/repos?type=personal"
+	firstPage, err := listReposPage(client, userEndpoint, 1)
+	if err == nil {
+		repositories, err := listReposAfterFirstPage(client, userEndpoint, limit, firstPage)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list repositories for user %q: %w", owner, err)
+		}
+		return repositories, nil
+	}
+	if !api.IsHTTPStatus(err, http.StatusNotFound) {
+		return nil, fmt.Errorf("failed to list repositories for user %q: %w", owner, err)
+	}
+
+	organizationEndpoint := "/orgs/" + escapedOwner + "/repos"
+	firstPage, err = listReposPage(client, organizationEndpoint, 1)
+	if err != nil {
+		if api.IsHTTPStatus(err, http.StatusNotFound) {
+			return nil, fmt.Errorf("owner %q was not found as a user or organization: %w", owner, err)
+		}
+		return nil, fmt.Errorf("failed to list repositories for organization %q: %w", owner, err)
+	}
+	repositories, err := listReposAfterFirstPage(client, organizationEndpoint, limit, firstPage)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list repositories for organization %q: %w", owner, err)
+	}
+	return repositories, nil
+}
+
+func listReposAtEndpoint(client *api.Client, endpoint string, limit int) ([]api.Repository, error) {
+	firstPage, err := listReposPage(client, endpoint, 1)
+	if err != nil {
+		return nil, err
+	}
+	return listReposAfterFirstPage(client, endpoint, limit, firstPage)
+}
+
+const repoListPageSize = 100
+
+func listReposPage(client *api.Client, endpoint string, page int) ([]api.Repository, error) {
+	var repositories []api.Repository
+	separator := "?"
+	if strings.Contains(endpoint, "?") {
+		separator = "&"
+	}
+	err := client.Get(fmt.Sprintf("%s%spage=%d&per_page=%d", endpoint, separator, page, repoListPageSize), &repositories)
+	return repositories, err
+}
+
+func listReposAfterFirstPage(client *api.Client, endpoint string, limit int, firstPage []api.Repository) ([]api.Repository, error) {
+	repositories := append([]api.Repository(nil), firstPage...)
+	for page := 2; len(repositories) < limit && len(firstPage) == repoListPageSize; page++ {
+		pageRepositories, err := listReposPage(client, endpoint, page)
+		if err != nil {
 			return nil, err
 		}
-		if len(pageRepos) == 0 {
-			break
-		}
-
-		repos = append(repos, pageRepos...)
-		if len(pageRepos) < maxPerPage {
+		repositories = append(repositories, pageRepositories...)
+		if len(pageRepositories) < repoListPageSize {
 			break
 		}
 	}
-
-	if len(repos) > limit {
-		repos = repos[:limit]
+	if len(repositories) > limit {
+		repositories = repositories[:limit]
 	}
-	return repos, nil
+	return repositories, nil
 }
 
 func parseRepositoryName(value, defaultOwner string) (string, string, error) {
@@ -150,6 +211,11 @@ func parseRepositoryName(value, defaultOwner string) (string, string, error) {
 }
 
 func repositoryListName(repo api.Repository) string {
+	if repo.Namespace.Path != "" && repo.Name != "" {
+		// Organization-scoped responses carry the canonical namespace path
+		// instead of an owner login and a localized full_name display name.
+		return repo.Namespace.Path + "/" + repo.Name
+	}
 	if repo.FullName != "" {
 		return repo.FullName
 	}
@@ -186,8 +252,18 @@ func newRepositoryJSON(repository api.Repository) repositoryJSON {
 		Forks:         repository.ForksCount,
 		Watchers:      repository.WatchersCount,
 		OpenIssues:    repository.OpenIssuesCount,
-		Owner:         repository.Owner.Login,
+		Owner:         repositoryOwner(repository),
 	}
+}
+
+// repositoryOwner returns the canonical owner of a repository. Organization
+// responses (GET /orgs/:org/repos) carry the namespace path instead of an
+// owner login, so it takes precedence for consistent owner output.
+func repositoryOwner(repo api.Repository) string {
+	if repo.Namespace.Path != "" {
+		return repo.Namespace.Path
+	}
+	return repo.Owner.Login
 }
 
 func repositoryVisibility(repo api.Repository) string {
