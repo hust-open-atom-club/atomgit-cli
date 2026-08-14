@@ -44,7 +44,7 @@ func newCmdDiscussionList(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
 
-			// respository parse shoule be second execute after limit identity
+			// repository parse should execute after limit validation
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
 			if err != nil {
 				return err
