@@ -25,20 +25,16 @@
 
 1. **Fork 仓库**
 
-   先在 AtomGit 上 Fork 本仓库，再克隆自己的 Fork，并添加上游仓库：
+   先在 AtomGit 上 Fork 本仓库。如果已有 Fork，请先通过 AtomGit 页面完成同步，然后克隆自己的 Fork：
 
    ```bash
    git clone https://atomgit.com/YOUR_USERNAME/atomgit-cli.git
    cd atomgit-cli
-   git remote add upstream https://atomgit.com/hust-open-atom-club/atomgit-cli.git
    ```
 
 2. **创建分支**
 
    ```bash
-   git fetch upstream
-   git switch main
-   git merge --ff-only upstream/main
    git switch -c feat/your-feature-name
    # 或
    git switch -c fix/bug-description
@@ -70,7 +66,7 @@
    )
    ```
 
-   修改 npm 启动器、平台包元数据或 npm 打包脚本时，还需要运行 `npm test`。修改命令参数或输出时，请执行对应命令的 `--help` 冒烟检查；纯文档修改至少运行 `git diff --check`。
+   修改命令参数或输出时，请执行对应命令的 `--help` 冒烟检查；纯文档修改至少运行 `git diff --check`。
 
 5. **提交更改**
 
