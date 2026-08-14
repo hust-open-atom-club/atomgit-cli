@@ -676,13 +676,33 @@ func TestDoJSONRequestRejectsEmptyJSONBody(t *testing.T) {
 	}
 }
 
+func TestDoJSONRequestRejectsEmptyAllowedStatuses(t *testing.T) {
+	var calls int32
+	client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			atomic.AddInt32(&calls, 1)
+			return nil, errors.New("request should not be sent")
+		}),
+	})
+
+	err := client.doJSONRequest(http.MethodGet, "/resource", nil,
+		"application/json", "application/json", RequestPolicy{}, nil)
+	if err == nil || !strings.Contains(err.Error(), "allowed statuses cannot be empty") {
+		t.Fatalf("error = %v, want empty allowed statuses error", err)
+	}
+	if calls != 0 {
+		t.Fatalf("calls = %d, want 0", calls)
+	}
+}
+
 func TestDoJSONRequestRetryPolicy(t *testing.T) {
 	t.Run("CanRetry false does not retry on network error", func(t *testing.T) {
 		var calls int32
+		originalErr := errors.New("network failure")
 		client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
 			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 				atomic.AddInt32(&calls, 1)
-				return nil, errors.New("network failure")
+				return nil, originalErr
 			}),
 		})
 
@@ -695,10 +715,8 @@ func TestDoJSONRequestRetryPolicy(t *testing.T) {
 		if !strings.Contains(err.Error(), "API request PUT /resource") {
 			t.Fatalf("error = %v, want wrapped transport error", err)
 		}
-		if !errors.Is(err, errors.New("network failure")) {
-			if !strings.Contains(err.Error(), "network failure") {
-				t.Fatalf("error does not preserve cause: %v", err)
-			}
+		if !errors.Is(err, originalErr) {
+			t.Fatalf("error does not preserve cause: %v", err)
 		}
 		if n := atomic.LoadInt32(&calls); n != 1 {
 			t.Fatalf("calls = %d, want 1 (no retry)", n)
@@ -859,6 +877,25 @@ func TestAPIErrorSanitizesControlChars(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), `\x1b`) {
 		t.Fatalf("error did not sanitize escape: %q", err.Error())
+	}
+}
+
+func TestAPIErrorSanitizesStatus(t *testing.T) {
+	resp := &http.Response{
+		Status: "403 Forbidden \x1b[31mspoofed\x1b[0m \u202ereversed",
+		Body:   io.NopCloser(strings.NewReader(`{"message":"denied"}`)),
+	}
+
+	err := newAPIError(resp)
+	for _, control := range []string{"\x1b", "\u202e"} {
+		if strings.Contains(err.Error(), control) {
+			t.Fatalf("error contained raw status control %q: %q", control, err.Error())
+		}
+	}
+	for _, escaped := range []string{`\x1b`, `\u202e`} {
+		if !strings.Contains(err.Error(), escaped) {
+			t.Fatalf("error did not sanitize status control %q: %q", escaped, err.Error())
+		}
 	}
 }
 

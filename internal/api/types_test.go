@@ -226,7 +226,7 @@ func TestPullRequestFileDecode(t *testing.T) {
 	})
 
 	t.Run("nested patch fields", func(t *testing.T) {
-		raw := `{"sha":"def456","filename":"other.go","status":"added","patch":{"old_path":"","new_path":"other.go","added_lines":20,"removed_lines":0,"too_large":true}}`
+		raw := `{"sha":"def456","filename":"other.go","patch":{"old_path":"","new_path":"other.go","added_lines":20,"removed_lines":0,"too_large":true,"new_file":true,"renamed_file":false,"deleted_file":false}}`
 		var file PullRequestFile
 		if err := json.Unmarshal([]byte(raw), &file); err != nil {
 			t.Fatal(err)
@@ -236,6 +236,34 @@ func TestPullRequestFileDecode(t *testing.T) {
 		}
 		if !file.Patch.TooLarge {
 			t.Fatal("patch.TooLarge should be true")
+		}
+		if !file.Patch.NewFile || file.GetChangeType() != "added" {
+			t.Fatalf("patch/change type = %#v/%q", file.Patch, file.GetChangeType())
+		}
+	})
+
+	t.Run("normalizes patch change flags", func(t *testing.T) {
+		tests := []struct {
+			name  string
+			patch string
+			want  string
+		}{
+			{name: "modified default", patch: `{}`, want: "modified"},
+			{name: "added", patch: `{"new_file":true}`, want: "added"},
+			{name: "renamed", patch: `{"renamed_file":true}`, want: "renamed"},
+			{name: "deleted", patch: `{"deleted_file":true}`, want: "deleted"},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				var file PullRequestFile
+				raw := `{"filename":"main.go","patch":` + tt.patch + `}`
+				if err := json.Unmarshal([]byte(raw), &file); err != nil {
+					t.Fatal(err)
+				}
+				if got := file.GetChangeType(); got != tt.want {
+					t.Fatalf("GetChangeType() = %q, want %q", got, tt.want)
+				}
+			})
 		}
 	})
 
