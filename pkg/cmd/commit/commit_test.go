@@ -486,3 +486,15 @@ func commitListBody(count int) string {
 	}
 	return string(data)
 }
+
+func TestCommitListRejectsInvalidLimitBeforeAuth(t *testing.T) {
+	cmd := newCmdCommitList(&cmdutil.Factory{Config: commitAuthErrorConfig{}})
+	_ = cmd.Flags().Set("limit", "0")
+	err := cmd.RunE(cmd, []string{"alice/demo"})
+	if err == nil || !strings.Contains(err.Error(), "must be positive") {
+		t.Fatalf("error = %v, want limit validation to run before authentication", err)
+	}
+	if strings.Contains(err.Error(), "not authenticated") {
+		t.Fatalf("error = %v, authentication must not run before limit validation", err)
+	}
+}
