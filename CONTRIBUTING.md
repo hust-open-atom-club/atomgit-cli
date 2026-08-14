@@ -74,6 +74,12 @@
    - 关联相关的 issue（如果有）
    - 确保 CI 检查通过
 
+7. **请求 AI 代码评审**
+   - 在 Pull Request 评论区单独发送 `/ai review`，请求 AI 对代码改动进行评审
+
+8. **获取 PR 改动总结**
+   - 在 Pull Request 评论区单独发送 `/ai summary`，获取本次 PR 的改动总结
+
 ## 开发指南
 
 ### 项目结构
