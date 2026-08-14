@@ -498,3 +498,55 @@ func TestCommitListRejectsInvalidLimitBeforeAuth(t *testing.T) {
 		t.Fatalf("error = %v, authentication must not run before limit validation", err)
 	}
 }
+
+func TestEscapeCell(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "plain", input: "plain text", want: "plain text"},
+		{name: "backslash", input: `a\b`, want: `a\\b`},
+		{name: "tab", input: "a\tb", want: `a\tb`},
+		{name: "newline", input: "a\nb", want: `a\nb`},
+		{name: "carriage return", input: "a\rb", want: `a\rb`},
+		{name: "mixed", input: "a\tb\nc\\d\re", want: `a\tb\nc\\d\re`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := escapeCell(tt.input); got != tt.want {
+				t.Fatalf("escapeCell(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCommitListEscapesTextColumns(t *testing.T) {
+	// The title contains a tab and a CRLF. After escaping, the tab-separated
+	// row must still have exactly the four structural separators, even when the
+	// output goes through the root command's sanitizing writer.
+	factory := &cmdutil.Factory{
+		Config: commitTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: commitRoundTripFunc(func(*http.Request) (*http.Response, error) {
+				return commitResponse(http.StatusOK, `[
+					{"sha":"abcdef1234567890abcdef1234567890abcdef12","html_url":"https://atomgit.com/alice/demo/commit/x","commit":{"message":"Fix\tbug\r\nline","author":{"name":"Alice","date":"2026-07-15T10:00:00Z"}},"author":{"login":"alice"}}
+				]`), nil
+			})}, nil
+		},
+	}
+
+	cmd := newCmdCommitList(factory)
+	var output bytes.Buffer
+	cmd.SetOut(cmdutil.NewSanitizingWriter(&output))
+	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+		t.Fatal(err)
+	}
+	want := "abcdef1\tFix\\tbug\talice\t2026-07-15T10:00:00Z\thttps://atomgit.com/alice/demo/commit/x\n"
+	if got := output.String(); got != want {
+		t.Fatalf("output = %q, want %q", got, want)
+	}
+	if got := strings.Count(output.String(), "\t"); got != 4 {
+		t.Fatalf("structural tab count = %d, want 4", got)
+	}
+}

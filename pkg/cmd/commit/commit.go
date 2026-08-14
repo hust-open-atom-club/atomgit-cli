@@ -96,12 +96,13 @@ func newCmdCommitList(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			for _, commit := range commits {
-				fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\n",
-					shortSHA(commit.SHA),
-					commitTitle(commit),
-					commitAuthor(commit),
-					commit.Commit.Author.Date,
-					commitWebURL(owner, repo, commit),
+				fmt.Fprintf(
+					out, "%s\t%s\t%s\t%s\t%s\n",
+					escapeCell(shortSHA(commit.SHA)),
+					escapeCell(commitTitle(commit)),
+					escapeCell(commitAuthor(commit)),
+					escapeCell(commit.Commit.Author.Date),
+					escapeCell(commitWebURL(owner, repo, commit)),
 				)
 			}
 
@@ -168,17 +169,17 @@ func newCmdCommitView(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			out := cmd.OutOrStdout()
-			fmt.Fprintf(out, "SHA: %s\n", commit.SHA)
-			fmt.Fprintf(out, "Title: %s\n", commitTitle(commit))
-			fmt.Fprintf(out, "Author: %s\n", commitAuthor(commit))
-			fmt.Fprintf(out, "Date: %s\n", commit.Commit.Author.Date)
-			fmt.Fprintf(out, "URL: %s\n", commitWebURL(owner, repo, commit))
+			fmt.Fprintf(out, "SHA: %s\n", escapeCell(commit.SHA))
+			fmt.Fprintf(out, "Title: %s\n", escapeCell(commitTitle(commit)))
+			fmt.Fprintf(out, "Author: %s\n", escapeCell(commitAuthor(commit)))
+			fmt.Fprintf(out, "Date: %s\n", escapeCell(commit.Commit.Author.Date))
+			fmt.Fprintf(out, "URL: %s\n", escapeCell(commitWebURL(owner, repo, commit)))
 			if len(commit.Parents) > 0 {
 				parents := make([]string, 0, len(commit.Parents))
 				for _, parent := range commit.Parents {
 					parents = append(parents, shortSHA(parent.SHA))
 				}
-				fmt.Fprintf(out, "Parents: %s\n", strings.Join(parents, ", "))
+				fmt.Fprintf(out, "Parents: %s\n", escapeCell(strings.Join(parents, ", ")))
 			}
 			if commit.Commit.Message != "" {
 				fmt.Fprintf(out, "\n%s\n", commit.Commit.Message)
@@ -254,4 +255,26 @@ func commitWebURL(owner, repo string, commit api.Commit) string {
 		return commit.HTMLURL
 	}
 	return browser.BuildCommitURL(owner, repo, commit.SHA)
+}
+
+// escapeCell escapes characters that would otherwise break tab-separated or
+// single-line text output: backslashes, tabs, newlines, and carriage returns.
+func escapeCell(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		switch r {
+		case '\\':
+			b.WriteString(`\\`)
+		case '\t':
+			b.WriteString(`\t`)
+		case '\n':
+			b.WriteString(`\n`)
+		case '\r':
+			b.WriteString(`\r`)
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
