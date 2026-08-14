@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
@@ -548,5 +549,96 @@ func TestCommitListEscapesTextColumns(t *testing.T) {
 	}
 	if got := strings.Count(output.String(), "\t"); got != 4 {
 		t.Fatalf("structural tab count = %d, want 4", got)
+	}
+}
+
+func TestCommitAuthorFallback(t *testing.T) {
+	tests := []struct {
+		name   string
+		commit api.Commit
+		want   string
+	}{
+		{
+			name:   "account login",
+			commit: api.Commit{Author: api.CommitAccount{Login: "alice"}},
+			want:   "alice",
+		},
+		{
+			name:   "account name",
+			commit: api.Commit{Author: api.CommitAccount{Name: "Alice"}},
+			want:   "Alice",
+		},
+		{
+			name:   "commit author name",
+			commit: api.Commit{Commit: api.CommitDetail{Author: api.CommitPerson{Name: "Alice"}}},
+			want:   "Alice",
+		},
+		{
+			name:   "commit author email",
+			commit: api.Commit{Commit: api.CommitDetail{Author: api.CommitPerson{Email: "alice@example.com"}}},
+			want:   "alice@example.com",
+		},
+		{
+			name:   "account email",
+			commit: api.Commit{Author: api.CommitAccount{Email: "alice@example.com"}},
+			want:   "alice@example.com",
+		},
+		{
+			name:   "login preferred over account name",
+			commit: api.Commit{Author: api.CommitAccount{Login: "alice", Name: "Alice"}},
+			want:   "alice",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := commitAuthor(tt.commit); got != tt.want {
+				t.Fatalf("commitAuthor() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCommitListAuthorEmailFallback(t *testing.T) {
+	// Neither the account nor the nested commit author has a login or name, so
+	// the author column and the JSON author field must fall back to the email.
+	factory := &cmdutil.Factory{
+		Config: commitTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: commitRoundTripFunc(func(*http.Request) (*http.Response, error) {
+				return commitResponse(http.StatusOK, `[
+					{"sha":"abcdef1234567890abcdef1234567890abcdef12","html_url":"https://atomgit.com/alice/demo/commit/x","commit":{"message":"Fix bug","author":{"name":"","email":"bot@example.com","date":"2026-07-15T10:00:00Z"}},"author":{"login":"","name":""}}
+				]`), nil
+			})}, nil
+		},
+	}
+
+	// Text output falls back to the commit author email.
+	var text bytes.Buffer
+	cmd := newCmdCommitList(factory)
+	cmd.SetOut(&text)
+	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+		t.Fatal(err)
+	}
+	want := "abcdef1\tFix bug\tbot@example.com\t2026-07-15T10:00:00Z\thttps://atomgit.com/alice/demo/commit/x\n"
+	if got := text.String(); got != want {
+		t.Fatalf("text output = %q, want %q", got, want)
+	}
+
+	// JSON output uses the same author fallback.
+	var jsonOut bytes.Buffer
+	cmd = newCmdCommitList(factory)
+	_ = cmd.Flags().Set("json", "true")
+	cmd.SetOut(&jsonOut)
+	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+		t.Fatal(err)
+	}
+	var values []struct {
+		Author string `json:"author"`
+	}
+	if err := json.Unmarshal(jsonOut.Bytes(), &values); err != nil {
+		t.Fatal(err)
+	}
+	if len(values) != 1 || values[0].Author != "bot@example.com" {
+		t.Fatalf("json author = %#v, want bot@example.com", values)
 	}
 }

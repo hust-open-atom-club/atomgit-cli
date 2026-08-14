@@ -241,12 +241,23 @@ func commitTitle(commit api.Commit) string {
 	return strings.TrimSpace(message)
 }
 
-// commitAuthor returns the account login, falling back to the commit author name.
+// commitAuthor returns the best available author display value, preferring the
+// account login and falling back through the account name, the commit author
+// name, and finally email addresses.
 func commitAuthor(commit api.Commit) string {
 	if commit.Author.Login != "" {
 		return commit.Author.Login
 	}
-	return commit.Commit.Author.Name
+	if commit.Author.Name != "" {
+		return commit.Author.Name
+	}
+	if commit.Commit.Author.Name != "" {
+		return commit.Commit.Author.Name
+	}
+	if commit.Commit.Author.Email != "" {
+		return commit.Commit.Author.Email
+	}
+	return commit.Author.Email
 }
 
 // commitWebURL returns the commit's web URL, falling back to a constructed URL.
