@@ -80,7 +80,7 @@ go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 
 ## 配置
 
-首次使用时运行 `ag auth login` 完成 OAuth 登录。凭据、输出安全和仓库推断参阅[配置指南](docs/configuration.md)。
+首次使用时运行 `ag auth login` 完成 OAuth 登录；无浏览器环境（沙箱、容器、CI）可改用 `echo "$TOKEN" | ag auth login --with-token` 通过已有访问令牌登录。凭据、输出安全和仓库推断参阅[配置指南](docs/configuration.md)。
 
 
 

@@ -38,7 +38,8 @@ type tokenResponse struct {
 	ExpiresIn    int64  `json:"expires_in"`
 }
 
-type userResponse struct {
+// UserInfo is the AtomGit identity returned by GET /api/v5/user.
+type UserInfo struct {
 	ID        interface{} `json:"id"`
 	Login     string      `json:"login"`
 	Name      string      `json:"name"`
@@ -166,7 +167,7 @@ func Login(ctx context.Context) (*LoginResult, error) {
 		if err != nil {
 			return nil, err
 		}
-		user, err := fetchUser(ctx, tok.AccessToken)
+		user, err := FetchUser(ctx, tok.AccessToken)
 		if err != nil {
 			return nil, err
 		}
@@ -308,8 +309,16 @@ func RefreshAccessToken(ctx context.Context, refreshToken string) (*RefreshedTok
 	}, nil
 }
 
-func fetchUser(ctx context.Context, accessToken string) (*userResponse, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, userURL, nil)
+// FetchUser validates an access token against the default AtomGit user
+// endpoint and returns the associated identity.
+func FetchUser(ctx context.Context, accessToken string) (*UserInfo, error) {
+	return FetchUserWithURL(ctx, userURL, accessToken)
+}
+
+// FetchUserWithURL validates an access token against a specific user endpoint
+// URL. It exists so tests can point validation at an httptest server.
+func FetchUserWithURL(ctx context.Context, url, accessToken string) (*UserInfo, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +336,7 @@ func fetchUser(ctx context.Context, accessToken string) (*userResponse, error) {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("user endpoint %s: %s", resp.Status, strings.TrimSpace(string(b)))
 	}
-	var u userResponse
+	var u UserInfo
 	if err := json.Unmarshal(b, &u); err != nil {
 		return nil, fmt.Errorf("parse user JSON: %w", err)
 	}

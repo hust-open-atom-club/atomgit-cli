@@ -18,6 +18,11 @@ ag auth login
 # 可为账号保存提交身份覆盖值
 ag auth login --force --git-name "Alice" --git-email alice@example.com
 
+# 无浏览器环境（沙箱、容器、CI）：从标准输入读取已有访问令牌登录
+# 令牌会先经 AtomGit 用户接口验证，通过后才写入令牌文件
+echo "$TOKEN" | ag auth login --with-token
+ag auth login --with-token < token.txt
+
 # 列出账号（不会输出 token）并切换活动账号及 Git identity
 ag auth list
 ag auth list --json

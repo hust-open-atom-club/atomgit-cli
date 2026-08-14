@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -11,6 +13,7 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/oauth"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 func NewCmdAuth(f *cmdutil.Factory) *cobra.Command {
@@ -100,27 +103,52 @@ otherwise switch to another account first. Use --all to remove every account.`,
 }
 
 func newCmdAuthLogin(f *cmdutil.Factory) *cobra.Command {
-	return newCmdAuthLoginWithFunc(f, oauth.Login)
+	return newCmdAuthLoginWithDeps(f, loginDeps{browserLogin: oauth.Login, validateToken: oauth.FetchUser})
+}
+
+// loginDeps injects the network-facing halves of login so tests can stub them.
+type loginDeps struct {
+	browserLogin  func(context.Context) (*oauth.LoginResult, error)
+	validateToken func(ctx context.Context, token string) (*oauth.UserInfo, error)
 }
 
 func newCmdAuthLoginWithFunc(f *cmdutil.Factory, login func(context.Context) (*oauth.LoginResult, error)) *cobra.Command {
+	return newCmdAuthLoginWithDeps(f, loginDeps{browserLogin: login, validateToken: oauth.FetchUser})
+}
+
+func newCmdAuthLoginWithDeps(f *cmdutil.Factory, deps loginDeps) *cobra.Command {
 	var force bool
+	var withToken bool
 	var gitName, gitEmail string
 	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Log in with AtomGit OAuth (opens browser, saves token.json)",
-		Args:  cobra.NoArgs,
+		Args:  cobra.ExactArgs(0),
 		Long: `Opens a browser to authorize ag against atomgit.com, then writes
-access_token and user to the XDG config path (see README).
-If already logged in, skips the browser unless --force is set. The first saved
-account becomes active; later logins do not change the active account.`,
+access_token and user to the XDG config path (see README). With --with-token,
+skips the browser and reads an existing access token (PAT or OAuth token)
+from standard input instead — useful in sandboxes, containers, and CI where
+no browser is available:
+
+    echo "$TOKEN" | ag auth login --with-token
+    ag auth login --with-token < token.txt
+
+Piped or redirected input is read to EOF without any prompt; in an
+interactive terminal a single hidden prompt is shown. The token is validated
+against the AtomGit user API before it is saved. If already logged in, skips
+unless --force is set. The first saved account becomes active; later logins
+do not change the active account.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			out := cmd.OutOrStdout()
 			if !force {
 				if _, err := f.Config.GetToken(); err == nil {
 					user, _ := f.Config.GetUser()
-					fmt.Fprintf(out, "✓ Already logged in as %s — skipping browser login.\n", user)
-					fmt.Fprintln(out, "  Use `ag auth refresh` to refresh the access token, `ag auth logout` to sign out, or `ag auth login --force` to use the browser again.")
+					skipped := "browser login"
+					if withToken {
+						skipped = "token login"
+					}
+					fmt.Fprintf(out, "✓ Already logged in as %s — skipping %s.\n", user, skipped)
+					fmt.Fprintln(out, "  Use `ag auth refresh` if this account has a refresh token, `ag auth logout` to sign out, or `ag auth login --force` to authenticate again.")
 					return nil
 				}
 			}
@@ -132,21 +160,45 @@ account becomes active; later logins do not change the active account.`,
 				defer cancel()
 			}
 
-			result, err := login(ctx)
-			if err != nil {
-				return err
-			}
-			cred := &config.StoredCredentials{
-				AccessToken:  result.AccessToken,
-				User:         result.Login,
-				Name:         result.Name,
-				Email:        result.Email,
-				GitName:      strings.TrimSpace(gitName),
-				GitEmail:     strings.TrimSpace(gitEmail),
-				RefreshToken: result.RefreshToken,
-				ExpiresIn:    result.ExpiresIn,
-				TokenType:    result.TokenType,
-				CreatedAt:    time.Now().Unix(),
+			var cred *config.StoredCredentials
+			if withToken {
+				token, err := readTokenFromStdin(cmd)
+				if err != nil {
+					return err
+				}
+				user, err := deps.validateToken(ctx, token)
+				if err != nil {
+					return fmt.Errorf("token validation failed (the token may be invalid or expired): %w", err)
+				}
+				if user.Login == "" {
+					return fmt.Errorf("token validation failed: user API returned empty login")
+				}
+				cred = &config.StoredCredentials{
+					AccessToken: token,
+					User:        user.Login,
+					Name:        user.Name,
+					Email:       user.Email,
+					GitName:     strings.TrimSpace(gitName),
+					GitEmail:    strings.TrimSpace(gitEmail),
+					CreatedAt:   time.Now().Unix(),
+				}
+			} else {
+				result, err := deps.browserLogin(ctx)
+				if err != nil {
+					return err
+				}
+				cred = &config.StoredCredentials{
+					AccessToken:  result.AccessToken,
+					User:         result.Login,
+					Name:         result.Name,
+					Email:        result.Email,
+					GitName:      strings.TrimSpace(gitName),
+					GitEmail:     strings.TrimSpace(gitEmail),
+					RefreshToken: result.RefreshToken,
+					ExpiresIn:    result.ExpiresIn,
+					TokenType:    result.TokenType,
+					CreatedAt:    time.Now().Unix(),
+				}
 			}
 			if !cmd.Flags().Changed("git-name") || !cmd.Flags().Changed("git-email") {
 				store, err := config.LoadCredentialStore()
@@ -176,7 +228,7 @@ account becomes active; later logins do not change the active account.`,
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(out, "✓ Logged in to atomgit.com as %s\n", result.Login)
+			fmt.Fprintf(out, "✓ Logged in to atomgit.com as %s\n", cred.User)
 			fmt.Fprintf(out, "  Token saved to %s\n", path)
 			if store.Active != cred.Key() {
 				fmt.Fprintf(out, "  Active account remains %s\n", store.Active)
@@ -185,10 +237,38 @@ account becomes active; later logins do not change the active account.`,
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&force, "force", false, "Always run browser login even if already logged in")
+	cmd.Flags().BoolVar(&force, "force", false, "Always authenticate again even if already logged in")
+	cmd.Flags().BoolVar(&withToken, "with-token", false, "Read an access token from standard input instead of browser OAuth")
 	cmd.Flags().StringVar(&gitName, "git-name", "", "Override the Git user.name stored for this account")
 	cmd.Flags().StringVar(&gitEmail, "git-email", "", "Override the Git user.email stored for this account")
 	return cmd
+}
+
+// readTokenFromStdin reads an access token from the command's stdin. Piped or
+// redirected input is consumed to EOF without any prompt; an interactive
+// terminal gets a single hidden-input prompt so the token is not echoed.
+func readTokenFromStdin(cmd *cobra.Command) (string, error) {
+	in := cmd.InOrStdin()
+	if file, ok := in.(*os.File); ok && term.IsTerminal(int(file.Fd())) {
+		fmt.Fprint(cmd.ErrOrStderr(), "Paste your token: ")
+		bytes, err := term.ReadPassword(int(file.Fd()))
+		fmt.Fprintln(cmd.ErrOrStderr())
+		if err != nil {
+			return "", fmt.Errorf("read token: %w", err)
+		}
+		if token := strings.TrimSpace(string(bytes)); token != "" {
+			return token, nil
+		}
+		return "", fmt.Errorf("no token provided")
+	}
+	bytes, err := io.ReadAll(in)
+	if err != nil {
+		return "", fmt.Errorf("read token from stdin: %w", err)
+	}
+	if token := strings.TrimSpace(string(bytes)); token != "" {
+		return token, nil
+	}
+	return "", fmt.Errorf("no token provided on stdin")
 }
 
 func newCmdAuthRefresh() *cobra.Command {
@@ -209,7 +289,7 @@ func newCmdAuthRefresh() *cobra.Command {
 				return err
 			}
 			if cred.RefreshToken == "" {
-				return fmt.Errorf("no refresh_token in credential file; run `ag auth login` to sign in again (OAuth must return a refresh token)")
+				return fmt.Errorf("no refresh_token stored for %s; this account was likely logged in via `ag auth login --with-token`, which cannot be refreshed — sign in again with a new token (`echo \"$TOKEN\" | ag auth login --with-token --force`) or run `ag auth login --force` for browser OAuth", cred.User)
 			}
 
 			tok, err := oauth.RefreshAccessToken(ctx, cred.RefreshToken)
