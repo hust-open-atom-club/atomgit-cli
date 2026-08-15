@@ -460,16 +460,6 @@ Unspecified metadata is left unchanged; use --milestone none to clear the
 current milestone.`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return cmdutil.AuthenticationError(err)
-			}
-
-			client, err := f.NewAPIClient(token)
-			if err != nil {
-				return err
-			}
-
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
@@ -481,11 +471,6 @@ current milestone.`,
 			}
 
 			metadataRequested := opts.Metadata.requested(cmd)
-			metadata, err := resolvePREditMetadata(client, owner, repo, number, opts.Metadata, cmd)
-			if err != nil {
-				return err
-			}
-
 			body := map[string]interface{}{}
 			if opts.Title != "" {
 				body["title"] = opts.Title
@@ -496,6 +481,21 @@ current milestone.`,
 
 			if len(body) == 0 && !metadataRequested {
 				return fmt.Errorf("at least one PR field or collaboration metadata flag must be provided")
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
+
+			metadata, err := resolvePREditMetadata(client, owner, repo, number, opts.Metadata, cmd)
+			if err != nil {
+				return err
 			}
 
 			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
@@ -693,11 +693,6 @@ By default, ag creates a merge commit. Use --rebase to rebase the commits onto t
 `,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return cmdutil.AuthenticationError(err)
-			}
-
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
@@ -706,6 +701,11 @@ By default, ag creates a merge commit. Use --rebase to rebase the commits onto t
 			number, err := parsePRNumber(remaining[0])
 			if err != nil {
 				return err
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)

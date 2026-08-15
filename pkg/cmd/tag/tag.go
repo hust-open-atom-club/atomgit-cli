@@ -31,6 +31,12 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 		Short: "List tags",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
@@ -40,12 +46,6 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
 
 			var tags []api.Tag
 			path := fmt.Sprintf("/repos/%s/%s/tags", owner, repo)

@@ -20,11 +20,6 @@ func newCmdUnlinkIssues(f *cmdutil.Factory) *cobra.Command {
 		Long:  `Unlink one or more issues from a pull request.`,
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return cmdutil.AuthenticationError(err)
-			}
-
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
@@ -36,11 +31,6 @@ func newCmdUnlinkIssues(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("at least one issue number is required (--issue)")
 			}
 
-			client, err := f.NewAPIClient(token)
-			if err != nil {
-				return err
-			}
-
 			// Convert issue numbers to integers
 			issueNumbers := []int{}
 			for _, issueNumber := range opts.Issues {
@@ -49,6 +39,16 @@ func newCmdUnlinkIssues(f *cmdutil.Factory) *cobra.Command {
 					return fmt.Errorf("invalid issue number: %s", issueNumber)
 				}
 				issueNumbers = append(issueNumbers, num)
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
 			}
 
 			// Unlink issues using array format
