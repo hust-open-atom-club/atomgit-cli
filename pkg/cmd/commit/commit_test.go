@@ -442,6 +442,49 @@ func TestCommitViewWebFlag(t *testing.T) {
 	}
 }
 
+func TestCommitViewRejectsBlankSHA(t *testing.T) {
+	tests := []struct {
+		name string
+		sha  string
+		web  bool
+	}{
+		{name: "empty sha", sha: ""},
+		{name: "whitespace sha", sha: "   "},
+		{name: "empty sha web", sha: "", web: true},
+		{name: "whitespace sha web", sha: "   ", web: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requests := 0
+			browserCalls := 0
+			factory := &cmdutil.Factory{
+				Config: commitTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: commitRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						requests++
+						return commitResponse(http.StatusOK, `{}`), nil
+					})}, nil
+				},
+				BrowserOpener: func(string) error { browserCalls++; return nil },
+			}
+			cmd := newCmdCommitView(factory)
+			if tt.web {
+				_ = cmd.Flags().Set("web", "true")
+			}
+			err := cmd.RunE(cmd, []string{"alice/demo", tt.sha})
+			if err == nil || !strings.Contains(err.Error(), "commit SHA is required") {
+				t.Fatalf("error = %v, want error containing %q", err, "commit SHA is required")
+			}
+			if requests != 0 {
+				t.Fatalf("HTTP requests = %d, want 0", requests)
+			}
+			if browserCalls != 0 {
+				t.Fatalf("browser calls = %d, want 0", browserCalls)
+			}
+		})
+	}
+}
+
 func TestCommitViewErrorResponse(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: commitTestConfig{},

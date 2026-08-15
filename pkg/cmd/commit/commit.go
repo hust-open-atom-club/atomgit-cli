@@ -136,7 +136,10 @@ func newCmdCommitView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-			sha := remaining[0]
+			sha := strings.TrimSpace(remaining[0])
+			if sha == "" {
+				return fmt.Errorf("commit SHA is required")
+			}
 
 			if opts.web {
 				u := browser.BuildCommitURL(owner, repo, sha)
