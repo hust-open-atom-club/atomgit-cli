@@ -19,6 +19,7 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/label"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/license"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/milestone"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/notification"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/org"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/pr"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/release"
@@ -77,6 +78,7 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	cmd.AddCommand(issue.NewCmdIssue(f))
 	cmd.AddCommand(label.NewCmdLabel(f))
 	cmd.AddCommand(milestone.NewCmdMilestone(f))
+	cmd.AddCommand(notification.NewCmdNotification(f))
 	cmd.AddCommand(release.NewCmdRelease(f))
 	cmd.AddCommand(runcmd.NewCmdRun(f))
 	cmd.AddCommand(workflow.NewCmdWorkflow(f))

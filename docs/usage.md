@@ -554,7 +554,7 @@ ag tag delete v1.0.0
 
 ## 资源命令的 JSON 输出
 
-`repo list/view`、`issue list/view`、`pr list/view` 和 `tag list` 支持布尔参数 `--json`。list 命令输出完整 JSON 数组，view 命令输出完整 JSON 对象；没有结果时 list 输出 `[]`。默认文本输出保持不变。
+`repo list/view`、`issue list/view`、`pr list/view`、`tag list` 和 `notification list` 支持布尔参数 `--json`。list 命令输出完整 JSON 数组，view 命令输出完整 JSON 对象；没有结果时 list 输出 `[]`。默认文本输出保持不变。
 
 JSON 字段使用 lowerCamelCase，并由 CLI 显式定义，不会因为 AtomGit API 增加字段而自动改变。Issue 和 PR 的 `number` 始终是字符串，标签输出为名称数组，PR 的 `head` 和 `base` 输出分支名称。可选的服务端字段缺失时仍输出对应的零值，以保持固定结构。
 
@@ -760,6 +760,36 @@ ag ssh-key list --limit 200
 ag ssh-key delete 123
 ag ssh-key delete 123 --yes
 ```
+
+## 通知 (notification)
+
+```bash
+# 列出仓库通知（默认列出全部，按时间倒序）
+ag notification list owner/repo
+
+# 在当前 Git 仓库中直接使用
+ag notification list
+
+# 只看未读；--type 按 merge_requests_open、issue_open 等类型过滤
+ag notification list owner/repo --unread
+ag notification list owner/repo --type issue_open
+
+# 按更新时间过滤（RFC 3339 时间戳）
+ag notification list owner/repo --since 2026-08-01T00:00:00Z --before 2026-08-15T00:00:00Z
+
+# 限制数量与结构化输出
+ag notification list owner/repo --limit 20
+ag notification list owner/repo --json
+
+# 标记指定通知为已读（ID 来自 `ag notification list`）
+ag notification mark-read owner/repo 292ecbec857e4f27b426d66f2157938c
+
+# 标记仓库内全部未读通知为已读（默认要求确认，--yes 跳过）
+ag notification mark-read owner/repo --all
+ag notification mark-read owner/repo --all --yes
+```
+
+文本输出每行依次为未读状态（`unread`/`read`）、类型、更新时间、标题和链接；没有通知时输出 `No notifications found`，`--json` 输出 `[]`。`--type` 由 CLI 在本地过滤，`--limit` 在过滤后的结果上生效。
 
 ## 搜索
 
