@@ -25,6 +25,7 @@ func NewCmdDiscussion(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.AddCommand(newCmdDiscussionList(f))
+	cmd.AddCommand(newCmdDiscussionView(f))
 	cmdutil.AddRepositoryContextHelp(cmd)
 	return cmd
 }
@@ -112,10 +113,7 @@ func displayDiscussionValue(value string) string {
 }
 
 func discussionAuthor(item api.Discussion) string {
-	if login := displayDiscussionValue(item.Author.Login); login != "-" {
-		return login
-	}
-	return displayDiscussionValue(item.Author.Name)
+	return authorLabel(item.Author)
 }
 
 func discussionStatus(item api.Discussion) string {

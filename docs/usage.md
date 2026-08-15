@@ -799,9 +799,18 @@ ag discussion list
 ag discussion list hust-open-atom-club/atomgit-cli
 ag discussion list hust-open-atom-club/atomgit-cli --limit 30
 ag discussion list hust-open-atom-club/atomgit-cli --json
+
+# 查看单个讨论的标题、状态与 Markdown 正文
+ag discussion view hust-open-atom-club/atomgit-cli 1
+
+# 连同评论串一起输出；有回复的评论会嵌套展示其回复
+ag discussion view hust-open-atom-club/atomgit-cli 1 --comments
+ag discussion view hust-open-atom-club/atomgit-cli 1 --comments --json
 ```
 
 公开仓库的 Discussion 可匿名读取；登录后会携带访问令牌，以便访问账号有权限查看的仓库。
+
+`discussion view` 的 `<number>` 必须是正整数，在认证之前就会校验。加 `--comments` 时会额外请求评论串，评论按服务端顺序排列，仅 `reply_total` 大于 0 的评论才继续拉取嵌套回复。已删除、已隐藏或正文为空的条目分别显示为 `[deleted]`、`[hidden]`、`[no content]`。JSON 输出中 `comments` 字段仅在指定 `--comments` 时出现：请求了但没有评论时输出 `[]`。
 
 ## 版本
 
