@@ -3,6 +3,7 @@ package tag
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -102,6 +103,16 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 		Short: "Create a tag",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			tagName := strings.TrimSpace(remaining[0])
+			if tagName == "" {
+				return fmt.Errorf("tag name is required")
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
@@ -111,13 +122,6 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
-			tagName := remaining[0]
 
 			body := api.TagRequest{
 				TagName: tagName,
@@ -149,6 +153,16 @@ func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
 		Short: "Delete a tag",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			tagName := strings.TrimSpace(remaining[0])
+			if tagName == "" {
+				return fmt.Errorf("tag name is required")
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
@@ -158,13 +172,6 @@ func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
-			tagName := remaining[0]
 
 			// Tag names may contain slashes (e.g. v1.0/rc1), so escape the name
 			// before splicing it into the request path.

@@ -143,13 +143,13 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
+			number, err := parsePRNumber(remaining[0])
+			if err != nil {
+				return err
+			}
 
 			if opts.web {
-				num, err := strconv.Atoi(number)
-				if err != nil {
-					return fmt.Errorf("invalid PR number: %s", number)
-				}
+				num, _ := strconv.Atoi(number)
 				u := browser.BuildPRURL(owner, repo, num)
 				fmt.Fprintf(cmd.OutOrStdout(), "Opening %s in your browser.\n", u)
 				if f.BrowserOpener != nil {
@@ -359,6 +359,11 @@ milestones must already exist in the repository.`,
 			if err != nil {
 				return err
 			}
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
 
 			token, err := f.Config.GetToken()
 			if err != nil {
@@ -369,12 +374,6 @@ milestones must already exist in the repository.`,
 			if err != nil {
 				return err
 			}
-
-			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
 
 			metadata, err := resolvePRCreateMetadata(client, owner, repo, opts.Metadata)
 			if err != nil {
@@ -543,6 +542,16 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 		Short: "Close a pull request",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			number, err := parsePRNumber(remaining[0])
+			if err != nil {
+				return err
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
@@ -552,13 +561,6 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
 
 			body := map[string]string{
 				"state": "closed",
@@ -590,6 +592,16 @@ func newCmdPRReopen(f *cmdutil.Factory) *cobra.Command {
 		Short: "Reopen a pull request",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			number, err := parsePRNumber(remaining[0])
+			if err != nil {
+				return err
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
@@ -599,13 +611,6 @@ func newCmdPRReopen(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
 
 			body := map[string]string{
 				"state": "open",

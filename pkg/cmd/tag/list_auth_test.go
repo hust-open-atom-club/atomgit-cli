@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
+	"github.com/spf13/cobra"
 )
 
 type recordingConfig struct {
@@ -37,5 +38,44 @@ func TestTagListRejectsUnresolvableRepositoryBeforeAuth(t *testing.T) {
 	}
 	if cfg.getTokenCalls != 0 {
 		t.Fatalf("GetToken was called %d times; repository resolution must happen before authentication", cfg.getTokenCalls)
+	}
+}
+
+func TestTagMutationsRejectInvalidInputBeforeAuth(t *testing.T) {
+	commands := []struct {
+		name string
+		new  func(*cmdutil.Factory) *cobra.Command
+	}{
+		{name: "create", new: newCmdTagCreate},
+		{name: "delete", new: newCmdTagDelete},
+	}
+	tests := []struct {
+		name      string
+		args      []string
+		wantError string
+	}{
+		{name: "repository", args: []string{"invalid-repo", "v1"}, wantError: "invalid repository format"},
+		{name: "blank name", args: []string{"owner/repo", " \t "}, wantError: "tag name is required"},
+	}
+
+	for _, command := range commands {
+		for _, tt := range tests {
+			t.Run(command.name+"/"+tt.name, func(t *testing.T) {
+				cfg := &recordingConfig{}
+				factory := &cmdutil.Factory{Config: cfg}
+				cmd := command.new(factory)
+				cmd.SetOut(io.Discard)
+				cmd.SetErr(io.Discard)
+
+				err := cmd.RunE(cmd, tt.args)
+
+				if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+					t.Fatalf("error = %v, want %q", err, tt.wantError)
+				}
+				if cfg.getTokenCalls != 0 {
+					t.Fatalf("GetToken was called %d times; invalid input must be rejected before authentication", cfg.getTokenCalls)
+				}
+			})
+		}
 	}
 }
