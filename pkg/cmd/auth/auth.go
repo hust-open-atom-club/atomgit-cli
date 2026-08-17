@@ -17,13 +17,20 @@ import (
 )
 
 func NewCmdAuth(f *cmdutil.Factory) *cobra.Command {
+	return newCmdAuthWithDeps(f, loginDeps{browserLogin: oauth.Login, validateToken: oauth.FetchUser})
+}
+
+// newCmdAuthWithDeps builds the auth command tree with injectable login
+// dependencies so tests can exercise the full Execute lifecycle (including
+// PreRunE wiring) without network access.
+func newCmdAuthWithDeps(f *cmdutil.Factory, deps loginDeps) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auth <command>",
 		Short: "Authenticate with AtomGit",
 		Long:  `Manage authentication state for AtomGit.`,
 	}
 
-	cmd.AddCommand(newCmdAuthLogin(f))
+	cmd.AddCommand(newCmdAuthLoginWithDeps(f, deps))
 	cmd.AddCommand(newCmdAuthLogout())
 	cmd.AddCommand(newCmdAuthRefresh())
 	cmd.AddCommand(newCmdAuthList())
@@ -31,6 +38,12 @@ func NewCmdAuth(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdAuthStatus(f))
 	cmd.AddCommand(newCmdAuthToken(f))
 	for _, child := range cmd.Commands() {
+		if child.Name() == "login" {
+			// login migrates legacy credentials itself, only after the new
+			// credentials have been validated, so a failed login never
+			// rewrites the credential store.
+			continue
+		}
 		child.PreRunE = migrateLegacyCredentials
 	}
 
@@ -139,6 +152,10 @@ against the AtomGit user API before it is saved. If already logged in, skips
 unless --force is set. The first saved account becomes active; later logins
 do not change the active account.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Runtime failures (empty stdin, validation errors, network
+			// errors) must be single-line errors, not a usage dump.
+			cmd.SilenceUsage = true
+
 			out := cmd.OutOrStdout()
 			if !force {
 				if _, err := f.Config.GetToken(); err == nil {
@@ -199,6 +216,12 @@ do not change the active account.`,
 					TokenType:    result.TokenType,
 					CreatedAt:    time.Now().Unix(),
 				}
+			}
+			// Migrate legacy credentials only now that the new credentials
+			// have been validated, so a failed login never rewrites the
+			// credential store.
+			if err := migrateLegacyCredentials(cmd, args); err != nil {
+				return err
 			}
 			if !cmd.Flags().Changed("git-name") || !cmd.Flags().Changed("git-email") {
 				store, err := config.LoadCredentialStore()
