@@ -8,6 +8,15 @@
 
 - 使用 OAuth 登录（推荐）：运行 `ag auth login`，在浏览器中完成 AtomGit 授权。登录成功后，`ag` 会自动将认证信息写入令牌文件。
 
+- 使用已有令牌登录（无浏览器环境）：将预先签发的访问令牌（PAT 或 OAuth access_token）通过标准输入传给 `ag auth login --with-token`，CLI 会先调用 AtomGit 用户接口验证令牌并获取用户名，验证通过后才写入令牌文件：
+
+  ```bash
+  echo "$TOKEN" | ag auth login --with-token
+  ag auth login --with-token < token.txt
+  ```
+
+  管道或重定向输入全程无交互提示；在终端直接运行时会出现一次隐藏输入的粘贴提示。该方式适合沙箱、容器、CI 等无法打开浏览器的环境。通过此方式登录的账号没有 `refresh_token`，`ag auth refresh` 对其不可用，令牌过期后需重新执行本命令。
+
 - 手动创建访问令牌：参考 [AtomGit 访问令牌（PAT）文档](https://docs.gitcode.com/docs/help/home/user_center/security_management/user_pat/)，依次进入「个人设置」->「访问令牌」->「新建访问令牌」，按需设置权限范围和到期时间，再将生成的 PAT 写入令牌文件。PAT 创建后只显示一次，请立即妥善保存，不要将其提交到代码仓库或分享给他人。
 
 令牌文件的默认路径因操作系统而异：
