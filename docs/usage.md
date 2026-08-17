@@ -241,6 +241,33 @@ ag branch protection delete owner/repo "release/*" --yes
 
 保护规则的 `--push` 与 `--merge` 接受由英文分号分隔的 `develop`、`admin`、`maintainer` 或用户名；显式传入空字符串表示不允许任何人执行该操作。AtomGit 对精确分支规则的优先级高于匹配的 wildcard 规则。CLI 只管理官方 API 暴露的推送与合并白名单，不修改评审、流水线等其他保护设置。更新接口要求同时提交两类权限，因此 CLI 会先读取现有规则并保留未显式修改的一侧；若服务端返回无法无损表示的旧权限，命令会停止并要求显式提供该权限。
 
+## Commit
+
+```bash
+# 列出仓库提交（默认显示 30 条）
+ag commit list owner/repo
+ag commit list owner/repo --limit 100
+
+# 从指定 SHA 或分支名开始列出
+ag commit list owner/repo --ref main
+ag commit list owner/repo --ref abcdef1
+
+# 只列出修改过指定文件的提交
+ag commit list owner/repo --path src/main.go
+
+# 按时间范围过滤（RFC 3339 格式）
+ag commit list owner/repo --since 2024-11-08T16:25:44Z
+ag commit list owner/repo --since 2024-11-08T16:25:44Z --until 2024-12-01T00:00:00Z
+
+# 查看提交详情
+ag commit view owner/repo abcdef1234567890abcdef1234567890abcdef12
+
+# 以 JSON 输出或在浏览器中打开
+ag commit list owner/repo --json
+ag commit view owner/repo abcdef1 --json
+ag commit view owner/repo abcdef1 --web
+```
+
 ## Browse
 
 在默认浏览器中打开仓库页面或指定资源：

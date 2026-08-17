@@ -497,6 +497,48 @@ type TagRequest struct {
 	Refs    string `json:"refs"`
 }
 
+// Commit represents a repository commit returned by the commits endpoints.
+type Commit struct {
+	URL         string         `json:"url"`
+	SHA         string         `json:"sha"`
+	HTMLURL     string         `json:"html_url"`
+	CommentsURL string         `json:"comments_url"`
+	Commit      CommitDetail   `json:"commit"`
+	Author      CommitAccount  `json:"author"`
+	Committer   CommitAccount  `json:"committer"`
+	Parents     []CommitParent `json:"parents"`
+}
+
+// CommitDetail is the nested commit metadata in a Commit response.
+type CommitDetail struct {
+	Message   string       `json:"message"`
+	Author    CommitPerson `json:"author"`
+	Committer CommitPerson `json:"committer"`
+}
+
+// CommitPerson identifies the author or committer of a commit.
+type CommitPerson struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Date  string `json:"date"`
+}
+
+// CommitAccount is the account attached to a commit.
+type CommitAccount struct {
+	Login     string `json:"login"`
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	AvatarURL string `json:"avatar_url"`
+	HTMLURL   string `json:"html_url"`
+}
+
+// CommitParent references a parent commit.
+type CommitParent struct {
+	SHA string `json:"sha"`
+	URL string `json:"url"`
+}
+
 // MergePRRequest represents the request body for merging a pull request
 type MergePRRequest struct {
 	MergeMethod         string `json:"merge_method"`
