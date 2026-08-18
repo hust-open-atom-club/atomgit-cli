@@ -68,7 +68,7 @@ jobs:
       - name: Set up Node.js
         uses: setup-node
         with:
-          version: "20"
+          node-version: "20"
 
       # Reproducible install from the lockfile; the tests run offline with
       # fake npm/process injection and never touch a real registry.
