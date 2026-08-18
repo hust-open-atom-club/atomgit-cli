@@ -281,6 +281,27 @@ func (c *Client) PostForm(path string, fields url.Values, result interface{}) er
 	return json.NewDecoder(resp.Body).Decode(result)
 }
 
+// PutForm sends an application/x-www-form-urlencoded PUT request. Some
+// endpoints (for example marking notifications read) only accept form-encoded
+// bodies and reject the JSON encoding used by Put.
+func (c *Client) PutForm(path string, fields url.Values, result interface{}) error {
+	body := strings.NewReader(fields.Encode())
+	resp, err := c.doRequestWithContentType(http.MethodPut, path, body, "application/x-www-form-urlencoded")
+	if err != nil {
+		return fmt.Errorf("API request PUT %s: %w", path, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return newAPIError(resp)
+	}
+
+	if result == nil {
+		return nil
+	}
+	return json.NewDecoder(resp.Body).Decode(result)
+}
+
 func (c *Client) Put(path string, body, result interface{}) error {
 	var bodyReader io.Reader
 	if body != nil {

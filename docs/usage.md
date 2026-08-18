@@ -812,6 +812,36 @@ ag ssh-key delete 123
 ag ssh-key delete 123 --yes
 ```
 
+## 通知 (notification)
+
+```bash
+# 列出仓库通知（默认列出全部，按时间倒序）
+ag notification list owner/repo
+
+# 在当前 Git 仓库中直接使用
+ag notification list
+
+# 只看未读；--type 按 merge_requests_open、issue_open 等类型过滤
+ag notification list owner/repo --unread
+ag notification list owner/repo --type issue_open
+
+# 按更新时间过滤（RFC 3339 时间戳）
+ag notification list owner/repo --since 2026-08-01T00:00:00Z --before 2026-08-15T00:00:00Z
+
+# 限制数量与结构化输出
+ag notification list owner/repo --limit 20
+ag notification list owner/repo --json
+
+# 标记指定通知为已读（ID 来自 `ag notification list`）
+ag notification mark-read owner/repo 292ecbec857e4f27b426d66f2157938c
+
+# 标记仓库内全部未读通知为已读（默认要求确认，--yes 跳过）
+ag notification mark-read owner/repo --all
+ag notification mark-read owner/repo --all --yes
+```
+
+文本输出每行依次为未读状态（`unread`/`read`）、类型、更新时间、标题和链接；没有通知时输出 `No notifications found`，`--json` 输出 `[]`。`--type` 由 CLI 在本地过滤，`--limit` 在过滤后的结果上生效。
+
 ## 搜索
 
 ```bash
