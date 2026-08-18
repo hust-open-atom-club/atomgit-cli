@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -215,6 +216,103 @@ func TestDiscussionViewCommentsAndNestedReplies(t *testing.T) {
 	}
 	if strings.Contains(output, "plain fallback") {
 		t.Errorf("plain content shown although markdown body exists:\n%s", output)
+	}
+}
+
+func TestDiscussionViewPaginatesCommentsAndReplies(t *testing.T) {
+	detailFixture := strings.Replace(viewDetailFixture, `"comment_total": 3`, `"comment_total": 101`, 1)
+	commentPage := func(start, count int, firstReplyTotal int) string {
+		items := make([]map[string]any, count)
+		for i := range items {
+			id := start + i
+			items[i] = map[string]any{
+				"id":          fmt.Sprintf("comment-%03d", id),
+				"author":      map[string]string{"login": fmt.Sprintf("author-%03d", id)},
+				"content":     fmt.Sprintf("comment-%03d", id),
+				"created_at":  fmt.Sprintf("2026-08-10T%02d:00:00+08:00", (id % 24)),
+				"reply_total": 0,
+			}
+		}
+		if firstReplyTotal > 0 && len(items) > 0 {
+			items[0]["reply_total"] = firstReplyTotal
+		}
+		encoded, err := json.Marshal(items)
+		if err != nil {
+			t.Fatalf("marshal comment page: %v", err)
+		}
+		return string(encoded)
+	}
+	replyPage := func(start, count int) string {
+		items := make([]map[string]any, count)
+		for i := range items {
+			id := start + i
+			items[i] = map[string]any{
+				"id":         fmt.Sprintf("reply-%03d", id),
+				"author":     map[string]string{"login": fmt.Sprintf("reply-author-%03d", id)},
+				"content":    fmt.Sprintf("reply-%03d", id),
+				"created_at": fmt.Sprintf("2026-08-11T%02d:00:00+08:00", (id % 24)),
+			}
+		}
+		encoded, err := json.Marshal(items)
+		if err != nil {
+			t.Fatalf("marshal reply page: %v", err)
+		}
+		return string(encoded)
+	}
+
+	requests := 0
+	factory := discussionFactory(discussionTestConfig{token: "token"}, func(req *http.Request) (*http.Response, error) {
+		requests++
+		page := req.URL.Query().Get("page")
+		if got := req.URL.Query().Get("per_page"); req.URL.Path != "/api/v5/repos/owner/repo/discuss/7" && got != "100" {
+			t.Fatalf("per_page = %q, want 100 for paginated endpoint", got)
+		}
+		switch req.URL.Path {
+		case "/api/v5/repos/owner/repo/discuss/7":
+			return discussionResponse(http.StatusOK, detailFixture), nil
+		case "/api/v5/repos/owner/repo/discuss/7/comment":
+			switch page {
+			case "1":
+				return discussionResponse(http.StatusOK, commentPage(1, 100, 101)), nil
+			case "2":
+				return discussionResponse(http.StatusOK, commentPage(101, 1, 0)), nil
+			default:
+				t.Fatalf("unexpected comment page %q", page)
+				return nil, nil
+			}
+		case "/api/v5/repos/owner/repo/discuss/7/comment/comment-001/reply":
+			switch page {
+			case "1":
+				return discussionResponse(http.StatusOK, replyPage(1, 100)), nil
+			case "2":
+				return discussionResponse(http.StatusOK, replyPage(101, 1)), nil
+			default:
+				t.Fatalf("unexpected reply page %q", page)
+				return nil, nil
+			}
+		default:
+			t.Fatalf("unexpected request path %q", req.URL.Path)
+			return nil, nil
+		}
+	})
+
+	output, err := runViewCommand(t, factory, []string{"owner/repo", "7"}, map[string]string{"comments": "true"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requests != 5 {
+		t.Fatalf("requests = %d, want detail + 2 comment pages + 2 reply pages", requests)
+	}
+	for _, want := range []string{"comment-001", "comment-101", "reply-001", "reply-101"} {
+		if !strings.Contains(output, want) {
+			t.Errorf("output missing %q", want)
+		}
+	}
+	if strings.Index(output, "reply-001") > strings.Index(output, "reply-101") {
+		t.Error("replies are out of server order")
+	}
+	if strings.Index(output, "comment-001") > strings.Index(output, "comment-101") {
+		t.Error("comments are out of server order")
 	}
 }
 

@@ -71,7 +71,7 @@ empty bodies are shown as explicit placeholders instead of blank text.`,
 
 			var threads []commentThread
 			if opts.comments {
-				comments, err := api.ListDiscussionComments(client, repository.Owner, repository.Name, number)
+				comments, err := api.ListDiscussionComments(client, repository.Owner, repository.Name, number, detail.CommentTotal)
 				if err != nil {
 					return fmt.Errorf("failed to list comments of discussion #%d for %s: %w", number, repository, err)
 				}
@@ -79,7 +79,7 @@ empty bodies are shown as explicit placeholders instead of blank text.`,
 				for _, comment := range comments {
 					thread := commentThread{Comment: comment}
 					if comment.ReplyTotal > 0 {
-						replies, err := api.ListDiscussionReplies(client, repository.Owner, repository.Name, number, comment.ID)
+						replies, err := api.ListDiscussionReplies(client, repository.Owner, repository.Name, number, comment.ID, comment.ReplyTotal)
 						if err != nil {
 							return fmt.Errorf("failed to list replies of comment %s on discussion #%d: %w", comment.ID, number, err)
 						}

@@ -43,8 +43,14 @@ func GetDiscussion(client *Client, owner, repo string, number int) (DiscussionDe
 	return detail, nil
 }
 
-// ListDiscussionComments fetches the comment thread of a discussion.
-func ListDiscussionComments(client *Client, owner, repo string, number int) ([]DiscussionComment, error) {
+// ListDiscussionComments fetches every comment in a discussion thread. total
+// comes from the discussion detail endpoint and lets the shared paginator stop
+// exactly after the reported number of comments.
+func ListDiscussionComments(client *Client, owner, repo string, number, total int) ([]DiscussionComment, error) {
+	if total <= 0 {
+		return []DiscussionComment{}, nil
+	}
+
 	path := fmt.Sprintf(
 		"/repos/%s/%s/discuss/%s/comment",
 		url.PathEscape(owner),
@@ -52,15 +58,18 @@ func ListDiscussionComments(client *Client, owner, repo string, number int) ([]D
 		strconv.Itoa(number),
 	)
 
-	var comments []DiscussionComment
-	if err := client.Get(path, &comments); err != nil {
-		return nil, err
-	}
-	return comments, nil
+	return GetPaginated[DiscussionComment](client, total, func(page, perPage int) string {
+		return fmt.Sprintf("%s?page=%d&per_page=%d", path, page, perPage)
+	})
 }
 
-// ListDiscussionReplies fetches the replies to one comment of a discussion.
-func ListDiscussionReplies(client *Client, owner, repo string, number int, commentID string) ([]DiscussionComment, error) {
+// ListDiscussionReplies fetches every reply to one comment of a discussion.
+// total is the comment's reply_total from the comments endpoint.
+func ListDiscussionReplies(client *Client, owner, repo string, number int, commentID string, total int) ([]DiscussionComment, error) {
+	if total <= 0 {
+		return []DiscussionComment{}, nil
+	}
+
 	path := fmt.Sprintf(
 		"/repos/%s/%s/discuss/%s/comment/%s/reply",
 		url.PathEscape(owner),
@@ -69,9 +78,7 @@ func ListDiscussionReplies(client *Client, owner, repo string, number int, comme
 		url.PathEscape(commentID),
 	)
 
-	var replies []DiscussionComment
-	if err := client.Get(path, &replies); err != nil {
-		return nil, err
-	}
-	return replies, nil
+	return GetPaginated[DiscussionComment](client, total, func(page, perPage int) string {
+		return fmt.Sprintf("%s?page=%d&per_page=%d", path, page, perPage)
+	})
 }
