@@ -55,7 +55,9 @@ such as merge_requests_open or issue_open.`,
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				// GetToken already returns the canonical login guidance for a
+				// missing credential; wrapping it would duplicate the prefix.
+				return err
 			}
 
 			client, err := f.NewAPIClient(token)

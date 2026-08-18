@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -109,7 +110,7 @@ func TestListNotificationsTypeFilterAndPaging(t *testing.T) {
 		filler += `{"id":"filler` + strconv.Itoa(i) + `","type":"issue_open"}`
 	}
 	pages := map[string]string{
-		"1": notificationPageJSON(notificationsPerPage, `{"id":"a","type":"merge_requests_open"}`+","+filler),
+		"1": notificationPageJSON(notificationsPerPage+2, `{"id":"a","type":"merge_requests_open"}`+","+filler),
 		"2": notificationPageJSON(notificationsPerPage+2, `{"id":"b","type":"issue_open"},{"id":"c","type":"merge_requests_open"}`),
 	}
 	var requestedPages []string
@@ -136,6 +137,66 @@ func TestListNotificationsTypeFilterAndPaging(t *testing.T) {
 	}
 }
 
+func TestListAllNotificationsFetchesEveryPage(t *testing.T) {
+	const total = 600
+	var requestedPages []string
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		pageText := r.URL.Query().Get("page")
+		requestedPages = append(requestedPages, pageText)
+		page, err := strconv.Atoi(pageText)
+		if err != nil {
+			t.Fatalf("page = %q: %v", pageText, err)
+		}
+		if got := r.URL.Query().Get("per_page"); got != "100" {
+			t.Fatalf("per_page = %q, want 100", got)
+		}
+
+		start := (page - 1) * notificationsPerPage
+		count := min(notificationsPerPage, total-start)
+		var items strings.Builder
+		for i := 0; i < count; i++ {
+			if i > 0 {
+				items.WriteByte(',')
+			}
+			items.WriteString(`{"id":"notification-`)
+			items.WriteString(strconv.Itoa(start + i))
+			items.WriteString(`","unread":true}`)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(notificationPageJSON(total, items.String())))
+	})
+
+	got, err := ListAllNotifications(client, "owner", "repo", NotificationListOptions{UnreadOnly: true})
+	if err != nil {
+		t.Fatalf("ListAllNotifications: %v", err)
+	}
+	if len(got) != total {
+		t.Fatalf("len(notifications) = %d, want %d", len(got), total)
+	}
+	if got[0].ID != "notification-0" || got[total-1].ID != "notification-599" {
+		t.Fatalf("first/last IDs = %q/%q", got[0].ID, got[total-1].ID)
+	}
+	if len(requestedPages) != 6 || requestedPages[0] != "1" || requestedPages[5] != "6" {
+		t.Fatalf("requested pages = %v, want 1 through 6", requestedPages)
+	}
+}
+
+func TestListNotificationsHugeLimitDoesNotPreallocateTheLimit(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"total":0,"list":[]}`))
+	})
+
+	limit := int(^uint(0) >> 1)
+	got, err := ListNotifications(client, "owner", "repo", NotificationListOptions{Limit: limit})
+	if err != nil {
+		t.Fatalf("ListNotifications: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("len(notifications) = %d, want 0", len(got))
+	}
+}
+
 func TestListNotificationsStopsOnEmptyPageAndTruncatesToLimit(t *testing.T) {
 	fullPage := ""
 	for i := 0; i < notificationsPerPage; i++ {
@@ -149,7 +210,7 @@ func TestListNotificationsStopsOnEmptyPageAndTruncatesToLimit(t *testing.T) {
 		requests++
 		w.Header().Set("Content-Type", "application/json")
 		if r.URL.Query().Get("page") == "1" {
-			_, _ = w.Write([]byte(notificationPageJSON(notificationsPerPage, fullPage)))
+			_, _ = w.Write([]byte(notificationPageJSON(notificationsPerPage+5, fullPage)))
 			return
 		}
 		_, _ = w.Write([]byte(`{"total":0,"list":[]}`))

@@ -58,7 +58,9 @@ supplied.`,
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				// GetToken already returns the canonical login guidance for a
+				// missing credential; wrapping it would duplicate the prefix.
+				return err
 			}
 
 			client, err := f.NewAPIClient(token)
@@ -68,8 +70,7 @@ supplied.`,
 
 			out := cmd.OutOrStdout()
 			if opts.all {
-				notifications, err := api.ListNotifications(client, repository.Owner, repository.Name, api.NotificationListOptions{
-					Limit:      maxMarkAllNotifications,
+				notifications, err := api.ListAllNotifications(client, repository.Owner, repository.Name, api.NotificationListOptions{
 					UnreadOnly: true,
 				})
 				if err != nil {
@@ -106,10 +107,6 @@ supplied.`,
 
 	return cmd
 }
-
-// maxMarkAllNotifications bounds how many unread notifications --all collects
-// before marking them read.
-const maxMarkAllNotifications = 500
 
 // confirmMarkAll asks the user to confirm marking count unread notifications
 // as read. It accepts y, Y, yes, and YES; anything else declines.

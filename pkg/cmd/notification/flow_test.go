@@ -3,8 +3,11 @@ package notification
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -79,6 +82,76 @@ func TestNotificationMarkReadAllConfirmedSendsExactlyFetchedIDs(t *testing.T) {
 	}
 	if !strings.Contains(putBody, "ids=ida") || !strings.Contains(putBody, "ids=idb") {
 		t.Fatalf("PUT body = %q, want exactly the fetched IDs", putBody)
+	}
+}
+
+func TestNotificationMarkReadAllProcessesMoreThanFiveHundred(t *testing.T) {
+	const total = 600
+	getRequests := 0
+	var markedIDs []string
+	factory := newFlowFactory(func(req *http.Request) (*http.Response, error) {
+		switch req.Method {
+		case http.MethodGet:
+			getRequests++
+			if req.URL.Query().Get("unread") != "true" || req.URL.Query().Get("per_page") != "100" {
+				t.Fatalf("notification query = %q", req.URL.RawQuery)
+			}
+			page, err := strconv.Atoi(req.URL.Query().Get("page"))
+			if err != nil {
+				t.Fatalf("page = %q: %v", req.URL.Query().Get("page"), err)
+			}
+			start := (page - 1) * 100
+			items := make([]map[string]any, 0, 100)
+			for i := start; i < min(start+100, total); i++ {
+				items = append(items, map[string]any{
+					"id":     fmt.Sprintf("notification-%03d", i),
+					"unread": true,
+				})
+			}
+			body, err := json.Marshal(map[string]any{"total": total, "list": items})
+			if err != nil {
+				t.Fatalf("marshal notifications: %v", err)
+			}
+			return cannedJSON(http.StatusOK, string(body)), nil
+		case http.MethodPut:
+			raw, _ := io.ReadAll(req.Body)
+			values, err := url.ParseQuery(string(raw))
+			if err != nil {
+				t.Fatalf("parse PUT body: %v", err)
+			}
+			markedIDs = values["ids"]
+			return cannedJSON(http.StatusOK, ""), nil
+		default:
+			t.Fatalf("unexpected method %s", req.Method)
+			return nil, nil
+		}
+	})
+
+	cmd := newCmdNotificationMarkRead(factory)
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(io.Discard)
+	if err := cmd.Flags().Set("all", "true"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Flags().Set("yes", "true"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.RunE(cmd, []string{"owner/repo"}); err != nil {
+		t.Fatalf("RunE: %v", err)
+	}
+
+	if getRequests != 6 {
+		t.Fatalf("GET requests = %d, want 6", getRequests)
+	}
+	if len(markedIDs) != total {
+		t.Fatalf("marked IDs = %d, want %d", len(markedIDs), total)
+	}
+	if markedIDs[0] != "notification-000" || markedIDs[total-1] != "notification-599" {
+		t.Fatalf("first/last marked IDs = %q/%q", markedIDs[0], markedIDs[total-1])
+	}
+	if !strings.Contains(out.String(), "Marked 600 notification(s) as read") {
+		t.Fatalf("output = %q", out.String())
 	}
 }
 
@@ -241,6 +314,22 @@ func TestNotificationListJSONFlow(t *testing.T) {
 	}
 	if compact.String() != want {
 		t.Fatalf("json output = %s, want %s", compact.String(), want)
+	}
+}
+
+func TestNotificationListHugeLimitDoesNotPanic(t *testing.T) {
+	factory := newFlowFactory(func(req *http.Request) (*http.Response, error) {
+		return cannedJSON(http.StatusOK, `{"total":0,"list":[]}`), nil
+	})
+
+	cmd := newCmdNotificationList(factory)
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	if err := cmd.Flags().Set("limit", strconv.Itoa(int(^uint(0)>>1))); err != nil {
+		t.Fatalf("set limit: %v", err)
+	}
+	if err := cmd.RunE(cmd, []string{"owner/repo"}); err != nil {
+		t.Fatalf("RunE: %v", err)
 	}
 }
 

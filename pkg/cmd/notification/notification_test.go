@@ -3,6 +3,7 @@ package notification
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -21,6 +22,28 @@ func (r *recordingConfig) GetToken() (string, error) {
 }
 func (*recordingConfig) GetUser() (string, error) { return "alice", nil }
 func (*recordingConfig) GetHost() string          { return "atomgit.com" }
+
+type notificationAuthErrorConfig struct{}
+
+func (notificationAuthErrorConfig) GetToken() (string, error) {
+	return "", errors.New("not authenticated: run `ag auth login`")
+}
+func (notificationAuthErrorConfig) GetUser() (string, error) { return "alice", nil }
+func (notificationAuthErrorConfig) GetHost() string          { return "atomgit.com" }
+
+func TestNotificationCommandsPreserveCanonicalAuthenticationError(t *testing.T) {
+	const want = "not authenticated: run `ag auth login`"
+
+	list := newCmdNotificationList(&cmdutil.Factory{Config: notificationAuthErrorConfig{}})
+	if err := list.RunE(list, []string{"owner/repo"}); err == nil || err.Error() != want {
+		t.Fatalf("notification list error = %v, want %q", err, want)
+	}
+
+	markRead := newCmdNotificationMarkRead(&cmdutil.Factory{Config: notificationAuthErrorConfig{}})
+	if err := markRead.RunE(markRead, []string{"owner/repo", "notification-id"}); err == nil || err.Error() != want {
+		t.Fatalf("notification mark-read error = %v, want %q", err, want)
+	}
+}
 
 // Issue #49 requires arguments/flags -> authentication -> execution, so
 // invalid local input must be rejected before GetToken is ever called and an

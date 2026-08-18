@@ -73,12 +73,28 @@ func ListNotifications(client *Client, owner, repo string, opts NotificationList
 	if opts.Limit <= 0 {
 		return nil, fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 	}
+	return listNotifications(client, owner, repo, opts, opts.Limit, false)
+}
+
+// ListAllNotifications fetches every notification matching opts. It is used
+// by commands such as mark-read --all that must not silently truncate at an
+// arbitrary client-side limit.
+func ListAllNotifications(client *Client, owner, repo string, opts NotificationListOptions) ([]Notification, error) {
+	return listNotifications(client, owner, repo, opts, 0, true)
+}
+
+func listNotifications(client *Client, owner, repo string, opts NotificationListOptions, limit int, all bool) ([]Notification, error) {
 
 	encodedOwner := url.PathEscape(owner)
 	encodedRepo := url.PathEscape(repo)
-	notifications := make([]Notification, 0, opts.Limit)
+	capacity := notificationsPerPage
+	if !all && limit < capacity {
+		capacity = limit
+	}
+	notifications := make([]Notification, 0, capacity)
+	fetched := 0
 
-	for page := 1; len(notifications) < opts.Limit; page++ {
+	for page := 1; all || len(notifications) < limit; page++ {
 		query := url.Values{}
 		query.Set("unread", strconv.FormatBool(opts.UnreadOnly))
 		if opts.Since != "" {
@@ -98,21 +114,25 @@ func ListNotifications(client *Client, owner, repo string, opts NotificationList
 		if len(result.List) == 0 {
 			break
 		}
+		fetched += len(result.List)
 
 		for _, notification := range result.List {
 			if opts.Type != "" && notification.Type != opts.Type {
 				continue
 			}
 			notifications = append(notifications, notification)
-			if len(notifications) == opts.Limit {
+			if !all && len(notifications) == limit {
 				break
 			}
 		}
-		if len(result.List) < notificationsPerPage {
+		if len(result.List) < notificationsPerPage || (result.Total > 0 && fetched >= result.Total) {
 			break
 		}
 	}
 
+	if !all && len(notifications) > limit {
+		notifications = notifications[:limit]
+	}
 	return notifications, nil
 }
 
