@@ -254,7 +254,7 @@ func printJobs(out io.Writer, jobs []actions.Job) {
 		for _, step := range job.Steps {
 			fmt.Fprintf(out, "    [%s] %s\n",
 				singleLine(fallback(step.Status, "UNKNOWN")),
-				singleLine(fallback(step.Name, step.Task, "unnamed")),
+				formatStepLabel(step),
 			)
 		}
 	}

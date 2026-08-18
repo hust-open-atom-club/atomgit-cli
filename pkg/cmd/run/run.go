@@ -20,6 +20,8 @@ operations are not supported.`,
 
 	cmd.AddCommand(newCmdRunList(f))
 	cmd.AddCommand(newCmdRunView(f))
+	cmd.AddCommand(newCmdRunStepLog(f))
+	cmd.AddCommand(newCmdRunArtifact(f))
 	return cmd
 }
 

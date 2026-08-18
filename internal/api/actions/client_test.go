@@ -389,3 +389,92 @@ func TestCreateWorkflowDispatch(t *testing.T) {
 		t.Fatalf("CreateWorkflowDispatch failed: %v", err)
 	}
 }
+
+func TestValidateWorkflowUsesBase64ContentAndBearerAuth(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodPost || req.URL.Path != "/api/v8/repos/team/demo/actions/workflows/validate" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		if got := req.Header.Get("Authorization"); got != "Bearer secret" {
+			t.Fatalf("Authorization = %q", got)
+		}
+		if req.URL.RawQuery != "" {
+			t.Fatalf("query = %q, want empty", req.URL.RawQuery)
+		}
+		bodyBytes, err := io.ReadAll(req.Body)
+		if err != nil {
+			t.Fatalf("read body: %v", err)
+		}
+		if !strings.Contains(string(bodyBytes), `"base64_content":"bmFtZTogY2kK"`) {
+			t.Fatalf("unexpected body: %s", string(bodyBytes))
+		}
+		return response(req, http.StatusOK, `{"valid":true,"diagnostics":[]}`), nil
+	})
+
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+	result, err := client.ValidateWorkflow("team", "demo", WorkflowValidationRequest{Base64Content: "bmFtZTogY2kK"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Valid || len(result.Diagnostics) != 0 {
+		t.Fatalf("result = %#v", result)
+	}
+}
+
+func TestValidateWorkflowDecodesInvalidDiagnostics(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return response(req, http.StatusOK, `{"valid":false,"diagnostics":[{"range":{"start":{"line":2,"column":1},"end":{"line":2,"column":1}},"severity":"Error","message":"expected node content"}]}`), nil
+	})
+
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+	result, err := client.ValidateWorkflow("team", "demo", WorkflowValidationRequest{Base64Content: "bmFtZTogWwo="})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Valid || len(result.Diagnostics) != 1 {
+		t.Fatalf("result = %#v", result)
+	}
+	diag := result.Diagnostics[0]
+	if diag.Severity != "Error" || diag.Message != "expected node content" || diag.Range.Start.Line != 2 || diag.Range.Start.Column != 1 {
+		t.Fatalf("diagnostic = %#v", diag)
+	}
+}
+
+func TestGetStepLogPostsPaginationFields(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodPost || req.URL.Path != "/api/v8/repos/team/demo/actions/runs/run-1/jobs/job-1/logs" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		if got := req.Header.Get("Authorization"); got != "Bearer secret" {
+			t.Fatalf("Authorization = %q", got)
+		}
+		if req.URL.RawQuery != "" {
+			t.Fatalf("query = %q, want empty", req.URL.RawQuery)
+		}
+		bodyBytes, err := io.ReadAll(req.Body)
+		if err != nil {
+			t.Fatalf("read body: %v", err)
+		}
+		if !strings.Contains(string(bodyBytes), `"step_id":"step-1"`) ||
+			!strings.Contains(string(bodyBytes), `"offset":57`) ||
+			!strings.Contains(string(bodyBytes), `"limit":1000`) ||
+			!strings.Contains(string(bodyBytes), `"sort":"asc"`) {
+			t.Fatalf("unexpected body: %s", string(bodyBytes))
+		}
+		return response(req, http.StatusOK, `{"has_more":true,"start_offset":57,"end_offset":178,"log":"next page\n"}`), nil
+	})
+
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+	result, err := client.GetStepLog("team", "demo", "run-1", "job-1", StepLogRequest{
+		StepID: "step-1",
+		Offset: 57,
+		Limit:  1000,
+		Sort:   "asc",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.HasMore || result.StartOffset != 57 || result.EndOffset != 178 || result.Log != "next page\n" {
+		t.Fatalf("result = %#v", result)
+	}
+}

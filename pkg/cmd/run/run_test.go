@@ -68,8 +68,10 @@ func TestNewCmdRunRegistersCommandsAndFlags(t *testing.T) {
 	}
 
 	want := map[string][]string{
-		"list": {"actor", "branch", "end-time", "event", "limit", "pr", "start-time", "status", "workflow", "workflow-name"},
-		"view": {"artifact", "artifact-file", "job", "log", "log-file", "overwrite"},
+		"list":     {"actor", "branch", "end-time", "event", "limit", "pr", "start-time", "status", "workflow", "workflow-name"},
+		"view":     {"artifact", "artifact-file", "job", "log", "log-file", "overwrite"},
+		"step-log": {"output", "overwrite"},
+		"artifact": {},
 	}
 	for name, flags := range want {
 		child, _, err := cmd.Find([]string{name})
@@ -255,7 +257,7 @@ func TestRunViewDisplaysRunJobsStepsURLAndArtifacts(t *testing.T) {
 	}
 	for _, value := range []string{
 		"Run: run-1", "Number: #7", "Title: Build main [31m", "Status: FAILED", "Actor: alice",
-		"https://atomgit.com/team/demo/actions/runs/run-1", "[FAILED] build (job-1)", "[FAILED] go test", "coverage (artifact-1, 2.0 KiB)",
+		"https://atomgit.com/team/demo/actions/runs/run-1", "[FAILED] build (job-1)", "[FAILED] go test (step-1)", "coverage (artifact-1, 2.0 KiB)",
 	} {
 		if !strings.Contains(out.String(), value) {
 			t.Fatalf("output missing %q:\n%s", value, out.String())
@@ -607,5 +609,251 @@ func assertFileContent(t *testing.T, filename, want string) {
 	}
 	if string(data) != want {
 		t.Fatalf("%s = %q, want %q", filename, data, want)
+	}
+}
+
+func decodeStepLogRequest(t *testing.T, req *http.Request) actions.StepLogRequest {
+	t.Helper()
+	var payload actions.StepLogRequest
+	if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	return payload
+}
+
+func TestRunStepLogWritesSinglePageToStdout(t *testing.T) {
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodPost || req.URL.Path != "/api/v8/repos/team/demo/actions/runs/run-1/jobs/job-1/logs" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		if req.URL.RawQuery != "" {
+			t.Fatalf("query = %q", req.URL.RawQuery)
+		}
+		payload := decodeStepLogRequest(t, req)
+		if payload.StepID != "step-1" || payload.Offset != 0 || payload.Limit != 1000 || payload.Sort != "asc" {
+			t.Fatalf("payload = %#v", payload)
+		}
+		return runResponse(req, http.StatusOK, `{"has_more":false,"start_offset":0,"end_offset":5,"log":"hello"}`), nil
+	})
+	factory := runFactory(runTestConfig{token: "secret"}, transport)
+	cmd := newCmdRunStepLog(factory)
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"team/demo", "run-1", "job-1", "step-1"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if out.String() != "hello" {
+		t.Fatalf("output = %q", out.String())
+	}
+}
+
+func TestRunStepLogConcatenatesPages(t *testing.T) {
+	var offsets []int64
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		payload := decodeStepLogRequest(t, req)
+		offsets = append(offsets, payload.Offset)
+		switch payload.Offset {
+		case 0:
+			return runResponse(req, http.StatusOK, `{"has_more":true,"start_offset":0,"end_offset":5,"log":"hello"}`), nil
+		case 5:
+			return runResponse(req, http.StatusOK, `{"has_more":false,"start_offset":5,"end_offset":11,"log":" world"}`), nil
+		default:
+			t.Fatalf("unexpected offset %d", payload.Offset)
+			return nil, nil
+		}
+	})
+	factory := runFactory(runTestConfig{token: "secret"}, transport)
+	cmd := newCmdRunStepLog(factory)
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"team/demo", "run-1", "job-1", "step-1"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if out.String() != "hello world" {
+		t.Fatalf("output = %q", out.String())
+	}
+	if len(offsets) != 2 || offsets[0] != 0 || offsets[1] != 5 {
+		t.Fatalf("offsets = %#v", offsets)
+	}
+}
+
+func TestRunStepLogAbortsStalledCursor(t *testing.T) {
+	requests := 0
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		requests++
+		return runResponse(req, http.StatusOK, `{"has_more":true,"start_offset":0,"end_offset":0,"log":"stuck"}`), nil
+	})
+	factory := runFactory(runTestConfig{token: "secret"}, transport)
+	cmd := newCmdRunStepLog(factory)
+	cmd.SetOut(io.Discard)
+	cmd.SetArgs([]string{"team/demo", "run-1", "job-1", "step-1"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "pagination stalled") {
+		t.Fatalf("error = %v", err)
+	}
+	if requests != 1 {
+		t.Fatalf("requests = %d, want 1", requests)
+	}
+}
+
+func TestRunStepLogWritesFileAndRefusesOverwrite(t *testing.T) {
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return runResponse(req, http.StatusOK, `{"has_more":false,"start_offset":0,"end_offset":5,"log":"saved"}`), nil
+	})
+	factory := runFactory(runTestConfig{token: "secret"}, transport)
+	destination := filepath.Join(t.TempDir(), "step.log")
+
+	cmd := newCmdRunStepLog(factory)
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"team/demo", "run-1", "job-1", "step-1", "--output", destination})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	assertFileContent(t, destination, "saved")
+	if !strings.Contains(out.String(), destination) {
+		t.Fatalf("output = %q", out.String())
+	}
+
+	requests := 0
+	blocked := runFactory(runTestConfig{token: "secret"}, func(req *http.Request) (*http.Response, error) {
+		requests++
+		return runResponse(req, http.StatusOK, `{"has_more":false,"start_offset":0,"end_offset":7,"log":"changed"}`), nil
+	})
+	cmd = newCmdRunStepLog(blocked)
+	cmd.SetOut(io.Discard)
+	cmd.SetArgs([]string{"team/demo", "run-1", "job-1", "step-1", "--output", destination})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "already exists") {
+		t.Fatalf("error = %v", err)
+	}
+	if requests != 0 {
+		t.Fatalf("requests = %d, want 0", requests)
+	}
+	assertFileContent(t, destination, "saved")
+}
+
+func TestRunStepLogInfersRepositoryAndRequiresAuth(t *testing.T) {
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path != "/api/v8/repos/inferred/repo/actions/runs/run-1/jobs/job-1/logs" {
+			t.Fatalf("path = %q", req.URL.Path)
+		}
+		return runResponse(req, http.StatusOK, `{"has_more":false,"start_offset":0,"end_offset":3,"log":"ok"}`), nil
+	})
+	factory := runFactory(runTestConfig{token: "secret"}, transport)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "inferred", Name: "repo"}, nil
+	}
+	cmd := newCmdRunStepLog(factory)
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"run-1", "job-1", "step-1"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if out.String() != "ok" {
+		t.Fatalf("output = %q", out.String())
+	}
+
+	unauth := newCmdRunStepLog(runFactory(runTestConfig{tokenErr: errors.New("missing token")}, nil))
+	unauth.SetOut(io.Discard)
+	unauth.SetArgs([]string{"team/demo", "run-1", "job-1", "step-1"})
+	err := unauth.Execute()
+	if err == nil || !strings.Contains(err.Error(), "missing token") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestRunStepLogRequiresIDs(t *testing.T) {
+	cmd := newCmdRunStepLog(runFactory(runTestConfig{token: "secret"}, nil))
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	cmd.SetArgs([]string{"team/demo", "run-1"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected argument error")
+	}
+}
+
+func TestRunArtifactViewTextAndJSON(t *testing.T) {
+	body := `{"id":"artifact-1","name":"coverage","size_bytes":2048,"workflow_id":"wf-1","workflow_run_id":"run-1","digest":"sha256:abc","created_at":1700000000000,"updated_at":1700000060000,"expires_at":1700086400000}`
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodGet || req.URL.Path != "/api/v8/repos/team/demo/actions/artifacts/artifact-1" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		return runResponse(req, http.StatusOK, body), nil
+	})
+	factory := runFactory(runTestConfig{token: "secret"}, transport)
+	cmd := newCmdRunArtifactView(factory)
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"team/demo", "artifact-1"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	for _, value := range []string{
+		"ID: artifact-1", "Name: coverage", "Size: 2.0 KiB", "Workflow: wf-1", "Run: run-1", "Digest: sha256:abc",
+	} {
+		if !strings.Contains(out.String(), value) {
+			t.Fatalf("output missing %q:\n%s", value, out.String())
+		}
+	}
+
+	jsonCmd := newCmdRunArtifactView(factory)
+	out.Reset()
+	jsonCmd.SetOut(&out)
+	jsonCmd.SetArgs([]string{"team/demo", "artifact-1", "--json"})
+	if err := jsonCmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), `"id": "artifact-1"`) || !strings.Contains(out.String(), `"digest": "sha256:abc"`) {
+		t.Fatalf("json output = %q", out.String())
+	}
+}
+
+func TestRunArtifactViewMissingArtifactAndAuth(t *testing.T) {
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return runResponse(req, http.StatusNotFound, `{"message":"artifact not found"}`), nil
+	})
+	cmd := newCmdRunArtifactView(runFactory(runTestConfig{token: "secret"}, transport))
+	cmd.SetOut(io.Discard)
+	cmd.SetArgs([]string{"team/demo", "missing"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "failed to get artifact") {
+		t.Fatalf("error = %v", err)
+	}
+
+	unauth := newCmdRunArtifactView(runFactory(runTestConfig{tokenErr: errors.New("missing token")}, nil))
+	unauth.SetOut(io.Discard)
+	unauth.SetArgs([]string{"team/demo", "artifact-1"})
+	err = unauth.Execute()
+	if err == nil || !strings.Contains(err.Error(), "missing token") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestRunArtifactViewInfersRepository(t *testing.T) {
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path != "/api/v8/repos/inferred/repo/actions/artifacts/artifact-1" {
+			t.Fatalf("path = %q", req.URL.Path)
+		}
+		return runResponse(req, http.StatusOK, `{"id":"artifact-1","name":"logs","size_bytes":10}`), nil
+	})
+	factory := runFactory(runTestConfig{token: "secret"}, transport)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "inferred", Name: "repo"}, nil
+	}
+	cmd := newCmdRunArtifactView(factory)
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"artifact-1"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "ID: artifact-1") || !strings.Contains(out.String(), "Name: logs") {
+		t.Fatalf("output = %q", out.String())
 	}
 }
