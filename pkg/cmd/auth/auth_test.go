@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/oauth"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
+	"github.com/spf13/cobra"
 )
 
 type testConfig struct {
@@ -91,6 +93,11 @@ func TestNewCmdAuthRegistersSubcommands(t *testing.T) {
 		}
 	}
 	for _, child := range cmd.Commands() {
+		// login migrates inside RunE after credential validation, not in
+		// PreRunE — see TestAuthLoginDefersMigrationUntilAfterValidation.
+		if child.Name() == "login" {
+			continue
+		}
 		if child.PreRunE == nil {
 			t.Errorf("%s does not migrate credentials before running", child.Name())
 		}
@@ -102,7 +109,7 @@ func TestNewCmdAuthRegistersSubcommands(t *testing.T) {
 	if login.Flags().Lookup("force") == nil {
 		t.Fatal("login --force flag was not registered")
 	}
-	for _, flag := range []string{"git-name", "git-email"} {
+	for _, flag := range []string{"git-name", "git-email", "with-token"} {
 		if login.Flags().Lookup(flag) == nil {
 			t.Fatalf("login --%s flag was not registered", flag)
 		}
@@ -155,12 +162,26 @@ func TestAuthPreRunMigratesLegacyCredentialStore(t *testing.T) {
 func TestAuthPreRunAllowsMissingCredentialFile(t *testing.T) {
 	isolateAuthConfig(t)
 	cmd := NewCmdAuth(&cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated")}})
+	list, _, err := cmd.Find([]string{"list"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := list.PreRunE(list, nil); err != nil {
+		t.Fatalf("pre-run error = %v", err)
+	}
+}
+
+func TestAuthLoginDefersMigrationUntilAfterValidation(t *testing.T) {
+	cmd := NewCmdAuth(&cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated")}})
 	login, _, err := cmd.Find([]string{"login"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := login.PreRunE(login, nil); err != nil {
-		t.Fatalf("pre-run error = %v", err)
+	// login must NOT migrate in PreRunE: with --with-token, migration before
+	// validation would rewrite the credential store even when the token is
+	// rejected. Migration runs inside RunE after validation succeeds.
+	if login.PreRunE != nil {
+		t.Fatal("login must not run credential migration in PreRunE")
 	}
 }
 
@@ -337,6 +358,288 @@ func TestAuthLoginReportsOAuthError(t *testing.T) {
 	if err := cmd.RunE(cmd, nil); err == nil || !strings.Contains(err.Error(), "authorization denied") {
 		t.Fatalf("error = %v", err)
 	}
+}
+
+func newTokenLoginCmd(factory *cmdutil.Factory, stdin string, validate func(context.Context, string) (*oauth.UserInfo, error)) *cobra.Command {
+	cmd := newCmdAuthLoginWithDeps(factory, loginDeps{
+		browserLogin: func(context.Context) (*oauth.LoginResult, error) {
+			return nil, errors.New("browser login must not run in --with-token mode")
+		},
+		validateToken: validate,
+	})
+	if err := cmd.Flags().Set("with-token", "true"); err != nil {
+		panic(err)
+	}
+	cmd.SetIn(strings.NewReader(stdin))
+	cmd.SetContext(context.Background())
+	return cmd
+}
+
+func TestAuthLoginWithTokenFromPipedStdin(t *testing.T) {
+	isolateAuthConfig(t)
+	factory := &cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated")}}
+	var gotToken string
+	cmd := newTokenLoginCmd(factory, "piped-token\n", func(_ context.Context, token string) (*oauth.UserInfo, error) {
+		gotToken = token
+		return &oauth.UserInfo{Login: "alice", Name: "Alice", Email: "alice@example.com"}, nil
+	})
+
+	output, err := captureStdout(t, func() error { return cmd.RunE(cmd, nil) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotToken != "piped-token" {
+		t.Fatalf("validated token = %q", gotToken)
+	}
+	if !strings.Contains(output, "Logged in to atomgit.com as alice") || !strings.Contains(output, "Token saved to") {
+		t.Fatalf("output = %q", output)
+	}
+	credentials, err := config.LoadStoredCredentials()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if credentials.AccessToken != "piped-token" || credentials.User != "alice" || credentials.Name != "Alice" || credentials.Email != "alice@example.com" {
+		t.Fatalf("credentials = %#v", credentials)
+	}
+	if credentials.RefreshToken != "" || credentials.ExpiresIn != 0 {
+		t.Fatalf("token login must not store OAuth refresh fields: %#v", credentials)
+	}
+}
+
+func TestAuthLoginWithTokenRejectsEmptyStdin(t *testing.T) {
+	isolateAuthConfig(t)
+	factory := &cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated")}}
+	validateCalled := false
+	cmd := newTokenLoginCmd(factory, "  \n", func(context.Context, string) (*oauth.UserInfo, error) {
+		validateCalled = true
+		return &oauth.UserInfo{Login: "alice"}, nil
+	})
+
+	err := cmd.RunE(cmd, nil)
+	if err == nil || !strings.Contains(err.Error(), "no token provided") {
+		t.Fatalf("error = %v", err)
+	}
+	if validateCalled {
+		t.Fatal("empty token must not reach the validator")
+	}
+}
+
+func TestAuthLoginWithTokenValidationFailureKeepsStoreUntouched(t *testing.T) {
+	isolateAuthConfig(t)
+	factory := &cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated")}}
+	cmd := newTokenLoginCmd(factory, "expired-token", func(context.Context, string) (*oauth.UserInfo, error) {
+		return nil, errors.New("user endpoint 401 Unauthorized")
+	})
+
+	err := cmd.RunE(cmd, nil)
+	if err == nil || !strings.Contains(err.Error(), "token validation failed") || !strings.Contains(err.Error(), "401") {
+		t.Fatalf("error = %v", err)
+	}
+	if _, statErr := os.Stat(mustPrimaryTokenPath(t)); !os.IsNotExist(statErr) {
+		t.Fatalf("credential file must not be written on validation failure: %v", statErr)
+	}
+}
+
+func TestAuthLoginWithTokenAddsAccountWithoutChangingActive(t *testing.T) {
+	isolateAuthConfig(t)
+	if err := config.SaveCredentials(&config.StoredCredentials{AccessToken: "alice-access", User: "alice"}); err != nil {
+		t.Fatal(err)
+	}
+	factory := &cmdutil.Factory{Config: testConfig{token: "alice-access", user: "alice"}}
+	cmd := newTokenLoginCmd(factory, "bob-token", func(context.Context, string) (*oauth.UserInfo, error) {
+		return &oauth.UserInfo{Login: "bob"}, nil
+	})
+	if err := cmd.Flags().Set("force", "true"); err != nil {
+		t.Fatal(err)
+	}
+
+	output, err := captureStdout(t, func() error { return cmd.RunE(cmd, nil) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"Logged in to atomgit.com as bob", "Active account remains alice", "ag auth switch bob"} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("output %q does not contain %q", output, want)
+		}
+	}
+	accounts, active, err := config.ListAccounts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(accounts) != 2 || active != "alice" {
+		t.Fatalf("accounts = %#v, active = %q", accounts, active)
+	}
+}
+
+func TestAuthLoginWithTokenForceReplacesStoredToken(t *testing.T) {
+	isolateAuthConfig(t)
+	if err := config.SaveCredentials(&config.StoredCredentials{AccessToken: "old-token", User: "alice"}); err != nil {
+		t.Fatal(err)
+	}
+	factory := &cmdutil.Factory{Config: testConfig{token: "old-token", user: "alice"}}
+	cmd := newTokenLoginCmd(factory, "new-token", func(context.Context, string) (*oauth.UserInfo, error) {
+		return &oauth.UserInfo{Login: "alice"}, nil
+	})
+	if err := cmd.Flags().Set("force", "true"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := captureStdout(t, func() error { return cmd.RunE(cmd, nil) }); err != nil {
+		t.Fatal(err)
+	}
+	credentials, err := config.LoadStoredCredentials()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if credentials.AccessToken != "new-token" {
+		t.Fatalf("credentials = %#v", credentials)
+	}
+}
+
+func TestAuthLoginWithTokenSkipsWhenAlreadyAuthenticated(t *testing.T) {
+	factory := &cmdutil.Factory{Config: testConfig{token: "token", user: "alice"}}
+	validateCalled := false
+	cmd := newTokenLoginCmd(factory, "piped-token", func(context.Context, string) (*oauth.UserInfo, error) {
+		validateCalled = true
+		return &oauth.UserInfo{Login: "bob"}, nil
+	})
+
+	output, err := captureStdout(t, func() error { return cmd.RunE(cmd, nil) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if validateCalled {
+		t.Fatal("validator must not run when already authenticated without --force")
+	}
+	if !strings.Contains(output, "Already logged in as alice") || !strings.Contains(output, "skipping token login") {
+		t.Fatalf("output = %q", output)
+	}
+}
+
+// executeAuthLogin runs the full auth command tree through Cobra's Execute
+// path so PreRunE wiring and error/usage output are exercised for real.
+func executeAuthLogin(t *testing.T, factory *cmdutil.Factory, deps loginDeps, stdin string, args ...string) (string, string, error) {
+	t.Helper()
+	authCmd := newCmdAuthWithDeps(factory, deps)
+	var stdout, stderr bytes.Buffer
+	authCmd.SetOut(&stdout)
+	authCmd.SetErr(&stderr)
+	authCmd.SetIn(strings.NewReader(stdin))
+	authCmd.SetArgs(append([]string{"login"}, args...))
+	authCmd.SetContext(context.Background())
+	err := authCmd.Execute()
+	return stdout.String(), stderr.String(), err
+}
+
+func tokenLoginOnlyDeps(validate func(context.Context, string) (*oauth.UserInfo, error)) loginDeps {
+	return loginDeps{
+		browserLogin: func(context.Context) (*oauth.LoginResult, error) {
+			return nil, errors.New("browser login must not run in --with-token mode")
+		},
+		validateToken: validate,
+	}
+}
+
+func writeLegacyCredentials(t *testing.T, home string) (string, []byte) {
+	t.Helper()
+	legacyPath := filepath.Join(home, ".atomgit_personal_token.json")
+	legacy := []byte("{\"access_token\":\"legacy-token\",\"user\":\"alice\"}\n")
+	if err := os.WriteFile(legacyPath, legacy, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return legacyPath, legacy
+}
+
+func TestAuthLoginWithTokenEmptyStdinSingleLineError(t *testing.T) {
+	isolateAuthConfig(t)
+	factory := &cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated")}}
+	validateCalled := false
+	stdout, stderr, err := executeAuthLogin(t, factory, tokenLoginOnlyDeps(func(context.Context, string) (*oauth.UserInfo, error) {
+		validateCalled = true
+		return nil, errors.New("must not run")
+	}), "", "--with-token")
+	if err == nil || !strings.Contains(err.Error(), "no token provided") {
+		t.Fatalf("error = %v", err)
+	}
+	if validateCalled {
+		t.Fatal("empty token must not reach the validator")
+	}
+	if combined := stdout + stderr; strings.Contains(combined, "Usage:") {
+		t.Fatalf("expected a single-line error, got usage output:\n%s", combined)
+	}
+	if _, statErr := os.Stat(mustPrimaryTokenPath(t)); !os.IsNotExist(statErr) {
+		t.Fatalf("credential file must not be written: %v", statErr)
+	}
+}
+
+func TestAuthLoginWithTokenValidationFailureSingleLineError(t *testing.T) {
+	isolateAuthConfig(t)
+	factory := &cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated")}}
+	stdout, stderr, err := executeAuthLogin(t, factory, tokenLoginOnlyDeps(func(context.Context, string) (*oauth.UserInfo, error) {
+		return nil, errors.New("user endpoint 401 Unauthorized")
+	}), "expired-token", "--with-token")
+	if err == nil || !strings.Contains(err.Error(), "token validation failed") {
+		t.Fatalf("error = %v", err)
+	}
+	if combined := stdout + stderr; strings.Contains(combined, "Usage:") {
+		t.Fatalf("expected a single-line error, got usage output:\n%s", combined)
+	}
+	if _, statErr := os.Stat(mustPrimaryTokenPath(t)); !os.IsNotExist(statErr) {
+		t.Fatalf("credential file must not be written on validation failure: %v", statErr)
+	}
+}
+
+func TestAuthLoginWithTokenValidationFailureLeavesLegacyStoreUntouched(t *testing.T) {
+	home := isolateAuthConfig(t)
+	legacyPath, legacy := writeLegacyCredentials(t, home)
+	factory := &cmdutil.Factory{Config: testConfig{token: "legacy-token", user: "alice"}}
+	_, _, err := executeAuthLogin(t, factory, tokenLoginOnlyDeps(func(context.Context, string) (*oauth.UserInfo, error) {
+		return nil, errors.New("user endpoint 401 Unauthorized")
+	}), "bad-token", "--with-token", "--force")
+	if err == nil || !strings.Contains(err.Error(), "token validation failed") {
+		t.Fatalf("error = %v", err)
+	}
+	got, readErr := os.ReadFile(legacyPath)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if !bytes.Equal(got, legacy) {
+		t.Fatalf("legacy credential file must not be rewritten on validation failure, got %s", got)
+	}
+	if _, statErr := os.Stat(mustPrimaryTokenPath(t)); !os.IsNotExist(statErr) {
+		t.Fatalf("credential store must not be migrated on validation failure: %v", statErr)
+	}
+}
+
+func TestAuthLoginWithTokenMigratesLegacyStoreAfterValidation(t *testing.T) {
+	home := isolateAuthConfig(t)
+	writeLegacyCredentials(t, home)
+	factory := &cmdutil.Factory{Config: testConfig{token: "legacy-token", user: "alice"}}
+	stdout, _, err := executeAuthLogin(t, factory, tokenLoginOnlyDeps(func(context.Context, string) (*oauth.UserInfo, error) {
+		return &oauth.UserInfo{Login: "bob"}, nil
+	}), "bob-token", "--with-token", "--force")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout, "Logged in to atomgit.com as bob") {
+		t.Fatalf("output = %q", stdout)
+	}
+	accounts, active, err := config.ListAccounts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(accounts) != 2 || active != "alice" {
+		t.Fatalf("accounts = %#v, active = %q", accounts, active)
+	}
+}
+
+func mustPrimaryTokenPath(t *testing.T) string {
+	t.Helper()
+	path, err := config.PrimaryTokenPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return path
 }
 
 func TestAuthStatus(t *testing.T) {

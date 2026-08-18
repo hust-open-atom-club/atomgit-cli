@@ -52,7 +52,7 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 	}
 
 	want := map[string]bool{
-		"api": false, "auth": false, "branch": false, "discussion": false, "issue": false, "label": false, "license": false, "milestone": false,
+		"api": false, "auth": false, "branch": false, "commit": false, "discussion": false, "issue": false, "label": false, "license": false, "milestone": false,
 		"check-update": false,
 		"notification": false,
 		"org":          false, "pr": false, "release": false, "repo": false, "run": false, "ssh-key": false, "tag": false, "version": false,
@@ -256,6 +256,47 @@ func TestAPIOutputHonorsRootSanitization(t *testing.T) {
 	}{
 		{name: "safe", args: []string{"api", "/user"}, want: "api \\x1b[31moutput\\x1b[0m\n"},
 		{name: "raw", args: []string{"--raw-output", "api", "/user"}, want: payload},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			cmd, err := newCmdRootWithWriters(factory, &stdout, &stderr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cmd.SetArgs(tt.args)
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+				t.Fatal(err)
+			}
+			if stdout.String() != tt.want {
+				t.Fatalf("stdout = %q, want %q", stdout.String(), tt.want)
+			}
+		})
+	}
+}
+
+func TestCommitDiffHonorsRootSanitization(t *testing.T) {
+	payload := "diff --git a/a b/a\r\n-old\r\n+new\r\n"
+	factory := &cmdutil.Factory{
+		Config: rootTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.URL.EscapedPath() != "/api/v5/repos/alice/demo/commit/abc/diff" {
+					t.Fatalf("path = %q", req.URL.EscapedPath())
+				}
+				return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: make(http.Header), Body: io.NopCloser(strings.NewReader(payload)), Request: req}, nil
+			})}, nil
+		},
+	}
+	for _, tt := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "safe", args: []string{"commit", "diff", "alice/demo", "abc"}, want: strings.ReplaceAll(payload, "\r", `\x0d`)},
+		{name: "raw", args: []string{"--raw-output", "commit", "diff", "alice/demo", "abc"}, want: payload},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer

@@ -8,6 +8,18 @@ import (
 	"unicode/utf8"
 )
 
+var tsvFieldEscaper = strings.NewReplacer(
+	`\`, `\\`,
+	"\t", `\t`,
+	"\n", `\n`,
+	"\r", `\r`,
+)
+
+// EscapeTSVField preserves a single field in tab-separated terminal output.
+func EscapeTSVField(value string) string {
+	return tsvFieldEscaper.Replace(value)
+}
+
 func isBidiControl(r rune) bool {
 	return (r >= 0x202A && r <= 0x202E) ||
 		(r >= 0x2066 && r <= 0x2069) ||

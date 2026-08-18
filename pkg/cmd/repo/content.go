@@ -39,17 +39,6 @@ type contentDirEntryJSON struct {
 	Size int64  `json:"size"`
 }
 
-var tsvFieldEscaper = strings.NewReplacer(
-	`\`, `\\`,
-	"\t", `\t`,
-	"\n", `\n`,
-	"\r", `\r`,
-)
-
-func escapeTSVField(value string) string {
-	return tsvFieldEscaper.Replace(value)
-}
-
 func validateContentPath(path string, allowRoot bool) error {
 	if path == "" {
 		return errors.New("path cannot be empty")
@@ -207,7 +196,7 @@ func newCmdRepoReadDir(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			for _, e := range entries {
-				if _, err := fmt.Fprintf(out, "%s\t%d\t%s\n", escapeTSVField(e.Type), e.Size, escapeTSVField(e.Path)); err != nil {
+				if _, err := fmt.Fprintf(out, "%s\t%d\t%s\n", cmdutil.EscapeTSVField(e.Type), e.Size, cmdutil.EscapeTSVField(e.Path)); err != nil {
 					return fmt.Errorf("write directory entry: %w", err)
 				}
 			}

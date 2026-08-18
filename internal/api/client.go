@@ -77,6 +77,40 @@ func NewClientWithBaseURL(token, baseURL string, httpClient *http.Client) *Clien
 	}
 }
 
+// streamingHTTPClient clones the configured client without its whole-request
+// timeout. http.Client.Timeout includes reading the response body, so retaining
+// the metadata client's 30-second limit would truncate large streamed bodies.
+// Connection, TLS, and response-header timeouts remain enforced by the
+// underlying transport.
+func streamingHTTPClient(client *Client) *http.Client {
+	base := client.httpClient
+	if base == nil {
+		base = &http.Client{}
+	}
+
+	streaming := *base
+	streaming.Timeout = 0
+
+	switch transport := streaming.Transport.(type) {
+	case nil:
+		if defaultTransport, ok := http.DefaultTransport.(*http.Transport); ok {
+			cloned := defaultTransport.Clone()
+			cloned.ResponseHeaderTimeout = 30 * time.Second
+			streaming.Transport = cloned
+		} else {
+			streaming.Transport = http.DefaultTransport
+		}
+	case *http.Transport:
+		cloned := transport.Clone()
+		if cloned.ResponseHeaderTimeout == 0 {
+			cloned.ResponseHeaderTimeout = 30 * time.Second
+		}
+		streaming.Transport = cloned
+	}
+
+	return &streaming
+}
+
 func (c *Client) doRequest(method, path string, body io.Reader) (*http.Response, error) {
 	return c.doRequestWithContentType(method, path, body, "application/json")
 }
@@ -518,11 +552,17 @@ func statusAllowed(code int, allowed []int) bool {
 // they can request only their contracted 200 or 201 status and disable retry
 // for state-sensitive operations such as related-branch PUT.
 func (c *Client) doJSONRequest(method, path string, body io.Reader, contentType, accept string, policy RequestPolicy, result interface{}) error {
+	return c.doJSONRequestContext(context.Background(), c.httpClient, method, path, body, contentType, accept, policy, result)
+}
+
+// doJSONRequestContext is doJSONRequest with caller-controlled cancellation
+// and an explicit HTTP client.
+func (c *Client) doJSONRequestContext(ctx context.Context, httpClient *http.Client, method, path string, body io.Reader, contentType, accept string, policy RequestPolicy, result interface{}) error {
 	if len(policy.AllowedStatuses) == 0 {
 		return fmt.Errorf("API request %s %s: allowed statuses cannot be empty", method, path)
 	}
 
-	resp, err := c.doRequestWithPolicyContext(context.Background(), c.httpClient, method, path, body, contentType, accept, policy.CanRetry)
+	resp, err := c.doRequestWithPolicyContext(ctx, httpClient, method, path, body, contentType, accept, policy.CanRetry)
 	if err != nil {
 		return fmt.Errorf("API request %s %s: %w", method, path, err)
 	}

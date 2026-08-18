@@ -89,6 +89,14 @@ func TestSanitizeTerminal(t *testing.T) {
 	}
 }
 
+func TestEscapeTSVField(t *testing.T) {
+	got := EscapeTSVField("dir\\name\tpart\nnext\rline")
+	want := `dir\\name\tpart\nnext\rline`
+	if got != want {
+		t.Fatalf("EscapeTSVField() = %q, want %q", got, want)
+	}
+}
+
 func TestSanitizeTerminal_NoPanic(t *testing.T) {
 	for _, input := range []string{
 		"\x00\x00\x00",

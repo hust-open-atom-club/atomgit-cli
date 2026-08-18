@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -189,7 +190,7 @@ func TestFetchUser(t *testing.T) {
 		return response(http.StatusOK, `{"login":"alice","name":"Alice"}`), nil
 	})
 
-	got, err := fetchUser(context.Background(), "access")
+	got, err := FetchUser(context.Background(), "access")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,10 +214,34 @@ func TestFetchUserErrors(t *testing.T) {
 			withDefaultHTTPClient(t, func(*http.Request) (*http.Response, error) {
 				return response(tt.code, tt.body), nil
 			})
-			_, err := fetchUser(context.Background(), "access")
+			_, err := FetchUser(context.Background(), "access")
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("error = %v", err)
 			}
 		})
+	}
+}
+
+func TestFetchUserWithURLAgainstTestServer(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "Bearer piped-token" {
+			http.Error(w, "bad token", http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"login":"alice","name":"Alice","email":"alice@example.com"}`)
+	}))
+	t.Cleanup(server.Close)
+
+	user, err := FetchUserWithURL(context.Background(), server.URL, "piped-token")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if user.Login != "alice" || user.Name != "Alice" || user.Email != "alice@example.com" {
+		t.Fatalf("user = %#v", user)
+	}
+
+	if _, err := FetchUserWithURL(context.Background(), server.URL, "wrong-token"); err == nil || !strings.Contains(err.Error(), "401") {
+		t.Fatalf("error = %v", err)
 	}
 }
