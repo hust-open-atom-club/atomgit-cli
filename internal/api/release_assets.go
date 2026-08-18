@@ -268,37 +268,3 @@ func DownloadReleaseAttachment(ctx context.Context, client *Client, owner, repo,
 	}
 	return resp.Body, nil
 }
-
-// streamingHTTPClient clones the configured client without its whole-request
-// timeout. http.Client.Timeout includes reading the response body, so retaining
-// the metadata client's 30-second limit would truncate large uploads and
-// downloads. Connection, TLS, and response-header timeouts remain enforced by
-// the underlying transport.
-func streamingHTTPClient(client *Client) *http.Client {
-	base := client.httpClient
-	if base == nil {
-		base = &http.Client{}
-	}
-
-	streaming := *base
-	streaming.Timeout = 0
-
-	switch transport := streaming.Transport.(type) {
-	case nil:
-		if defaultTransport, ok := http.DefaultTransport.(*http.Transport); ok {
-			cloned := defaultTransport.Clone()
-			cloned.ResponseHeaderTimeout = 30 * time.Second
-			streaming.Transport = cloned
-		} else {
-			streaming.Transport = http.DefaultTransport
-		}
-	case *http.Transport:
-		cloned := transport.Clone()
-		if cloned.ResponseHeaderTimeout == 0 {
-			cloned.ResponseHeaderTimeout = 30 * time.Second
-		}
-		streaming.Transport = cloned
-	}
-
-	return &streaming
-}

@@ -743,6 +743,47 @@ type PullRequestCommit struct {
 	} `json:"commit"`
 }
 
+// CompareCommit represents commit metadata returned by the comparison API.
+type CompareCommit struct {
+	SHA    string `json:"sha"`
+	Commit struct {
+		Message string `json:"message"`
+		Author  struct {
+			Name  string `json:"name"`
+			Email string `json:"email"`
+			Date  string `json:"date"`
+		} `json:"author"`
+	} `json:"commit"`
+	Author struct {
+		Name  string `json:"name"`
+		Email string `json:"email"`
+		Login string `json:"login"`
+	} `json:"author"`
+}
+
+// CompareFile represents a file returned by the comparison API.
+type CompareFile struct {
+	SHA       string       `json:"sha"`
+	Filename  string       `json:"filename"`
+	Status    string       `json:"status"`
+	Additions int          `json:"additions"`
+	Deletions int          `json:"deletions"`
+	Changes   int          `json:"changes"`
+	BlobURL   string       `json:"blob_url"`
+	RawURL    string       `json:"raw_url"`
+	Patch     string       `json:"patch"`
+	Truncated FlexibleBool `json:"truncated"`
+}
+
+// CommitComparison is returned by the commit comparison API.
+type CommitComparison struct {
+	BaseCommit      CompareCommit   `json:"base_commit"`
+	MergeBaseCommit CompareCommit   `json:"merge_base_commit"`
+	Commits         []CompareCommit `json:"commits"`
+	Files           []CompareFile   `json:"files"`
+	Truncated       FlexibleBool    `json:"truncated"`
+}
+
 // PullRequestFile represents a changed file in a pull request. Optional
 // fields fall back to nested patch metadata when the top-level value is absent.
 type PullRequestFile struct {

@@ -271,7 +271,26 @@ ag commit view owner/repo abcdef1234567890abcdef1234567890abcdef12
 ag commit list owner/repo --json
 ag commit view owner/repo abcdef1 --json
 ag commit view owner/repo abcdef1 --web
+
+# 比较两个 commit、分支或 tag
+ag commit compare main...feature
+ag commit compare owner/repo release/1.0...feature/new-ui
+
+# 输出固定字段的 JSON 对象
+ag commit compare owner/repo main...feature --json
+
+# 输出单个 commit 的 diff 或 email-style patch 文本
+ag commit diff owner/repo <sha>
+ag commit patch owner/repo <sha>
+
+# 为 git apply、git am 或文件保存保留原始字节
+ag --raw-output commit diff owner/repo <sha>
+ag --raw-output commit patch owner/repo <sha>
 ```
+
+`commit compare` 接受 commit SHA、分支名或 tag，比较参数必须使用 `<base>...<head>` 格式。省略仓库时会从当前 Git 仓库推断；包含 `/` 的 ref 会作为单个路径参数安全编码。
+
+文本比较输出包含 base、merge base、提交列表和文件统计；文件行使用独立的元数据列标记二进制文件及服务端截断的文件，字段中的制表符、换行和反斜杠会转义。空比较仍会输出零提交、零文件；JSON 模式中的 `commits` 和 `files` 固定为空数组。`diff` 与 `patch` 不做 JSON 解码，默认仍遵循全局终端安全清理；保存为可直接处理的原始 diff/patch 时使用 `ag --raw-output commit diff ...` 或 `ag --raw-output commit patch ...`。接口文档声明的成功状态 `200` 会直接输出正文，其他状态会作为命令错误返回。
 
 ## Browse
 
@@ -586,7 +605,7 @@ ag tag delete v1.0.0
 
 ## 资源命令的 JSON 输出
 
-`repo list/view`、`issue list/view`、`pr list/view` 和 `tag list` 支持布尔参数 `--json`。list 命令输出完整 JSON 数组，view 命令输出完整 JSON 对象；没有结果时 list 输出 `[]`。默认文本输出保持不变。
+`repo list/view`、`issue list/view`、`pr list/view`、`tag list` 和 `commit list/view/compare` 支持布尔参数 `--json`。list 命令输出完整 JSON 数组，view 与 compare 命令输出完整 JSON 对象；没有结果时 list 输出 `[]`。默认文本输出保持不变。
 
 JSON 字段使用 lowerCamelCase，并由 CLI 显式定义，不会因为 AtomGit API 增加字段而自动改变。Issue 和 PR 的 `number` 始终是字符串，标签输出为名称数组，PR 的 `head` 和 `base` 输出分支名称。可选的服务端字段缺失时仍输出对应的零值，以保持固定结构。
 
