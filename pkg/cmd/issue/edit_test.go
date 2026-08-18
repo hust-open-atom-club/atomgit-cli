@@ -196,6 +196,25 @@ func TestIssueEditReportsAuthenticationError(t *testing.T) {
 	}
 }
 
+func TestIssueEditAuthenticatesBeforeConfirmation(t *testing.T) {
+	cmd := newCmdIssueEdit(&cmdutil.Factory{Config: issueEditAuthErrorConfig{}})
+	if err := cmd.Flags().Set("remove-assignee", "true"); err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetIn(strings.NewReader("yes\n"))
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	cmd.SetErr(&output)
+
+	err := cmd.RunE(cmd, []string{"alice/demo", "7"})
+	if err == nil || !strings.Contains(err.Error(), "not authenticated") {
+		t.Fatalf("error = %v, want authentication error", err)
+	}
+	if output.Len() != 0 {
+		t.Fatalf("prompted before authentication: %q", output.String())
+	}
+}
+
 func TestIssueEditReportsAPIErrors(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -376,7 +395,20 @@ func TestIssueEditAssigneeConfirmation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			factory := &cmdutil.Factory{Config: issueEditAuthErrorConfig{}}
+			var factory *cmdutil.Factory
+			if tt.wantDecl {
+				factory = &cmdutil.Factory{Config: issueTestConfig{}}
+			} else {
+				assignee := tt.flags["assignee"]
+				if tt.flags["remove-assignee"] == "true" {
+					assignee = ""
+				}
+				factory, _ = issueEditTestFactory(t, map[string]string{
+					"repo":     "demo",
+					"title":    "Existing title",
+					"assignee": assignee,
+				}, http.StatusOK, true)
+			}
 			cmd := newCmdIssueEdit(factory)
 			cmd.SetIn(strings.NewReader(tt.input))
 			var stderr bytes.Buffer
@@ -398,8 +430,8 @@ func TestIssueEditAssigneeConfirmation(t *testing.T) {
 				}
 				return
 			}
-			if err == nil || !strings.Contains(err.Error(), "not authenticated") {
-				t.Fatalf("error = %v, want auth error (after confirmation)", err)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 			if tt.wantPrompt && !strings.Contains(stderr.String(), "Change assignee") {
 				t.Fatalf("stderr = %q, want confirmation prompt", stderr.String())
@@ -412,7 +444,11 @@ func TestIssueEditAssigneeConfirmation(t *testing.T) {
 }
 
 func TestIssueEditAssigneeConfirmationToStderr(t *testing.T) {
-	factory := &cmdutil.Factory{Config: issueEditAuthErrorConfig{}}
+	factory, _ := issueEditTestFactory(t, map[string]string{
+		"repo":     "demo",
+		"title":    "Existing title",
+		"assignee": "bob",
+	}, http.StatusOK, true)
 	cmd := newCmdIssueEdit(factory)
 	cmd.SetIn(strings.NewReader("yes\n"))
 	var stdout, stderr bytes.Buffer
@@ -423,11 +459,11 @@ func TestIssueEditAssigneeConfirmationToStderr(t *testing.T) {
 		t.Fatal(err)
 	}
 	err := cmd.RunE(cmd, []string{"alice/demo", "7"})
-	if err == nil || !strings.Contains(err.Error(), "not authenticated") {
-		t.Fatalf("error = %v", err)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if stdout.Len() != 0 {
-		t.Fatalf("stdout = %q, want empty", stdout.String())
+	if strings.Contains(stdout.String(), "Change assignee") {
+		t.Fatalf("stdout contains confirmation prompt: %q", stdout.String())
 	}
 	if !strings.Contains(stderr.String(), "Change assignee") {
 		t.Fatalf("stderr = %q, want confirmation prompt", stderr.String())

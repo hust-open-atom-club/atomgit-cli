@@ -93,6 +93,7 @@ func TestIssuePRsJSONSchema(t *testing.T) {
 	_ = cmd.Flags().Set("json", "true")
 	var output bytes.Buffer
 	cmd.SetOut(&output)
+	cmd.SetErr(&output)
 	if err := cmd.RunE(cmd, []string{"alice/demo", "7"}); err != nil {
 		t.Fatal(err)
 	}
@@ -226,6 +227,24 @@ func TestIssueBranchesInvalidNumber(t *testing.T) {
 	err := cmd.RunE(cmd, []string{"alice/demo", "0"})
 	if err == nil || !strings.Contains(err.Error(), "positive integer") {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestIssueBranchesAuthenticatesBeforeConfirmation(t *testing.T) {
+	cmd := newCmdIssueBranches(&cmdutil.Factory{Config: issueEditAuthErrorConfig{}})
+	if err := cmd.Flags().Set("remove", "main"); err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetIn(strings.NewReader("yes\n"))
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+
+	err := cmd.RunE(cmd, []string{"alice/demo", "7"})
+	if err == nil || !strings.Contains(err.Error(), "not authenticated") {
+		t.Fatalf("error = %v, want authentication error", err)
+	}
+	if output.Len() != 0 {
+		t.Fatalf("prompted before authentication: %q", output.String())
 	}
 }
 

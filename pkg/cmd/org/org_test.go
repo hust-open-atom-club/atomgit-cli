@@ -3,7 +3,6 @@ package org
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"testing"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
@@ -202,9 +202,9 @@ func TestOrgListValidationBeforeRequest(t *testing.T) {
 		t.Fatalf("error = %v", err)
 	}
 
-	cmd = newCmdOrgList(orgFactory(orgTestConfig{tokenErr: errors.New("missing token")}, transport))
-	if err := cmd.RunE(cmd, nil); err == nil || !strings.Contains(err.Error(), "not authenticated") {
-		t.Fatalf("error = %v", err)
+	cmd = newCmdOrgList(orgFactory(orgTestConfig{tokenErr: config.ErrNotAuthenticated}, transport))
+	if err := cmd.RunE(cmd, nil); err != config.ErrNotAuthenticated {
+		t.Fatalf("error = %v, want canonical authentication error", err)
 	}
 	if requests != 0 {
 		t.Fatalf("requests = %d, want 0", requests)

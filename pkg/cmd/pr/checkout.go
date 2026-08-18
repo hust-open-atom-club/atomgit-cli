@@ -139,7 +139,7 @@ branches. Use --force to override these safety checks.`,
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			apiClient, err := f.NewAPIClient(token)

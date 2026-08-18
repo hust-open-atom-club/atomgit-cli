@@ -173,7 +173,7 @@ func parseFilePathArg(arg string) (path string, lineStart, lineEnd int) {
 func resolveDefaultBranch(f *cmdutil.Factory, owner, repo string) (string, error) {
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return "", err
+		return "", cmdutil.AuthenticationError(err)
 	}
 	client, err := f.NewAPIClient(token)
 	if err != nil {

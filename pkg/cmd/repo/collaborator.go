@@ -298,7 +298,7 @@ func newCmdRepoCollaboratorRemove(f *cmdutil.Factory) *cobra.Command {
 func collaboratorAPIClient(f *cmdutil.Factory) (*api.Client, error) {
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return nil, fmt.Errorf("not authenticated: %w", err)
+		return nil, cmdutil.AuthenticationError(err)
 	}
 	return f.NewAPIClient(token)
 }

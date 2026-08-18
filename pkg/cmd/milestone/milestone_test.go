@@ -9,15 +9,16 @@ import (
 	"strings"
 	"testing"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 
-type milestoneTestConfig struct{}
+type milestoneTestConfig struct{ tokenErr error }
 
-func (milestoneTestConfig) GetToken() (string, error) { return "token", nil }
-func (milestoneTestConfig) GetUser() (string, error)  { return "alice", nil }
-func (milestoneTestConfig) GetHost() string           { return "atomgit.com" }
+func (c milestoneTestConfig) GetToken() (string, error) { return "token", c.tokenErr }
+func (milestoneTestConfig) GetUser() (string, error)    { return "alice", nil }
+func (milestoneTestConfig) GetHost() string             { return "atomgit.com" }
 
 type milestoneRoundTripFunc func(*http.Request) (*http.Response, error)
 
@@ -49,6 +50,28 @@ func TestMilestoneRegistersSubcommandsAndFlags(t *testing.T) {
 		if create.Flags().Lookup(flag) == nil {
 			t.Errorf("create flag --%s was not registered", flag)
 		}
+	}
+}
+
+func TestMilestoneReturnsCanonicalAuthenticationError(t *testing.T) {
+	_, err := authenticatedClient(&cmdutil.Factory{Config: milestoneTestConfig{tokenErr: config.ErrNotAuthenticated}})
+	if err != config.ErrNotAuthenticated {
+		t.Fatalf("error = %v, want canonical authentication error", err)
+	}
+}
+
+func TestMilestoneDeleteAuthenticatesBeforeConfirmation(t *testing.T) {
+	cmd := newCmdMilestoneDelete(&cmdutil.Factory{Config: milestoneTestConfig{tokenErr: config.ErrNotAuthenticated}})
+	cmd.SetIn(strings.NewReader("yes\n"))
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+
+	err := cmd.RunE(cmd, []string{"alice/demo", "7"})
+	if err != config.ErrNotAuthenticated {
+		t.Fatalf("error = %v, want canonical authentication error", err)
+	}
+	if output.Len() != 0 {
+		t.Fatalf("prompted before authentication: %q", output.String())
 	}
 }
 

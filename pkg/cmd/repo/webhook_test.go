@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -22,6 +23,12 @@ func (webhookTestConfig) GetUser() (string, error)  { return "alice", nil }
 func (webhookTestConfig) GetHost() string           { return "atomgit.com" }
 
 type webhookRoundTripFunc func(*http.Request) (*http.Response, error)
+
+type webhookFailingReader struct{}
+
+func (webhookFailingReader) Read([]byte) (int, error) {
+	return 0, fmt.Errorf("stdin was read before authentication")
+}
 
 func (f webhookRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
@@ -293,6 +300,46 @@ func TestRepoWebhookDeleteAndTestConfirmBeforeRequests(t *testing.T) {
 			}
 			if calls != test.wantCalls || !strings.HasSuffix(output.String(), test.wantOutput) {
 				t.Fatalf("calls = %d, output = %q", calls, output.String())
+			}
+		})
+	}
+}
+
+func TestRepoWebhookAuthenticatesBeforeReadingSecretFromStdin(t *testing.T) {
+	factory := repoFactory(repoCommandConfig{tokenErr: config.ErrNotAuthenticated}, nil)
+	tests := []struct {
+		name      string
+		new       func(*cmdutil.Factory) *cobra.Command
+		configure func(*cobra.Command)
+		args      []string
+	}{
+		{
+			name: "create",
+			new:  newCmdRepoWebhookCreate,
+			configure: func(cmd *cobra.Command) {
+				_ = cmd.Flags().Set("url", "https://example.com/hook")
+				_ = cmd.Flags().Set("events", "push")
+				_ = cmd.Flags().Set("secret-stdin", "true")
+			},
+			args: []string{"alice/demo"},
+		},
+		{
+			name: "edit",
+			new:  newCmdRepoWebhookEdit,
+			configure: func(cmd *cobra.Command) {
+				_ = cmd.Flags().Set("secret-stdin", "true")
+			},
+			args: []string{"alice/demo", "42"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := tt.new(factory)
+			tt.configure(cmd)
+			cmd.SetIn(webhookFailingReader{})
+			if err := cmd.RunE(cmd, tt.args); err != config.ErrNotAuthenticated {
+				t.Fatalf("error = %v, want authentication before stdin read", err)
 			}
 		})
 	}

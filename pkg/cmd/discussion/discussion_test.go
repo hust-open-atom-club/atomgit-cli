@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
@@ -206,7 +207,7 @@ func TestDiscussionListRejectsInvalidRepositoryBeforeRequest(t *testing.T) {
 
 func TestDiscussionListUnauthenticated(t *testing.T) {
 	requests := 0
-	factory := discussionFactory(discussionTestConfig{tokenErr: errors.New(notAuthenticatedError)}, func(req *http.Request) (*http.Response, error) {
+	factory := discussionFactory(discussionTestConfig{tokenErr: fmt.Errorf("wrapped credential error: %w", config.ErrNotAuthenticated)}, func(req *http.Request) (*http.Response, error) {
 		requests++
 		if got := req.Header.Get("Authorization"); got != "" {
 			t.Fatalf("Authorization = %q, want empty", got)

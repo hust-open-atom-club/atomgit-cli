@@ -74,14 +74,22 @@ func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory,
 		return fmt.Errorf("--public and --private are mutually exclusive")
 	}
 
+	var owner, repoName string
+	var err error
+	if strings.Contains(opts.Name, "/") {
+		owner, repoName, err = parseRepositoryName(opts.Name, "")
+	} else {
+		_, repoName, err = parseRepositoryName(opts.Name, "current-user")
+	}
+	if err != nil {
+		return err
+	}
 	currentUser, err := f.Config.GetUser()
 	if err != nil {
 		return cmdutil.AuthenticationError(err)
 	}
-
-	owner, repoName, err := parseRepositoryName(opts.Name, currentUser)
-	if err != nil {
-		return err
+	if owner == "" {
+		owner = currentUser
 	}
 
 	token, err := f.Config.GetToken()

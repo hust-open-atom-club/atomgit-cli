@@ -1,16 +1,16 @@
 package discussion
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"text/tabwriter"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
-
-const notAuthenticatedError = "not authenticated: run `ag auth login`"
 
 func NewCmdDiscussion(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
@@ -52,7 +52,7 @@ func newCmdDiscussionList(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			token, err := f.Config.GetToken()
-			if err != nil && err.Error() != notAuthenticatedError {
+			if err != nil && !errors.Is(err, config.ErrNotAuthenticated) {
 				return err
 			}
 			if err != nil {

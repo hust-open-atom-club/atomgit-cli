@@ -91,7 +91,7 @@ func newCmdRepoReadFile(f *cmdutil.Factory) *cobra.Command {
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated. Please check your token file: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)
@@ -167,7 +167,7 @@ func newCmdRepoReadDir(f *cmdutil.Factory) *cobra.Command {
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated. Please check your token file: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)

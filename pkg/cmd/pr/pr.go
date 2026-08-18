@@ -349,15 +349,19 @@ milestones must already exist in the repository.`,
 			if opts.Title == "" {
 				return fmt.Errorf("title is required")
 			}
-			bodyText, err := cmdutil.ReadBody(
-				opts.Body,
-				opts.BodyFile,
-				cmd.Flags().Changed("body"),
-				cmd.Flags().Changed("body-file"),
-				cmd.InOrStdin(),
-			)
-			if err != nil {
-				return err
+			var bodyText string
+			var err error
+			if opts.BodyFile != "-" {
+				bodyText, err = cmdutil.ReadBody(
+					opts.Body,
+					opts.BodyFile,
+					cmd.Flags().Changed("body"),
+					cmd.Flags().Changed("body-file"),
+					cmd.InOrStdin(),
+				)
+				if err != nil {
+					return err
+				}
 			}
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
 			if err != nil {
@@ -370,6 +374,18 @@ milestones must already exist in the repository.`,
 				return cmdutil.AuthenticationError(err)
 			}
 
+			if opts.BodyFile == "-" {
+				bodyText, err = cmdutil.ReadBody(
+					opts.Body,
+					opts.BodyFile,
+					cmd.Flags().Changed("body"),
+					cmd.Flags().Changed("body-file"),
+					cmd.InOrStdin(),
+				)
+				if err != nil {
+					return err
+				}
+			}
 			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err

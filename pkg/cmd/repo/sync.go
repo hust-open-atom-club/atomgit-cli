@@ -74,7 +74,7 @@ interactive confirmation unless --yes is also supplied.`,
 func runRepoSync(cmd *cobra.Command, f *cmdutil.Factory, opts *SyncOptions, repository syncRepository) error {
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return err
+		return cmdutil.AuthenticationError(err)
 	}
 	client, err := f.NewAPIClient(token)
 	if err != nil {

@@ -66,6 +66,20 @@ func newCmdIssueEdit(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid issue number %q (must be a positive integer)", number)
 			}
 
+			body := opts.Body
+			if bodyFileChanged {
+				content, err := os.ReadFile(opts.BodyFile)
+				if err != nil {
+					return fmt.Errorf("failed to read body file: %w", err)
+				}
+				body = string(content)
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+
 			if (assigneeChanged || removeAssignee) && !opts.Yes {
 				action := "set assignee to " + assignee
 				if removeAssignee {
@@ -79,20 +93,6 @@ func newCmdIssueEdit(f *cmdutil.Factory) *cobra.Command {
 				if !confirmed {
 					return nil
 				}
-			}
-
-			body := opts.Body
-			if bodyFileChanged {
-				content, err := os.ReadFile(opts.BodyFile)
-				if err != nil {
-					return fmt.Errorf("failed to read body file: %w", err)
-				}
-				body = string(content)
-			}
-
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return cmdutil.AuthenticationError(err)
 			}
 			client, err := f.NewAPIClient(token)
 			if err != nil {

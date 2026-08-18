@@ -154,21 +154,42 @@ func newCmdRepoWebhookCreate(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			secretValue, secretProvided, err := readWebhookSecret(cmd.InOrStdin(), secret)
-			if err != nil {
-				return err
-			}
-			if webhookSecretFlagsChanged(cmd) && !secretProvided {
-				return fmt.Errorf("webhook secret source must not be empty")
+			var secretValue string
+			var secretProvided bool
+			if !secret.Stdin {
+				secretValue, secretProvided, err = readWebhookSecret(cmd.InOrStdin(), secret)
+				if err != nil {
+					return err
+				}
+				if webhookSecretFlagsChanged(cmd) && !secretProvided {
+					return fmt.Errorf("webhook secret source must not be empty")
+				}
 			}
 			encryptionValue, encryptionProvided, err := parseWebhookEncryption(encryption)
 			if err != nil {
 				return err
 			}
-			if encryptionProvided && !secretProvided {
+			if encryptionProvided && !webhookSecretFlagsChanged(cmd) {
 				return fmt.Errorf("--encryption requires a secret source")
 			}
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+			if secret.Stdin {
+				secretValue, secretProvided, err = readWebhookSecret(cmd.InOrStdin(), secret)
+				if err != nil {
+					return err
+				}
+				if !secretProvided {
+					return fmt.Errorf("webhook secret source must not be empty")
+				}
+			}
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
@@ -181,10 +202,6 @@ func newCmdRepoWebhookCreate(f *cmdutil.Factory) *cobra.Command {
 				} else {
 					body["encryption_type"] = 0
 				}
-			}
-			client, err := webhookAPIClient(f)
-			if err != nil {
-				return err
 			}
 			var created api.Webhook
 			if err := mutateWebhook(client, http.MethodPost, webhookCollectionPath(repository), body, &created); err != nil {
@@ -238,24 +255,44 @@ func newCmdRepoWebhookEdit(f *cmdutil.Factory) *cobra.Command {
 				}
 				applyWebhookEvents(body, eventValues)
 			}
-			secretValue, secretProvided, err := readWebhookSecret(cmd.InOrStdin(), secret)
-			if err != nil {
-				return err
+			var secretValue string
+			var secretProvided bool
+			if !secret.Stdin {
+				secretValue, secretProvided, err = readWebhookSecret(cmd.InOrStdin(), secret)
+				if err != nil {
+					return err
+				}
+				if webhookSecretFlagsChanged(cmd) && !secretProvided {
+					return fmt.Errorf("webhook secret source must not be empty")
+				}
 			}
-			if webhookSecretFlagsChanged(cmd) && !secretProvided {
-				return fmt.Errorf("webhook secret source must not be empty")
+			encryptionValue := 0
+			if cmd.Flags().Changed("encryption") {
+				encryptionValue, _, err = parseWebhookEncryption(encryption)
+				if err != nil {
+					return err
+				}
+			}
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+			if secret.Stdin {
+				secretValue, secretProvided, err = readWebhookSecret(cmd.InOrStdin(), secret)
+				if err != nil {
+					return err
+				}
+				if !secretProvided {
+					return fmt.Errorf("webhook secret source must not be empty")
+				}
 			}
 			if secretProvided {
 				body["password"] = secretValue
 			}
 			if cmd.Flags().Changed("encryption") {
-				encryptionValue, _, err := parseWebhookEncryption(encryption)
-				if err != nil {
-					return err
-				}
 				body["encryption_type"] = encryptionValue
 			}
-			client, err := webhookAPIClient(f)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
@@ -301,6 +338,10 @@ func newCmdRepoWebhookDelete(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
 			if !yes {
 				confirmed, err := confirmWebhookAction(cmd.InOrStdin(), cmd.OutOrStdout(), fmt.Sprintf("Permanently delete webhook #%d from %s", id, repository.String()))
 				if err != nil {
@@ -311,7 +352,7 @@ func newCmdRepoWebhookDelete(f *cmdutil.Factory) *cobra.Command {
 					return nil
 				}
 			}
-			client, err := webhookAPIClient(f)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
@@ -342,6 +383,10 @@ func newCmdRepoWebhookTest(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
 			if !yes {
 				confirmed, err := confirmWebhookAction(cmd.InOrStdin(), cmd.OutOrStdout(), fmt.Sprintf("Send a real test payload through webhook #%d in %s", id, repository.String()))
 				if err != nil {
@@ -352,7 +397,7 @@ func newCmdRepoWebhookTest(f *cmdutil.Factory) *cobra.Command {
 					return nil
 				}
 			}
-			client, err := webhookAPIClient(f)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
@@ -370,7 +415,7 @@ func newCmdRepoWebhookTest(f *cmdutil.Factory) *cobra.Command {
 func webhookAPIClient(f *cmdutil.Factory) (*api.Client, error) {
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return nil, fmt.Errorf("not authenticated: %w", err)
+		return nil, cmdutil.AuthenticationError(err)
 	}
 	return f.NewAPIClient(token)
 }
