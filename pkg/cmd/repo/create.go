@@ -76,7 +76,7 @@ func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory,
 
 	currentUser, err := f.Config.GetUser()
 	if err != nil {
-		return fmt.Errorf("failed to get current user: %w", err)
+		return cmdutil.AuthenticationError(err)
 	}
 
 	owner, repoName, err := parseRepositoryName(opts.Name, currentUser)
@@ -86,7 +86,7 @@ func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory,
 
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return fmt.Errorf("not authenticated: %w", err)
+		return cmdutil.AuthenticationError(err)
 	}
 
 	client, err := f.NewAPIClient(token)

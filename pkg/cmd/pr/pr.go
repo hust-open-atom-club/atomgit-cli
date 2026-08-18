@@ -82,11 +82,6 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 		Short: "List pull requests",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
 			if opts.Limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
@@ -96,6 +91,11 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
 
 			client, err := f.NewAPIClient(token)
 			if err != nil {
@@ -143,13 +143,13 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
+			number, err := parsePRNumber(remaining[0])
+			if err != nil {
+				return err
+			}
 
 			if opts.web {
-				num, err := strconv.Atoi(number)
-				if err != nil {
-					return fmt.Errorf("invalid PR number: %s", number)
-				}
+				num, _ := strconv.Atoi(number)
 				u := browser.BuildPRURL(owner, repo, num)
 				fmt.Fprintf(cmd.OutOrStdout(), "Opening %s in your browser.\n", u)
 				if f.BrowserOpener != nil {
@@ -162,7 +162,7 @@ func newCmdPRView(f *cmdutil.Factory) *cobra.Command {
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)
@@ -359,22 +359,21 @@ milestones must already exist in the repository.`,
 			if err != nil {
 				return err
 			}
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
-
-			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
 
 			metadata, err := resolvePRCreateMetadata(client, owner, repo, opts.Metadata)
 			if err != nil {
@@ -460,16 +459,6 @@ Unspecified metadata is left unchanged; use --milestone none to clear the
 current milestone.`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
-			client, err := f.NewAPIClient(token)
-			if err != nil {
-				return err
-			}
-
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
@@ -481,11 +470,6 @@ current milestone.`,
 			}
 
 			metadataRequested := opts.Metadata.requested(cmd)
-			metadata, err := resolvePREditMetadata(client, owner, repo, number, opts.Metadata, cmd)
-			if err != nil {
-				return err
-			}
-
 			body := map[string]interface{}{}
 			if opts.Title != "" {
 				body["title"] = opts.Title
@@ -496,6 +480,21 @@ current milestone.`,
 
 			if len(body) == 0 && !metadataRequested {
 				return fmt.Errorf("at least one PR field or collaboration metadata flag must be provided")
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
+
+			metadata, err := resolvePREditMetadata(client, owner, repo, number, opts.Metadata, cmd)
+			if err != nil {
+				return err
 			}
 
 			path := fmt.Sprintf("/repos/%s/%s/pulls/%s", owner, repo, number)
@@ -543,22 +542,25 @@ func newCmdPRClose(f *cmdutil.Factory) *cobra.Command {
 		Short: "Close a pull request",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			number, err := parsePRNumber(remaining[0])
+			if err != nil {
+				return err
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
-
-			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
 
 			body := map[string]string{
 				"state": "closed",
@@ -590,22 +592,25 @@ func newCmdPRReopen(f *cmdutil.Factory) *cobra.Command {
 		Short: "Reopen a pull request",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			number, err := parsePRNumber(remaining[0])
+			if err != nil {
+				return err
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
-
-			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
 
 			body := map[string]string{
 				"state": "open",
@@ -646,7 +651,7 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)
@@ -693,11 +698,6 @@ By default, ag creates a merge commit. Use --rebase to rebase the commits onto t
 `,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
@@ -706,6 +706,11 @@ By default, ag creates a merge commit. Use --rebase to rebase the commits onto t
 			number, err := parsePRNumber(remaining[0])
 			if err != nil {
 				return err
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)

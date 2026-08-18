@@ -20,11 +20,6 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 		Short: "View all comments on a pull request",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
@@ -34,6 +29,14 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 			number, err := strconv.Atoi(remaining[0])
 			if err != nil {
 				return fmt.Errorf("invalid PR number: %s", remaining[0])
+			}
+			if number <= 0 {
+				return fmt.Errorf("invalid PR number: %s", remaining[0])
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client := api.NewClient(token)

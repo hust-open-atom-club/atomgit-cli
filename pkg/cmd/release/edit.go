@@ -96,7 +96,7 @@ func runReleaseEdit(cmd *cobra.Command, f *cmdutil.Factory, opts editOptions, ar
 
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return fmt.Errorf("not authenticated: %w", err)
+		return cmdutil.AuthenticationError(err)
 	}
 	client, err := f.NewAPIClient(token)
 	if err != nil {

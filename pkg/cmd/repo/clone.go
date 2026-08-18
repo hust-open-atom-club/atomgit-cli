@@ -69,7 +69,7 @@ func resolveCloneRepoArg(f *cmdutil.Factory, arg string) (string, string, error)
 	if !strings.Contains(arg, "/") && !strings.HasPrefix(arg, "git@") {
 		user, err := f.Config.GetUser()
 		if err != nil {
-			return "", "", fmt.Errorf("failed to get current user: %w", err)
+			return "", "", cmdutil.AuthenticationError(err)
 		}
 		defaultOwner = user
 	}

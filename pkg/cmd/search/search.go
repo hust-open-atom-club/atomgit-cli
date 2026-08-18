@@ -88,14 +88,14 @@ func newCmdSearchUsers(f *cmdutil.Factory) *cobra.Command {
 			if err := validateChoice("order", opts.Order, searchOrders); err != nil {
 				return err
 			}
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
 			if opts.Limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+
 			query := args[0]
 
 			client, err := f.NewAPIClient(token)
@@ -165,13 +165,12 @@ func newCmdSearchRepositories(f *cmdutil.Factory) *cobra.Command {
 			if err := validateChoice("order", opts.Order, searchOrders); err != nil {
 				return err
 			}
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
 			if opts.Limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
+			}
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
 			}
 
 			query := args[0]
@@ -252,13 +251,12 @@ func newCmdSearchIssues(f *cmdutil.Factory) *cobra.Command {
 			if err := validateChoice("state", opts.State, issueSearchStates); err != nil {
 				return err
 			}
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
 			if opts.Limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
+			}
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
 			}
 
 			query := args[0]

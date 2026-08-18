@@ -40,7 +40,7 @@ backward compatibility. Use --add or --remove to make the operation explicit.`,
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 			client, err := f.NewAPIClient(token)
 			if err != nil {

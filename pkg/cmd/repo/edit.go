@@ -76,7 +76,7 @@ module switches, merge policies, or other unsupported GitHub CLI settings.`,
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("failed to edit repository %s/%s: not authenticated: %w", owner, repoName, err)
+				return fmt.Errorf("failed to edit repository %s/%s: %w", owner, repoName, cmdutil.AuthenticationError(err))
 			}
 			client, err := f.NewAPIClient(token)
 			if err != nil {

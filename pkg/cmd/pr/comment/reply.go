@@ -22,11 +22,6 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 		Short: "Reply to a comment thread on a pull request",
 		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 2)
 			if err != nil {
 				return err
@@ -34,7 +29,7 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 			owner, repo := repository.Owner, repository.Name
 
 			number, err := strconv.Atoi(remaining[0])
-			if err != nil {
+			if err != nil || number <= 0 {
 				return fmt.Errorf("invalid PR number: %s", remaining[0])
 			}
 
@@ -43,6 +38,11 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 			discussionID := strings.TrimSpace(remaining[1])
 			if discussionID == "" {
 				return fmt.Errorf("discussion ID cannot be empty")
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
 			}
 
 			// Get body
@@ -65,7 +65,10 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("reply body cannot be empty")
 			}
 
-			client := api.NewClient(token)
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
 
 			// Reply using discussions API. The response carries the discussion id
 			// as `id` and the new reply's comment id as `note_id`.

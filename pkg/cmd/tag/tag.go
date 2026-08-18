@@ -3,6 +3,7 @@ package tag
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -31,21 +32,21 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 		Short: "List tags",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
-
-			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
 
 			var tags []api.Tag
 			path := fmt.Sprintf("/repos/%s/%s/tags", owner, repo)
@@ -102,22 +103,25 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 		Short: "Create a tag",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			tagName := strings.TrimSpace(remaining[0])
+			if tagName == "" {
+				return fmt.Errorf("tag name is required")
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
-
-			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
-			tagName := remaining[0]
 
 			body := api.TagRequest{
 				TagName: tagName,
@@ -149,22 +153,25 @@ func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
 		Short: "Delete a tag",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			tagName := strings.TrimSpace(remaining[0])
+			if tagName == "" {
+				return fmt.Errorf("tag name is required")
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
-
-			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
-			if err != nil {
-				return err
-			}
-			owner, repo := repository.Owner, repository.Name
-			tagName := remaining[0]
 
 			// Tag names may contain slashes (e.g. v1.0/rc1), so escape the name
 			// before splicing it into the request path.

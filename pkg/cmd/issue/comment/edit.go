@@ -22,11 +22,6 @@ func newCmdEdit(f *cmdutil.Factory) *cobra.Command {
 		Short: "Edit a comment on an issue",
 		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 2)
 			if err != nil {
 				return err
@@ -34,13 +29,18 @@ func newCmdEdit(f *cmdutil.Factory) *cobra.Command {
 			owner, repo := repository.Owner, repository.Name
 
 			number, err := strconv.Atoi(remaining[0])
-			if err != nil {
+			if err != nil || number <= 0 {
 				return fmt.Errorf("invalid issue number: %s", remaining[0])
 			}
 
 			commentID, err := strconv.Atoi(remaining[1])
-			if err != nil {
+			if err != nil || commentID <= 0 {
 				return fmt.Errorf("invalid comment ID: %s", remaining[1])
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client := api.NewClient(token)

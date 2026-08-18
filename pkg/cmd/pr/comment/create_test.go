@@ -10,11 +10,11 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
-type prCommentTestConfig struct{}
+type prCommentTestConfig struct{ tokenErr error }
 
-func (prCommentTestConfig) GetToken() (string, error) { return "token", nil }
-func (prCommentTestConfig) GetUser() (string, error)  { return "alice", nil }
-func (prCommentTestConfig) GetHost() string           { return "atomgit.com" }
+func (c prCommentTestConfig) GetToken() (string, error) { return "token", c.tokenErr }
+func (prCommentTestConfig) GetUser() (string, error)    { return "alice", nil }
+func (prCommentTestConfig) GetHost() string             { return "atomgit.com" }
 
 type prCommentRoundTripFunc func(*http.Request) (*http.Response, error)
 

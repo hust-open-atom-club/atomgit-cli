@@ -93,7 +93,7 @@ func TestResolveCloneRepoArgUsesCurrentUserForShortName(t *testing.T) {
 func TestResolveCloneRepoArgReportsUserError(t *testing.T) {
 	factory := repoFactory(repoCommandConfig{userErr: errors.New("missing user")}, nil)
 	_, _, err := resolveCloneRepoArg(factory, "project")
-	if err == nil || !strings.Contains(err.Error(), "failed to get current user: missing user") {
+	if err == nil || !strings.Contains(err.Error(), "not authenticated: missing user") {
 		t.Fatalf("error = %v", err)
 	}
 }

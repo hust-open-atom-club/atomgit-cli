@@ -54,7 +54,7 @@ func (c *config) GetToken() (string, error) {
 	token, _, err := loadTokenFromFile()
 	if err != nil {
 		if errors.Is(err, ErrTokenNotFound) {
-			return "", fmt.Errorf("not authenticated: run `ag auth login`")
+			return "", ErrNotAuthenticated
 		}
 		return "", err
 	}
@@ -70,7 +70,7 @@ func (c *config) GetUser() (string, error) {
 	_, user, err := loadTokenFromFile()
 	if err != nil {
 		if errors.Is(err, ErrTokenNotFound) {
-			return "", fmt.Errorf("not authenticated: run `ag auth login`")
+			return "", ErrNotAuthenticated
 		}
 		return "", err
 	}

@@ -84,13 +84,13 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 				}
 			}
 
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated. Please check your token file: %w", err)
-			}
-
 			if opts.Limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)
