@@ -60,7 +60,7 @@ func newCmdCommitList(f *cmdutil.Factory) *cobra.Command {
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return err
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)
@@ -159,7 +159,7 @@ func newCmdCommitView(f *cmdutil.Factory) *cobra.Command {
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return err
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)
@@ -441,7 +441,7 @@ func commitTextArg(args []string) (string, error) {
 func authenticatedClient(f *cmdutil.Factory) (*api.Client, error) {
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return nil, err
+		return nil, cmdutil.AuthenticationError(err)
 	}
 	return f.NewAPIClient(token)
 }

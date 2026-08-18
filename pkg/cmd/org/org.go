@@ -62,7 +62,7 @@ func runOrgList(out io.Writer, f *cmdutil.Factory, opts *listOptions) error {
 
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return fmt.Errorf("not authenticated: %w", err)
+		return cmdutil.AuthenticationError(err)
 	}
 	client, err := f.NewAPIClient(token)
 	if err != nil {

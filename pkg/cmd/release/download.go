@@ -72,7 +72,7 @@ func runReleaseDownload(cmd *cobra.Command, f *cmdutil.Factory, opts downloadOpt
 
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return fmt.Errorf("not authenticated: %w", err)
+		return cmdutil.AuthenticationError(err)
 	}
 	client, err := f.NewAPIClient(token)
 	if err != nil {

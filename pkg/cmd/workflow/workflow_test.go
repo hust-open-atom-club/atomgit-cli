@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
@@ -223,7 +224,7 @@ func TestWorkflowRunSuccess(t *testing.T) {
 func TestWorkflowRunErrors(t *testing.T) {
 	t.Run("unauthenticated error", func(t *testing.T) {
 		f := newTestFactory(nil, "")
-		f.Config = workflowTestConfig{tokenErr: fmt.Errorf("no token found")}
+		f.Config = workflowTestConfig{tokenErr: config.ErrNotAuthenticated}
 		cmd := NewCmdWorkflow(f)
 
 		out := &bytes.Buffer{}
@@ -232,8 +233,8 @@ func TestWorkflowRunErrors(t *testing.T) {
 		cmd.SetArgs([]string{"run", "owner/repo", "wf-123"})
 
 		err := cmd.Execute()
-		if err == nil || !strings.Contains(err.Error(), "not authenticated") {
-			t.Fatalf("expected unauthenticated error, got: %v", err)
+		if err != config.ErrNotAuthenticated {
+			t.Fatalf("error = %v, want canonical authentication error", err)
 		}
 	})
 

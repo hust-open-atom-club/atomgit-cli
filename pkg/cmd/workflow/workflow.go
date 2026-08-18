@@ -72,7 +72,7 @@ func requireToken(f *cmdutil.Factory) (string, error) {
 	}
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return "", fmt.Errorf("not authenticated: %w", err)
+		return "", cmdutil.AuthenticationError(err)
 	}
 	return token, nil
 }

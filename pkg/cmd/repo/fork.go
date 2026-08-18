@@ -50,6 +50,15 @@ Use --private or --public to override.`,
 }
 
 func runFork(out io.Writer, f *cmdutil.Factory, opts *ForkOptions, repoArg string) error {
+	if opts.Public && opts.Private {
+		return fmt.Errorf("--public and --private are mutually exclusive")
+	}
+	repository, err := cmdutil.ParseRepository(repoArg)
+	if err != nil {
+		return err
+	}
+	owner, repoName := repository.Owner, repository.Name
+
 	token, err := f.Config.GetToken()
 	if err != nil {
 		return cmdutil.AuthenticationError(err)
@@ -59,12 +68,6 @@ func runFork(out io.Writer, f *cmdutil.Factory, opts *ForkOptions, repoArg strin
 	if err != nil {
 		return err
 	}
-
-	repository, err := cmdutil.ParseRepository(repoArg)
-	if err != nil {
-		return err
-	}
-	owner, repoName := repository.Owner, repository.Name
 
 	currentUser, err := f.Config.GetUser()
 	if err != nil {

@@ -243,9 +243,10 @@ func TestRepoSyncAuthenticationErrorDoesNotRequest(t *testing.T) {
 		requests++
 		return forkResponse(http.StatusOK, `{}`), nil
 	})
-	cmd := newCmdRepoSync(repoFactory(repoCommandConfig{tokenErr: errors.New("missing token"), user: "alice"}, transport))
+	tokenErr := errors.New("missing token")
+	cmd := newCmdRepoSync(repoFactory(repoCommandConfig{tokenErr: tokenErr, user: "alice"}, transport))
 	err := cmd.RunE(cmd, []string{"alice/demo"})
-	if err == nil || err.Error() != "missing token" || requests != 0 {
+	if err == nil || err.Error() != "not authenticated: missing token" || !errors.Is(err, tokenErr) || requests != 0 {
 		t.Fatalf("error = %v, requests = %d", err, requests)
 	}
 }

@@ -12,7 +12,9 @@ import (
 	"testing"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
+	"github.com/spf13/cobra"
 )
 
 type repoCommandConfig struct {
@@ -750,6 +752,80 @@ func TestRepoViewReturnsCanonicalAuthenticationError(t *testing.T) {
 	err := cmd.RunE(cmd, []string{"alice/demo"})
 	if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestRepoAuxiliaryCommandsReturnCanonicalAuthenticationError(t *testing.T) {
+	factory := repoFactory(repoCommandConfig{tokenErr: config.ErrNotAuthenticated}, nil)
+	tests := []struct {
+		name string
+		call func() error
+	}{
+		{name: "collaborator", call: func() error {
+			_, err := collaboratorAPIClient(factory)
+			return err
+		}},
+		{name: "webhook", call: func() error {
+			_, err := webhookAPIClient(factory)
+			return err
+		}},
+		{name: "read file", call: func() error {
+			cmd := newCmdRepoReadFile(factory)
+			return cmd.RunE(cmd, []string{"alice/demo", "README.md"})
+		}},
+		{name: "read directory", call: func() error {
+			cmd := newCmdRepoReadDir(factory)
+			return cmd.RunE(cmd, []string{"alice/demo", "."})
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.call(); err != config.ErrNotAuthenticated {
+				t.Fatalf("error = %v, want canonical authentication error", err)
+			}
+		})
+	}
+}
+
+func TestRepoInteractiveCommandsAuthenticateBeforePrompt(t *testing.T) {
+	factory := repoFactory(repoCommandConfig{tokenErr: config.ErrNotAuthenticated}, nil)
+	tests := []struct {
+		name      string
+		new       func(*cmdutil.Factory) *cobra.Command
+		configure func(*cobra.Command)
+		args      []string
+	}{
+		{
+			name: "edit",
+			new:  newCmdRepoEdit,
+			configure: func(cmd *cobra.Command) {
+				_ = cmd.Flags().Set("public", "true")
+			},
+			args: []string{"alice/demo"},
+		},
+		{name: "webhook delete", new: newCmdRepoWebhookDelete, args: []string{"alice/demo", "42"}},
+		{name: "webhook test", new: newCmdRepoWebhookTest, args: []string{"alice/demo", "42"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := tt.new(factory)
+			if tt.configure != nil {
+				tt.configure(cmd)
+			}
+			cmd.SetIn(strings.NewReader("yes\n"))
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+
+			err := cmd.RunE(cmd, tt.args)
+			if err == nil || !strings.Contains(err.Error(), config.ErrNotAuthenticated.Error()) {
+				t.Fatalf("error = %v, want canonical authentication error", err)
+			}
+			if output.Len() != 0 {
+				t.Fatalf("prompted before authentication: %q", output.String())
+			}
+		})
 	}
 }
 

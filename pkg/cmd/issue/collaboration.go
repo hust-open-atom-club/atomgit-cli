@@ -61,7 +61,7 @@ request.`,
 
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
 			client, err := f.NewAPIClient(token)
@@ -139,6 +139,11 @@ list before mutating branches that other tools may also manage.`,
 				opts.Remove = removeNames
 			}
 
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+
 			if isMutation {
 				hasRemoval := false
 				for _, name := range opts.Remove {
@@ -162,12 +167,6 @@ list before mutating branches that other tools may also manage.`,
 					}
 				}
 			}
-
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
 			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err

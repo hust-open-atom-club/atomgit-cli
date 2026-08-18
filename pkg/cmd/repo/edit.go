@@ -63,6 +63,11 @@ module switches, merge policies, or other unsupported GitHub CLI settings.`,
 			}
 			owner, repoName := repository.Owner, repository.Name
 
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("failed to edit repository %s/%s: %w", owner, repoName, cmdutil.AuthenticationError(err))
+			}
+
 			if consequential && !opts.Yes {
 				confirmed, err := confirmRepoEdit(cmd.InOrStdin(), cmd.OutOrStdout(), owner, repoName, request)
 				if err != nil {
@@ -72,11 +77,6 @@ module switches, merge policies, or other unsupported GitHub CLI settings.`,
 					fmt.Fprintln(cmd.OutOrStdout(), "Repository update cancelled.")
 					return nil
 				}
-			}
-
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("failed to edit repository %s/%s: %w", owner, repoName, cmdutil.AuthenticationError(err))
 			}
 			client, err := f.NewAPIClient(token)
 			if err != nil {

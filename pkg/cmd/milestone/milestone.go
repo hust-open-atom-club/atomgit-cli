@@ -305,6 +305,10 @@ func newCmdMilestoneDelete(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
 			out := cmd.OutOrStdout()
 			if !yes {
 				confirmed, err := confirmMilestoneDelete(cmd.InOrStdin(), out, repository, number)
@@ -316,7 +320,7 @@ func newCmdMilestoneDelete(f *cmdutil.Factory) *cobra.Command {
 					return nil
 				}
 			}
-			client, err := authenticatedClient(f)
+			client, err := newAPIClient(f, token)
 			if err != nil {
 				return err
 			}
@@ -334,7 +338,7 @@ func newCmdMilestoneDelete(f *cmdutil.Factory) *cobra.Command {
 func authenticatedClient(f *cmdutil.Factory) (*api.Client, error) {
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return nil, fmt.Errorf("not authenticated: %w", err)
+		return nil, cmdutil.AuthenticationError(err)
 	}
 	return newAPIClient(f, token)
 }

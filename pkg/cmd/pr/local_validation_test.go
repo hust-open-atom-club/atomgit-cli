@@ -1,14 +1,28 @@
 package pr
 
 import (
+	"errors"
 	"io"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
+
+type prAuthenticationErrorConfig struct{}
+
+func (prAuthenticationErrorConfig) GetToken() (string, error) { return "", config.ErrNotAuthenticated }
+func (prAuthenticationErrorConfig) GetUser() (string, error)  { return "alice", nil }
+func (prAuthenticationErrorConfig) GetHost() string           { return "atomgit.com" }
+
+type failingReader struct{}
+
+func (failingReader) Read([]byte) (int, error) {
+	return 0, errors.New("stdin was read before authentication")
+}
 
 // Issue #49 requires arguments/flags -> authentication -> execution, so
 // invalid local input must be rejected before GetToken is ever called and an
@@ -136,6 +150,21 @@ func TestPRCreateRejectsLocalErrorsBeforeAuth(t *testing.T) {
 				t.Fatalf("GetToken was called %d times; local errors must be rejected before authentication", cfg.getTokenCalls)
 			}
 		})
+	}
+}
+
+func TestPRCreateAuthenticatesBeforeReadingBodyFromStdin(t *testing.T) {
+	cmd := newCmdPRCreate(&cmdutil.Factory{Config: prAuthenticationErrorConfig{}})
+	for name, value := range map[string]string{"title": "test", "body-file": "-"} {
+		if err := cmd.Flags().Set(name, value); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cmd.SetIn(failingReader{})
+
+	err := cmd.RunE(cmd, []string{"owner/repo"})
+	if err != config.ErrNotAuthenticated {
+		t.Fatalf("error = %v, want authentication before stdin read", err)
 	}
 }
 

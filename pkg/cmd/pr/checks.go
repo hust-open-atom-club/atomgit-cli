@@ -69,7 +69,7 @@ func runPRChecks(cmd *cobra.Command, f *cmdutil.Factory, opts checksOptions, arg
 	}
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return fmt.Errorf("not authenticated: %w", err)
+		return cmdutil.AuthenticationError(err)
 	}
 	prClient, actionsClient, err := newChecksClients(f, token)
 	if err != nil {

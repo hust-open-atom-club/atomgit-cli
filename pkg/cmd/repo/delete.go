@@ -32,6 +32,7 @@ the confirmation prompt.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var owner, repoName string
+			var err error
 			if len(args) == 0 {
 				repository, err := cmdutil.ResolveRepository(f, "")
 				if err != nil {
@@ -39,11 +40,15 @@ the confirmation prompt.`,
 				}
 				owner, repoName = repository.Owner, repository.Name
 			} else {
-				currentUser, err := f.Config.GetUser()
-				if err != nil {
-					return cmdutil.AuthenticationError(err)
+				if strings.Contains(args[0], "/") {
+					owner, repoName, err = parseRepositoryName(args[0], "")
+				} else {
+					currentUser, userErr := f.Config.GetUser()
+					if userErr != nil {
+						return cmdutil.AuthenticationError(userErr)
+					}
+					owner, repoName, err = parseRepositoryName(args[0], currentUser)
 				}
-				owner, repoName, err = parseRepositoryName(args[0], currentUser)
 				if err != nil {
 					return err
 				}
