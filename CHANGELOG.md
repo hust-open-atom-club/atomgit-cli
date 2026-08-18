@@ -1,3 +1,22 @@
+atomgit-cli (v0.7.2) unstable; urgency=medium
+
+  * Add command aliases, Actions workflow listing and dispatch, and token-based
+    login through ag auth login --with-token.
+  * Add commit listing, viewing, comparison, diff, and patch commands, plus
+    repository content reading and owner-scoped repository listing.
+  * Add issue collaboration details, pull request detail queries, discussion
+    listing and viewing, and repository notification management.
+  * Validate local arguments and repository context before authentication, keep
+    authentication failures canonical, and harden API error handling.
+  * Serialize alias configuration updates and make config writes atomic across
+    Unix and Windows.
+  * Add stable and latest Nix package definitions, expand release maintenance
+    guidance, and correct the WinGet package identifier.
+  * Improve Release creation status handling and command output safety for
+    commit and discussion data.
+
+ -- Dongliang Mu <dzm91@hust.edu.cn>  Wed, 19 Aug 2026 00:04:07 +0800
+
 atomgit-cli (v0.7.1) unstable; urgency=medium
 
   * Add milestone management, repository fork synchronization, and direct
