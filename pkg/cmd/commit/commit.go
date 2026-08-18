@@ -1,9 +1,12 @@
-// Package commit provides the ag commit command for listing and viewing
-// repository commits.
+// Package commit provides the ag commit command for listing, viewing,
+// comparing, and inspecting repository commits.
 package commit
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"strconv"
 	"strings"
@@ -18,13 +21,15 @@ func NewCmdCommit(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "commit",
 		Short: "Manage commits",
-		Long:  `List and view repository commits.`,
+		Long:  "List, view, compare, and inspect repository commits.",
 	}
 
 	cmd.AddCommand(newCmdCommitList(f))
 	cmd.AddCommand(newCmdCommitView(f))
+	cmd.AddCommand(newCmdCompare(f))
+	cmd.AddCommand(newCmdCommitText(f, "diff"))
+	cmd.AddCommand(newCmdCommitText(f, "patch"))
 	cmdutil.AddRepositoryContextHelp(cmd)
-
 	return cmd
 }
 
@@ -291,4 +296,299 @@ func escapeCell(s string) string {
 		}
 	}
 	return b.String()
+}
+
+type comparisonJSON struct {
+	Base      string             `json:"base"`
+	Head      string             `json:"head"`
+	BaseSHA   string             `json:"baseSHA"`
+	MergeBase string             `json:"mergeBaseSHA"`
+	Commits   []comparisonCommit `json:"commits"`
+	Files     []comparisonFile   `json:"files"`
+	Truncated bool               `json:"truncated"`
+}
+
+type comparisonCommit struct {
+	SHA         string `json:"sha"`
+	Message     string `json:"message"`
+	Author      string `json:"author"`
+	AuthorName  string `json:"authorName"`
+	AuthorEmail string `json:"authorEmail"`
+	AuthoredAt  string `json:"authoredAt"`
+	URL         string `json:"url"`
+}
+
+type comparisonFile struct {
+	SHA       string `json:"sha"`
+	Filename  string `json:"filename"`
+	Status    string `json:"status"`
+	Additions int    `json:"additions"`
+	Deletions int    `json:"deletions"`
+	Changes   int    `json:"changes"`
+	BlobURL   string `json:"blobURL"`
+	RawURL    string `json:"rawURL"`
+	Patch     string `json:"patch"`
+	Binary    bool   `json:"binary"`
+	Truncated bool   `json:"truncated"`
+}
+
+func newCmdCompare(f *cmdutil.Factory) *cobra.Command {
+	var jsonOutput bool
+
+	cmd := &cobra.Command{
+		Use:   "compare [<owner>/<repo>] <base>...<head>",
+		Short: "Compare two commits, branches, or tags",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if err := cobra.RangeArgs(1, 2)(cmd, args); err != nil {
+				return err
+			}
+			_, err := comparisonArg(args)
+			return err
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			base, head, err := parseComparisonArg(args)
+			if err != nil {
+				return err
+			}
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+
+			client, err := authenticatedClient(f)
+			if err != nil {
+				return err
+			}
+			comparison, err := api.CompareCommits(commandContext(cmd), client, repository.Owner, repository.Name, base, head)
+			if err != nil {
+				return err
+			}
+
+			result := newComparisonJSON(base, head, repository, f.Config.GetHost(), comparison)
+			if jsonOutput {
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), result)
+			}
+			return writeComparison(cmd.OutOrStdout(), result)
+		},
+	}
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output comparison as JSON")
+	return cmd
+}
+
+func newCmdCommitText(f *cmdutil.Factory, format string) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   format + " [<owner>/<repo>] <sha>",
+		Short: "Show a commit's " + format,
+		Args: func(cmd *cobra.Command, args []string) error {
+			if err := cobra.RangeArgs(1, 2)(cmd, args); err != nil {
+				return err
+			}
+			_, err := commitTextArg(args)
+			return err
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sha, err := commitTextArg(args)
+			if err != nil {
+				return err
+			}
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+
+			client, err := authenticatedClient(f)
+			if err != nil {
+				return err
+			}
+			body, err := api.GetCommitText(commandContext(cmd), client, repository.Owner, repository.Name, sha, format)
+			if err != nil {
+				return err
+			}
+			defer body.Close()
+			if _, err := io.Copy(cmd.OutOrStdout(), body); err != nil {
+				return fmt.Errorf("stream commit %s output: %w", format, err)
+			}
+			return nil
+		},
+	}
+	return cmd
+}
+
+func comparisonArg(args []string) (string, error) {
+	if len(args) == 0 {
+		return "", errors.New("comparison is required")
+	}
+	value := args[len(args)-1]
+	_, _, err := parseComparison(value)
+	return value, err
+}
+
+func parseComparisonArg(args []string) (string, string, error) {
+	value, err := comparisonArg(args)
+	if err != nil {
+		return "", "", err
+	}
+	return parseComparison(value)
+}
+
+func commitTextArg(args []string) (string, error) {
+	if len(args) == 0 {
+		return "", errors.New("commit SHA is required")
+	}
+	return validateRef(args[len(args)-1], "commit SHA")
+}
+
+func authenticatedClient(f *cmdutil.Factory) (*api.Client, error) {
+	token, err := f.Config.GetToken()
+	if err != nil {
+		return nil, err
+	}
+	return f.NewAPIClient(token)
+}
+
+func commandContext(cmd *cobra.Command) context.Context {
+	if ctx := cmd.Context(); ctx != nil {
+		return ctx
+	}
+	return context.Background()
+}
+
+func parseComparison(value string) (string, string, error) {
+	separator := strings.Index(value, "...")
+	if separator < 0 || strings.Contains(value[separator+3:], "...") {
+		return "", "", errors.New("comparison must use the form <base>...<head>")
+	}
+	base, err := validateRef(value[:separator], "base ref")
+	if err != nil {
+		return "", "", err
+	}
+	head, err := validateRef(value[separator+3:], "head ref")
+	if err != nil {
+		return "", "", err
+	}
+	return base, head, nil
+}
+
+func validateRef(value, name string) (string, error) {
+	if value == "" {
+		return "", fmt.Errorf("%s cannot be empty", name)
+	}
+	if value == "@" || strings.HasPrefix(value, ".") || strings.HasSuffix(value, ".") || strings.HasPrefix(value, "/") || strings.HasSuffix(value, "/") || strings.Contains(value, "..") || strings.Contains(value, "@{") || strings.Contains(value, "//") {
+		return "", fmt.Errorf("invalid %s %q", name, value)
+	}
+	for _, part := range strings.Split(value, "/") {
+		if strings.HasPrefix(part, ".") || strings.HasSuffix(part, ".lock") {
+			return "", fmt.Errorf("invalid %s %q", name, value)
+		}
+	}
+	for _, r := range value {
+		if r < 0x20 || r == 0x7f || strings.ContainsRune(" ~^:?*[\\", r) {
+			return "", fmt.Errorf("invalid %s %q", name, value)
+		}
+	}
+	return value, nil
+}
+
+func newComparisonJSON(base, head string, repository cmdutil.Repository, host string, comparison *api.CommitComparison) comparisonJSON {
+	result := comparisonJSON{
+		Base:      base,
+		Head:      head,
+		BaseSHA:   comparison.BaseCommit.SHA,
+		MergeBase: comparison.MergeBaseCommit.SHA,
+		Commits:   make([]comparisonCommit, 0, len(comparison.Commits)),
+		Files:     make([]comparisonFile, 0, len(comparison.Files)),
+		Truncated: comparison.Truncated.Bool(),
+	}
+	for _, commit := range comparison.Commits {
+		result.Commits = append(result.Commits, comparisonCommit{
+			SHA:         commit.SHA,
+			Message:     commit.Commit.Message,
+			Author:      commit.Author.Login,
+			AuthorName:  firstNonEmpty(commit.Author.Name, commit.Commit.Author.Name),
+			AuthorEmail: firstNonEmpty(commit.Author.Email, commit.Commit.Author.Email),
+			AuthoredAt:  commit.Commit.Author.Date,
+			URL:         cmdutil.ResolveWebURL("", host, repository.Owner, repository.Name, "commit", commit.SHA),
+		})
+	}
+	for _, file := range comparison.Files {
+		result.Files = append(result.Files, comparisonFile{
+			SHA:       file.SHA,
+			Filename:  file.Filename,
+			Status:    file.Status,
+			Additions: file.Additions,
+			Deletions: file.Deletions,
+			Changes:   file.Changes,
+			BlobURL:   file.BlobURL,
+			RawURL:    file.RawURL,
+			Patch:     file.Patch,
+			Binary:    isBinaryPatch(file.Patch),
+			Truncated: file.Truncated.Bool(),
+		})
+	}
+	return result
+}
+
+func writeComparison(out io.Writer, comparison comparisonJSON) error {
+	if _, err := fmt.Fprintf(out, "Comparison: %s...%s\n", cmdutil.EscapeTSVField(comparison.Base), cmdutil.EscapeTSVField(comparison.Head)); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(out, "Base: %s\nMerge base: %s\nCommits: %d\nFiles: %d\nTruncated: %t\n",
+		comparison.BaseSHA, comparison.MergeBase, len(comparison.Commits), len(comparison.Files), comparison.Truncated); err != nil {
+		return err
+	}
+	if len(comparison.Commits) > 0 {
+		if _, err := fmt.Fprintln(out, "\nCommits:"); err != nil {
+			return err
+		}
+		for _, commit := range comparison.Commits {
+			author := firstNonEmpty(commit.Author, commit.AuthorName, commit.AuthorEmail, "-")
+			if _, err := fmt.Fprintf(out, "%s\t%s\t%s\n", cmdutil.EscapeTSVField(shortSHA(commit.SHA)), cmdutil.EscapeTSVField(firstLine(commit.Message)), cmdutil.EscapeTSVField(author)); err != nil {
+				return err
+			}
+		}
+	}
+	if len(comparison.Files) > 0 {
+		if _, err := fmt.Fprintln(out, "\nFiles:"); err != nil {
+			return err
+		}
+		for _, file := range comparison.Files {
+			metadata := "-"
+			if file.Binary {
+				metadata = "binary"
+			}
+			if file.Truncated {
+				if metadata == "-" {
+					metadata = "truncated"
+				} else {
+					metadata += ",truncated"
+				}
+			}
+			if _, err := fmt.Fprintf(out, "%s\t+%d\t-%d\t%s\t%s\n",
+				cmdutil.EscapeTSVField(firstNonEmpty(file.Status, "modified")), file.Additions, file.Deletions, cmdutil.EscapeTSVField(file.Filename), metadata); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func firstLine(value string) string {
+	if index := strings.IndexByte(value, '\n'); index >= 0 {
+		value = value[:index]
+	}
+	return strings.TrimSpace(value)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func isBinaryPatch(patch string) bool {
+	patch = strings.TrimSpace(patch)
+	return strings.HasPrefix(patch, "Binary files ") || strings.HasPrefix(patch, "GIT binary patch")
 }
