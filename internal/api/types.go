@@ -154,12 +154,19 @@ func formatIdentifier(value interface{}) string {
 
 // User represents an AtomGit user
 type User struct {
-	ID      string `json:"id"`
-	Login   string `json:"login"`
-	Name    string `json:"name"`
-	Email   string `json:"email"`
-	HTMLURL string `json:"html_url"`
-	Type    string `json:"type"`
+	ID           string   `json:"id"`
+	Login        string   `json:"login"`
+	Name         string   `json:"name"`
+	Email        string   `json:"email"`
+	HTMLURL      string   `json:"html_url"`
+	Type         string   `json:"type"`
+	Bio          string   `json:"bio"`
+	Company      string   `json:"company"`
+	Website      string   `json:"website"`
+	Location     string   `json:"location"`
+	Followers    int      `json:"followers"`
+	Following    int      `json:"following"`
+	TopLanguages []string `json:"top_languages"`
 }
 
 // Collaborator represents a repository member and the provenance of their
