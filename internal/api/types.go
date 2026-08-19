@@ -169,6 +169,12 @@ type User struct {
 	TopLanguages []string `json:"top_languages"`
 }
 
+// EmailAddress represents one email address visible to the authenticated user.
+type EmailAddress struct {
+	Email string `json:"email"`
+	State string `json:"state"`
+}
+
 // Collaborator represents a repository member and the provenance of their
 // effective permission.
 type Collaborator struct {

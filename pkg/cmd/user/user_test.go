@@ -67,6 +67,149 @@ func TestNewCmdUserRegistersView(t *testing.T) {
 	}
 }
 
+func TestNewCmdUserRegistersEmails(t *testing.T) {
+	cmd := NewCmdUser(&cmdutil.Factory{})
+	emails, _, err := cmd.Find([]string{"emails"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if emails.Flags().Lookup("json") == nil {
+		t.Fatal("emails --json flag was not registered")
+	}
+	if !strings.Contains(emails.Example, "ag user emails --json") {
+		t.Fatalf("emails examples = %q", emails.Example)
+	}
+	if err := emails.Args(emails, []string{"unexpected"}); err == nil {
+		t.Fatal("user emails accepted an argument")
+	}
+}
+
+func TestUserEmailsTextOutput(t *testing.T) {
+	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodGet || req.URL.Path != "/api/v5/emails" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		if got := req.Header.Get("Authorization"); got != "Bearer token" {
+			t.Fatalf("authorization header was not configured")
+		}
+		return userResponse(http.StatusOK, `[{"email":"alice@example.com","state":"confirmed"},{"email":"a@example.org","state":"pending"}]`), nil
+	})
+	cmd := newCmdUserEmails(userFactory(userTestConfig{}, transport))
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"EMAIL", "STATE", "alice@example.com", "confirmed", "a@example.org", "pending"} {
+		if !strings.Contains(output.String(), want) {
+			t.Fatalf("output = %q, missing %q", output.String(), want)
+		}
+	}
+}
+
+func TestUserEmailsEmptyOutput(t *testing.T) {
+	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return userResponse(http.StatusOK, `[]`), nil
+	})
+	cmd := newCmdUserEmails(userFactory(userTestConfig{}, transport))
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := output.String(); got != "No email addresses found.\n" {
+		t.Fatalf("output = %q", got)
+	}
+}
+
+func TestUserEmailsJSON(t *testing.T) {
+	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return userResponse(http.StatusOK, `[{"email":"alice@example.com","state":"confirmed"}]`), nil
+	})
+	cmd := newCmdUserEmails(userFactory(userTestConfig{}, transport))
+	if err := cmd.Flags().Set("json", "true"); err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+	var got []map[string]string
+	if err := json.Unmarshal(output.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, []map[string]string{{"email": "alice@example.com", "state": "confirmed"}}) {
+		t.Fatalf("output = %q", output.String())
+	}
+}
+
+func TestUserEmailsJSONEmptyOutput(t *testing.T) {
+	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return userResponse(http.StatusOK, `null`), nil
+	})
+	cmd := newCmdUserEmails(userFactory(userTestConfig{}, transport))
+	if err := cmd.Flags().Set("json", "true"); err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(output.String()); got != "[]" {
+		t.Fatalf("output = %q", got)
+	}
+}
+
+func TestUserEmailsSanitizesTextOutput(t *testing.T) {
+	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return userResponse(http.StatusOK, `[{"email":"alice@example.com\u001b[31m","state":"confirmed\nstate"}]`), nil
+	})
+	cmd := newCmdUserEmails(userFactory(userTestConfig{}, transport))
+	var output bytes.Buffer
+	cmd.SetOut(cmdutil.NewSanitizingWriter(&output))
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := output.String(); strings.ContainsRune(got, '\x1b') || strings.Contains(got, "confirmed\nstate") {
+		t.Fatalf("control bytes were not sanitized: %q", got)
+	}
+	if !strings.Contains(output.String(), `\x1b[31m`) || !strings.Contains(output.String(), `\nstate`) {
+		t.Fatalf("output = %q", output.String())
+	}
+}
+
+func TestUserEmailsRequiresToken(t *testing.T) {
+	cmd := newCmdUserEmails(userFactory(userTestConfig{tokenErr: errors.New("not authenticated: run `ag auth login`")}, nil))
+	err := cmd.RunE(cmd, nil)
+	if err == nil || !strings.Contains(err.Error(), "not authenticated") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestUserEmailsAPIError(t *testing.T) {
+	transport := userRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		return userResponse(http.StatusForbidden, `{}`), nil
+	})
+	cmd := newCmdUserEmails(userFactory(userTestConfig{}, transport))
+	err := cmd.RunE(cmd, nil)
+	if err == nil || !strings.Contains(err.Error(), "list authenticated user emails") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestUserEmailsMalformedResponse(t *testing.T) {
+	transport := userRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		return userResponse(http.StatusOK, `{`), nil
+	})
+	cmd := newCmdUserEmails(userFactory(userTestConfig{}, transport))
+	err := cmd.RunE(cmd, nil)
+	if err == nil || !strings.Contains(err.Error(), "list authenticated user emails") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
 func TestUserViewTextOutput(t *testing.T) {
 	tests := []struct {
 		name     string
