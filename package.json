@@ -24,6 +24,7 @@
     "bin/ag.js"
   ],
   "scripts": {
+    "publish:npm": "node scripts/publish-npm-packages.js",
     "test": "node --test",
     "version:npm": "node scripts/set-npm-version.js"
   },

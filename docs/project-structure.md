@@ -73,9 +73,10 @@ atomgit-cli/
 │   ├── build-npm-packages.js   # 生成 npm 主包与平台包
 │   ├── check-npm-version.js    # 校验发布版本与 npm 版本
 │   ├── publish-atomgit-release.js # 创建并验证 AtomGit Release
+│   ├── publish-npm-packages.js # 校验并安全发布 npm 制品
 │   └── set-npm-version.js      # 同步 npm 包版本
 ├── .gitcode/workflows/        # AtomGit CI、Release 与定时 Nix 更新工作流
-├── test/                       # npm 平台包集成测试
+├── test/                       # npm 平台包与发布流程测试
 ├── .goreleaser.yaml            # 跨平台发布打包配置
 ├── flake.nix                   # Nix package 和开发环境
 ├── install.sh                  # Linux/macOS Release 安装脚本
@@ -107,6 +108,6 @@ atomgit-cli/
 
 ## 测试
 
-Go 测试文件与被测包放在同一目录，API 响应样本放在 `internal/api/testdata`；`test/` 包含 npm 平台包的集成测试。命令测试通过依赖注入、临时目录和模拟 HTTP 服务运行，不依赖真实 AtomGit 凭据或外部网络。
+Go 测试文件与被测包放在同一目录，API 响应样本放在 `internal/api/testdata`；`test/` 包含 npm 平台包和发布流程测试。命令测试通过依赖注入、临时目录和模拟 HTTP 服务运行，不依赖真实 AtomGit/npm 凭据或外部网络。
 
 新增命令或修改目录职责时，应同步更新本文档和项目 [README](../README.md) 中的入口说明。
