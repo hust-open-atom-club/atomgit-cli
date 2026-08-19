@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api/actions"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -734,6 +735,81 @@ func TestRunStepLogWritesFileAndRefusesOverwrite(t *testing.T) {
 		t.Fatalf("requests = %d, want 0", requests)
 	}
 	assertFileContent(t, destination, "saved")
+}
+
+func TestRunStepLogOutputOmitsFileWhenLaterPageFails(t *testing.T) {
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		payload := decodeStepLogRequest(t, req)
+		switch payload.Offset {
+		case 0:
+			return runResponse(req, http.StatusOK, `{"has_more":true,"start_offset":0,"end_offset":5,"log":"hello"}`), nil
+		case 5:
+			return runResponse(req, http.StatusInternalServerError, `{"message":"backend failed"}`), nil
+		default:
+			t.Fatalf("unexpected offset %d", payload.Offset)
+			return nil, nil
+		}
+	})
+	dir := t.TempDir()
+	destination := filepath.Join(dir, "step.log")
+	cmd := newCmdRunStepLog(runFactory(runTestConfig{token: "secret"}, transport))
+	cmd.SetOut(io.Discard)
+	cmd.SetArgs([]string{"team/demo", "run-1", "job-1", "step-1", "--output", destination})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "failed to get step log") {
+		t.Fatalf("error = %v", err)
+	}
+	if _, statErr := os.Stat(destination); !os.IsNotExist(statErr) {
+		t.Fatalf("destination still exists: %v", statErr)
+	}
+	entries, readErr := os.ReadDir(dir)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if len(entries) != 0 {
+		names := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			names = append(names, entry.Name())
+		}
+		t.Fatalf("leftover files = %v", names)
+	}
+}
+
+func TestRunStepLogOutputReturnsWhenDestinationIsUnwritable(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Chmod(dir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chmod(dir, 0o755)
+	})
+	probe := filepath.Join(dir, "probe")
+	if file, err := os.Create(probe); err == nil {
+		_ = file.Close()
+		_ = os.Remove(probe)
+		t.Skip("process can write to a mode 0555 directory")
+	}
+
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return runResponse(req, http.StatusOK, `{"has_more":false,"start_offset":0,"end_offset":5,"log":"hello"}`), nil
+	})
+	destination := filepath.Join(dir, "step.log")
+	cmd := newCmdRunStepLog(runFactory(runTestConfig{token: "secret"}, transport))
+	cmd.SetOut(io.Discard)
+	cmd.SetArgs([]string{"team/demo", "run-1", "job-1", "step-1", "--output", destination})
+
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Execute()
+	}()
+	select {
+	case err := <-done:
+		if err == nil || !strings.Contains(err.Error(), "write step log") {
+			t.Fatalf("error = %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("command hung after destination write failure")
+	}
 }
 
 func TestRunStepLogInfersRepositoryAndRequiresAuth(t *testing.T) {

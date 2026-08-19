@@ -77,10 +77,18 @@ func runStepLog(cmd *cobra.Command, f *cmdutil.Factory, opts stepLogOptions, arg
 		reader, writer := io.Pipe()
 		errc := make(chan error, 1)
 		go func() {
-			errc <- writeStepLogs(writer, client, repository.Owner, repository.Name, runID, jobID, stepID)
-			_ = writer.Close()
+			err := writeStepLogs(writer, client, repository.Owner, repository.Name, runID, jobID, stepID)
+			if err != nil {
+				_ = writer.CloseWithError(err)
+			} else {
+				_ = writer.Close()
+			}
+			errc <- err
 		}()
 		path, writeErr := writeDownload(destination, reader, opts.Overwrite)
+		if writeErr != nil {
+			_ = reader.Close()
+		}
 		copyErr := <-errc
 		if writeErr != nil {
 			return fmt.Errorf("write step log: %w", writeErr)
