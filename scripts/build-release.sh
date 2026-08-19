@@ -337,6 +337,6 @@ if [ "$RELEASE_MODE" = "snapshot" ]; then
   echo "试打包完成。制品位于 ${OUT}/，请勿将未校验的快照制品用于正式发布。"
 else
   echo "完成。将 ${OUT}/ 下各 .tar.gz / .zip、checksums.txt、install.sh 与 install.ps1 作为 AtomGit Release「${TAG}」的附件上传即可。"
-  echo "npm 包位于 ${OUT}/npm/；发布时先发布七个平台包，再发布 atomgit-cli 主包。"
+  echo "npm 包位于 ${OUT}/npm/；发布时先发布七个平台包，再发布 atomgit-cli 主包（可用 npm run publish:npm -- ${TAG} \"${OUT}/npm\"）。"
 fi
 echo "（Windows 也可：PowerShell 执行 install.ps1，或下载 ag_windows_*.zip 手动解压并加入 PATH。）"

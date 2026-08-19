@@ -28,28 +28,9 @@ npm 平台包复用对应操作系统和架构的普通 Release 归档。
 
 AtomGit Release 只上传七个普通平台归档、两个安装脚本和根 `checksums.txt`，共十个项目附件。AtomGit 还会自动展示四个源码归档，因此保留 LoongArch64 支持的 Release 页面通常共显示十四个 artifacts。Homebrew、Scoop 和 WinGet 复用普通平台归档，不再发布按 distribution 重复打包的专用附件。
 
-发布 npm 制品时，先发布 `npm/` 下七个名称带平台和架构的包；确认它们可用后，再发布 `atomgit-cli` 主包。主包和平台包必须使用相同版本。
-
 上传 Release 附件前可校验所有制品：
 
 ```bash
-
-# Linux
-(cd dist/vX.Y.Z && sha256sum -c checksums.txt)
-
-
-# macOS
-(cd dist/vX.Y.Z && shasum -a 256 -c checksums.txt)
-```
-
-npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registry 前单独校验：
-
-```bash
-(cd dist/vX.Y.Z/npm && shasum -a 256 -c checksums.txt)
-```
-
-`scripts/build-release.sh` 始终使用 GoReleaser 的 `--skip=publish`，只在本地准备并验证制品，然后打印完整的附件 basename 清单。发布上传由下述 `make publish` 入口调用独立脚本完成；单独执行构建脚本不会创建 AtomGit Release 或上传附件。
-
 # Linux
 (cd dist/vX.Y.Z && sha256sum -c checksums.txt)
 
@@ -97,41 +78,66 @@ make publish \
 
 ## 发布到 npm registry
 
-AtomGit Release 发布并验证完成后，再发布 `dist/vX.Y.Z/npm/` 中的 npm tarball。发布前确认当前 npm 账号有权发布 `@hust-open-atom-club` scope，并按 registry 的认证和双因素认证要求完成登录：
+AtomGit Release 发布并验证完成后，再处理 `dist/vX.Y.Z/npm/` 中的七个平台包和一个主启动包。仓库只保留 `npm run publish:npm` 这一套安全入口；不要绕过它逐个运行 `npm publish`。
+
+发布前使用不访问 registry 的校验模式：
 
 ```bash
-npm whoami
-
-
-# Linux
-(cd dist/vX.Y.Z/npm && sha256sum -c checksums.txt)
-
-
-# macOS
-(cd dist/vX.Y.Z/npm && shasum -a 256 -c checksums.txt)
+npm run publish:npm -- vX.Y.Z dist/vX.Y.Z/npm --dry-run
 ```
 
-目录中应包含七个平台包和一个 `@hust-open-atom-club/atomgit-cli` 主启动包。逐个使用 `npm pack <tarball> --dry-run --json` 检查包名、版本和文件清单，并检查包内元数据的平台限制，确保八个包的版本均为 `X.Y.Z`，且主包的 `optionalDependencies` 精确引用同版本的七个平台包。
+脚本会检查 `checksums.txt`、tarball 名称和内容、完整的受支持平台集合、包名、版本、`os`/`cpu` 元数据、Unix 可执行位，以及主包 `optionalDependencies` 对七个平台包的精确引用。任何缺失、额外包或 checksum 冲突都会在 registry 请求之前失败。
 
-先依次发布七个平台包，每发布一个包都应等待精确版本能够从 registry 查询到，再继续发布下一个包：
+### AtomGit Actions：暂存后人工审批
+
+AtomGit Actions 当前不在 npm Trusted Publishing 支持的 CI 平台列表中，因此默认入口使用 [staged publishing](https://docs.npmjs.com/staged-publishing)：自动化只执行 `npm stage publish`，包不会立即公开；维护者随后通过 2FA 审批每个 stage。该流程要求 Node.js 22.14.0+、npm 11.15.0+，并要求目标包已经存在于 npm registry。
+
+在 CI secret 中配置具备 scope 写权限的 granular access token 即可，token 不需要也不应启用 Bypass 2FA。通过临时 npm user config 或 `NODE_AUTH_TOKEN` 提供凭据，不得把 token 写入仓库、制品、命令参数或日志。包的发布访问设置可以继续保持要求 2FA 的安全策略。
+
+校验通过后执行默认暂存流程：
 
 ```bash
-npm publish <platform-package.tgz> --access public --ignore-scripts
-npm view <platform-package-name>@X.Y.Z version
+npm run publish:npm -- vX.Y.Z dist/vX.Y.Z/npm
 ```
 
-确认七个平台包全部可见后，最后发布主启动包并回读版本：
+脚本先查询已公开版本和现有 stage：
+
+- 已公开且 integrity/shasum 与本地 tarball 一致的包会安全跳过。
+- 已暂存且 shasum 一致的包会复用原 stage ID，适合在自动化中断后直接重试。
+- 已公开或已暂存但内容不一致时立即失败，不会尝试替换 npm 的不可变版本。
+- 缺失的平台包按稳定顺序暂存；只有七个平台版本全部公开后，下一次运行才会暂存主包。输出会列出当前阶段的待审批 stage ID。
+
+维护者先检查 stage，再依次审批七个平台包：
 
 ```bash
-npm publish <atomgit-cli-package.tgz> --access public --ignore-scripts
-npm view @hust-open-atom-club/atomgit-cli@X.Y.Z version
+npm stage view <platform-stage-id>
+npm stage download <platform-stage-id>
+npm stage approve <platform-stage-id>
 ```
 
-npm 版本不可覆盖。重新执行中断的发布流程时，先通过 `npm view <name>@X.Y.Z --json` 检查已存在包的名称、版本和 `dist.integrity` 或 `dist.shasum`；只有远端内容与本地 tarball 完全一致时才跳过，出现冲突或无法确认时应停止，不得尝试替换已发布版本。
+`npm stage approve` 会交互式要求 2FA。批准平台包后重新运行发布命令；脚本确认七个平台版本均已公开且与本地 tarball 一致后，才会创建主包 stage：
 
-全部包可见后，在唯一的系统临时目录中安装主包的精确版本，确认 npm 自动选择了当前操作系统和架构对应的平台包，并执行 `ag version` 核对 tag。验证完成后删除该临时目录。
+```bash
+npm run publish:npm -- vX.Y.Z dist/vX.Y.Z/npm
+npm stage view <main-stage-id>
+npm stage approve <main-stage-id>
+```
 
-npm tarball 只发布到 npm registry，不得作为 AtomGit Release 附件上传。
+主包审批完成后再次运行相同的 `npm run publish:npm` 命令。脚本会验证八个远端版本的 integrity/shasum，在隔离临时目录安装主包的精确版本，并通过 `npm exec --prefix` 调用 npm 生成的 `.bin/ag`（Windows 为 `ag.cmd`）执行 `ag version --json`；只有实际命令入口可执行且输出与本次 `vX.Y.Z` tag 一致时才报告发布完成。
+
+staged publishing 不能创建从未在 npm registry 发布过的新包。新增平台包的首个版本应在 npm 支持的 Trusted Publishing CI 中完成，不能通过降低包的 2FA 或 token 安全设置绕过限制。
+
+### Trusted Publishing
+
+如果后续将最终发布迁移到 GitHub Actions、GitLab.com shared runners 或 CircleCI cloud，可在 npm 配置对应的 [Trusted Publisher](https://docs.npmjs.com/trusted-publishers/)，使用 Node.js 22.14.0+ 和 npm 11.5.1+，并显式运行直接发布模式：
+
+```bash
+npm run publish:npm -- vX.Y.Z dist/vX.Y.Z/npm --publish
+```
+
+直接模式仅用于受支持的 OIDC 工作流，不应回退到长期 Bypass 2FA token。npm CLI 会自动交换短期 OIDC 凭据；GitHub Actions 和 GitLab.com 会自动生成 provenance。正式启用前需要为八个包分别配置相同的受信任工作流和允许的操作。
+
+发布中断后必须继续使用完全相同的 version 和制品目录。不要重新打包或替换已经暂存或公开的 tarball；出现 integrity/shasum 冲突时应停止并查明制品来源。npm tarball 只发布到 npm registry，不得作为 AtomGit Release 附件上传。
 
 
 ## 维护 Homebrew tap

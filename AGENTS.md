@@ -23,11 +23,11 @@
 - `pkg/cmdutil/`：注入到命令中的共享依赖（`Factory`），以及仓库解析、JSON、下载和安全输出等通用逻辑。
 - `pkg/cmd/<name>/`：各 Cobra 命令及子命令实现。
 - `bin/ag.js`：npm 主包入口，根据操作系统和架构调用对应的可选平台包。
-- `test/`：npm 主包与平台包的集成测试。
+- `test/`：npm 主包、平台包与发布流程的集成测试。
 - `.goreleaser.yaml`：Linux 的 amd64/arm64/loong64，以及 macOS 和 Windows 的 amd64/arm64 发布打包配置。
 - `scripts/build-release.sh`：GoReleaser 打包包装脚本，负责版本元数据、安装脚本、校验和和 npm 制品，输出到被忽略的 `dist/`。
 - `scripts/publish-atomgit-release.js`：校验正式制品并通过 `ag release`/`ag api` 创建、续传和回读验证 AtomGit Release。
-- `scripts/build-npm-packages.js`、`scripts/check-npm-version.js`、`scripts/set-npm-version.js`：npm 平台包生成与版本同步。
+- `scripts/build-npm-packages.js`、`scripts/check-npm-version.js`、`scripts/set-npm-version.js`、`scripts/publish-npm-packages.js`：npm 平台包生成、版本同步与安全发布。
 - `flake.nix`、`nix/`、`.gitcode/workflows/update-nix.yml`：Nix `stable`/`latest` package、固定输出哈希与自动更新流程。
 - `README.md`：面向用户的简短项目入口；详细安装、配置、命令、发布和结构说明分别位于 `docs/installation.md`、`docs/configuration.md`、`docs/usage.md`、`docs/releasing.md` 和 `docs/project-structure.md`。
 - `docs/cross_repo_pr_demo.md`：使用 `owner:branch` 创建跨仓库 PR 的示例。
@@ -87,7 +87,7 @@ test -z "$(gofmt -l .)"
 - 纯解析、校验和格式化逻辑应拆成小函数做单元测试。
 - 测试不得依赖真实凭据、用户主目录、浏览器、固定端口或外部网络；使用 `t.TempDir`、环境变量隔离和 `httptest`。
 - 修改命令标志或输出时，除单元测试外，至少执行相应的 `go run ./cmd/ag <command> --help` 冒烟检查。
-- 修改 npm 启动器、平台包元数据或 npm 打包脚本时，运行 `npm test`；版本字段必须通过 `npm run version:npm -- X.Y.Z` 一次性同步，不能只手工修改其中一个文件。
+- 修改 npm 启动器、平台包元数据、打包或发布脚本时，运行 `npm test`；版本字段必须通过 `npm run version:npm -- X.Y.Z` 一次性同步，不能只手工修改其中一个文件。发布测试必须注入假的 npm 命令，不能访问真实 registry 或读取真实 token。
 - 发布流程发生变化时，使用 `make release-snapshot VERSION=vX.Y.Z` 验证 GoReleaser 的多平台制品。只有工作区干净、`vX.Y.Z` tag 存在且指向当前 HEAD 时，才运行 `make release VERSION=vX.Y.Z`。两个命令都会将制品生成到 `dist/`，不要提交这些制品。
 - 纯文档修改至少运行 `git diff --check`，并确认 Markdown 代码围栏成对、相对链接目标存在。
 
