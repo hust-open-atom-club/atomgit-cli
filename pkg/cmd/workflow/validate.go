@@ -51,12 +51,12 @@ func runValidate(cmd *cobra.Command, f *cmdutil.Factory, opts *validateOptions, 
 		return fmt.Errorf("read workflow file %s: %w", filePath, err)
 	}
 
-	token, err := requireToken(f)
+	repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
 	if err != nil {
 		return err
 	}
 
-	repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+	token, err := requireToken(f)
 	if err != nil {
 		return err
 	}

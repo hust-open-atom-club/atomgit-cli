@@ -74,6 +74,30 @@ func TestWorkflowValidateMissingAuthentication(t *testing.T) {
 	}
 }
 
+func TestWorkflowValidateRejectsInvalidRepositoryBeforeAuth(t *testing.T) {
+	path := writeWorkflowFile(t, "name: ci\n")
+	requests := 0
+	f := newTestFactory(roundTripFunc(func(*http.Request) (*http.Response, error) {
+		requests++
+		return nil, nil
+	}), "")
+	f.Config = workflowTestConfig{tokenErr: os.ErrPermission}
+	cmd := NewCmdWorkflow(f)
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	cmd.SetArgs([]string{"validate", "invalid", "--file", path})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "invalid repository format") {
+		t.Fatalf("error = %v, want repository validation to run before authentication", err)
+	}
+	if strings.Contains(err.Error(), "not authenticated") {
+		t.Fatalf("error = %v, authentication must not run before repository validation", err)
+	}
+	if requests != 0 {
+		t.Fatalf("requests = %d, want 0", requests)
+	}
+}
+
 func TestWorkflowValidateValidFile(t *testing.T) {
 	contents := "name: ci\n"
 	path := writeWorkflowFile(t, contents)
