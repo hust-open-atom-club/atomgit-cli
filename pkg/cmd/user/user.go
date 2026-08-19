@@ -135,6 +135,9 @@ func userProfileURL(user api.User) string {
 	return "https://atomgit.com/" + url.PathEscape(user.Login)
 }
 
+// userJSON is the stable, documented JSON schema emitted by `ag user view
+// --json`. Fields are always present so automation can distinguish a real
+// zero/empty value from a missing field.
 type userJSON struct {
 	ID           string   `json:"id"`
 	Login        string   `json:"login"`
@@ -142,16 +145,20 @@ type userJSON struct {
 	Email        string   `json:"email"`
 	URL          string   `json:"url"`
 	Type         string   `json:"type"`
-	Bio          string   `json:"bio,omitempty"`
-	Company      string   `json:"company,omitempty"`
-	Website      string   `json:"website,omitempty"`
-	Location     string   `json:"location,omitempty"`
-	Followers    int      `json:"followers,omitempty"`
-	Following    int      `json:"following,omitempty"`
-	TopLanguages []string `json:"topLanguages,omitempty"`
+	Bio          string   `json:"bio"`
+	Company      string   `json:"company"`
+	Website      string   `json:"website"`
+	Location     string   `json:"location"`
+	Followers    int      `json:"followers"`
+	Following    int      `json:"following"`
+	TopLanguages []string `json:"topLanguages"`
 }
 
 func newUserJSON(user api.User) userJSON {
+	topLanguages := user.TopLanguages
+	if topLanguages == nil {
+		topLanguages = []string{}
+	}
 	return userJSON{
 		ID:           user.ID,
 		Login:        user.Login,
@@ -165,6 +172,6 @@ func newUserJSON(user api.User) userJSON {
 		Location:     user.Location,
 		Followers:    user.Followers,
 		Following:    user.Following,
-		TopLanguages: user.TopLanguages,
+		TopLanguages: topLanguages,
 	}
 }

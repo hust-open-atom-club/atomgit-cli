@@ -158,19 +158,49 @@ func TestUserViewRejectsInvalidLoginBeforeRequest(t *testing.T) {
 
 func TestUserViewEscapesLoginPathSegment(t *testing.T) {
 	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-		// "?" is not rejected by validLogin? It is rejected above, so use a
-		// login with characters that need escaping but stay valid.
-		if req.URL.Path != "/api/v5/users/alice" {
-			t.Fatalf("path = %q", req.URL.Path)
+		// "alice%2Fadmin" must be escaped so the encoded slash cannot be
+		// decoded into a path separator by the server; assert on the escaped
+		// path and on the absence of a query string.
+		if got := req.URL.EscapedPath(); got != "/api/v5/users/alice%252Fadmin" {
+			t.Fatalf("escaped path = %q", got)
 		}
 		if req.URL.RawQuery != "" {
 			t.Fatalf("unexpected query %q", req.URL.RawQuery)
 		}
-		return userResponse(http.StatusOK, `{"login":"alice","html_url":"https://atomgit.com/alice"}`), nil
+		return userResponse(http.StatusOK, `{"login":"alice%2Fadmin","html_url":"https://atomgit.com/alice%2Fadmin"}`), nil
 	})
 	cmd := newCmdUserView(userFactory(userTestConfig{}, transport))
+	if err := cmd.RunE(cmd, []string{"alice%2Fadmin"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUserViewJSONStableFieldsOnZeroValues(t *testing.T) {
+	// A response with empty/zero optional fields must still emit every
+	// documented JSON field so automation can distinguish "0/empty" from
+	// "missing".
+	transport := userRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		return userResponse(http.StatusOK, `{"id":"1","login":"alice","name":"Alice","email":"alice@example.com","html_url":"https://atomgit.com/alice","type":"User"}`), nil
+	})
+	cmd := newCmdUserView(userFactory(userTestConfig{}, transport))
+	if err := cmd.Flags().Set("json", "true"); err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	cmd.SetOut(&output)
 	if err := cmd.RunE(cmd, []string{"alice"}); err != nil {
 		t.Fatal(err)
+	}
+	want := `{"id":"1","login":"alice","name":"Alice","email":"alice@example.com","url":"https://atomgit.com/alice","type":"User","bio":"","company":"","website":"","location":"","followers":0,"following":0,"topLanguages":[]}`
+	var gotValue, wantValue any
+	if err := json.Unmarshal(output.Bytes(), &gotValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal([]byte(want), &wantValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(gotValue, wantValue) {
+		t.Fatalf("output = %s, want = %s", output.String(), want)
 	}
 }
 

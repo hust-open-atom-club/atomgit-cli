@@ -215,6 +215,28 @@ ag user view alice --json
 ag user view alice --web
 ```
 
+`ag user view --json` 输出稳定的 JSON 对象，字段始终齐全（空字符串、零计数和空数组也会输出，便于自动化区分"值为零/空"与"字段缺失"）：
+
+```json
+{
+  "id": "686baf25160adc265d6cbdec",
+  "login": "mudongliang",
+  "name": "mudongliang",
+  "email": "dzm91@hust.edu.cn",
+  "url": "https://atomgit.com/mudongliang",
+  "type": "User",
+  "bio": "华中科技大学网络空间安全学院慕冬亮",
+  "company": "",
+  "website": "https://mudongliang.github.io/",
+  "location": "",
+  "followers": 2,
+  "following": 1,
+  "topLanguages": ["Go", "Shell", "PowerShell", "Markdown"]
+}
+```
+
+字段说明：`id`/`login`/`name`/`email`/`url`/`type` 为用户基本信息；`bio`/`company`/`website`/`location` 为个人资料文本；`followers`/`following` 为关注计数；`topLanguages` 为仓库语言列表（缺失时输出 `[]`）。
+
 ## Branch
 
 ```bash
