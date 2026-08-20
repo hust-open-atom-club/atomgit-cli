@@ -29,7 +29,7 @@ func CreateIssueWithAssignee(client *Client, owner, repo, title, body, assignee 
 	var issue Issue
 	err = client.doJSONRequest(http.MethodPost, path, bytes.NewReader(jsonBody),
 		"application/json", "application/json",
-		RequestPolicy{AllowedStatuses: []int{http.StatusCreated}, CanRetry: false},
+		RequestPolicy{AllowedStatuses: []int{http.StatusOK, http.StatusCreated}, CanRetry: false},
 		&issue)
 	if err != nil {
 		return nil, fmt.Errorf("create issue with assignee: %w", err)
