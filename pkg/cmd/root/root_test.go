@@ -627,3 +627,19 @@ func TestExpandAliasWithEscapedSpaceInExpansion(t *testing.T) {
 		t.Errorf("ExpandAlias() = %v, want %v", got, want)
 	}
 }
+
+// TestRootSilencesUsageOnAuthenticationError is a regression test for issue
+// #49: before SilenceUsage was set on the root command, an unauthenticated
+// invocation would print the full Cobra usage/help block before the
+// "not authenticated: run `ag auth login`" message, making the error hard to
+// spot. The root command now silences usage so only the actionable error
+// reaches the user.
+func TestRootSilencesUsageOnAuthenticationError(t *testing.T) {
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, io.Discard, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cmd.SilenceUsage {
+		t.Errorf("root command SilenceUsage = false, want true (issue #49)")
+	}
+}

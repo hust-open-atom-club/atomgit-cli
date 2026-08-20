@@ -47,6 +47,7 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 		Long:          `Work seamlessly with AtomGit from the command line.`,
 		Version:       version.Text(),
 		SilenceErrors: true,
+		SilenceUsage:  true,
 	}
 	cmd.SetVersionTemplate(`{{.Version}}`)
 	cmd.Flags().Bool("version", false, "Show version information")
