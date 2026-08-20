@@ -49,3 +49,31 @@ jobs:
 
       - name: Build
         run: go build ./cmd/ag
+
+  npm-test:
+    name: npm test
+    runs-on: [ubuntu-latest, x64, small]
+    steps:
+      - name: Check out PR code
+        if: ${{ atomgit.head_ref != '' }}
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check out pushed code
+        if: ${{ atomgit.head_ref == '' }}
+        uses: checkout
+
+      - name: Set up Node.js
+        uses: setup-node
+        with:
+          node-version: "20"
+
+      # Reproducible install from the lockfile; the tests run offline with
+      # fake npm/process injection and never touch a real registry.
+      - name: Install dependencies
+        run: npm ci --no-fund --no-audit
+
+      - name: Run npm tests
+        run: npm test
