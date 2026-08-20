@@ -168,3 +168,42 @@ type WorkflowDispatchPayload struct {
 	Ref    string            `json:"ref"`
 	Inputs map[string]string `json:"inputs,omitempty"`
 }
+
+type WorkflowValidationRequest struct {
+	Base64Content string `json:"base64_content"`
+}
+
+type WorkflowValidationResponse struct {
+	Valid       bool         `json:"valid"`
+	Diagnostics []Diagnostic `json:"diagnostics"`
+}
+
+type DiagnosticRangePoint struct {
+	Line   int `json:"line"`
+	Column int `json:"column"`
+}
+
+type DiagnosticRange struct {
+	Start DiagnosticRangePoint `json:"start"`
+	End   DiagnosticRangePoint `json:"end"`
+}
+
+type Diagnostic struct {
+	Range    DiagnosticRange `json:"range"`
+	Severity string          `json:"severity"`
+	Message  string          `json:"message"`
+}
+
+type StepLogRequest struct {
+	StepID string `json:"step_id"`
+	Offset int64  `json:"offset"`
+	Limit  int    `json:"limit"`
+	Sort   string `json:"sort"`
+}
+
+type StepLogResponse struct {
+	HasMore     bool   `json:"has_more"`
+	StartOffset int64  `json:"start_offset"`
+	EndOffset   int64  `json:"end_offset"`
+	Log         string `json:"log"`
+}

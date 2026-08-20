@@ -27,6 +27,14 @@ func singleLine(value string) string {
 	return strings.Join(strings.Fields(value), " ")
 }
 
+func formatStepLabel(step actions.Step) string {
+	name := singleLine(fallback(step.Name, step.Task, "unnamed"))
+	if id := singleLine(step.ID); id != "" {
+		return fmt.Sprintf("%s (%s)", name, id)
+	}
+	return name
+}
+
 func formatTimestamp(value actions.Timestamp) string {
 	timestamp := value.Time()
 	if timestamp.IsZero() {

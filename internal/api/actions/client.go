@@ -233,19 +233,50 @@ func (c *Client) ListWorkflows(owner, repo string, opts ListWorkflowsOptions) (W
 
 func (c *Client) CreateWorkflowDispatch(owner, repo, workflowID string, payload WorkflowDispatchPayload) error {
 	path := repositoryPath(owner, repo) + "/actions/workflows/" + url.PathEscape(workflowID) + "/dispatches"
+	return c.postJSON("create workflow dispatch", path, payload, nil)
+}
+
+func (c *Client) ValidateWorkflow(owner, repo string, request WorkflowValidationRequest) (WorkflowValidationResponse, error) {
+	var result WorkflowValidationResponse
+	path := repositoryPath(owner, repo) + "/actions/workflows/validate"
+	if err := c.postJSON("validate workflow", path, request, &result); err != nil {
+		return WorkflowValidationResponse{}, err
+	}
+	return result, nil
+}
+
+func (c *Client) GetStepLog(owner, repo, runID, jobID string, request StepLogRequest) (StepLogResponse, error) {
+	var result StepLogResponse
+	path := repositoryPath(owner, repo) + "/actions/runs/" + url.PathEscape(runID) + "/jobs/" + url.PathEscape(jobID) + "/logs"
+	if err := c.postJSON("get workflow run step log", path, request, &result); err != nil {
+		return StepLogResponse{}, err
+	}
+	return result, nil
+}
+
+func (c *Client) postJSON(operation, path string, payload, result interface{}) error {
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("create workflow dispatch: marshal payload: %w", err)
+		return fmt.Errorf("%s: marshal payload: %w", operation, err)
 	}
 
 	resp, err := c.client.DoRequestRawWithBody(http.MethodPost, path, bodyBytes, "application/json", "application/json")
 	if err != nil {
-		return fmt.Errorf("create workflow dispatch: %w", err)
+		return fmt.Errorf("%s: %w", operation, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusAccepted {
-		return responseError("create workflow dispatch", resp)
+		return responseError(operation, resp)
+	}
+	if result == nil || resp.StatusCode == http.StatusNoContent {
+		return nil
+	}
+	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+		if errors.Is(err, io.EOF) && resp.StatusCode != http.StatusOK {
+			return nil
+		}
+		return fmt.Errorf("%s: decode response: %w", operation, err)
 	}
 	return nil
 }
