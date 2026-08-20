@@ -25,6 +25,16 @@ func (rootTestConfig) GetToken() (string, error) { return "secret", nil }
 func (rootTestConfig) GetUser() (string, error)  { return "tester", nil }
 func (rootTestConfig) GetHost() string           { return "atomgit.com" }
 
+type unauthenticatedRootTestConfig struct{}
+
+func (unauthenticatedRootTestConfig) GetToken() (string, error) {
+	return "", config.ErrNotAuthenticated
+}
+func (unauthenticatedRootTestConfig) GetUser() (string, error) {
+	return "", config.ErrNotAuthenticated
+}
+func (unauthenticatedRootTestConfig) GetHost() string { return "atomgit.com" }
+
 type rootRoundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f rootRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
@@ -615,11 +625,31 @@ func TestExpandAliasWithEscapedSpaceInExpansion(t *testing.T) {
 // spot. The root command now silences usage so only the actionable error
 // reaches the user.
 func TestRootSilencesUsageOnAuthenticationError(t *testing.T) {
-	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, io.Discard, io.Discard)
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{
+		Config: unauthenticatedRootTestConfig{},
+	}, &stdout, &stderr)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !cmd.SilenceUsage {
-		t.Errorf("root command SilenceUsage = false, want true (issue #49)")
+	cmd.SetArgs([]string{"repo", "list"})
+
+	err = cmd.Execute()
+	if !errors.Is(err, config.ErrNotAuthenticated) {
+		t.Fatalf("Execute() error = %v, want %v", err, config.ErrNotAuthenticated)
+	}
+	if err.Error() != config.ErrNotAuthenticated.Error() {
+		t.Fatalf("Execute() error = %q, want %q", err, config.ErrNotAuthenticated)
+	}
+	if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdutil.FlushWriter(cmd.ErrOrStderr()); err != nil {
+		t.Fatal(err)
+	}
+
+	output := stdout.String() + stderr.String()
+	if strings.Contains(output, "Usage:") {
+		t.Fatalf("command output contains Usage block:\n%s", output)
 	}
 }
