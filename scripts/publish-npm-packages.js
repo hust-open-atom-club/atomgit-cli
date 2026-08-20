@@ -690,6 +690,20 @@ async function smokeTestPublishedPackage(plan, options) {
           `expected ${expectedVersion}`,
       );
     }
+    const expectedFields = ["buildDate", "commit", "version"];
+    const actualFields =
+      versionInfo && typeof versionInfo === "object" && !Array.isArray(versionInfo)
+        ? Object.keys(versionInfo).sort()
+        : [];
+    if (
+      actualFields.length !== expectedFields.length ||
+      actualFields.some((field, index) => field !== expectedFields[index])
+    ) {
+      throw new Error(
+        `installed ${packageSpec} reported version fields ${JSON.stringify(actualFields)}; ` +
+          `expected ${JSON.stringify(expectedFields)}`,
+      );
+    }
   } finally {
     await rm(installDir, { recursive: true, force: true });
   }

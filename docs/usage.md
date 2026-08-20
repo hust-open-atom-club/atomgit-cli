@@ -969,6 +969,8 @@ ag version --json
 
 通过 `go install ...@latest` 从模块代理安装时，模块版本仍然可用，但由于源码包不包含 Git 历史，文本输出会省略无法获得的 commit 和构建时间，JSON 输出则将对应字段保留为 `unknown`。
 
+文本输出包含版本号以及可用的 commit 和构建时间；JSON 输出固定包含 `version`、`commit` 和 `buildDate` 三个字段。
+
 ## 检查 CLI 更新
 
 ```bash

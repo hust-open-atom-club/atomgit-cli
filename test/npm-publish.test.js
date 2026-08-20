@@ -275,7 +275,13 @@ function registryRunner(plan, options = {}) {
       }
       return {
         status: 0,
-        stdout: JSON.stringify({ version: options.reportedVersion || `v${plan.version}` }),
+        stdout: JSON.stringify(
+          options.reportedVersionInfo || {
+            version: options.reportedVersion || `v${plan.version}`,
+            commit: "abc1234",
+            buildDate: "2026-08-20T00:00:00Z",
+          },
+        ),
         stderr: "",
       };
     }
@@ -638,6 +644,30 @@ test("rejects a published package whose installed CLI reports the wrong version"
       verifyAttempts: 1,
     }),
     /reported version "v9\.9\.9"; expected v1\.2\.3/,
+  );
+});
+
+test("rejects legacy source and selfUpdate fields from the installed npm CLI", async () => {
+  const plan = publicationPlan();
+  const registry = registryRunner(plan, {
+    existing: plan.packages.map(({ manifest }) => manifest.name),
+    reportedVersionInfo: {
+      version: "v1.2.3",
+      commit: "abc1234",
+      buildDate: "2026-08-20T00:00:00Z",
+      selfUpdate: false,
+      source: "npm",
+    },
+  });
+
+  await assert.rejects(
+    publishArtifacts(plan, {
+      mode: PUBLISH_MODE_DIRECT,
+      logger: () => {},
+      runNpm: registry.run,
+      verifyAttempts: 1,
+    }),
+    /reported version fields .*selfUpdate.*source.*expected \["buildDate","commit","version"\]/,
   );
 });
 

@@ -123,7 +123,7 @@ npm stage view <main-stage-id>
 npm stage approve <main-stage-id>
 ```
 
-主包审批完成后再次运行相同的 `npm run publish:npm` 命令。脚本会验证八个远端版本的 integrity/shasum，在隔离临时目录安装主包的精确版本，并通过 `npm exec --prefix` 调用 npm 生成的 `.bin/ag`（Windows 为 `ag.cmd`）执行 `ag version --json`；只有实际命令入口可执行且输出与本次 `vX.Y.Z` tag 一致时才报告发布完成。
+主包审批完成后再次运行相同的 `npm run publish:npm` 命令。脚本会验证八个远端版本的 integrity/shasum，在隔离临时目录安装主包的精确版本，并通过 `npm exec --prefix` 调用 npm 生成的 `.bin/ag`（Windows 为 `ag.cmd`）执行 `ag version --json`；只有实际命令入口可执行、输出与本次 `vX.Y.Z` tag 一致，且 JSON 只包含 `version`、`commit` 和 `buildDate` 时才报告发布完成。
 
 staged publishing 不能创建从未在 npm registry 发布过的新包。新增平台包的首个版本应在 npm 支持的 Trusted Publishing CI 中完成，不能通过降低包的 2FA 或 token 安全设置绕过限制。
 
@@ -153,7 +153,7 @@ Homebrew tap 位于 [hust-open-atom-club/homebrew-tap](https://github.com/hust-o
 - `stable` 从上游仓库的最新正式 AtomGit Release 源码归档构建，并固定版本、源码 hash 和 `vendorHash`。
 - `latest` 直接从当前 flake revision 的源码构建，因此始终对应检出仓库的最新 commit；工作流只维护其 `vendorHash`。
 
-两个 package 都由 Nix 管理；支持发行来源字段的版本会报告 `selfUpdate=false, source=nix`。`default` 和兼容名称 `ag` 都指向 `stable`。
+两个 package 都由 Nix 管理；共享构建参数暂时保留 `Source=nix` 注入，以便仍基于旧版源码的 `stable` 正确报告由 Nix 管理。源码移除发行来源字段后，该兼容参数不会改变版本输出。`default` 和兼容名称 `ag` 都指向 `stable`。
 
 `.gitcode/workflows/update-nix.yml` 每天在默认分支上运行，也支持手动触发。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；构建验证后在内容变化时直接提交到默认分支。工作流需要 `repository: write`，并在单次 `git push` 中使用自动生成的 `ATOMGIT_TOKEN`，不需要额外长期 token。
 
