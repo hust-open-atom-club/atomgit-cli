@@ -24,6 +24,8 @@ make release VERSION="v${VERSION}"
 
 仓库根目录的 `install.sh` 和 `install.ps1` 是不绑定具体版本的源码模板，使用 `__AG_RELEASE_TAG__` 占位符。发布构建只替换安装器中的绑定变量，生成的 Release 附件默认下载本次 tag；模板中的使用示例始终保持为 `latest` 和 `vX.Y.Z`，无需随版本手工修改。
 
+`install.ps1` 必须保持纯 ASCII，确保 Windows PowerShell 5.1 在无 `charset` 的 HTTP 响应以及使用系统 ANSI 代码页读取本地脚本时都能正确解析。发布制品校验会拒绝包含非 ASCII 字节的 PowerShell 安装器。
+
 npm 平台包复用对应操作系统和架构的普通 Release 归档。
 
 AtomGit Release 只上传七个普通平台归档、两个安装脚本和根 `checksums.txt`，共十个项目附件。AtomGit 还会自动展示四个源码归档，因此保留 LoongArch64 支持的 Release 页面通常共显示十四个 artifacts。Homebrew、Scoop 和 WinGet 复用普通平台归档，不再发布按 distribution 重复打包的专用附件。

@@ -310,6 +310,8 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 脚本默认安装到 `%USERPROFILE%\.local\bin`，并将该目录加入当前用户的 `Path`。
 
+`install.ps1` 保持纯 ASCII，以兼容 Windows PowerShell 5.1 在不同系统代码页下的脚本下载、保存和执行；安装过程中的提示信息使用英文。
+
 ### 手动安装
 
 从 [Release 页面](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)下载与操作系统和处理器架构匹配的文件：

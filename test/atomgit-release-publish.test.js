@@ -168,6 +168,29 @@ test("validates the release artifact set, checksums, archives, and installer tag
   await assert.rejects(inspectArtifacts(fixture.releaseDir, fixture.tag), /extra: extra.txt/);
 });
 
+test("keeps the source PowerShell installer ASCII-only for Windows PowerShell 5.1", async () => {
+  const installer = await readFile(path.join(__dirname, "..", "install.ps1"));
+  assert.equal(installer.findIndex((byte) => byte > 0x7f), -1);
+});
+
+test("rejects a release with non-ASCII PowerShell installer bytes", async (t) => {
+  const fixture = await createFixture(t);
+  const installerPath = path.join(fixture.releaseDir, "install.ps1");
+  await writeFile(installerPath, `$BundledTag = '${fixture.tag}'\nWrite-Host "installed 安装"\n`);
+
+  const checksumNames = [...ARCHIVES, "install.sh", "install.ps1"];
+  const lines = [];
+  for (const name of checksumNames) {
+    lines.push(`${digest(await readFile(path.join(fixture.releaseDir, name)))}  ${name}`);
+  }
+  await writeFile(path.join(fixture.releaseDir, "checksums.txt"), `${lines.join("\n")}\n`);
+
+  await assert.rejects(
+    inspectArtifacts(fixture.releaseDir, fixture.tag),
+    /install\.ps1 must contain only ASCII bytes/,
+  );
+});
+
 test("rejects legacy package-manager artifact directories", async (t) => {
   const fixture = await createFixture(t);
   await mkdir(path.join(fixture.releaseDir, "package-managers"));

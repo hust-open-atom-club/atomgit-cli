@@ -1,20 +1,22 @@
-# AtomGit CLI (ag) — Windows 一键安装
-# 仓库: https://atomgit.com/hust-open-atom-club/atomgit-cli
+# AtomGit CLI (ag) - Windows installer
+# Repository: https://atomgit.com/hust-open-atom-club/atomgit-cli
 #
-# 用法（在 PowerShell 中）:
+# Usage (PowerShell):
 #   irm https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1 | iex
 #   $env:AG_VERSION = "vX.Y.Z"; .\install.ps1
 #
-# 安装完成后执行 `ag auth login` 完成 OAuth 认证。
-# 令牌文件默认路径: %USERPROFILE%\.config\ag-cli\token.json
+# After installation, run `ag auth login` to authenticate with OAuth.
+# Default token file: %USERPROFILE%\.config\ag-cli\token.json
 #
-# 若提示执行策略，可先: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+# If execution policy blocks the script, run:
+#   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 #Requires -Version 5.1
 
 $ErrorActionPreference = "Stop"
 
-# Release 构建会将占位符替换为当前 tag；直接运行源码模板时需设置 AG_VERSION。
+# Release builds replace this placeholder with the current tag. Set AG_VERSION
+# when running the source template directly.
 $BundledTag = '__AG_RELEASE_TAG__'
 
 function Die([string]$Msg) {
@@ -31,7 +33,7 @@ elseif ($env:AG_DEFAULT_VERSION) { $env:AG_DEFAULT_VERSION }
 else { $BundledTag }
 
 if ($Version -eq '__AG_RELEASE_TAG__') {
-    Die '源码安装器模板尚未绑定发布版本；请设置 AG_VERSION=vX.Y.Z，或使用 AtomGit Release 中的 install.ps1'
+    Die 'The source installer is not bound to a release. Set AG_VERSION=vX.Y.Z or use install.ps1 from an AtomGit Release.'
 }
 
 function Get-GoArch {
@@ -63,7 +65,7 @@ try {
         Invoke-WebRequest -Uri $url -OutFile (Join-Path $tmp $asset) -UseBasicParsing
     }
     catch {
-        Die "无法下载预编译包（请确认已发布 $Version 且附件名为 $asset）。错误: $_"
+        Die "Failed to download the prebuilt archive. Verify that $Version is published with an asset named $asset. Error: $_"
     }
 
     $extract = Join-Path $tmp "extract"
@@ -72,7 +74,7 @@ try {
 
     $exe = Join-Path $extract "ag.exe"
     if (-not (Test-Path -LiteralPath $exe)) {
-        Die "压缩包内未找到 ag.exe"
+        Die "ag.exe was not found in the archive"
     }
 
     $dest = Get-InstallDir
@@ -89,12 +91,12 @@ try {
         $newPath = if ($userPath) { "$userPath;$dest" } else { $dest }
         [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
         $env:Path += ";$dest"
-        Write-Host "已将目录加入当前用户 PATH: $dest"
-        Write-Host "若本窗口仍找不到 ag，请重新打开终端。"
+        Write-Host "Added directory to the current user PATH: $dest"
+        Write-Host "Reopen the terminal if ag is not available in this window."
     }
 
     & $target --help | Out-Null
-    Write-Host "ag 已安装: $target"
+    Write-Host "ag installed: $target"
 }
 finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue

@@ -121,7 +121,12 @@ async function inspectArtifacts(directory, tag) {
     artifacts.push({ name, filePath, sha256: digest });
   }
   const shellInstaller = await readFile(path.join(directory, "install.sh"), "utf8");
-  const powershellInstaller = await readFile(path.join(directory, "install.ps1"), "utf8");
+  const powershellInstallerContents = await readFile(path.join(directory, "install.ps1"));
+  const nonASCIIIndex = powershellInstallerContents.findIndex((byte) => byte > 0x7f);
+  if (nonASCIIIndex !== -1) {
+    throw new Error(`install.ps1 must contain only ASCII bytes; found a non-ASCII byte at offset ${nonASCIIIndex}`);
+  }
+  const powershellInstaller = powershellInstallerContents.toString("ascii");
   if (!shellInstaller.includes(`_BUNDLED_TAG="${tag}"`)) throw new Error(`install.sh is not bound to ${tag}`);
   if (!powershellInstaller.includes(`$BundledTag = '${tag}'`)) throw new Error(`install.ps1 is not bound to ${tag}`);
 
