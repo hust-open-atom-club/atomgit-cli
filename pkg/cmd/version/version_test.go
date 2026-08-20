@@ -3,67 +3,37 @@ package version
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"testing"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 )
 
-func setVersionMetadata(t *testing.T, source string) {
+func setVersionMetadata(t *testing.T) {
 	t.Helper()
 	oldV, oldC, oldB := version.Version, version.Commit, version.BuildDate
-	oldSource := version.Source
 	version.Version = "v1.2.3"
 	version.Commit = "abc1234"
 	version.BuildDate = "2026-07-24T00:00:00Z"
-	version.Source = source
 	t.Cleanup(func() {
 		version.Version = oldV
 		version.Commit = oldC
 		version.BuildDate = oldB
-		version.Source = oldSource
 	})
 }
 
-func TestNewCmdVersion_TextProfileAndInvalidMatrix(t *testing.T) {
-	tests := []struct {
-		name           string
-		source         string
-		wantSelfUpdate bool
-		wantSource     string
-	}{
-		{name: "source", source: "source", wantSelfUpdate: true, wantSource: "source"},
-		{name: "release", source: "release", wantSelfUpdate: true, wantSource: "release"},
-		{name: "development", source: "development", wantSelfUpdate: true, wantSource: "development"},
-		{name: "npm", source: "npm", wantSource: "npm"},
-		{name: "homebrew", source: "homebrew", wantSource: "homebrew"},
-		{name: "winget", source: "winget", wantSource: "winget"},
-		{name: "scoop", source: "scoop", wantSource: "scoop"},
-		{name: "nix", source: "nix", wantSource: "nix"},
-		{name: "extension source", source: "corp-repo", wantSource: "corp-repo"},
-		{name: "invalid source", source: "unknown", wantSource: "unknown"},
+func TestNewCmdVersion_Text(t *testing.T) {
+	setVersionMetadata(t)
+
+	var buf bytes.Buffer
+	cmd := NewCmdVersion()
+	cmd.SetOut(&buf)
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			setVersionMetadata(t, tt.source)
-
-			var buf bytes.Buffer
-			cmd := NewCmdVersion()
-			cmd.SetOut(&buf)
-			if err := cmd.Execute(); err != nil {
-				t.Fatalf("Execute() error = %v", err)
-			}
-			want := fmt.Sprintf(
-				"ag version v1.2.3 (commit: abc1234, built: 2026-07-24T00:00:00Z, self-update: %t, source: %s)\n",
-				tt.wantSelfUpdate,
-				tt.wantSource,
-			)
-			if got := buf.String(); got != want {
-				t.Errorf("output = %q, want %q", got, want)
-			}
-		})
+	want := "ag version v1.2.3 (commit: abc1234, built: 2026-07-24T00:00:00Z)\n"
+	if got := buf.String(); got != want {
+		t.Errorf("output = %q, want %q", got, want)
 	}
 }
 
@@ -77,33 +47,29 @@ func TestFormatTextOmitsUnknownMetadata(t *testing.T) {
 			name: "all metadata",
 			info: version.Info{
 				Version: "v1.0.0", Commit: "abc1234", BuildDate: "2026-07-15T00:00:00Z",
-				SelfUpdate: true, Source: "release",
 			},
-			want: "ag version v1.0.0 (commit: abc1234, built: 2026-07-15T00:00:00Z, self-update: true, source: release)\n",
+			want: "ag version v1.0.0 (commit: abc1234, built: 2026-07-15T00:00:00Z)\n",
 		},
 		{
 			name: "commit only",
 			info: version.Info{
 				Version: "v1.0.0", Commit: "abc1234", BuildDate: "unknown",
-				Source: "npm",
 			},
-			want: "ag version v1.0.0 (commit: abc1234, self-update: false, source: npm)\n",
+			want: "ag version v1.0.0 (commit: abc1234)\n",
 		},
 		{
 			name: "build date only",
 			info: version.Info{
 				Version: "v1.0.0", Commit: "unknown", BuildDate: "2026-07-15T00:00:00Z",
-				SelfUpdate: true, Source: "source",
 			},
-			want: "ag version v1.0.0 (built: 2026-07-15T00:00:00Z, self-update: true, source: source)\n",
+			want: "ag version v1.0.0 (built: 2026-07-15T00:00:00Z)\n",
 		},
 		{
 			name: "no optional metadata",
 			info: version.Info{
 				Version: "v1.0.0", Commit: " UNKNOWN ", BuildDate: "",
-				Source: "unknown",
 			},
-			want: "ag version v1.0.0 (self-update: false, source: unknown)\n",
+			want: "ag version v1.0.0\n",
 		},
 	}
 
@@ -117,62 +83,41 @@ func TestFormatTextOmitsUnknownMetadata(t *testing.T) {
 }
 
 func TestText_MatchesVersionCLIContract(t *testing.T) {
-	setVersionMetadata(t, "release")
+	setVersionMetadata(t)
 
-	want := "ag version v1.2.3 (commit: abc1234, built: 2026-07-24T00:00:00Z, self-update: true, source: release)\n"
+	want := "ag version v1.2.3 (commit: abc1234, built: 2026-07-24T00:00:00Z)\n"
 	if got := Text(); got != want {
 		t.Errorf("Text() = %q, want %q", got, want)
 	}
 }
 
-func TestNewCmdVersion_JSONPreservesFieldsAndAddsPolicy(t *testing.T) {
-	tests := []struct {
-		name           string
-		source         string
-		wantSelfUpdate bool
-		wantSource     string
-	}{
-		{name: "source", source: "source", wantSelfUpdate: true, wantSource: "source"},
-		{name: "release", source: "release", wantSelfUpdate: true, wantSource: "release"},
-		{name: "development", source: "development", wantSelfUpdate: true, wantSource: "development"},
-		{name: "npm", source: "npm", wantSource: "npm"},
-		{name: "homebrew", source: "homebrew", wantSource: "homebrew"},
-		{name: "winget", source: "winget", wantSource: "winget"},
-		{name: "scoop", source: "scoop", wantSource: "scoop"},
-		{name: "nix", source: "nix", wantSource: "nix"},
-		{name: "extension source", source: "corp-repo", wantSource: "corp-repo"},
-		{name: "invalid source", source: "unknown", wantSource: "unknown"},
+func TestNewCmdVersion_JSONPreservesFixedFields(t *testing.T) {
+	setVersionMetadata(t)
+
+	var buf bytes.Buffer
+	cmd := NewCmdVersion()
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{"--json"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			setVersionMetadata(t, tt.source)
-
-			var buf bytes.Buffer
-			cmd := NewCmdVersion()
-			cmd.SetOut(&buf)
-			cmd.SetArgs([]string{"--json"})
-			if err := cmd.Execute(); err != nil {
-				t.Fatalf("Execute() error = %v", err)
-			}
-
-			var fields map[string]json.RawMessage
-			if err := json.Unmarshal(buf.Bytes(), &fields); err != nil {
-				t.Fatalf("invalid JSON: %v\noutput: %s", err, buf.String())
-			}
-			wantFields := map[string]string{
-				"version":    `"v1.2.3"`,
-				"commit":     `"abc1234"`,
-				"buildDate":  `"2026-07-24T00:00:00Z"`,
-				"selfUpdate": map[bool]string{true: "true", false: "false"}[tt.wantSelfUpdate],
-				"source":     `"` + tt.wantSource + `"`,
-			}
-			for name, want := range wantFields {
-				if got, ok := fields[name]; !ok || string(got) != want {
-					t.Errorf("field %q = %s, want %s", name, got, want)
-				}
-			}
-		})
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(buf.Bytes(), &fields); err != nil {
+		t.Fatalf("invalid JSON: %v\noutput: %s", err, buf.String())
+	}
+	wantFields := map[string]string{
+		"version":   `"v1.2.3"`,
+		"commit":    `"abc1234"`,
+		"buildDate": `"2026-07-24T00:00:00Z"`,
+	}
+	if len(fields) != len(wantFields) {
+		t.Fatalf("fields = %v, want only version, commit and buildDate", fields)
+	}
+	for name, want := range wantFields {
+		if got, ok := fields[name]; !ok || string(got) != want {
+			t.Errorf("field %q = %s, want %s", name, got, want)
+		}
 	}
 }
 

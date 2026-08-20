@@ -1,7 +1,6 @@
 package version
 
 import (
-	"regexp"
 	"runtime/debug"
 	"strings"
 )
@@ -11,86 +10,26 @@ var (
 	Version   = "dev"
 	Commit    = "unknown"
 	BuildDate = "unknown"
-	Source    = "source"
 )
 
 // ReadBuildInfo is a package-level variable for test injection.
 var ReadBuildInfo = debug.ReadBuildInfo
 
-type DistributionSource string
-
-const (
-	SourceSource      DistributionSource = "source"
-	SourceRelease     DistributionSource = "release"
-	SourceDevelopment DistributionSource = "development"
-	SourceNPM         DistributionSource = "npm"
-	SourceHomebrew    DistributionSource = "homebrew"
-	SourceWinget      DistributionSource = "winget"
-	SourceScoop       DistributionSource = "scoop"
-	SourceNix         DistributionSource = "nix"
-	SourceUnknown     DistributionSource = "unknown"
-)
-
-type PolicyState string
-
-const (
-	PolicyEnabled  PolicyState = "enabled"
-	PolicyDisabled PolicyState = "disabled"
-	PolicyInvalid  PolicyState = "invalid"
-)
-
-type BuildPolicy struct {
-	State      PolicyState
-	Source     DistributionSource
-	SelfUpdate bool
-}
-
 // Info holds the embedded version metadata exposed to callers.
 type Info struct {
-	Version    string `json:"version"`
-	Commit     string `json:"commit"`
-	BuildDate  string `json:"buildDate"`
-	SelfUpdate bool   `json:"selfUpdate"`
-	Source     string `json:"source"`
-}
-
-var distributionSourcePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,63}$`)
-
-func Policy() BuildPolicy {
-	source := DistributionSource(Source)
-	if source == SourceUnknown ||
-		!distributionSourcePattern.MatchString(string(source)) {
-		return BuildPolicy{
-			State:  PolicyInvalid,
-			Source: SourceUnknown,
-		}
-	}
-	switch source {
-	case SourceSource, SourceRelease, SourceDevelopment:
-		return BuildPolicy{
-			State:      PolicyEnabled,
-			Source:     source,
-			SelfUpdate: true,
-		}
-	default:
-		return BuildPolicy{
-			State:  PolicyDisabled,
-			Source: source,
-		}
-	}
+	Version   string `json:"version"`
+	Commit    string `json:"commit"`
+	BuildDate string `json:"buildDate"`
 }
 
 // Get returns build information. When linker values were injected (Version !=
 // "dev") they are used exclusively. Otherwise it falls back to Go build
 // information for optional enrichment of otherwise-default fields.
 func Get() Info {
-	policy := Policy()
 	info := Info{
-		Version:    Version,
-		Commit:     Commit,
-		BuildDate:  BuildDate,
-		SelfUpdate: policy.SelfUpdate,
-		Source:     string(policy.Source),
+		Version:   Version,
+		Commit:    Commit,
+		BuildDate: BuildDate,
 	}
 
 	// Linker-injected release values take absolute precedence.
