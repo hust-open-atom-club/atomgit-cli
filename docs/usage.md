@@ -222,6 +222,12 @@ ag user view alice --json
 
 # 在浏览器中打开资料页
 ag user view alice --web
+
+# 列出当前认证账号的邮件地址（会输出隐私信息）
+ag user emails
+
+# 输出稳定的 JSON 数组
+ag user emails --json
 ```
 
 `ag user view --json` 输出稳定的 JSON 对象，字段始终齐全（空字符串、零计数和空数组也会输出，便于自动化区分"值为零/空"与"字段缺失"）：
@@ -245,6 +251,8 @@ ag user view alice --web
 ```
 
 字段说明：`id`/`login`/`name`/`email`/`url`/`type` 为用户基本信息；`bio`/`company`/`website`/`location` 为个人资料文本；`followers`/`following` 为关注计数；`topLanguages` 为仓库语言列表（缺失时输出 `[]`）。
+
+`ag user emails` 需要认证，并且只会在明确调用时将当前账号的邮件地址输出到标准输出。文本模式显示邮件地址和状态；`--json` 输出固定 `email`、`state` 字段的数组。没有邮件地址时，文本模式输出 `No email addresses found.`，JSON 模式输出 `[]`。
 
 ## Branch
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"text/tabwriter"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -17,6 +18,54 @@ func NewCmdUser(f *cmdutil.Factory) *cobra.Command {
 		Long:  "View the authenticated user's profile or a public profile.",
 	}
 	cmd.AddCommand(newCmdUserView(f))
+	cmd.AddCommand(newCmdUserEmails(f))
+	return cmd
+}
+
+func newCmdUserEmails(f *cmdutil.Factory) *cobra.Command {
+	var jsonOutput bool
+	cmd := &cobra.Command{
+		Use:   "emails",
+		Short: "List email addresses for the authenticated user",
+		Example: `  ag user emails
+  ag user emails --json`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
+
+			var emails []api.EmailAddress
+			if err := client.Get("/emails", &emails); err != nil {
+				return fmt.Errorf("list authenticated user emails: %w", err)
+			}
+			if emails == nil {
+				emails = []api.EmailAddress{}
+			}
+
+			out := cmd.OutOrStdout()
+			if jsonOutput {
+				return cmdutil.WriteJSON(out, emails)
+			}
+			if len(emails) == 0 {
+				fmt.Fprintln(out, "No email addresses found.")
+				return nil
+			}
+
+			w := tabwriter.NewWriter(out, 0, 4, 2, ' ', 0)
+			fmt.Fprintln(w, "EMAIL\tSTATE")
+			for _, email := range emails {
+				fmt.Fprintf(w, "%s\t%s\n", cmdutil.EscapeTSVField(email.Email), cmdutil.EscapeTSVField(email.State))
+			}
+			return w.Flush()
+		},
+	}
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output email addresses as JSON")
 	return cmd
 }
 
