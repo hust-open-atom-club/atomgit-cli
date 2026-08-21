@@ -73,7 +73,12 @@ nix profile install nixpkgs#atomgit-cli
 
 ### Aur / Archlinux
 
+目前atomgit 已经上传到aur 中，用户可以用yay/paru自行选择从二进制还是源码安装
+
 ```bash
+# 从源码安装
+yay -S atomgit-cli
+# 二进制安装
 yay -S atomgit-cli-bin
 ```
 
