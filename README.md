@@ -71,6 +71,12 @@ scoop install atomgit-cli
 nix profile install nixpkgs#atomgit-cli
 ```
 
+### Aur / Archlinux
+
+```bash
+yay -S atomgit-cli-bin
+```
+
 ### Go
 
 ```bash
