@@ -351,6 +351,131 @@ func TestRunViewMergesMissingJobsFromRunStages(t *testing.T) {
 	}
 }
 
+func TestRunViewPaginatesJobsAndDeduplicatesResults(t *testing.T) {
+	pageOne := make([]actions.Job, 100)
+	for i := range pageOne {
+		pageOne[i] = actions.Job{ID: fmt.Sprintf("job-%d", i), Name: fmt.Sprintf("build-%d", i), Status: "COMPLETED"}
+	}
+	pageTwo := []actions.Job{
+		{ID: "job-99", Name: "build-99-duplicate", Status: "COMPLETED"},
+		{ID: "job-100", Name: "build-100", Status: "COMPLETED"},
+	}
+	requests := []string{}
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		requests = append(requests, req.URL.RequestURI())
+		switch req.URL.Path {
+		case "/api/v8/repos/team/demo/actions/runs/run-1":
+			return runResponse(req, http.StatusOK, `{"workflow_run_id":"run-1","status":"COMPLETED","stages":[]}`), nil
+		case "/api/v8/repos/team/demo/actions/runs/run-1/jobs":
+			page, _ := strconv.Atoi(req.URL.Query().Get("page"))
+			if req.URL.Query().Get("per_page") != "100" {
+				t.Fatalf("jobs query = %q", req.URL.RawQuery)
+			}
+			jobs := pageOne
+			if page == 2 {
+				jobs = pageTwo
+			}
+			body, err := json.Marshal(actions.JobListResponse{TotalCount: 101, Jobs: jobs})
+			if err != nil {
+				t.Fatal(err)
+			}
+			return runResponse(req, http.StatusOK, string(body)), nil
+		case "/api/v8/repos/team/demo/actions/runs/run-1/artifacts":
+			return runResponse(req, http.StatusOK, `{"total_count":0,"artifacts":[]}`), nil
+		default:
+			t.Fatalf("unexpected path %s", req.URL.Path)
+			return nil, nil
+		}
+	})
+	cmd := newCmdRunView(runFactory(runTestConfig{token: "secret"}, transport))
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	if err := runView(cmd, runFactory(runTestConfig{token: "secret"}, transport), viewOptions{}, "team/demo", "run-1"); err != nil {
+		t.Fatal(err)
+	}
+	if len(requests) != 4 {
+		t.Fatalf("requests = %v", requests)
+	}
+	if strings.Count(out.String(), "(job-99)") != 1 || strings.Count(out.String(), "(job-100)") != 1 {
+		t.Fatalf("duplicate or missing jobs in output: job-99=%d job-100=%d", strings.Count(out.String(), "(job-99)"), strings.Count(out.String(), "(job-100)"))
+	}
+	if strings.Contains(out.String(), "build-99-duplicate") {
+		t.Fatalf("later duplicate replaced the first job: %s", out.String())
+	}
+}
+
+func TestRunViewStopsOnRepeatedJobsPage(t *testing.T) {
+	page := make([]actions.Job, 100)
+	for i := range page {
+		page[i] = actions.Job{ID: fmt.Sprintf("job-%d", i), Name: fmt.Sprintf("build-%d", i), Status: "COMPLETED"}
+	}
+	requests := 0
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		switch req.URL.Path {
+		case "/api/v8/repos/team/demo/actions/runs/run-1":
+			return runResponse(req, http.StatusOK, `{"workflow_run_id":"run-1","status":"RUNNING","stages":[]}`), nil
+		case "/api/v8/repos/team/demo/actions/runs/run-1/jobs":
+			requests++
+			body, err := json.Marshal(actions.JobListResponse{TotalCount: 300, Jobs: page})
+			if err != nil {
+				t.Fatal(err)
+			}
+			return runResponse(req, http.StatusOK, string(body)), nil
+		case "/api/v8/repos/team/demo/actions/runs/run-1/artifacts":
+			return runResponse(req, http.StatusOK, `{"total_count":0,"artifacts":[]}`), nil
+		default:
+			t.Fatalf("unexpected path %s", req.URL.Path)
+			return nil, nil
+		}
+	})
+	factory := runFactory(runTestConfig{token: "secret"}, transport)
+	cmd := newCmdRunView(factory)
+	cmd.SetOut(io.Discard)
+	if err := runView(cmd, factory, viewOptions{}, "team/demo", "run-1"); err != nil {
+		t.Fatal(err)
+	}
+	if requests != 2 {
+		t.Fatalf("jobs requests = %d, want 2", requests)
+	}
+}
+
+func TestRunViewStopsWhenJobsPageFails(t *testing.T) {
+	page := make([]actions.Job, 100)
+	for i := range page {
+		page[i] = actions.Job{ID: fmt.Sprintf("job-%d", i), Name: fmt.Sprintf("build-%d", i), Status: "COMPLETED"}
+	}
+	requests := 0
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		switch req.URL.Path {
+		case "/api/v8/repos/team/demo/actions/runs/run-1":
+			return runResponse(req, http.StatusOK, `{"workflow_run_id":"run-1","status":"FAILED","stages":[]}`), nil
+		case "/api/v8/repos/team/demo/actions/runs/run-1/jobs":
+			requests++
+			if requests == 1 {
+				body, err := json.Marshal(actions.JobListResponse{TotalCount: 101, Jobs: page})
+				if err != nil {
+					t.Fatal(err)
+				}
+				return runResponse(req, http.StatusOK, string(body)), nil
+			}
+			return runResponse(req, http.StatusInternalServerError, `{"message":"jobs backend failed"}`), nil
+		default:
+			t.Fatalf("unexpected path %s", req.URL.Path)
+			return nil, nil
+		}
+	})
+	factory := runFactory(runTestConfig{token: "secret"}, transport)
+	cmd := newCmdRunView(factory)
+	cmd.SetOut(io.Discard)
+	err := runView(cmd, factory, viewOptions{}, "team/demo", "run-1")
+	if err == nil || !strings.Contains(err.Error(), "jobs backend failed") {
+		t.Fatalf("error = %v, want jobs API error", err)
+	}
+	if requests != 2 {
+		t.Fatalf("jobs requests = %d, want 2", requests)
+	}
+}
+
 func TestListRunArtifactsPaginates(t *testing.T) {
 	requests := 0
 	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
