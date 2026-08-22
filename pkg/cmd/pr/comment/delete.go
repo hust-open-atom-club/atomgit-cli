@@ -41,18 +41,20 @@ func newCmdDelete(f *cmdutil.Factory) *cobra.Command {
 				return cmdutil.AuthenticationError(err)
 			}
 
-			client := api.NewClient(token)
-			currentUser, _ := f.Config.GetUser()
-
-			// Verify PR exists (number is validated but not used directly)
-			_ = number
-
-			// Get the comment first to check ownership
-			var comment api.Comment
-			path := fmt.Sprintf("/repos/%s/%s/pulls/comments/%d", owner, repo, commentID)
-			if err := client.Get(path, &comment); err != nil {
-				return fmt.Errorf("failed to get comment: %w", err)
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
 			}
+			currentUser, err := f.Config.GetUser()
+			if err != nil {
+				return fmt.Errorf("failed to get current user: %w", err)
+			}
+
+			comment, err := api.GetPullRequestCommentForParent(client, owner, repo, number, commentID)
+			if err != nil {
+				return fmt.Errorf("failed to verify comment parent: %w", err)
+			}
+			path := fmt.Sprintf("/repos/%s/%s/pulls/comments/%d", owner, repo, commentID)
 
 			// Check if current user owns this comment
 			if comment.User.Login != currentUser {
