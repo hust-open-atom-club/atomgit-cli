@@ -12,9 +12,9 @@
 | Linux | amd64、arm64 / aarch64、loong64 / loongarch64 |
 | Windows | amd64、arm64 |
 
-### 为什么不能用 apt / dnf / zypper / pacman（AUR）等发行版包管理器安装？
+### 为什么不能用 apt / dnf / zypper 等发行版包管理器安装？
 
-项目目前没有发布官方维护的 Debian/Ubuntu（apt）、Fedora（dnf）、openSUSE（zypper）、Arch Linux（AUR）、Alpine（apk）等发行版专用包。截至本文档撰写时，AUR、Debian/Ubuntu 和 Fedora 的官方仓库中均检索不到 `atomgit-cli` 包。
+项目目前没有发布官方维护的 Debian/Ubuntu（apt）、Fedora（dnf）、openSUSE（zypper）、Alpine（apk）等发行版专用包。截至本文档撰写时Debian/Ubuntu 和 Fedora 的官方仓库中均检索不到 `atomgit-cli` 包。
 
 官方安装渠道包括：
 
@@ -23,6 +23,7 @@
 - WinGet：`winget install HUSTOpenAtomClub.AtomGitCLI`（仅 Windows）
 - Scoop：`scoop bucket add hust-open-atom-club https://github.com/hust-open-atom-club/ScoopBucket && scoop install atomgit-cli`（仅 Windows）
 - Nix / NixOS：`nix profile install nixpkgs#atomgit-cli`（`nixos-unstable` 已收录）
+- Aur / Archlinux: `yay -S atomgit-cli`(`aur`已收录)
 - Go：`go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest`（需 Go 1.24.2 或更高版本）
 - AtomGit Release：使用 `install.sh` / `install.ps1` 自动安装，或从 [Release 页面](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)手动下载对应平台的归档
 
@@ -37,6 +38,7 @@
 - **Homebrew**：macOS 或 Linux 上通过项目维护的 tap 安装，由 Homebrew 管理升级。
 - **WinGet / Scoop**：Windows 用户可直接使用系统包管理器安装与升级。
 - **Nix / NixOS**：NixOS 用户或已使用 Nix 的系统，包已进入 `nixos-unstable`。
+- **Archlinux**: Archlinux 用户或使用aur的系统，包已经提交到 `aur`。
 - **`go install`**：适合 Go 开发者；从模块代理构建，`ag version` 中 commit 和构建时间可能为 `unknown`。
 - **AtomGit Release**：通过 `install.sh` / `install.ps1` 自动安装或手动下载归档，不依赖 Node.js、包管理器或 Go 工具链。
 
@@ -79,6 +81,7 @@ Go 模块代理提供的源码包不包含 `.git` 目录，因此通过 `go inst
 - WinGet：`winget upgrade HUSTOpenAtomClub.AtomGitCLI`
 - Scoop：`scoop update atomgit-cli`
 - Nix：`nix profile upgrade`（升级 profile 中使用未锁定 flake 引用安装的全部包）；NixOS 系统级安装则通过 `nixos-rebuild switch` 跟随系统升级
+- aur:`yay -S atomgit-cli`(注意：更推荐使用` yay -Syu`进行滚动更新，由于滚动发行版的特性，部分更新可能会有兼容问题)
 
 也可以先运行 `ag check-update` 查看是否有新版本，再使用对应的安装方式升级。
 
