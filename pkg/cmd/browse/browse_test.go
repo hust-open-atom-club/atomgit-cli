@@ -24,12 +24,16 @@ type browseRoundTripFunc func(*http.Request) (*http.Response, error)
 func (f browseRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
 
 func mockRepoHTTPClient(defaultBranch string) func() (*http.Client, error) {
+	return mockRepoHTTPClientWithResponse(http.StatusOK, `{"default_branch": "`+defaultBranch+`"}`)
+}
+
+func mockRepoHTTPClientWithResponse(status int, body string) func() (*http.Client, error) {
 	return func() (*http.Client, error) {
 		return &http.Client{Transport: browseRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 			if req.URL.Path == "/api/v5/repos/alice/demo" {
 				return &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       io.NopCloser(strings.NewReader(`{"default_branch": "` + defaultBranch + `"}`)),
+					StatusCode: status,
+					Body:       io.NopCloser(strings.NewReader(body)),
 					Header:     make(http.Header),
 				}, nil
 			}
@@ -232,6 +236,129 @@ func TestBrowseNonMainDefaultBranch(t *testing.T) {
 	}
 	if capturedURL != "https://atomgit.com/alice/demo/blob/develop/README.md" {
 		t.Fatalf("URL = %q, want https://atomgit.com/alice/demo/blob/develop/README.md", capturedURL)
+	}
+}
+
+func TestBrowseDefaultBranchFailureReturnsErrorWithoutOpeningBrowser(t *testing.T) {
+	for _, status := range []int{
+		http.StatusUnauthorized,
+		http.StatusForbidden,
+		http.StatusNotFound,
+		http.StatusBadGateway,
+	} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			opened := false
+			f := &cmdutil.Factory{
+				Config:     browseTestConfig{},
+				HttpClient: mockRepoHTTPClientWithResponse(status, "unavailable"),
+				BrowserOpener: func(rawURL string) error {
+					opened = true
+					return nil
+				},
+			}
+			cmd := NewCmdBrowse(f)
+			cmd.SetArgs([]string{"-R", "alice/demo", "README.md", "--no-browser"})
+
+			err := cmd.Execute()
+			if err == nil || !strings.Contains(err.Error(), "failed to resolve default branch for alice/demo") {
+				t.Fatalf("error = %v, want contextual default branch error", err)
+			}
+			if opened {
+				t.Fatal("browser opened after default branch resolution failed")
+			}
+		})
+	}
+}
+
+func TestBrowseEmptyDefaultBranchReturnsError(t *testing.T) {
+	opened := false
+	f := &cmdutil.Factory{
+		Config:     browseTestConfig{},
+		HttpClient: mockRepoHTTPClient(""),
+		BrowserOpener: func(rawURL string) error {
+			opened = true
+			return nil
+		},
+	}
+	cmd := NewCmdBrowse(f)
+	cmd.SetArgs([]string{"-R", "alice/demo", "README.md"})
+
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "empty default branch for alice/demo") {
+		t.Fatalf("error = %v, want empty default branch error", err)
+	}
+	if opened {
+		t.Fatal("browser opened after empty default branch")
+	}
+}
+
+func TestBrowseDefaultBranchNetworkFailureReturnsError(t *testing.T) {
+	opened := false
+	f := &cmdutil.Factory{
+		Config: browseTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: browseRoundTripFunc(func(*http.Request) (*http.Response, error) {
+				return nil, errors.New("network unavailable")
+			})}, nil
+		},
+		BrowserOpener: func(rawURL string) error {
+			opened = true
+			return nil
+		},
+	}
+	cmd := NewCmdBrowse(f)
+	cmd.SetArgs([]string{"-R", "alice/demo", "README.md"})
+
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "failed to resolve default branch for alice/demo") {
+		t.Fatalf("error = %v, want contextual network error", err)
+	}
+	if opened {
+		t.Fatal("browser opened after network failure")
+	}
+}
+
+func TestBrowseExplicitRefSkipsDefaultBranchRequest(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{
+			name: "branch",
+			args: []string{"-R", "alice/demo", "README.md", "--branch", "release"},
+			want: "https://atomgit.com/alice/demo/blob/release/README.md",
+		},
+		{
+			name: "commit",
+			args: []string{"-R", "alice/demo", "README.md", "--commit", "abc1234"},
+			want: "https://atomgit.com/alice/demo/blob/abc1234/README.md",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var capturedURL string
+			f := &cmdutil.Factory{
+				Config: browseTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return nil, errors.New("default branch request should be skipped")
+				},
+				BrowserOpener: func(rawURL string) error {
+					capturedURL = rawURL
+					return nil
+				},
+			}
+			cmd := NewCmdBrowse(f)
+			cmd.SetArgs(tt.args)
+
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if capturedURL != tt.want {
+				t.Fatalf("URL = %q, want %q", capturedURL, tt.want)
+			}
+		})
 	}
 }
 
