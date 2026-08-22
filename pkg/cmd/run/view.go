@@ -23,19 +23,25 @@ type viewOptions struct {
 func newCmdRunView(f *cmdutil.Factory) *cobra.Command {
 	opts := viewOptions{}
 	cmd := &cobra.Command{
-		Use:   "view <owner>/<repo> <run-id>",
+		Use:   "view [<owner>/<repo>] <run-id>",
 		Short: "View a workflow run, jobs, logs, and artifacts",
 		Example: `  ag run view owner/repo 12345
+  ag run view 12345
   ag run view owner/repo 12345 --job job-id
   ag run view owner/repo 12345 --job job-id --log
   ag run view owner/repo 12345 --job job-id --log-file job-logs.zip
   ag run view owner/repo 12345 --artifact artifact-id
   ag run view owner/repo 12345 --artifact artifact-id --artifact-file build.zip --overwrite`,
-		Args: cobra.ExactArgs(2),
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runView(cmd, f, opts, args[0], args[1])
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			return runView(cmd, f, opts, repository.String(), remaining[0])
 		},
 	}
+	cmdutil.AddRepositoryContextHelp(cmd)
 
 	cmd.Flags().StringVarP(&opts.JobID, "job", "j", "", "View a specific job")
 	cmd.Flags().BoolVar(&opts.Log, "log", false, "Write the selected job log text to stdout")
