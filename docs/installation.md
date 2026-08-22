@@ -143,6 +143,20 @@ nix profile remove atomgit-cli
 
 如果通过 Home Manager 或 NixOS 配置安装，请从 `home.packages` 或 `environment.systemPackages` 中移除对应条目，然后重新应用配置。
 
+### 使用 Aur 安装
+
+如果使用archlinux 或基于archlinux的发行版，可以直接使用`aur`仓库的包进行安装
+
+`aur` 中提供了三个包，可按需选择：
+
+```bash
+# 二进制安装（免编译，稳定版）
+yay -S atomgit-cli-bin
+# 从源码安装（稳定版）
+yay -S atomgit-cli
+# 开发版安装（跟随 main 分支最新提交）
+yay -S atomgit-cli-git
+```
 ### 使用 Home Manager 或 NixOS 安装
 
 如果系统本身已经使用 `nixos-unstable`，可以直接把 `pkgs.atomgit-cli` 加入系统或用户环境：
