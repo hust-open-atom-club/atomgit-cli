@@ -259,6 +259,69 @@ func TestBranchCreateSendsRequestBodyAndReportsSuccess(t *testing.T) {
 	}
 }
 
+func TestBranchCommandsInferRepositoryContext(t *testing.T) {
+	factoryFor := func(transport branchRoundTripFunc) *cmdutil.Factory {
+		factory := branchFactory(branchCommandConfig{token: "token"}, transport)
+		factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+		}
+		return factory
+	}
+
+	t.Run("list", func(t *testing.T) {
+		cmd := newCmdBranchList(factoryFor(func(req *http.Request) (*http.Response, error) {
+			if req.URL.Path != "/api/v5/repos/alice/demo/branches" {
+				t.Fatalf("path = %s", req.URL.Path)
+			}
+			return branchResponse(http.StatusOK, `[]`), nil
+		}))
+		if err := cmd.RunE(cmd, nil); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("view", func(t *testing.T) {
+		cmd := newCmdBranchView(factoryFor(func(req *http.Request) (*http.Response, error) {
+			if req.URL.EscapedPath() != "/api/v5/repos/alice/demo/branches/main" {
+				t.Fatalf("path = %s", req.URL.EscapedPath())
+			}
+			return branchResponse(http.StatusOK, `{"name":"main"}`), nil
+		}))
+		if err := cmd.RunE(cmd, []string{"main"}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("create", func(t *testing.T) {
+		cmd := newCmdBranchCreate(factoryFor(func(req *http.Request) (*http.Response, error) {
+			if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/branches" {
+				t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+			}
+			return branchResponse(http.StatusOK, `{"name":"feature/foo"}`), nil
+		}))
+		_ = cmd.Flags().Set("ref", "main")
+		if err := cmd.RunE(cmd, []string{"feature/foo"}); err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestBranchExplicitRepositoryOverridesContext(t *testing.T) {
+	factory := branchFactory(branchCommandConfig{token: "token"}, func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path != "/api/v5/repos/bob/other/branches" {
+			t.Fatalf("path = %s", req.URL.Path)
+		}
+		return branchResponse(http.StatusOK, `[]`), nil
+	})
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+	}
+	cmd := newCmdBranchList(factory)
+	if err := cmd.RunE(cmd, []string{"bob/other"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBranchCreateValidatesBeforeRequest(t *testing.T) {
 	requests := 0
 	cmd := newCmdBranchCreate(branchFactory(branchCommandConfig{token: "token"}, func(*http.Request) (*http.Response, error) {

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
 const protectionRulesJSON = `[
@@ -62,6 +64,27 @@ func TestProtectionListAndViewDistinguishExactAndWildcard(t *testing.T) {
 		if !strings.Contains(viewOut.String(), text) {
 			t.Fatalf("view output missing %q:\n%s", text, viewOut.String())
 		}
+	}
+}
+
+func TestProtectionCommandsInferRepositoryContext(t *testing.T) {
+	factory := branchFactory(branchCommandConfig{token: "token"}, func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path != "/api/v5/repos/alice/demo/protect_branches" {
+			t.Fatalf("path = %s", req.URL.Path)
+		}
+		return branchResponse(http.StatusOK, `[{"name":"main","no_one_can_push":true,"no_one_can_merge":true}]`), nil
+	})
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+	}
+
+	list := newCmdProtectionList(factory)
+	if err := list.RunE(list, nil); err != nil {
+		t.Fatal(err)
+	}
+	view := newCmdProtectionView(factory)
+	if err := view.RunE(view, []string{"main"}); err != nil {
+		t.Fatal(err)
 	}
 }
 

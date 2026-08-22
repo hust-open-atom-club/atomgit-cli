@@ -33,6 +33,7 @@ func NewCmdBranch(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdBranchCreate(f))
 	cmd.AddCommand(newCmdBranchDelete(f))
 	cmd.AddCommand(newCmdBranchProtection(f))
+	cmdutil.AddRepositoryContextHelp(cmd)
 
 	return cmd
 }
@@ -53,6 +54,14 @@ func parseRepositoryArg(repository string) (repositoryRef, error) {
 	return repositoryRef{Owner: owner, Repo: repo}, nil
 }
 
+func resolveRepositoryArgs(f *cmdutil.Factory, args []string, trailingArgs int) (repositoryRef, []string, error) {
+	repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, trailingArgs)
+	if err != nil {
+		return repositoryRef{}, nil, err
+	}
+	return repositoryRef{Owner: repository.Owner, Repo: repository.Name}, remaining, nil
+}
+
 func branchPath(repository repositoryRef, branchName string) string {
 	return fmt.Sprintf("/repos/%s/%s/branches/%s", repository.Owner, repository.Repo, escapePathSegment(branchName))
 }
@@ -61,16 +70,16 @@ func newCmdBranchList(f *cmdutil.Factory) *cobra.Command {
 	var limit int
 
 	cmd := &cobra.Command{
-		Use:     "list <owner>/<repo>",
+		Use:     "list [<owner>/<repo>]",
 		Short:   "List remote branches",
 		Example: `  ag branch list owner/repo --limit 50`,
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", limit)
 			}
 
-			repository, err := parseRepositoryArg(args[0])
+			repository, _, err := resolveRepositoryArgs(f, args, 0)
 			if err != nil {
 				return err
 			}
@@ -100,12 +109,12 @@ func newCmdBranchList(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdBranchView(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "view <owner>/<repo> <branch>",
+		Use:     "view [<owner>/<repo>] <branch>",
 		Short:   "View a remote branch",
 		Example: `  ag branch view owner/repo main`,
-		Args:    cobra.ExactArgs(2),
+		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			repository, err := parseRepositoryArg(args[0])
+			repository, remaining, err := resolveRepositoryArgs(f, args, 1)
 			if err != nil {
 				return err
 			}
@@ -115,7 +124,7 @@ func newCmdBranchView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			branchName := args[1]
+			branchName := remaining[0]
 			var branch api.Branch
 			if err := client.Get(branchPath(repository, branchName), &branch); err != nil {
 				return fmt.Errorf("failed to view branch %q in %s/%s: %w", branchName, repository.Owner, repository.Repo, err)
@@ -132,21 +141,21 @@ func newCmdBranchCreate(f *cmdutil.Factory) *cobra.Command {
 	var sourceRef string
 
 	cmd := &cobra.Command{
-		Use:     "create <owner>/<repo> <branch> --ref <ref>",
+		Use:     "create [<owner>/<repo>] <branch> --ref <ref>",
 		Short:   "Create a remote branch",
 		Example: `  ag branch create owner/repo feature/foo --ref main`,
-		Args:    cobra.ExactArgs(2),
+		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if strings.TrimSpace(args[1]) == "" {
+			repository, remaining, err := resolveRepositoryArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			branchName := remaining[0]
+			if strings.TrimSpace(branchName) == "" {
 				return fmt.Errorf("branch name is required")
 			}
 			if strings.TrimSpace(sourceRef) == "" {
 				return fmt.Errorf("source ref is required")
-			}
-
-			repository, err := parseRepositoryArg(args[0])
-			if err != nil {
-				return err
 			}
 
 			client, err := authenticatedClient(f)
@@ -154,7 +163,6 @@ func newCmdBranchCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			branchName := args[1]
 			request := api.BranchRequest{
 				BranchName: branchName,
 				Refs:       sourceRef,
@@ -179,17 +187,17 @@ func newCmdBranchDelete(f *cmdutil.Factory) *cobra.Command {
 	var yes bool
 
 	cmd := &cobra.Command{
-		Use:   "delete <owner>/<repo> <branch>",
+		Use:   "delete [<owner>/<repo>] <branch>",
 		Short: "Delete a remote branch",
 		Example: `  ag branch delete owner/repo feature/foo
   ag branch delete owner/repo feature/foo --yes`,
-		Args: cobra.ExactArgs(2),
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			repository, err := parseRepositoryArg(args[0])
+			repository, remaining, err := resolveRepositoryArgs(f, args, 1)
 			if err != nil {
 				return err
 			}
-			branchName := args[1]
+			branchName := remaining[0]
 			if strings.TrimSpace(branchName) == "" {
 				return fmt.Errorf("branch name is required")
 			}
