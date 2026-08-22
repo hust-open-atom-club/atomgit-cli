@@ -647,8 +647,12 @@ ag tag list owner/repo --json
 
 # 创建或删除标签
 ag tag create v1.0.0 --ref main
+# 删除标签（默认要求确认；自动化场景请使用 --yes）
 ag tag delete v1.0.0
+ag tag delete v1.0.0 --yes
 ```
+
+`ag tag delete` 默认会显示目标仓库和标签名并要求确认；可使用 `--yes`（或 `-y`）跳过确认提示。
 
 ## 资源命令的 JSON 输出
 

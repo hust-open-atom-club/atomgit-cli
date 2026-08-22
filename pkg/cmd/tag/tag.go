@@ -1,7 +1,9 @@
 package tag
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"net/url"
 	"strings"
 
@@ -156,10 +158,18 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 }
 
 func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
+	var yes bool
+
 	cmd := &cobra.Command{
 		Use:   "delete [<owner>/<repo>] <tag_name>",
 		Short: "Delete a tag",
-		Args:  cobra.RangeArgs(1, 2),
+		Long: `Delete a tag from AtomGit.
+
+By default, you will be prompted to confirm the deletion. Use --yes to skip
+the confirmation prompt.`,
+		Example: `  ag tag delete owner/repo v1.0.0
+  ag tag delete owner/repo v1.0.0 --yes`,
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
@@ -169,6 +179,18 @@ func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
 			tagName := strings.TrimSpace(remaining[0])
 			if tagName == "" {
 				return fmt.Errorf("tag name is required")
+			}
+
+			out := cmd.OutOrStdout()
+			if !yes {
+				confirmed, err := confirmTagDelete(cmd.InOrStdin(), out, repository, tagName)
+				if err != nil {
+					return err
+				}
+				if !confirmed {
+					fmt.Fprintln(out, "Deletion cancelled.")
+					return nil
+				}
 			}
 
 			token, err := f.Config.GetToken()
@@ -188,11 +210,25 @@ func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "Deleted tag %s\n", tagName)
+			fmt.Fprintf(out, "Deleted tag %s\n", tagName)
 
 			return nil
 		},
 	}
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip confirmation prompt")
 
 	return cmd
+}
+
+func confirmTagDelete(in io.Reader, out io.Writer, repository cmdutil.Repository, tagName string) (bool, error) {
+	fmt.Fprintf(out, "Delete tag %s from %s? [y/N] ", tagName, repository.String())
+	scanner := bufio.NewScanner(in)
+	if !scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return false, fmt.Errorf("read confirmation: %w", err)
+		}
+		return false, nil
+	}
+	answer := strings.TrimSpace(scanner.Text())
+	return strings.EqualFold(answer, "y") || strings.EqualFold(answer, "yes"), nil
 }
