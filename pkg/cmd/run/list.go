@@ -23,6 +23,7 @@ type listOptions struct {
 	StartTime     int64
 	EndTime       int64
 	Limit         int
+	JSON          bool
 }
 
 func newCmdRunList(f *cmdutil.Factory) *cobra.Command {
@@ -49,6 +50,7 @@ func newCmdRunList(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().Int64Var(&opts.StartTime, "start-time", 0, "Filter runs starting at or after this Unix timestamp in milliseconds")
 	cmd.Flags().Int64Var(&opts.EndTime, "end-time", 0, "Filter runs ending at or before this Unix timestamp in milliseconds")
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of runs to list")
+	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output workflow runs as JSON")
 	return cmd
 }
 
@@ -89,8 +91,14 @@ func runList(cmd *cobra.Command, f *cmdutil.Factory, opts listOptions, repositor
 		return err
 	}
 	if len(runs) == 0 {
+		if opts.JSON {
+			return cmdutil.WriteJSON(cmd.OutOrStdout(), runsJSON(runs))
+		}
 		fmt.Fprintln(cmd.OutOrStdout(), "No workflow runs found.")
 		return nil
+	}
+	if opts.JSON {
+		return cmdutil.WriteJSON(cmd.OutOrStdout(), runsJSON(runs))
 	}
 
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', 0)
@@ -112,6 +120,34 @@ func runList(cmd *cobra.Command, f *cmdutil.Factory, opts listOptions, repositor
 		)
 	}
 	return w.Flush()
+}
+
+type runJSON struct {
+	Status    string `json:"status"`
+	RunNumber int    `json:"runNumber"`
+	Title     string `json:"title"`
+	Workflow  string `json:"workflow"`
+	Branch    string `json:"branch"`
+	Event     string `json:"event"`
+	RunID     string `json:"runId"`
+	StartedAt string `json:"startedAt"`
+}
+
+func runsJSON(runs []actions.Run) []runJSON {
+	result := make([]runJSON, len(runs))
+	for i, workflowRun := range runs {
+		result[i] = runJSON{
+			Status:    singleLine(fallback(workflowRun.Status, "UNKNOWN")),
+			RunNumber: workflowRun.RunNumber,
+			Title:     singleLine(fallback(workflowRun.Title, "-")),
+			Workflow:  singleLine(fallback(workflowRun.WorkflowName, "-")),
+			Branch:    singleLine(fallback(workflowRun.HeadBranch, "-")),
+			Event:     singleLine(fallback(workflowRun.Event, "-")),
+			RunID:     singleLine(fallback(workflowRun.WorkflowRunID, "-")),
+			StartedAt: formatTimestamp(workflowRun.StartTime),
+		}
+	}
+	return result
 }
 
 func listRuns(client *actions.Client, owner, repo string, opts listOptions, status, event string) ([]actions.Run, error) {

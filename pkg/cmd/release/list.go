@@ -2,6 +2,8 @@ package release
 
 import (
 	"fmt"
+	"strings"
+	"unicode"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -10,6 +12,7 @@ import (
 
 func newCmdReleaseList(f *cmdutil.Factory) *cobra.Command {
 	var limit int
+	var jsonOutput bool
 
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
@@ -43,6 +46,9 @@ func newCmdReleaseList(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			out := cmd.OutOrStdout()
+			if jsonOutput {
+				return cmdutil.WriteJSON(out, releasesJSON(releases))
+			}
 			if len(releases) == 0 {
 				fmt.Fprintln(out, "No releases found")
 				return nil
@@ -55,6 +61,7 @@ func newCmdReleaseList(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().IntVarP(&limit, "limit", "L", 30, "Maximum number of releases to list")
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output releases as JSON")
 	return cmd
 }
 
@@ -71,4 +78,42 @@ func releaseStatus(r api.Release) string {
 		return "latest"
 	}
 	return "release"
+}
+
+type releaseJSON struct {
+	TagName         string `json:"tag"`
+	Name            string `json:"name"`
+	Status          string `json:"status"`
+	Draft           bool   `json:"draft"`
+	Prerelease      bool   `json:"prerelease"`
+	TargetCommitish string `json:"targetCommitish"`
+	CreatedAt       string `json:"createdAt"`
+	Author          string `json:"author"`
+}
+
+func releasesJSON(releases []api.Release) []releaseJSON {
+	result := make([]releaseJSON, len(releases))
+	for i, release := range releases {
+		result[i] = releaseJSON{
+			TagName:         sanitizeJSONText(release.TagName),
+			Name:            sanitizeJSONText(release.Name),
+			Status:          releaseStatus(release),
+			Draft:           release.Draft,
+			Prerelease:      release.Prerelease,
+			TargetCommitish: sanitizeJSONText(release.TargetCommitish),
+			CreatedAt:       sanitizeJSONText(release.CreatedAt),
+			Author:          sanitizeJSONText(release.Author.Login),
+		}
+	}
+	return result
+}
+
+func sanitizeJSONText(value string) string {
+	value = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return ' '
+		}
+		return r
+	}, value)
+	return strings.Join(strings.Fields(value), " ")
 }

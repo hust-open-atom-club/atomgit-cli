@@ -260,6 +260,7 @@ ag user emails --json
 # 列出远程分支（默认显示 30 条）
 ag branch list owner/repo
 ag branch list owner/repo --limit 100
+ag branch list owner/repo --json
 
 # 查看远程分支详情
 ag branch view owner/repo main
@@ -655,7 +656,7 @@ ag tag delete v1.0.0 --yes
 
 ## 资源命令的 JSON 输出
 
-`repo list/view`、`issue list/view`、`pr list/view`、`tag list` 和 `commit list/view/compare` 支持布尔参数 `--json`。list 命令输出完整 JSON 数组，view 与 compare 命令输出完整 JSON 对象；没有结果时 list 输出 `[]`。默认文本输出保持不变。
+`repo list/view`、`issue list/view`、`pr list/view`、`tag list`、`branch list`、`label list`、`release list`、`run list` 和 `commit list/view/compare` 支持布尔参数 `--json`。list 命令输出完整 JSON 数组，view 与 compare 命令输出完整 JSON 对象；没有结果时 list 输出 `[]`。默认文本输出保持不变。
 
 JSON 字段使用 lowerCamelCase，并由 CLI 显式定义，不会因为 AtomGit API 增加字段而自动改变。Issue 和 PR 的 `number` 始终是字符串，标签输出为名称数组，PR 的 `head` 和 `base` 输出分支名称。可选的服务端字段缺失时仍输出对应的零值，以保持固定结构。
 
@@ -667,6 +668,7 @@ JSON 字段使用 lowerCamelCase，并由 CLI 显式定义，不会因为 AtomGi
 # 列出仓库标签（默认显示 30 条）
 ag label list owner/repo
 ag label list owner/repo --limit 50
+ag label list owner/repo --json
 
 # 创建标签
 ag label create owner/repo --name bug --color "#ff0000"
@@ -714,6 +716,7 @@ ag milestone delete owner/repo 12 --yes
 ```bash
 # 列出运行记录（默认最多 30 条）
 ag run list owner/repo
+ag run list owner/repo --json
 
 # 按分支、状态和触发事件过滤
 ag run list owner/repo --branch main --status failed --event push
@@ -808,6 +811,7 @@ ag api /repos/owner/repo/issues --paginate
 # 列出仓库 Release（默认最多 30 条）
 ag release list
 ag release list owner/repo --limit 50
+ag release list owner/repo --json
 
 # 按 tag 查看 Release 详情（附件列表、作者、时间、状态等）
 ag release view v1.0.0

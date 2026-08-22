@@ -3,6 +3,7 @@ package label
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -26,6 +27,7 @@ func NewCmdLabel(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdLabelList(f *cmdutil.Factory) *cobra.Command {
 	var limit int
+	var jsonOutput bool
 
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
@@ -59,6 +61,9 @@ func newCmdLabelList(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			out := cmd.OutOrStdout()
+			if jsonOutput {
+				return cmdutil.WriteJSON(out, labelsJSON(labels))
+			}
 			for _, label := range labels {
 				fmt.Fprintf(out, "%s [%s]", label.Name, label.Color)
 				if description := strings.TrimSpace(label.Description); description != "" {
@@ -71,5 +76,31 @@ func newCmdLabelList(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().IntVarP(&limit, "limit", "L", 30, "Maximum number of labels to list")
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output labels as JSON")
 	return cmd
+}
+
+type labelJSON struct {
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	Color       string `json:"color"`
+	Description string `json:"description"`
+}
+
+func labelsJSON(labels []api.Label) []labelJSON {
+	result := make([]labelJSON, len(labels))
+	for i, label := range labels {
+		result[i] = labelJSON{ID: label.ID, Name: sanitizeJSONText(label.Name), Color: sanitizeJSONText(label.Color), Description: sanitizeJSONText(label.Description)}
+	}
+	return result
+}
+
+func sanitizeJSONText(value string) string {
+	value = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return ' '
+		}
+		return r
+	}, value)
+	return strings.Join(strings.Fields(value), " ")
 }

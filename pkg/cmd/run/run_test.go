@@ -69,7 +69,7 @@ func TestNewCmdRunRegistersCommandsAndFlags(t *testing.T) {
 	}
 
 	want := map[string][]string{
-		"list":     {"actor", "branch", "end-time", "event", "limit", "pr", "start-time", "status", "workflow", "workflow-name"},
+		"list":     {"actor", "branch", "end-time", "event", "json", "limit", "pr", "start-time", "status", "workflow", "workflow-name"},
 		"view":     {"artifact", "artifact-file", "job", "log", "log-file", "overwrite"},
 		"step-log": {"output", "overwrite"},
 		"artifact": {},
@@ -193,6 +193,35 @@ func TestRunListNormalizesMultilineTableCells(t *testing.T) {
 	}
 }
 
+func TestRunListJSONUsesFilteredResultsAndSanitizesFields(t *testing.T) {
+	requests := 0
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		requests++
+		return runResponse(req, http.StatusOK, `{"total_count":2,"workflow_runs":[
+			{"workflow_run_id":"run-1","run_number":7,"title":"update:\tfile\n\u001b[31m","workflow_name":"CI","status":"COMPLETED","head_branch":"main","event":"Push"},
+			{"workflow_run_id":"run-2","run_number":8}
+		]}`), nil
+	})
+	cmd := newCmdRunList(runFactory(runTestConfig{token: "secret"}, transport))
+	_ = cmd.Flags().Set("limit", "1")
+	_ = cmd.Flags().Set("json", "true")
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	if err := cmd.RunE(cmd, []string{"team/demo"}); err != nil {
+		t.Fatal(err)
+	}
+	if requests != 1 || strings.Contains(out.String(), "\x1b") {
+		t.Fatalf("requests = %d, output = %q", requests, out.String())
+	}
+	var values []runJSON
+	if err := json.Unmarshal(out.Bytes(), &values); err != nil {
+		t.Fatalf("invalid JSON %q: %v", out.String(), err)
+	}
+	if len(values) != 1 || values[0].RunID != "run-1" || values[0].RunNumber != 7 || values[0].Title != "update: file [31m" || values[0].Workflow != "CI" || values[0].StartedAt != "-" {
+		t.Fatalf("values = %#v", values)
+	}
+}
+
 func TestRunListEmptyAndValidation(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -205,6 +234,22 @@ func TestRunListEmptyAndValidation(t *testing.T) {
 			t.Fatal(err)
 		}
 		if out.String() != "No workflow runs found.\n" {
+			t.Fatalf("output = %q", out.String())
+		}
+	})
+
+	t.Run("empty JSON", func(t *testing.T) {
+		transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return runResponse(req, http.StatusOK, `{"total_count":0,"workflow_runs":[]}`), nil
+		})
+		cmd := newCmdRunList(runFactory(runTestConfig{token: "secret"}, transport))
+		_ = cmd.Flags().Set("json", "true")
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		if err := cmd.RunE(cmd, []string{"team/demo"}); err != nil {
+			t.Fatal(err)
+		}
+		if out.String() != "[]\n" {
 			t.Fatalf("output = %q", out.String())
 		}
 	})

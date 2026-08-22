@@ -116,6 +116,7 @@ ag --help
 ```
 
 完整命令参阅[使用指南](docs/usage.md)。
+`branch list`、`label list`、`release list` 和 `run list` 可使用 `--json` 输出稳定的机器可读数组。
 安装、认证、使用和故障排查中的常见问题请参阅[常见问题（FAQ）](docs/faq.md)。
 
 ## 更多文档

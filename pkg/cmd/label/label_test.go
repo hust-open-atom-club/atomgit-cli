@@ -2,6 +2,7 @@ package label
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/url"
@@ -25,7 +26,7 @@ func (f labelRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error)
 func TestNewCmdLabelRegistersCommands(t *testing.T) {
 	cmd := NewCmdLabel(&cmdutil.Factory{})
 	want := map[string][]string{
-		"list":   {"limit"},
+		"list":   {"json", "limit"},
 		"create": {"name", "color"},
 		"edit":   {"name", "color"},
 		"delete": {"yes"},
@@ -87,6 +88,48 @@ func TestLabelListHonorsLimit(t *testing.T) {
 	}
 	if got := output.String(); got != "bug [#ff0000] Defect\n" {
 		t.Fatalf("output = %q", got)
+	}
+}
+
+func TestLabelListJSONAndEmpty(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		body string
+		want int
+	}{
+		{name: "labels", body: `[{"id":7,"name":"bug","color":"#ff0000","description":"Defect\u001b[31m"}]`, want: 1},
+		{name: "empty", body: `[]`, want: 0},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := &cmdutil.Factory{
+				Config: labelTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: labelRoundTripFunc(func(*http.Request) (*http.Response, error) {
+						return labelResponse(http.StatusOK, tt.body), nil
+					})}, nil
+				},
+			}
+			cmd := newCmdLabelList(factory)
+			_ = cmd.Flags().Set("json", "true")
+			var out bytes.Buffer
+			cmd.SetOut(&out)
+			if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(out.String(), "\x1b") {
+				t.Fatalf("JSON output contains terminal escape: %q", out.String())
+			}
+			var values []labelJSON
+			if err := json.Unmarshal(out.Bytes(), &values); err != nil {
+				t.Fatalf("invalid JSON %q: %v", out.String(), err)
+			}
+			if len(values) != tt.want {
+				t.Fatalf("values = %#v", values)
+			}
+			if tt.want == 1 && (values[0].ID != 7 || values[0].Name != "bug" || values[0].Color != "#ff0000" || values[0].Description != "Defect [31m") {
+				t.Fatalf("values = %#v", values)
+			}
+		})
 	}
 }
 
