@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 )
 
 const protectionRulesJSON = `[
@@ -62,6 +64,22 @@ func TestProtectionListAndViewDistinguishExactAndWildcard(t *testing.T) {
 		if !strings.Contains(viewOut.String(), text) {
 			t.Fatalf("view output missing %q:\n%s", text, viewOut.String())
 		}
+	}
+}
+
+func TestProtectionPermissionValueMapsOwnerAccessToAdmin(t *testing.T) {
+	rule := api.ProtectedBranchRule{
+		OwnerCanPush:  api.FlexibleBool(true),
+		OwnerCanMerge: api.FlexibleBool(true),
+	}
+
+	push, err := protectionPermissionValue(rule, true)
+	if err != nil || push != "admin" {
+		t.Fatalf("push = %q, err = %v; want admin", push, err)
+	}
+	merge, err := protectionPermissionValue(rule, false)
+	if err != nil || merge != "admin" {
+		t.Fatalf("merge = %q, err = %v; want admin", merge, err)
 	}
 }
 
@@ -168,7 +186,6 @@ func TestProtectionSetRefusesUnrepresentableOmittedPermission(t *testing.T) {
 		rule string
 		want string
 	}{
-		{name: "owner", rule: `[{"name":"main","owner_can_merge":true}]`, want: "owner-only"},
 		{name: "committer", rule: `[{"name":"main","committer_can_merge":true}]`, want: "committer-only"},
 	}
 	for _, tt := range tests {
