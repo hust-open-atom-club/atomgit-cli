@@ -87,7 +87,9 @@ func TestRepoCollaboratorListPaginatesAndShowsPermissionSources(t *testing.T) {
 	cmd := newCmdRepoCollaboratorList(factory)
 	_ = cmd.Flags().Set("limit", "101")
 	var output bytes.Buffer
+	var warnings bytes.Buffer
 	cmd.SetOut(&output)
+	cmd.SetErr(&warnings)
 	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
 		t.Fatal(err)
 	}
@@ -99,6 +101,9 @@ func TestRepoCollaboratorListPaginatesAndShowsPermissionSources(t *testing.T) {
 			t.Errorf("output does not contain %q", want)
 		}
 	}
+	if warnings.String() != pendingCollaboratorInvitationsNote+"\n" {
+		t.Fatalf("warnings = %q", warnings.String())
+	}
 }
 
 func TestRepoCollaboratorListJSON(t *testing.T) {
@@ -108,7 +113,9 @@ func TestRepoCollaboratorListJSON(t *testing.T) {
 	cmd := newCmdRepoCollaboratorList(factory)
 	_ = cmd.Flags().Set("json", "true")
 	var output bytes.Buffer
+	var warnings bytes.Buffer
 	cmd.SetOut(&output)
+	cmd.SetErr(&warnings)
 	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
 		t.Fatal(err)
 	}
@@ -118,6 +125,9 @@ func TestRepoCollaboratorListJSON(t *testing.T) {
 	}
 	if len(values) != 1 || values[0]["username"] != "bob" || values[0]["permission"] != "admin" || values[0]["direct"] != true {
 		t.Fatalf("JSON = %#v", values)
+	}
+	if warnings.Len() != 0 {
+		t.Fatalf("JSON list warning = %q", warnings.String())
 	}
 }
 
@@ -138,6 +148,22 @@ func TestRepoCollaboratorView(t *testing.T) {
 		if !strings.Contains(output.String(), want) {
 			t.Errorf("output does not contain %q: %s", want, output.String())
 		}
+	}
+}
+
+func TestRepoCollaboratorViewExplainsPendingInvitationLimitation(t *testing.T) {
+	requests := 0
+	factory := collaboratorFactory(func(req *http.Request) (*http.Response, error) {
+		requests++
+		if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/collaborators/bob/permission" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		return collaboratorResponse(http.StatusNotFound, `{"message":"not found"}`), nil
+	})
+	cmd := newCmdRepoCollaboratorView(factory)
+	err := cmd.RunE(cmd, []string{"alice/demo", "bob"})
+	if err == nil || !strings.Contains(err.Error(), "not found among accepted collaborators") || !strings.Contains(err.Error(), "may have a pending invitation") || requests != 1 {
+		t.Fatalf("error = %v, requests = %d", err, requests)
 	}
 }
 
@@ -165,7 +191,7 @@ func TestRepoCollaboratorAddChecksThenSendsPermission(t *testing.T) {
 	if err := cmd.RunE(cmd, []string{"alice/demo", "bob"}); err != nil {
 		t.Fatal(err)
 	}
-	if requests != 2 || output.String() != "Added collaborator bob with pull permission\n" {
+	if requests != 2 || output.String() != "Sent collaborator invitation to bob with pull permission\n" {
 		t.Fatalf("requests = %d, output = %q", requests, output.String())
 	}
 }
@@ -299,6 +325,60 @@ func TestRepoCollaboratorRemoveConfirmationAndInheritedProtection(t *testing.T) 
 			}
 			if writes != test.wantWrites || (test.wantOutput != "" && !strings.HasSuffix(output.String(), test.wantOutput)) {
 				t.Fatalf("writes = %d, output = %q", writes, output.String())
+			}
+		})
+	}
+}
+
+func TestRepoCollaboratorRemoveTriesPendingInvitationWhenNotAccepted(t *testing.T) {
+	for _, test := range []struct {
+		name         string
+		input        string
+		yes          bool
+		deleteStatus int
+		wantDeletes  int
+		wantOutput   string
+		wantError    string
+	}{
+		{name: "cancel", input: "n\n", deleteStatus: http.StatusOK, wantOutput: "Invitation revocation cancelled.\n"},
+		{name: "confirm", input: "yes\n", deleteStatus: http.StatusOK, wantDeletes: 1, wantOutput: "Revoked pending invitation for bob\n"},
+		{name: "yes flag", yes: true, deleteStatus: http.StatusOK, wantDeletes: 1, wantOutput: "Revoked pending invitation for bob\n"},
+		{name: "not found", yes: true, deleteStatus: http.StatusNotFound, wantDeletes: 1, wantError: "no pending invitation could be revoked through AtomGit API v5"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			deletes := 0
+			factory := collaboratorFactory(func(req *http.Request) (*http.Response, error) {
+				switch req.Method {
+				case http.MethodGet:
+					return collaboratorResponse(http.StatusNotFound, `{"message":"not found"}`), nil
+				case http.MethodDelete:
+					deletes++
+					if req.URL.Path != "/api/v5/repos/alice/demo/collaborators/bob" {
+						t.Fatalf("delete path = %s", req.URL.Path)
+					}
+					return collaboratorResponse(test.deleteStatus, `{"message":"not found"}`), nil
+				default:
+					t.Fatalf("method = %s", req.Method)
+					return nil, nil
+				}
+			})
+			cmd := newCmdRepoCollaboratorRemove(factory)
+			if test.yes {
+				_ = cmd.Flags().Set("yes", "true")
+			}
+			cmd.SetIn(strings.NewReader(test.input))
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			err := cmd.RunE(cmd, []string{"alice/demo", "bob"})
+			if test.wantError != "" {
+				if err == nil || !strings.Contains(err.Error(), test.wantError) {
+					t.Fatalf("error = %v", err)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			}
+			if deletes != test.wantDeletes || (test.wantOutput != "" && !strings.HasSuffix(output.String(), test.wantOutput)) {
+				t.Fatalf("deletes = %d, output = %q", deletes, output.String())
 			}
 		})
 	}
