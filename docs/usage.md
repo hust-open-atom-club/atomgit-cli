@@ -652,6 +652,8 @@ ag tag delete v1.0.0
 ag tag delete v1.0.0 --yes
 ```
 
+`tag create` 必须显式传入非空的 `--ref`，值可以是 branch、tag 或 commit SHA。
+
 `ag tag delete` 默认会显示目标仓库和标签名并要求确认；可使用 `--yes`（或 `-y`）跳过确认提示。
 
 ## 资源命令的 JSON 输出

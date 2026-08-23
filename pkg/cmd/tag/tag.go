@@ -112,6 +112,9 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 		Use:   "create [<owner>/<repo>] <tag_name>",
 		Short: "Create a tag",
 		Args:  cobra.RangeArgs(1, 2),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return validateTagCreateRef(opts.Ref)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
@@ -121,6 +124,9 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 			tagName := strings.TrimSpace(remaining[0])
 			if tagName == "" {
 				return fmt.Errorf("tag name is required")
+			}
+			if err := validateTagCreateRef(opts.Ref); err != nil {
+				return err
 			}
 
 			token, err := f.Config.GetToken()
@@ -152,9 +158,17 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.Message, "message", "m", "", "Tag message")
-	cmd.Flags().StringVar(&opts.Ref, "ref", "", "The SHA value or branch name to create the tag from")
+	cmd.Flags().StringVar(&opts.Ref, "ref", "", "Branch, tag, or commit SHA to create the tag from (required)")
+	_ = cmd.MarkFlagRequired("ref")
 
 	return cmd
+}
+
+func validateTagCreateRef(ref string) error {
+	if strings.TrimSpace(ref) == "" {
+		return fmt.Errorf("source ref is required; pass --ref with a branch, tag, or commit SHA")
+	}
+	return nil
 }
 
 func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
