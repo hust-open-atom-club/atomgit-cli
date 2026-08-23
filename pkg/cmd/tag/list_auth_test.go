@@ -41,6 +41,30 @@ func TestTagListRejectsUnresolvableRepositoryBeforeAuth(t *testing.T) {
 	}
 }
 
+func TestTagListRejectsInvalidLimitBeforeAuth(t *testing.T) {
+	for _, limit := range []string{"0", "-1"} {
+		t.Run(limit, func(t *testing.T) {
+			cfg := &recordingConfig{}
+			factory := &cmdutil.Factory{Config: cfg}
+			cmd := newCmdTagList(factory)
+			cmd.SetOut(io.Discard)
+			cmd.SetErr(io.Discard)
+			if err := cmd.Flags().Set("limit", limit); err != nil {
+				t.Fatal(err)
+			}
+
+			err := cmd.RunE(cmd, []string{"alice/demo"})
+
+			if err == nil || !strings.Contains(err.Error(), "must be positive") {
+				t.Fatalf("error = %v, want positive-limit error", err)
+			}
+			if cfg.getTokenCalls != 0 {
+				t.Fatalf("GetToken was called %d times; invalid limit must be rejected before authentication", cfg.getTokenCalls)
+			}
+		})
+	}
+}
+
 func TestTagMutationsRejectInvalidInputBeforeAuth(t *testing.T) {
 	commands := []struct {
 		name string

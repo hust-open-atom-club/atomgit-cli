@@ -101,7 +101,7 @@ ag issue prs owner/repo 42
 ag issue branches owner/repo 42 --add feature/fix
 ag label list
 ag milestone list
-ag tag list
+ag tag list --limit 100
 ag release list
 ag run list owner/repo
 ag discussion list

@@ -637,11 +637,12 @@ ag issue comment delete owner/repo 42 789 --yes
 ## Tag
 
 ```bash
-# 在当前 Git 仓库中列出标签
+# 在当前 Git 仓库中列出标签（默认显示 30 条）
 ag tag list
 
-# 显式指定仓库
+# 显式指定仓库或限制返回数量
 ag tag list owner/repo
+ag tag list owner/repo --limit 100
 ag tag list owner/repo --json
 
 # 创建或删除标签

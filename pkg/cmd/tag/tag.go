@@ -29,11 +29,17 @@ func NewCmdTag(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 	var jsonOutput bool
+	var limit int
 	cmd := &cobra.Command{
-		Use:   "list [<owner>/<repo>]",
-		Short: "List tags",
-		Args:  cobra.MaximumNArgs(1),
+		Use:     "list [<owner>/<repo>]",
+		Short:   "List tags",
+		Example: `  ag tag list owner/repo --limit 50`,
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", limit)
+			}
+
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
 			if err != nil {
 				return err
@@ -50,10 +56,11 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			var tags []api.Tag
-			path := fmt.Sprintf("/repos/%s/%s/tags", owner, repo)
-			if err := client.Get(path, &tags); err != nil {
-				return err
+			tags, err := api.GetPaginated[api.Tag](client, limit, func(page, perPage int) string {
+				return fmt.Sprintf("/repos/%s/%s/tags?page=%d&per_page=%d", owner, repo, page, perPage)
+			})
+			if err != nil {
+				return fmt.Errorf("failed to list tags for %s/%s: %w", owner, repo, err)
 			}
 			if jsonOutput {
 				return cmdutil.WriteJSON(cmd.OutOrStdout(), tagsJSON(tags))
@@ -72,6 +79,7 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().IntVarP(&limit, "limit", "L", 30, "Maximum number of tags to list")
 	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output tags as JSON")
 
 	return cmd
