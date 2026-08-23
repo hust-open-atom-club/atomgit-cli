@@ -4,7 +4,7 @@
 [![npm](https://img.shields.io/npm/v/%40hust-open-atom-club%2Fatomgit-cli?logo=npm)](https://www.npmjs.com/package/@hust-open-atom-club/atomgit-cli)
 [![Latest Release](https://img.shields.io/github/v/release/hust-open-atom-club/atomgit-cli?display_name=tag)](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)
 [![Build](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.atomgit.com%2Fapi%2Fv8%2Frepos%2Fhust-open-atom-club%2Fatomgit-cli%2Factions%2Fruns%3Fworkflow_name%3DCI%26branch%3Dmain%26per_page%3D1&query=%24.workflow_runs%5B0%5D.status&label=build)](https://atomgit.com/hust-open-atom-club/atomgit-cli/actions)
-[![Homebrew](https://img.shields.io/badge/homebrew-tap-FBB040?logo=homebrew&logoColor=white)](https://github.com/hust-open-atom-club/homebrew-tap)
+[![Homebrew](https://img.shields.io/badge/homebrew-core-FBB040?logo=homebrew&logoColor=white)](https://formulae.brew.sh/formula/atomgit-cli)
 [![Go Reference](https://pkg.go.dev/badge/atomgit.com/hust-open-atom-club/atomgit-cli.svg)](https://pkg.go.dev/atomgit.com/hust-open-atom-club/atomgit-cli)
 [![GoReleaser](https://img.shields.io/badge/powered_by-GoReleaser-69D7E4?logo=goreleaser&logoColor=white)](https://goreleaser.com/)
 
@@ -46,9 +46,19 @@ npm install -g @hust-open-atom-club/atomgit-cli
 
 ### Homebrew
 
+安装 Homebrew Core 提供的最新稳定版（推荐）：
+
+```bash
+brew install atomgit-cli
+```
+
+如需跟踪 AtomGit `main` 最新 commit 的开发快照，可改用项目维护的 Homebrew Tap：
+
 ```bash
 brew install hust-open-atom-club/tap/atomgit-cli
 ```
+
+Homebrew Core 面向稳定版，项目 Tap 面向开发快照；两者使用同名 Formula，不能同时安装。区别和切换方法请参阅[完整安装指南](docs/installation.md#homebrew-安装)。
 
 ### WinGet
 
