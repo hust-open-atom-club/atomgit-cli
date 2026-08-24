@@ -2,6 +2,18 @@
 
 AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、WinGet、Scoop、Nix 或 Go 安装，也可以通过 AtomGit Release 自动或手动安装，或从源码构建。
 
+## 目录
+
+- [npm 安装](#npm-安装)
+- [Homebrew 安装](#homebrew-安装)
+- [WinGet 安装](#winget-安装)
+- [Scoop 安装](#scoop-安装)
+- [Nix / NixOS 安装](#nix--nixos-安装)
+- [Go 安装](#go-安装)
+- [AtomGit Release 安装](#atomgit-release-安装)
+- [源码安装](#源码安装)
+- [安装验证](#安装验证)
+
 ## npm 安装
 
 npm 安装需要 Node.js 18 或更高版本。执行：

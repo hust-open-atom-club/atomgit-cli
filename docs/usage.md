@@ -2,6 +2,34 @@
 
 本文档介绍 AtomGit CLI 各命令的常用参数和示例。安装方法请参阅[安装指南](installation.md)，认证与其他配置请参阅[配置指南](configuration.md)。
 
+## 目录
+
+- [认证](#认证)
+- [仓库 (repo)](#仓库-repo)
+- [组织 (org)](#组织-org)
+- [用户 (user)](#用户-user)
+- [Branch](#branch)
+- [Commit](#commit)
+- [Browse](#browse)
+- [Pull Request (pr)](#pull-request-pr)
+- [Issue](#issue)
+- [Tag](#tag)
+- [资源命令的 JSON 输出](#资源命令的-json-输出)
+- [Label](#label)
+- [Milestone](#milestone)
+- [Actions 运行记录 (run)](#actions-运行记录-run)
+- [Actions 工作流管理 (workflow)](#actions-工作流管理-workflow)
+- [通用 API 请求](#通用-api-请求)
+- [Release](#release)
+- [License](#license)
+- [SSH Key](#ssh-key)
+- [通知 (notification)](#通知-notification)
+- [搜索](#搜索)
+- [讨论](#讨论)
+- [版本](#版本)
+- [检查 CLI 更新](#检查-cli-更新)
+- [命令别名 (alias)](#命令别名-alias)
+
 所有命令均可通过 `--help` 查看完整参数，例如：
 
 ```bash
@@ -635,15 +663,6 @@ ag issue comment view owner/repo 42
 ag issue comment edit owner/repo 42 789
 ag issue comment edit owner/repo 42 789 --body "Updated information"
 
-
-# 删除评论
-ag issue comment delete owner/repo 42 789
-ag issue comment delete owner/repo 42 789 --yes
-```
-
-# 编辑评论（交互式编辑）
-ag issue comment edit owner/repo 42 789
-ag issue comment edit owner/repo 42 789 --body "Updated information"
 
 # 删除评论
 ag issue comment delete owner/repo 42 789
