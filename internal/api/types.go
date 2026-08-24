@@ -196,6 +196,15 @@ type EmailAddress struct {
 	State string `json:"state"`
 }
 
+// Namespace represents a user or group namespace visible to the authenticated user.
+type Namespace struct {
+	ID      int64  `json:"id"`
+	Path    string `json:"path"`
+	Name    string `json:"name"`
+	HTMLURL string `json:"html_url"`
+	Type    string `json:"type"`
+}
+
 // Collaborator represents a repository member and the provenance of their
 // effective permission.
 type Collaborator struct {
