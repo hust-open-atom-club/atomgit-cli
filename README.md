@@ -2,8 +2,8 @@
 
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-blue.svg)](LICENSE)
 [![npm](https://img.shields.io/npm/v/%40hust-open-atom-club%2Fatomgit-cli?logo=npm)](https://www.npmjs.com/package/@hust-open-atom-club/atomgit-cli)
-[![Latest Release](https://img.shields.io/github/v/release/hust-open-atom-club/atomgit-cli?display_name=tag)](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)
-[![Build](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.atomgit.com%2Fapi%2Fv8%2Frepos%2Fhust-open-atom-club%2Fatomgit-cli%2Factions%2Fruns%3Fworkflow_name%3DCI%26branch%3Dmain%26per_page%3D1&query=%24.workflow_runs%5B0%5D.status&label=build)](https://atomgit.com/hust-open-atom-club/atomgit-cli/actions)
+[![Latest Release](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.atomgit.com%2Fapi%2Fv5%2Frepos%2Fhust-open-atom-club%2Fatomgit-cli%2Freleases%2Flatest&query=%24.tag_name&label=release)](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)
+[![CI Status](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.atomgit.com%2Fapi%2Fv8%2Frepos%2Fhust-open-atom-club%2Fatomgit-cli%2Factions%2Fruns%3Fworkflow_name%3DCI%26branch%3Dmain%26per_page%3D1&query=%24.workflow_runs%5B0%5D.status&label=CI%20status)](https://atomgit.com/hust-open-atom-club/atomgit-cli/actions)
 [![Homebrew](https://img.shields.io/badge/homebrew-core-FBB040?logo=homebrew&logoColor=white)](https://formulae.brew.sh/formula/atomgit-cli)
 [![Go Reference](https://pkg.go.dev/badge/atomgit.com/hust-open-atom-club/atomgit-cli.svg)](https://pkg.go.dev/atomgit.com/hust-open-atom-club/atomgit-cli)
 [![GoReleaser](https://img.shields.io/badge/powered_by-GoReleaser-69D7E4?logo=goreleaser&logoColor=white)](https://goreleaser.com/)
@@ -14,7 +14,7 @@ AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 
 | 类别 | 能力 |
 | --- | --- |
-| 📦 仓库 | 列出、查看、创建、编辑、克隆、删除、复刻和同步仓库 |
+| 📦 仓库 | 列出、查看、创建、编辑、克隆、删除、复刻和同步仓库，管理仓库级推送规则 |
 | 👥 协作者 | 列出、查看、添加、修改和移除仓库协作者 |
 | 🔔 Webhook | 列出、查看、创建、编辑、删除和测试仓库 Webhook |
 | 🌿 分支 | 列出、查看、创建和删除分支，管理分支保护规则 |
@@ -24,7 +24,7 @@ AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 | 🎯 里程碑 | 列出、查看、创建、编辑、关闭、重开和删除里程碑 |
 | 🏷️ Tag | 列出、创建和删除 Git tag |
 | 🚀 Release | 列出、查看、创建和编辑 Release，上传和下载附件 |
-| ⚙️ Actions | 列出和查看 workflow 运行、job、日志与 artifact，并下载日志和 artifact |
+| ⚙️ Actions | 列出、校验和触发 workflow；查看 workflow 运行、job、日志与 artifact，并下载日志和 artifact |
 | 🏢 组织 | 列出当前账号加入的组织 |
 | 🔍 搜索 | 搜索仓库、用户和 Issue |
 | 💬 Discussion | 列出仓库 Discussion |
@@ -93,39 +93,10 @@ go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 
 首次使用时运行 `ag auth login` 完成 OAuth 登录；无浏览器环境（沙箱、容器、CI）可改用 `echo "$TOKEN" | ag auth login --with-token` 通过已有访问令牌登录。凭据、输出安全和仓库推断参阅[配置指南](docs/configuration.md)。
 
-## 常用命令
+## 使用
 
-```bash
-ag repo view
-ag repo read-file owner/repo README.md
-ag repo read-dir owner/repo .
-ag repo collaborator list
-ag repo webhook list
-ag branch list owner/repo
-ag pr list
-ag pr commits owner/repo 42
-ag pr files owner/repo 42
-ag issue list
-ag issue create owner/repo --title "Bug report" --assignee alice
-ag issue prs owner/repo 42
-ag issue branches owner/repo 42 --add feature/fix
-ag label list
-ag milestone list
-ag tag list --limit 100
-ag release list
-ag run list owner/repo
-ag discussion list
-ag notification list
-ag org list
-ag search repositories atomgit
-ag auth status
-ag ssh-key list
-ag api /user
-ag check-update
-ag --help
-```
+运行 `ag --help` 查看命令概览，或运行 `ag <command> --help` 查看具体命令的参数。完整示例和说明参阅[使用指南](docs/usage.md)。
 
-完整命令参阅[使用指南](docs/usage.md)。
 安装、认证、使用和故障排查中的常见问题请参阅[常见问题（FAQ）](docs/faq.md)。
 
 ## 更多文档
