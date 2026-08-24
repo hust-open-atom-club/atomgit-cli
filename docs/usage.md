@@ -717,6 +717,7 @@ ag milestone delete owner/repo 12 --yes
 ```bash
 # 列出运行记录（默认最多 30 条）
 ag run list owner/repo
+ag run list
 
 # 按分支、状态和触发事件过滤
 ag run list owner/repo --branch main --status failed --event push
@@ -727,6 +728,7 @@ ag run list owner/repo --start-time 1700000000000 --end-time 1700086400000
 
 # 查看 run、jobs、steps、URL 和 artifacts；步骤行包含 step ID
 ag run view owner/repo <run-id>
+ag run view <run-id>
 
 # 查看指定 job 及其步骤
 ag run view owner/repo <run-id> --job <job-id>
@@ -749,6 +751,7 @@ ag run step-log owner/repo <run-id> <job-id> <step-id> --output step.log --overw
 
 # 查看 artifact 元数据，不下载归档
 ag run artifact view owner/repo <artifact-id>
+ag run artifact view <artifact-id>
 ag run artifact view owner/repo <artifact-id> --json
 ```
 
