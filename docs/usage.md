@@ -273,7 +273,7 @@ ag branch delete owner/repo feature/foo
 ag branch delete owner/repo feature/foo --yes
 
 # 查看保护分支规则（输出会区分 exact 与 wildcard）
-ag branch protection list owner/repo
+ag branch protection list owner/repo --limit 30
 ag branch protection view owner/repo main
 ag branch protection view owner/repo "release/*"
 
