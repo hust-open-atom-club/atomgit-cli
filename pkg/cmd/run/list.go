@@ -29,16 +29,22 @@ type listOptions struct {
 func newCmdRunList(f *cmdutil.Factory) *cobra.Command {
 	opts := listOptions{}
 	cmd := &cobra.Command{
-		Use:   "list <owner>/<repo>",
+		Use:   "list [<owner>/<repo>]",
 		Short: "List workflow runs",
 		Example: `  ag run list owner/repo
+  ag run list
   ag run list owner/repo --branch main --status failed
   ag run list owner/repo --event push --workflow-name CI --limit 50`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runList(cmd, f, opts, args[0])
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+			return runList(cmd, f, opts, repository.String())
 		},
 	}
+	cmdutil.AddRepositoryContextHelp(cmd)
 
 	cmd.Flags().StringVarP(&opts.Branch, "branch", "b", "", "Filter by head branch")
 	cmd.Flags().StringVarP(&opts.Status, "status", "s", "", "Filter by status: completed, running, failed, canceled, ignored, paused, suspend")

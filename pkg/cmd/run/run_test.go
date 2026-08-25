@@ -17,6 +17,7 @@ import (
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api/actions"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
+	"github.com/spf13/cobra"
 )
 
 type runTestConfig struct {
@@ -274,6 +275,109 @@ func TestRunListEmptyAndValidation(t *testing.T) {
 				t.Fatalf("error = %v", err)
 			}
 		})
+	}
+}
+
+func TestRunListInfersRepositoryFromCurrentCheckout(t *testing.T) {
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path != "/api/v8/repos/inferred/repo/actions/runs" {
+			t.Fatalf("path = %q", req.URL.Path)
+		}
+		if req.URL.Query().Get("page") != "1" || req.URL.Query().Get("per_page") != "1" {
+			t.Fatalf("query = %q", req.URL.RawQuery)
+		}
+		return runResponse(req, http.StatusOK, `{"total_count":1,"workflow_runs":[{"workflow_run_id":"run-1","run_number":1,"status":"COMPLETED"}]}`), nil
+	})
+	factory := runFactory(runTestConfig{token: "secret"}, transport)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "inferred", Name: "repo"}, nil
+	}
+	cmd := newCmdRunList(factory)
+	_ = cmd.Flags().Set("limit", "1")
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs(nil)
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "run-1") {
+		t.Fatalf("output = %q", out.String())
+	}
+}
+
+func TestRunListExplicitRepositoryTakesPrecedence(t *testing.T) {
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path != "/api/v8/repos/explicit/repo/actions/runs" {
+			t.Fatalf("path = %q", req.URL.Path)
+		}
+		return runResponse(req, http.StatusOK, `{"total_count":1,"workflow_runs":[{"workflow_run_id":"run-1","status":"COMPLETED"}]}`), nil
+	})
+	factory := runFactory(runTestConfig{token: "secret"}, transport)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{}, errors.New("resolver must not be called")
+	}
+	cmd := newCmdRunList(factory)
+	cmd.SetOut(io.Discard)
+	cmd.SetArgs([]string{"explicit/repo"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRunCommandsResolveRepositoryBeforeAuthentication(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		args []string
+		new  func(*cmdutil.Factory) *cobra.Command
+	}{
+		{name: "list", args: nil, new: newCmdRunList},
+		{name: "view", args: []string{"run-1"}, new: newCmdRunView},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			factory := runFactory(runTestConfig{tokenErr: errors.New("missing token")}, nil)
+			factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+				return cmdutil.Repository{}, errors.New("repository resolver failed")
+			}
+			cmd := test.new(factory)
+			cmd.SetOut(io.Discard)
+			cmd.SetArgs(test.args)
+			err := cmd.Execute()
+			if err == nil || !strings.Contains(err.Error(), "repository resolver failed") {
+				t.Fatalf("error = %v, want resolver error", err)
+			}
+			if strings.Contains(err.Error(), "missing token") {
+				t.Fatalf("authentication happened before repository resolution: %v", err)
+			}
+		})
+	}
+}
+
+func TestRunViewExplicitRepositoryTakesPrecedence(t *testing.T) {
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if !strings.HasPrefix(req.URL.Path, "/api/v8/repos/explicit/repo/actions/") {
+			t.Fatalf("path = %q", req.URL.Path)
+		}
+		switch req.URL.Path {
+		case "/api/v8/repos/explicit/repo/actions/runs/run-1":
+			return runResponse(req, http.StatusOK, `{"workflow_run_id":"run-1","status":"RUNNING","stages":[]}`), nil
+		case "/api/v8/repos/explicit/repo/actions/runs/run-1/jobs":
+			return runResponse(req, http.StatusOK, `{"total_count":0,"jobs":[]}`), nil
+		case "/api/v8/repos/explicit/repo/actions/runs/run-1/artifacts":
+			return runResponse(req, http.StatusOK, `{"total_count":0,"artifacts":[]}`), nil
+		default:
+			t.Fatalf("unexpected path %s", req.URL.Path)
+			return nil, nil
+		}
+	})
+	factory := runFactory(runTestConfig{token: "secret"}, transport)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{}, errors.New("resolver must not be called")
+	}
+	cmd := newCmdRunView(factory)
+	cmd.SetOut(io.Discard)
+	cmd.SetArgs([]string{"explicit/repo", "run-1"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
 	}
 }
 
