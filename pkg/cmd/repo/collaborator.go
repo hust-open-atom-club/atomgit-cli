@@ -221,7 +221,7 @@ func newCmdRepoCollaboratorEdit(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("collaborator %q already has %s permission", username, permission)
 			}
 			if !yes && collaboratorPermissionReduction(currentPermission, permission) {
-				confirmed, err := confirmCollaboratorAction(cmd.InOrStdin(), cmd.OutOrStdout(), fmt.Sprintf("Reduce %s's permission from %s to %s", username, currentPermission, permission))
+				confirmed, err := confirmCollaboratorAction(cmd.InOrStdin(), cmd.ErrOrStderr(), fmt.Sprintf("Reduce %s's permission from %s to %s", username, currentPermission, permission))
 				if err != nil {
 					return err
 				}
@@ -275,7 +275,7 @@ func newCmdRepoCollaboratorRemove(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			if !yes {
-				confirmed, err := confirmCollaboratorAction(cmd.InOrStdin(), cmd.OutOrStdout(), fmt.Sprintf("Remove %s from %s", username, repository.String()))
+				confirmed, err := confirmCollaboratorAction(cmd.InOrStdin(), cmd.ErrOrStderr(), fmt.Sprintf("Remove %s from %s", username, repository.String()))
 				if err != nil {
 					return err
 				}
@@ -410,12 +410,7 @@ func collaboratorPermissionReduction(current, target string) bool {
 }
 
 func confirmCollaboratorAction(in io.Reader, out io.Writer, prompt string) (bool, error) {
-	fmt.Fprintf(out, "%s? [y/N] ", prompt)
-	var response string
-	if _, err := fmt.Fscan(in, &response); err != nil && err != io.EOF {
-		return false, fmt.Errorf("read confirmation: %w", err)
-	}
-	return strings.EqualFold(response, "y") || strings.EqualFold(response, "yes"), nil
+	return cmdutil.Confirm(in, out, fmt.Sprintf("%s? [y/N] ", prompt))
 }
 
 type collaboratorJSON struct {

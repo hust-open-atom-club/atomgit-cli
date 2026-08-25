@@ -1,7 +1,6 @@
 package branch
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"strings"
@@ -218,7 +217,7 @@ func newCmdBranchDelete(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			if !yes {
-				confirmed, err := confirmDelete(cmd.InOrStdin(), cmd.OutOrStdout(), repository, branchName)
+				confirmed, err := confirmDelete(cmd.InOrStdin(), cmd.ErrOrStderr(), repository, branchName)
 				if err != nil {
 					return err
 				}
@@ -241,16 +240,7 @@ func newCmdBranchDelete(f *cmdutil.Factory) *cobra.Command {
 }
 
 func confirmDelete(in io.Reader, out io.Writer, repository repositoryRef, branchName string) (bool, error) {
-	fmt.Fprintf(out, "Delete branch %s from %s/%s? [y/N] ", branchName, repository.Owner, repository.Repo)
-	scanner := bufio.NewScanner(in)
-	if !scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			return false, fmt.Errorf("failed to read confirmation: %w", err)
-		}
-		return false, nil
-	}
-	answer := strings.ToLower(strings.TrimSpace(scanner.Text()))
-	return answer == "y" || answer == "yes", nil
+	return cmdutil.Confirm(in, out, fmt.Sprintf("Delete branch %s from %s/%s? [y/N] ", branchName, repository.Owner, repository.Repo))
 }
 
 func printBranchSummary(out io.Writer, branch api.Branch) {

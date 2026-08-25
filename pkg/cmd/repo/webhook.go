@@ -343,7 +343,7 @@ func newCmdRepoWebhookDelete(f *cmdutil.Factory) *cobra.Command {
 				return cmdutil.AuthenticationError(err)
 			}
 			if !yes {
-				confirmed, err := confirmWebhookAction(cmd.InOrStdin(), cmd.OutOrStdout(), fmt.Sprintf("Permanently delete webhook #%d from %s", id, repository.String()))
+				confirmed, err := confirmWebhookAction(cmd.InOrStdin(), cmd.ErrOrStderr(), fmt.Sprintf("Permanently delete webhook #%d from %s", id, repository.String()))
 				if err != nil {
 					return err
 				}
@@ -388,7 +388,7 @@ func newCmdRepoWebhookTest(f *cmdutil.Factory) *cobra.Command {
 				return cmdutil.AuthenticationError(err)
 			}
 			if !yes {
-				confirmed, err := confirmWebhookAction(cmd.InOrStdin(), cmd.OutOrStdout(), fmt.Sprintf("Send a real test payload through webhook #%d in %s", id, repository.String()))
+				confirmed, err := confirmWebhookAction(cmd.InOrStdin(), cmd.ErrOrStderr(), fmt.Sprintf("Send a real test payload through webhook #%d in %s", id, repository.String()))
 				if err != nil {
 					return err
 				}
@@ -616,12 +616,7 @@ func readWebhookSecret(in io.Reader, options webhookSecretOptions) (string, bool
 }
 
 func confirmWebhookAction(in io.Reader, out io.Writer, prompt string) (bool, error) {
-	fmt.Fprintf(out, "%s? [y/N] ", prompt)
-	var response string
-	if _, err := fmt.Fscan(in, &response); err != nil && err != io.EOF {
-		return false, fmt.Errorf("read confirmation: %w", err)
-	}
-	return strings.EqualFold(response, "y") || strings.EqualFold(response, "yes"), nil
+	return cmdutil.Confirm(in, out, fmt.Sprintf("%s? [y/N] ", prompt))
 }
 
 func webhookEvents(item api.Webhook) []string {

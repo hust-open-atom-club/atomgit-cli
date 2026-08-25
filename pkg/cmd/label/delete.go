@@ -2,7 +2,6 @@ package label
 
 import (
 	"fmt"
-	"io"
 	"net/url"
 	"strings"
 
@@ -35,12 +34,11 @@ the confirmation prompt.`,
 
 			out := cmd.OutOrStdout()
 			if !yes {
-				fmt.Fprintf(out, "Delete label %q from %s? [y/N] ", name, repository.String())
-				var response string
-				if _, err := fmt.Fscan(cmd.InOrStdin(), &response); err != nil && err != io.EOF {
-					return fmt.Errorf("read confirmation: %w", err)
+				confirmed, err := cmdutil.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), fmt.Sprintf("Delete label %q from %s? [y/N] ", name, repository.String()))
+				if err != nil {
+					return err
 				}
-				if !strings.EqualFold(response, "y") && !strings.EqualFold(response, "yes") {
+				if !confirmed {
 					fmt.Fprintln(out, "Deletion cancelled.")
 					return nil
 				}

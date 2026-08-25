@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"net/url"
@@ -120,7 +119,7 @@ func runRepoSync(cmd *cobra.Command, f *cmdutil.Factory, opts *SyncOptions, repo
 	}
 
 	if opts.Force && !opts.Yes {
-		confirmed, err := confirmRepoSync(cmd.InOrStdin(), out, repository, upstream, branch)
+		confirmed, err := confirmRepoSync(cmd.InOrStdin(), cmd.ErrOrStderr(), repository, upstream, branch)
 		if err != nil {
 			return err
 		}
@@ -176,14 +175,5 @@ func readSyncBranch(client *api.Client, repository syncRepository, branch string
 }
 
 func confirmRepoSync(in io.Reader, out io.Writer, repository, upstream syncRepository, branch string) (bool, error) {
-	fmt.Fprintf(out, "Force-sync %s:%s from %s and overwrite divergent commits? [y/N] ", repository, branch, upstream)
-	scanner := bufio.NewScanner(in)
-	if !scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			return false, fmt.Errorf("failed to read confirmation: %w", err)
-		}
-		return false, nil
-	}
-	answer := strings.ToLower(strings.TrimSpace(scanner.Text()))
-	return answer == "y" || answer == "yes", nil
+	return cmdutil.Confirm(in, out, fmt.Sprintf("Force-sync %s:%s from %s and overwrite divergent commits? [y/N] ", repository, branch, upstream))
 }

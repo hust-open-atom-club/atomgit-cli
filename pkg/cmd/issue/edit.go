@@ -1,10 +1,7 @@
 package issue
 
 import (
-	"bufio"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -163,14 +160,5 @@ func newCmdIssueEdit(f *cmdutil.Factory) *cobra.Command {
 }
 
 func confirmPrompt(cmd *cobra.Command, prompt string) (bool, error) {
-	if _, err := fmt.Fprint(cmd.ErrOrStderr(), prompt); err != nil {
-		return false, fmt.Errorf("write confirmation prompt: %w", err)
-	}
-	reader := bufio.NewReader(cmd.InOrStdin())
-	line, err := reader.ReadString('\n')
-	if err != nil && !errors.Is(err, io.EOF) {
-		return false, fmt.Errorf("read confirmation response: %w", err)
-	}
-	response := strings.TrimSpace(strings.ToLower(line))
-	return response == "y" || response == "yes", nil
+	return cmdutil.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), prompt)
 }

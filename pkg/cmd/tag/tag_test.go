@@ -335,7 +335,9 @@ func TestTagListPaginatesAndHonorsLimit(t *testing.T) {
 				}
 			}
 			var output bytes.Buffer
+			var errOutput bytes.Buffer
 			cmd.SetOut(&output)
+			cmd.SetErr(&errOutput)
 			if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
 				t.Fatal(err)
 			}
@@ -464,7 +466,9 @@ func TestTagDeleteConfirmation(t *testing.T) {
 				}
 			}
 			var output bytes.Buffer
+			var errOutput bytes.Buffer
 			cmd.SetOut(&output)
+			cmd.SetErr(&errOutput)
 
 			if err := cmd.RunE(cmd, []string{"alice/demo", "  v1.0/rc1  "}); err != nil {
 				t.Fatal(err)
@@ -480,11 +484,11 @@ func TestTagDeleteConfirmation(t *testing.T) {
 			}
 			if tt.wantPrompt {
 				const wantPrompt = "Delete tag v1.0/rc1 from alice/demo? [y/N] "
-				if !strings.Contains(output.String(), wantPrompt) {
-					t.Fatalf("output = %q, want prompt containing %q", output.String(), wantPrompt)
+				if !strings.Contains(errOutput.String(), wantPrompt) {
+					t.Fatalf("stderr = %q, want prompt containing %q", errOutput.String(), wantPrompt)
 				}
-			} else if strings.Contains(output.String(), "[y/N]") {
-				t.Fatalf("--yes unexpectedly prompted: %q", output.String())
+			} else if strings.Contains(errOutput.String(), "[y/N]") {
+				t.Fatalf("--yes unexpectedly prompted: %q", errOutput.String())
 			}
 			if tt.wantDeletes == 0 {
 				if !strings.Contains(output.String(), "Deletion cancelled.") {

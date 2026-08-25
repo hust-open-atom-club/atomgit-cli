@@ -1,7 +1,6 @@
 package tag
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"net/url"
@@ -197,7 +196,7 @@ the confirmation prompt.`,
 
 			out := cmd.OutOrStdout()
 			if !yes {
-				confirmed, err := confirmTagDelete(cmd.InOrStdin(), out, repository, tagName)
+				confirmed, err := confirmTagDelete(cmd.InOrStdin(), cmd.ErrOrStderr(), repository, tagName)
 				if err != nil {
 					return err
 				}
@@ -235,14 +234,5 @@ the confirmation prompt.`,
 }
 
 func confirmTagDelete(in io.Reader, out io.Writer, repository cmdutil.Repository, tagName string) (bool, error) {
-	fmt.Fprintf(out, "Delete tag %s from %s? [y/N] ", tagName, repository.String())
-	scanner := bufio.NewScanner(in)
-	if !scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			return false, fmt.Errorf("read confirmation: %w", err)
-		}
-		return false, nil
-	}
-	answer := strings.TrimSpace(scanner.Text())
-	return strings.EqualFold(answer, "y") || strings.EqualFold(answer, "yes"), nil
+	return cmdutil.Confirm(in, out, fmt.Sprintf("Delete tag %s from %s? [y/N] ", tagName, repository.String()))
 }

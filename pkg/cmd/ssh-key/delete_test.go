@@ -44,7 +44,9 @@ func TestSSHKeyDeleteConfirmedAndYes(t *testing.T) {
 			}
 			cmd.SetIn(strings.NewReader(tt.input))
 			var out bytes.Buffer
+			var errOut bytes.Buffer
 			cmd.SetOut(&out)
+			cmd.SetErr(&errOut)
 
 			if err := cmd.RunE(cmd, []string{"7"}); err != nil {
 				t.Fatal(err)
@@ -57,8 +59,8 @@ func TestSSHKeyDeleteConfirmedAndYes(t *testing.T) {
 			}
 			if !tt.yes {
 				for _, want := range []string{"Work Laptop", "SHA256:n2SnR+G5fxMfq7a0Rylsm28CAeefs8U1bmx36JtqgGo"} {
-					if !strings.Contains(out.String(), want) {
-						t.Fatalf("prompt missing %q: %s", want, out.String())
+					if !strings.Contains(errOut.String(), want) {
+						t.Fatalf("prompt missing %q: %s", want, errOut.String())
 					}
 				}
 			}

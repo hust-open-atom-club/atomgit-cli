@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"strings"
@@ -69,7 +68,7 @@ module switches, merge policies, or other unsupported GitHub CLI settings.`,
 			}
 
 			if consequential && !opts.Yes {
-				confirmed, err := confirmRepoEdit(cmd.InOrStdin(), cmd.OutOrStdout(), owner, repoName, request)
+				confirmed, err := confirmRepoEdit(cmd.InOrStdin(), cmd.ErrOrStderr(), owner, repoName, request)
 				if err != nil {
 					return err
 				}
@@ -213,17 +212,7 @@ func confirmRepoEdit(in io.Reader, out io.Writer, owner, repo string, request ma
 		}
 		changes = append(changes, "visibility to "+visibility)
 	}
-	fmt.Fprintf(out, "Update %s/%s %s? [y/N] ", owner, repo, strings.Join(changes, " and "))
-
-	scanner := bufio.NewScanner(in)
-	if !scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			return false, fmt.Errorf("failed to read confirmation: %w", err)
-		}
-		return false, nil
-	}
-	answer := strings.ToLower(strings.TrimSpace(scanner.Text()))
-	return answer == "y" || answer == "yes", nil
+	return cmdutil.Confirm(in, out, fmt.Sprintf("Update %s/%s %s? [y/N] ", owner, repo, strings.Join(changes, " and ")))
 }
 
 func usableRepoEditResult(repository api.Repository) bool {
