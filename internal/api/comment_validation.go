@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 )
+
+const commentValidationPageSize = 100
 
 // GetIssueCommentForParent returns a comment only when it is attached to the
 // requested issue. The repository-level comment endpoint does not carry the
@@ -26,14 +29,28 @@ func GetPullRequestCommentForParent(client *Client, owner, repo string, number, 
 }
 
 func getCommentForParent(client *Client, path, parentKind string, number, commentID int) (Comment, error) {
-	var comments []Comment
-	if err := client.Get(path, &comments); err != nil {
-		return Comment{}, fmt.Errorf("get comments for %s #%d: %w", parentKind, number, err)
+	for page := 1; page <= maxUntilEmptyRequestPages; page++ {
+		var comments []Comment
+		pagePath := commentPagePath(path, page)
+		if err := client.Get(pagePath, &comments); err != nil {
+			return Comment{}, fmt.Errorf("get comments for %s #%d: %w", parentKind, number, err)
+		}
+		if comment, ok := findCommentByID(comments, int64(commentID)); ok {
+			return comment, nil
+		}
+		if len(comments) == 0 {
+			return Comment{}, fmt.Errorf("comment #%d does not belong to %s #%d", commentID, parentKind, number)
+		}
 	}
-	if comment, ok := findCommentByID(comments, int64(commentID)); ok {
-		return comment, nil
+	return Comment{}, fmt.Errorf("get comments for %s #%d: pagination reached the maximum of %d pages", parentKind, number, maxUntilEmptyRequestPages)
+}
+
+func commentPagePath(path string, page int) string {
+	separator := "?"
+	if strings.Contains(path, "?") {
+		separator = "&"
 	}
-	return Comment{}, fmt.Errorf("comment #%d does not belong to %s #%d", commentID, parentKind, number)
+	return fmt.Sprintf("%s%spage=%d&per_page=%d", path, separator, page, commentValidationPageSize)
 }
 
 func findCommentByID(comments []Comment, commentID int64) (Comment, bool) {

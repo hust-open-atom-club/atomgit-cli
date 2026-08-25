@@ -60,7 +60,43 @@ func TestIssueCommentEditVerifiesParentBeforePatch(t *testing.T) {
 	if err := cmd.RunE(cmd, []string{"alice/demo", "8", "42"}); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := strings.Join(methods, ","), "GET /api/v5/repos/alice/demo/issues/8/comments,PATCH /api/v5/repos/alice/demo/issues/comments/42"; got != want {
+	if got, want := strings.Join(methods, ","), "GET /api/v5/repos/alice/demo/issues/8/comments?page=1&per_page=100,PATCH /api/v5/repos/alice/demo/issues/comments/42"; got != want {
+		t.Fatalf("request order = %q, want %q", got, want)
+	}
+}
+
+func TestIssueCommentEditFindsParentOnSecondPage(t *testing.T) {
+	var methods []string
+	factory := &cmdutil.Factory{
+		Config: issueCommentTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: issueCommentRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				methods = append(methods, req.Method+" "+req.URL.RequestURI())
+				switch req.Method {
+				case http.MethodGet:
+					switch req.URL.Query().Get("page") {
+					case "1":
+						return issueJSONResponse(http.StatusOK, `[{"id":99,"user":{"login":"alice"}}]`), nil
+					case "2":
+						return issueJSONResponse(http.StatusOK, `[{"id":42,"body":"old","user":{"login":"alice"}}]`), nil
+					default:
+						t.Fatalf("unexpected page %q", req.URL.Query().Get("page"))
+					}
+				case http.MethodPatch:
+					return issueJSONResponse(http.StatusOK, `{"id":42,"body":"new","user":{"login":"alice"}}`), nil
+				default:
+					t.Fatalf("unexpected method %s", req.Method)
+				}
+				return nil, nil
+			})}, nil
+		},
+	}
+	cmd := newCmdEdit(factory)
+	_ = cmd.Flags().Set("body", "new")
+	if err := cmd.RunE(cmd, []string{"alice/demo", "8", "42"}); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := strings.Join(methods, ","), "GET /api/v5/repos/alice/demo/issues/8/comments?page=1&per_page=100,GET /api/v5/repos/alice/demo/issues/8/comments?page=2&per_page=100,PATCH /api/v5/repos/alice/demo/issues/comments/42"; got != want {
 		t.Fatalf("request order = %q, want %q", got, want)
 	}
 }
@@ -77,7 +113,10 @@ func TestIssueCommentDeleteRejectsCommentFromAnotherIssue(t *testing.T) {
 				if req.Method != http.MethodGet {
 					t.Fatalf("unexpected request %s %s", req.Method, req.URL.Path)
 				}
-				return issueJSONResponse(http.StatusOK, `[{"id":99,"user":{"login":"alice"}}]`), nil
+				if req.URL.Query().Get("page") == "1" {
+					return issueJSONResponse(http.StatusOK, `[{"id":99,"user":{"login":"alice"}}]`), nil
+				}
+				return issueJSONResponse(http.StatusOK, `[]`), nil
 			})}, nil
 		},
 	}
