@@ -759,7 +759,7 @@ ag milestone delete owner/repo 12 --yes
 
 ## Actions 运行记录 (run)
 
-`ag run` 目前只提供只读的运行检查能力，不会触发、重跑、取消或删除工作流运行。
+`ag run` 提供工作流运行检查能力，并支持删除单个 artifact；不会触发、重跑、取消或删除工作流运行。
 
 ```bash
 # 列出运行记录（默认最多 30 条）
@@ -800,9 +800,13 @@ ag run step-log owner/repo <run-id> <job-id> <step-id> --output step.log --overw
 ag run artifact view owner/repo <artifact-id>
 ag run artifact view <artifact-id>
 ag run artifact view owner/repo <artifact-id> --json
+
+# 删除 artifact；默认先显示元数据并要求确认
+ag run artifact delete owner/repo <artifact-id>
+ag run artifact delete <artifact-id> --yes
 ```
 
-`--log` 会先把 AtomGit 返回的日志 ZIP 流式写入临时文件，再逐项输出其中的日志文本；若服务端返回纯文本也会直接兼容。`--log-file` 保留服务端原始 ZIP。`ag run view --artifact` 下载的是 artifact 归档，而 `ag run artifact view` 只读取元数据。日志、step-log `--output` 和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
+`--log` 会先把 AtomGit 返回的日志 ZIP 流式写入临时文件，再逐项输出其中的日志文本；若服务端返回纯文本也会直接兼容。`--log-file` 保留服务端原始 ZIP。`ag run view --artifact` 下载的是 artifact 归档，而 `ag run artifact view` 只读取元数据。`ag run artifact delete` 会先读取 artifact 元数据并显示仓库、ID、名称、workflow run ID 和过期时间，只有输入 `y` 或 `yes` 才会继续；`--yes` 可跳过确认，但不会跳过元数据读取。artifact 删除后无法恢复。日志、step-log `--output` 和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
 
 ## Actions 工作流管理 (workflow)
 

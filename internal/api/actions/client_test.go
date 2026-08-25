@@ -184,6 +184,66 @@ func TestRunJobAndArtifactJSONPaths(t *testing.T) {
 	}
 }
 
+func TestDeleteArtifactRequiresNoContent(t *testing.T) {
+	tests := []struct {
+		name    string
+		status  int
+		body    string
+		wantErr bool
+	}{
+		{name: "no content", status: http.StatusNoContent},
+		{name: "forbidden", status: http.StatusForbidden, body: `{"message":"missing permission"}`, wantErr: true},
+		{name: "not found", status: http.StatusNotFound, body: `{"message":"artifact not found"}`, wantErr: true},
+		{name: "server error", status: http.StatusInternalServerError, body: `{"message":"backend failed"}`, wantErr: true},
+		{name: "unexpected success", status: http.StatusOK, body: `{}`, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method != http.MethodDelete || req.URL.Path != "/api/v8/repos/team/demo/actions/artifacts/artifact-1" {
+					t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+				}
+				if got := req.Header.Get("Authorization"); got != "Bearer secret" {
+					t.Fatalf("Authorization = %q", got)
+				}
+				return response(req, tt.status, tt.body), nil
+			})
+			client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+
+			err := client.DeleteArtifact("team", "demo", "artifact-1")
+			if !tt.wantErr {
+				if err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			var httpErr *HTTPError
+			if !errors.As(err, &httpErr) || httpErr.StatusCode != tt.status {
+				t.Fatalf("error type = %T (%v)", err, err)
+			}
+			if !strings.Contains(err.Error(), "delete artifact") {
+				t.Fatalf("error = %q", err)
+			}
+		})
+	}
+}
+
+func TestDeleteArtifactReportsTransportError(t *testing.T) {
+	transportErr := errors.New("connection refused")
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return nil, transportErr
+	})})
+
+	err := client.DeleteArtifact("team", "demo", "artifact-1")
+	if !errors.Is(err, transportErr) || !strings.Contains(err.Error(), "delete artifact") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
 func TestGetJobHandlesEmptySuccessResponse(t *testing.T) {
 	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		if req.URL.Path != "/api/v8/repos/team/demo/actions/runs/run-1/jobs/missing-job" {
