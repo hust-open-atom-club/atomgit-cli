@@ -3,8 +3,37 @@ package api
 import (
 	"encoding/json"
 	"os"
+	"reflect"
 	"testing"
 )
+
+func TestUpdateRepositoryPushRuleRequestJSONPreservesExplicitZeroValues(t *testing.T) {
+	falseValue := false
+	emptyValue := ""
+	zeroValue := 0
+	request := UpdateRepositoryPushRuleRequest{
+		RejectNotSignedByGPG: &falseValue,
+		CommitMessageRegex:   &emptyValue,
+		MaxFileSize:          &zeroValue,
+	}
+
+	data, err := json.Marshal(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]interface{}
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]interface{}{
+		"reject_not_signed_by_gpg": false,
+		"commit_message_regex":     "",
+		"max_file_size":            float64(0),
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("JSON = %#v, want %#v", got, want)
+	}
+}
 
 func TestNumberFormatting(t *testing.T) {
 	tests := []struct {
