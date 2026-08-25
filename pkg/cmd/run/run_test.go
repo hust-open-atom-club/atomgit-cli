@@ -535,8 +535,9 @@ func TestRunViewStopsOnRepeatedJobsPage(t *testing.T) {
 	factory := runFactory(runTestConfig{token: "secret"}, transport)
 	cmd := newCmdRunView(factory)
 	cmd.SetOut(io.Discard)
-	if err := runView(cmd, factory, viewOptions{}, "team/demo", "run-1"); err != nil {
-		t.Fatal(err)
+	err := runView(cmd, factory, viewOptions{}, "team/demo", "run-1")
+	if err == nil || !strings.Contains(err.Error(), "pagination made no progress on page 2: collected 100 of 300 jobs") {
+		t.Fatalf("error = %v, want incomplete pagination error", err)
 	}
 	if requests != 2 {
 		t.Fatalf("jobs requests = %d, want 2", requests)

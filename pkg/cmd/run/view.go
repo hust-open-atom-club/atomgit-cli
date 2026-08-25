@@ -178,15 +178,6 @@ func listRunJobs(client *actions.Client, owner, repo, runID string) ([]actions.J
 		if err != nil {
 			return nil, err
 		}
-		if len(response.Jobs) == 0 {
-			return jobs, nil
-		}
-
-		fingerprint := jobPageFingerprint(response.Jobs)
-		if _, exists := seenPages[fingerprint]; exists {
-			return jobs, nil
-		}
-		seenPages[fingerprint] = struct{}{}
 
 		if response.TotalCount > 0 {
 			if expectedTotal == 0 {
@@ -195,6 +186,21 @@ func listRunJobs(client *actions.Client, owner, repo, runID string) ([]actions.J
 				totalTrusted = false
 			}
 		}
+		if len(response.Jobs) == 0 {
+			if totalTrusted && expectedTotal > len(jobs) {
+				return nil, jobsPaginationNoProgressError(page, len(jobs), expectedTotal)
+			}
+			return jobs, nil
+		}
+
+		fingerprint := jobPageFingerprint(response.Jobs)
+		if _, exists := seenPages[fingerprint]; exists {
+			if totalTrusted && expectedTotal > len(jobs) {
+				return nil, jobsPaginationNoProgressError(page, len(jobs), expectedTotal)
+			}
+			return jobs, nil
+		}
+		seenPages[fingerprint] = struct{}{}
 
 		added := 0
 		for _, job := range response.Jobs {
@@ -214,12 +220,22 @@ func listRunJobs(client *actions.Client, owner, repo, runID string) ([]actions.J
 		if totalTrusted && expectedTotal > 0 && len(jobs) >= expectedTotal {
 			return jobs, nil
 		}
-		if len(response.Jobs) < perPage || added == 0 {
+		if added == 0 {
+			if totalTrusted && expectedTotal > len(jobs) {
+				return nil, jobsPaginationNoProgressError(page, len(jobs), expectedTotal)
+			}
+			return jobs, nil
+		}
+		if len(response.Jobs) < perPage {
 			return jobs, nil
 		}
 	}
 
 	return nil, fmt.Errorf("workflow run jobs pagination exceeded %d pages", maxPages)
+}
+
+func jobsPaginationNoProgressError(page, collected, expectedTotal int) error {
+	return fmt.Errorf("workflow run jobs pagination made no progress on page %d: collected %d of %d jobs", page, collected, expectedTotal)
 }
 
 func jobIdentity(job actions.Job) string {
