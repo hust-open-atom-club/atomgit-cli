@@ -70,7 +70,7 @@ func TestNewCmdBranchRegistersSubcommandsAndHelp(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, flags := range map[string][]string{
-		"list": {}, "view": {}, "set": {"push", "merge", "yes"}, "delete": {"yes"},
+		"list": {"limit"}, "view": {}, "set": {"push", "merge", "yes"}, "delete": {"yes"},
 	} {
 		child, _, findErr := protection.Find([]string{name})
 		if findErr != nil || child.Name() != name {

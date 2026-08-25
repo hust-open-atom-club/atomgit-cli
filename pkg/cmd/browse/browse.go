@@ -79,11 +79,10 @@ func NewCmdBrowse(f *cmdutil.Factory) *cobra.Command {
 					// Resolve branch lazily — only needed for file path without -c
 					commitRef := opts.branch
 					if commitRef == "" && opts.commit == "" {
-						if b, err := resolveDefaultBranch(f, owner, repo); err == nil {
-							commitRef = b
-						} else {
-							fmt.Fprintf(cmd.ErrOrStderr(), "warning: could not determine default branch: %v; assuming \"main\"\n", err)
-							commitRef = "main"
+						var err error
+						commitRef, err = resolveDefaultBranch(f, owner, repo)
+						if err != nil {
+							return err
 						}
 					}
 					if opts.commit != "" {
@@ -181,12 +180,13 @@ func resolveDefaultBranch(f *cmdutil.Factory, owner, repo string) (string, error
 	}
 	var repoInfo api.Repository
 	if err := client.Get(fmt.Sprintf("/repos/%s/%s", owner, repo), &repoInfo); err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to resolve default branch for %s/%s: %w", owner, repo, err)
 	}
-	if repoInfo.DefaultBranch == "" {
+	defaultBranch := strings.TrimSpace(repoInfo.DefaultBranch)
+	if defaultBranch == "" {
 		return "", fmt.Errorf("empty default branch for %s/%s", owner, repo)
 	}
-	return repoInfo.DefaultBranch, nil
+	return defaultBranch, nil
 }
 
 func resolveNumber(client *api.Client, owner, repo string, num int) (string, error) {

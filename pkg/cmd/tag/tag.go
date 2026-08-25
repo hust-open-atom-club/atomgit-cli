@@ -29,11 +29,17 @@ func NewCmdTag(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 	var jsonOutput bool
+	var limit int
 	cmd := &cobra.Command{
-		Use:   "list [<owner>/<repo>]",
-		Short: "List tags",
-		Args:  cobra.MaximumNArgs(1),
+		Use:     "list [<owner>/<repo>]",
+		Short:   "List tags",
+		Example: `  ag tag list owner/repo --limit 50`,
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", limit)
+			}
+
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
 			if err != nil {
 				return err
@@ -50,10 +56,11 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			var tags []api.Tag
-			path := fmt.Sprintf("/repos/%s/%s/tags", owner, repo)
-			if err := client.Get(path, &tags); err != nil {
-				return err
+			tags, err := api.GetPaginated[api.Tag](client, limit, func(page, perPage int) string {
+				return fmt.Sprintf("/repos/%s/%s/tags?page=%d&per_page=%d", owner, repo, page, perPage)
+			})
+			if err != nil {
+				return fmt.Errorf("failed to list tags for %s/%s: %w", owner, repo, err)
 			}
 			if jsonOutput {
 				return cmdutil.WriteJSON(cmd.OutOrStdout(), tagsJSON(tags))
@@ -72,6 +79,7 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().IntVarP(&limit, "limit", "L", 30, "Maximum number of tags to list")
 	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output tags as JSON")
 
 	return cmd
@@ -104,6 +112,9 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 		Use:   "create [<owner>/<repo>] <tag_name>",
 		Short: "Create a tag",
 		Args:  cobra.RangeArgs(1, 2),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return validateTagCreateRef(opts.Ref)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
@@ -113,6 +124,9 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 			tagName := strings.TrimSpace(remaining[0])
 			if tagName == "" {
 				return fmt.Errorf("tag name is required")
+			}
+			if err := validateTagCreateRef(opts.Ref); err != nil {
+				return err
 			}
 
 			token, err := f.Config.GetToken()
@@ -144,9 +158,17 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.Message, "message", "m", "", "Tag message")
-	cmd.Flags().StringVar(&opts.Ref, "ref", "", "The SHA value or branch name to create the tag from")
+	cmd.Flags().StringVar(&opts.Ref, "ref", "", "Branch, tag, or commit SHA to create the tag from (required)")
+	_ = cmd.MarkFlagRequired("ref")
 
 	return cmd
+}
+
+func validateTagCreateRef(ref string) error {
+	if strings.TrimSpace(ref) == "" {
+		return fmt.Errorf("source ref is required; pass --ref with a branch, tag, or commit SHA")
+	}
+	return nil
 }
 
 func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {

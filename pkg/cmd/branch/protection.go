@@ -21,6 +21,8 @@ type protectionSetOptions struct {
 	Yes   bool
 }
 
+const protectionRuleLookupLimit = 10000
+
 func newCmdBranchProtection(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "protection",
@@ -39,11 +41,17 @@ push and merge allowlists; other web settings are not changed by this command.`,
 }
 
 func newCmdProtectionList(f *cmdutil.Factory) *cobra.Command {
-	return &cobra.Command{
-		Use:   "list [<owner>/<repo>]",
-		Short: "List protected branch rules",
-		Args:  cobra.MaximumNArgs(1),
+	var limit int
+
+	cmd := &cobra.Command{
+		Use:     "list [<owner>/<repo>]",
+		Short:   "List protected branch rules",
+		Example: "  ag branch protection list owner/repo --limit 50",
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", limit)
+			}
 			repository, _, err := resolveRepositoryArgs(f, args, 0)
 			if err != nil {
 				return err
@@ -52,7 +60,7 @@ func newCmdProtectionList(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			rules, err := listProtectionRules(client, repository)
+			rules, err := listProtectionRules(client, repository, limit)
 			if err != nil {
 				return fmt.Errorf("failed to list protected branch rules for %s/%s: %w", repository.Owner, repository.Repo, err)
 			}
@@ -62,6 +70,11 @@ func newCmdProtectionList(f *cmdutil.Factory) *cobra.Command {
 			return nil
 		},
 	}
+
+	// Keep the display limit local to list; lookup commands use the complete
+	// bounded result set so a later-page rule cannot be mistaken for missing.
+	cmd.Flags().IntVarP(&limit, "limit", "L", 30, "Maximum number of protected branch rules to list")
+	return cmd
 }
 
 func newCmdProtectionView(f *cmdutil.Factory) *cobra.Command {
@@ -82,7 +95,7 @@ func newCmdProtectionView(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			rules, err := listProtectionRules(client, repository)
+			rules, err := listProtectionRules(client, repository, protectionRuleLookupLimit)
 			if err != nil {
 				return fmt.Errorf("failed to read protected branch rules for %s/%s: %w", repository.Owner, repository.Repo, err)
 			}
@@ -142,7 +155,7 @@ requires confirmation unless --yes is supplied.`,
 			if err != nil {
 				return err
 			}
-			rules, err := listProtectionRules(client, repository)
+			rules, err := listProtectionRules(client, repository, protectionRuleLookupLimit)
 			if err != nil {
 				return fmt.Errorf("failed to read protected branch rules for %s/%s: %w", repository.Owner, repository.Repo, err)
 			}
@@ -225,7 +238,7 @@ func newCmdProtectionDelete(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			rules, err := listProtectionRules(client, repository)
+			rules, err := listProtectionRules(client, repository, protectionRuleLookupLimit)
 			if err != nil {
 				return fmt.Errorf("failed to read protected branch rules for %s/%s: %w", repository.Owner, repository.Repo, err)
 			}
@@ -263,10 +276,15 @@ func protectionRulePath(repository repositoryRef, pattern string) string {
 	return protectionRulesPath(repository) + "/" + url.PathEscape(pattern) + "/setting"
 }
 
-func listProtectionRules(client *api.Client, repository repositoryRef) ([]api.ProtectedBranchRule, error) {
-	var rules []api.ProtectedBranchRule
+func listProtectionRules(client *api.Client, repository repositoryRef, limit int) ([]api.ProtectedBranchRule, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("invalid limit: %d (must be positive)", limit)
+	}
 	path := fmt.Sprintf("/repos/%s/%s/protect_branches", url.PathEscape(repository.Owner), url.PathEscape(repository.Repo))
-	if err := client.Get(path, &rules); err != nil {
+	rules, err := api.GetPaginated[api.ProtectedBranchRule](client, limit, func(page, perPage int) string {
+		return fmt.Sprintf("%s?page=%d&per_page=%d", path, page, perPage)
+	})
+	if err != nil {
 		return nil, err
 	}
 	sort.SliceStable(rules, func(i, j int) bool { return rules[i].Name < rules[j].Name })

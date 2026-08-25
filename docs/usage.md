@@ -2,6 +2,34 @@
 
 本文档介绍 AtomGit CLI 各命令的常用参数和示例。安装方法请参阅[安装指南](installation.md)，认证与其他配置请参阅[配置指南](configuration.md)。
 
+## 目录
+
+- [认证](#认证)
+- [仓库 (repo)](#仓库-repo)
+- [组织 (org)](#组织-org)
+- [用户 (user)](#用户-user)
+- [Branch](#branch)
+- [Commit](#commit)
+- [Browse](#browse)
+- [Pull Request (pr)](#pull-request-pr)
+- [Issue](#issue)
+- [Tag](#tag)
+- [资源命令的 JSON 输出](#资源命令的-json-输出)
+- [Label](#label)
+- [Milestone](#milestone)
+- [Actions 运行记录 (run)](#actions-运行记录-run)
+- [Actions 工作流管理 (workflow)](#actions-工作流管理-workflow)
+- [通用 API 请求](#通用-api-请求)
+- [Release](#release)
+- [License](#license)
+- [SSH Key](#ssh-key)
+- [通知 (notification)](#通知-notification)
+- [搜索](#搜索)
+- [讨论](#讨论)
+- [版本](#版本)
+- [检查 CLI 更新](#检查-cli-更新)
+- [命令别名 (alias)](#命令别名-alias)
+
 所有命令均可通过 `--help` 查看完整参数，例如：
 
 ```bash
@@ -106,6 +134,20 @@ ag repo edit owner/my-project --name "My Project" --visibility private
 ag repo edit owner/my-project --public --yes
 ag repo edit owner/my-project --private --yes
 
+# 查看仓库级推送规则
+ag repo push-rule view
+ag repo push-rule view owner/my-project
+ag repo push-rule view owner/my-project --json
+
+# 更新推送规则；默认显示目标仓库和变更字段并要求确认
+ag repo push-rule edit owner/my-project --deny-force-push
+ag repo push-rule edit owner/my-project --reject-not-signed-by-gpg --max-file-size 50
+
+# 非交互式更新，或显式关闭/清空规则
+ag repo push-rule edit owner/my-project --deny-force-push --yes
+ag repo push-rule edit owner/my-project --reject-not-signed-by-gpg=false --yes
+ag repo push-rule edit owner/my-project --commit-message-regex "" --max-file-size 0 --yes
+
 # 克隆仓库
 ag repo clone owner/repo
 ag repo clone owner/repo --branch dev
@@ -134,6 +176,8 @@ ag repo delete owner/repo --yes
 `ag repo edit` 仅发送命令行中明确指定的字段，支持 `--name`、`--description`、`--default-branch` 和 `--visibility public|private`。`--public`、`--private` 是可见性的便利选项；它们与 `--visibility` 三者互斥。名称或可见性修改需要交互确认，可使用 `--yes` 跳过确认。成功后命令会显示更新后的仓库名称和浏览器 URL。
 
 该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。
+
+`ag repo push-rule view` 展示签名提交要求、提交信息正则、单文件大小限制、管理员豁免和强推限制。`ag repo push-rule edit` 只发送命令行中明确指定的字段，并保留显式的 `false`、空字符串和 `0`；未指定的远端规则保持不变。所有更新默认需要确认，可使用 `--yes` 跳过。仓库级推送规则与分支、标签保护规则相互独立。
 
 `ag repo sync` 仅更新 AtomGit 上的远端 Fork。命令会先验证仓库确为 Fork、上游存在且目标分支在两端都可读取；未指定 `--branch` 时使用 Fork 的默认分支。默认同步不会覆盖分叉提交，冲突时返回非零退出码。`--force` 可能覆盖 Fork 上的分叉提交，因此需要交互确认；仅在已审查目标后才应结合 `--yes` 使用。
 
@@ -228,6 +272,16 @@ ag user emails
 
 # 输出稳定的 JSON 数组
 ag user emails --json
+
+# 列出当前认证账号参与的命名空间（默认 mode 为 intrant）
+ag user namespaces
+
+# 按项目关联或全部来源查询，并限制返回数量
+ag user namespaces --mode project --limit 100
+ag user namespaces --mode all
+
+# 输出固定字段的 JSON 数组
+ag user namespaces --json
 ```
 
 `ag user view --json` 输出稳定的 JSON 对象，字段始终齐全（空字符串、零计数和空数组也会输出，便于自动化区分"值为零/空"与"字段缺失"）：
@@ -254,6 +308,8 @@ ag user emails --json
 
 `ag user emails` 需要认证，并且只会在明确调用时将当前账号的邮件地址输出到标准输出。文本模式显示邮件地址和状态；`--json` 输出固定 `email`、`state` 字段的数组。没有邮件地址时，文本模式输出 `No email addresses found.`，JSON 模式输出 `[]`。
 
+`ag user namespaces` 需要认证，用于列出当前账号通过成员关系或项目关联可见的用户及群组命名空间。`--mode` 支持 `intrant`（默认值）、`project` 和 `all`；文本模式显示路径、名称、类型和 URL，`--json` 输出固定的 `id`、`path`、`name`、`url`、`type` 字段。`ag org list` 仍只列出组织，不受此命令影响。
+
 ## Branch
 
 ```bash
@@ -277,7 +333,7 @@ ag branch delete owner/repo feature/foo --yes
 ag branch delete feature/foo --yes
 
 # 查看保护分支规则（输出会区分 exact 与 wildcard）
-ag branch protection list owner/repo
+ag branch protection list owner/repo --limit 30
 ag branch protection view owner/repo main
 ag branch protection view owner/repo "release/*"
 ag branch protection list
@@ -631,23 +687,15 @@ ag issue comment delete owner/repo 42 789
 ag issue comment delete owner/repo 42 789 --yes
 ```
 
-# 编辑评论（交互式编辑）
-ag issue comment edit owner/repo 42 789
-ag issue comment edit owner/repo 42 789 --body "Updated information"
-
-# 删除评论
-ag issue comment delete owner/repo 42 789
-ag issue comment delete owner/repo 42 789 --yes
-```
-
 ## Tag
 
 ```bash
-# 在当前 Git 仓库中列出标签
+# 在当前 Git 仓库中列出标签（默认显示 30 条）
 ag tag list
 
-# 显式指定仓库
+# 显式指定仓库或限制返回数量
 ag tag list owner/repo
+ag tag list owner/repo --limit 100
 ag tag list owner/repo --json
 
 # 创建或删除标签
@@ -656,6 +704,8 @@ ag tag create v1.0.0 --ref main
 ag tag delete v1.0.0
 ag tag delete v1.0.0 --yes
 ```
+
+`tag create` 必须显式传入非空的 `--ref`，值可以是 branch、tag 或 commit SHA。
 
 `ag tag delete` 默认会显示目标仓库和标签名并要求确认；可使用 `--yes`（或 `-y`）跳过确认提示。
 
@@ -720,6 +770,7 @@ ag milestone delete owner/repo 12 --yes
 ```bash
 # 列出运行记录（默认最多 30 条）
 ag run list owner/repo
+ag run list
 
 # 按分支、状态和触发事件过滤
 ag run list owner/repo --branch main --status failed --event push
@@ -730,6 +781,7 @@ ag run list owner/repo --start-time 1700000000000 --end-time 1700086400000
 
 # 查看 run、jobs、steps、URL 和 artifacts；步骤行包含 step ID
 ag run view owner/repo <run-id>
+ag run view <run-id>
 
 # 查看指定 job 及其步骤
 ag run view owner/repo <run-id> --job <job-id>
@@ -752,6 +804,7 @@ ag run step-log owner/repo <run-id> <job-id> <step-id> --output step.log --overw
 
 # 查看 artifact 元数据，不下载归档
 ag run artifact view owner/repo <artifact-id>
+ag run artifact view <artifact-id>
 ag run artifact view owner/repo <artifact-id> --json
 ```
 
