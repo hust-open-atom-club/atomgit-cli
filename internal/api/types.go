@@ -42,6 +42,27 @@ type Repository struct {
 	} `json:"namespace"`
 }
 
+// RepositoryPushRule represents the documented repository push-rule fields
+// returned by GET /repos/{owner}/{repo}/push_config.
+type RepositoryPushRule struct {
+	RejectNotSignedByGPG FlexibleBool `json:"reject_not_signed_by_gpg"`
+	CommitMessageRegex   string       `json:"commit_message_regex"`
+	MaxFileSize          int          `json:"max_file_size"`
+	SkipRuleForOwner     FlexibleBool `json:"skip_rule_for_owner"`
+	DenyForcePush        FlexibleBool `json:"deny_force_push"`
+}
+
+// UpdateRepositoryPushRuleRequest is the body for
+// PUT /repos/{owner}/{repo}/push_config. Pointer fields distinguish omitted
+// settings from explicitly supplied false, empty-string, and zero values.
+type UpdateRepositoryPushRuleRequest struct {
+	RejectNotSignedByGPG *bool   `json:"reject_not_signed_by_gpg,omitempty"`
+	CommitMessageRegex   *string `json:"commit_message_regex,omitempty"`
+	MaxFileSize          *int    `json:"max_file_size,omitempty"`
+	SkipRuleForOwner     *bool   `json:"skip_rule_for_owner,omitempty"`
+	DenyForcePush        *bool   `json:"deny_force_push,omitempty"`
+}
+
 // RepositorySyncRequest selects the fork branch to synchronize. Force permits
 // the server to overwrite commits that cannot be fast-forwarded.
 type RepositorySyncRequest struct {
@@ -173,6 +194,15 @@ type User struct {
 type EmailAddress struct {
 	Email string `json:"email"`
 	State string `json:"state"`
+}
+
+// Namespace represents a user or group namespace visible to the authenticated user.
+type Namespace struct {
+	ID      int64  `json:"id"`
+	Path    string `json:"path"`
+	Name    string `json:"name"`
+	HTMLURL string `json:"html_url"`
+	Type    string `json:"type"`
 }
 
 // Collaborator represents a repository member and the provenance of their

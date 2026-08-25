@@ -2,6 +2,18 @@
 
 AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、WinGet、Scoop、Nix 或 Go 安装，也可以通过 AtomGit Release 自动或手动安装，或从源码构建。
 
+## 目录
+
+- [npm 安装](#npm-安装)
+- [Homebrew 安装](#homebrew-安装)
+- [WinGet 安装](#winget-安装)
+- [Scoop 安装](#scoop-安装)
+- [Nix / NixOS 安装](#nix--nixos-安装)
+- [Go 安装](#go-安装)
+- [AtomGit Release 安装](#atomgit-release-安装)
+- [源码安装](#源码安装)
+- [安装验证](#安装验证)
+
 ## npm 安装
 
 npm 安装需要 Node.js 18 或更高版本。执行：
@@ -34,27 +46,74 @@ npm uninstall -g @hust-open-atom-club/atomgit-cli
 
 ## Homebrew 安装
 
-`atomgit-cli` 目前尚未进入 Homebrew Core。macOS 或 Linux 用户需要通过项目维护的 Homebrew tap 安装：
+macOS 或 Linux 用户可以通过 Homebrew Core 安装稳定版，也可以通过项目维护的 Homebrew Tap 跟踪开发快照。
+
+### Homebrew Core（稳定版，推荐）
+
+Homebrew Core 中的 `atomgit-cli` 跟随项目正式发布的稳定版本，适合日常使用和自动化环境。安装时执行：
 
 ```bash
-brew install hust-open-atom-club/tap/atomgit-cli
-```
-
-也可以先添加 tap，再使用简短的 formula 名称安装：
-
-```bash
-brew tap hust-open-atom-club/tap
 brew install atomgit-cli
 ```
 
-升级已安装的 AtomGit CLI：
+升级 Homebrew Core 版本：
 
 ```bash
 brew update
 brew upgrade atomgit-cli
 ```
 
-Homebrew 安装的二进制由 Homebrew 管理升级。
+Homebrew Core Formula 使用固定的稳定版源码；目标平台存在 bottle 时，Homebrew 会优先安装 bottle，否则会按 Formula 从源码构建。项目发布新版本后，Homebrew Core 的版本可能需要等待 Formula 更新完成。
+
+### 项目 Homebrew Tap（开发快照）
+
+项目维护的 [`hust-open-atom-club/tap`](https://github.com/hust-open-atom-club/homebrew-tap) 跟踪 AtomGit `main` 分支的最新 commit，适合提前测试尚未进入稳定版的修复和功能。安装时使用完整 Formula 名称，以便与 Homebrew Core 明确区分：
+
+```bash
+brew install hust-open-atom-club/tap/atomgit-cli
+```
+
+也可以先显式添加 Tap，再安装：
+
+```bash
+brew tap hust-open-atom-club/tap
+brew install hust-open-atom-club/tap/atomgit-cli
+```
+
+升级项目 Tap 版本：
+
+```bash
+brew update
+brew upgrade hust-open-atom-club/tap/atomgit-cli
+```
+
+Tap Formula 会固定到一个不可变的 AtomGit commit，并从源码构建。自动化任务每小时检查一次 `main`；发现新 commit 后，只有 Formula 在 macOS 和 Linux 上通过测试，更新才会合并。其开发版本号包含稳定版基线、commit 时间、必要时使用的同秒碰撞计数器和缩写 SHA。
+
+### Homebrew Core 与项目 Tap 的区别
+
+| 项目 | Homebrew Core | 项目 Homebrew Tap |
+| --- | --- | --- |
+| 更新目标 | 最新正式稳定版 | AtomGit `main` 最新固定 commit |
+| 更新节奏 | 随 Homebrew Core Formula 更新 | 每小时检查，通过 macOS/Linux 测试后更新 |
+| 稳定性 | 推荐日常使用 | 开发快照，可能包含尚未发布的改动 |
+| 安装命令 | `brew install atomgit-cli` | `brew install hust-open-atom-club/tap/atomgit-cli` |
+
+两个渠道提供的 Formula 名称均为 `atomgit-cli`，Homebrew 不允许同时安装。若要从 Homebrew Core 切换到项目 Tap：
+
+```bash
+brew uninstall atomgit-cli
+brew install hust-open-atom-club/tap/atomgit-cli
+```
+
+若要从项目 Tap 切换回 Homebrew Core：
+
+```bash
+brew uninstall hust-open-atom-club/tap/atomgit-cli
+brew untap hust-open-atom-club/tap
+brew install atomgit-cli
+```
+
+无论使用哪个渠道，已安装的二进制都由 Homebrew 管理。可以通过对应的完整 Formula 名称运行 `brew info`，确认准备安装或升级的版本与来源。
 
 卸载：
 
