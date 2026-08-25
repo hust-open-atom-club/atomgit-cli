@@ -2,8 +2,6 @@ package release
 
 import (
 	"fmt"
-	"strings"
-	"unicode"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -95,25 +93,15 @@ func releasesJSON(releases []api.Release) []releaseJSON {
 	result := make([]releaseJSON, len(releases))
 	for i, release := range releases {
 		result[i] = releaseJSON{
-			TagName:         sanitizeJSONText(release.TagName),
-			Name:            sanitizeJSONText(release.Name),
+			TagName:         release.TagName,
+			Name:            release.Name,
 			Status:          releaseStatus(release),
 			Draft:           release.Draft,
 			Prerelease:      release.Prerelease,
-			TargetCommitish: sanitizeJSONText(release.TargetCommitish),
-			CreatedAt:       sanitizeJSONText(release.CreatedAt),
-			Author:          sanitizeJSONText(release.Author.Login),
+			TargetCommitish: release.TargetCommitish,
+			CreatedAt:       release.CreatedAt,
+			Author:          release.Author.Login,
 		}
 	}
 	return result
-}
-
-func sanitizeJSONText(value string) string {
-	value = strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) {
-			return ' '
-		}
-		return r
-	}, value)
-	return strings.Join(strings.Fields(value), " ")
 }

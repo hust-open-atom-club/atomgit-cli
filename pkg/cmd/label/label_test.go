@@ -126,7 +126,7 @@ func TestLabelListJSONAndEmpty(t *testing.T) {
 			if len(values) != tt.want {
 				t.Fatalf("values = %#v", values)
 			}
-			if tt.want == 1 && (values[0].ID != 7 || values[0].Name != "bug" || values[0].Color != "#ff0000" || values[0].Description != "Defect [31m") {
+			if tt.want == 1 && (values[0].ID != 7 || values[0].Name != "bug" || values[0].Color != "#ff0000" || values[0].Description != "Defect\x1b[31m") {
 				t.Fatalf("values = %#v", values)
 			}
 		})

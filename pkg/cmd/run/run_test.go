@@ -194,12 +194,12 @@ func TestRunListNormalizesMultilineTableCells(t *testing.T) {
 	}
 }
 
-func TestRunListJSONUsesFilteredResultsAndSanitizesFields(t *testing.T) {
+func TestRunListJSONUsesFilteredResultsAndPreservesFields(t *testing.T) {
 	requests := 0
 	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 		requests++
 		return runResponse(req, http.StatusOK, `{"total_count":2,"workflow_runs":[
-			{"workflow_run_id":"run-1","run_number":7,"title":"update:\tfile\n\u001b[31m","workflow_name":"CI","status":"COMPLETED","head_branch":"main","event":"Push"},
+			{"workflow_run_id":"run-1","run_number":7,"title":"update:\tfile\n\u001b[31m","workflow_name":"CI","status":"COMPLETED","head_branch":"main","event":"Push","start_time":"2026-08-23T00:00:00Z"},
 			{"workflow_run_id":"run-2","run_number":8}
 		]}`), nil
 	})
@@ -218,7 +218,7 @@ func TestRunListJSONUsesFilteredResultsAndSanitizesFields(t *testing.T) {
 	if err := json.Unmarshal(out.Bytes(), &values); err != nil {
 		t.Fatalf("invalid JSON %q: %v", out.String(), err)
 	}
-	if len(values) != 1 || values[0].RunID != "run-1" || values[0].RunNumber != 7 || values[0].Title != "update: file [31m" || values[0].Workflow != "CI" || values[0].StartedAt != "-" {
+	if len(values) != 1 || values[0].RunID != "run-1" || values[0].RunNumber != 7 || values[0].Title != "update:\tfile\n\x1b[31m" || values[0].Workflow != "CI" || values[0].StartedAt != "2026-08-23T00:00:00Z" {
 		t.Fatalf("values = %#v", values)
 	}
 }

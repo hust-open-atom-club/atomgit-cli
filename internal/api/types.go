@@ -320,6 +320,7 @@ type Branch struct {
 	Commit             BranchCommit `json:"commit"`
 	Protected          FlexibleBool `json:"protected"`
 	Default            FlexibleBool `json:"default"`
+	DefaultBranch      FlexibleBool `json:"default_branch"`
 	Merged             FlexibleBool `json:"merged"`
 	DevelopersCanPush  FlexibleBool `json:"developers_can_push"`
 	DevelopersCanMerge FlexibleBool `json:"developers_can_merge"`

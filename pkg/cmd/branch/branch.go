@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"unicode"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -369,25 +368,15 @@ func newBranchJSON(branch api.Branch) branchJSON {
 		commit = branch.Commit.ShortID
 	}
 	return branchJSON{
-		Name:               sanitizeJSONText(displayBranchName(branch)),
-		Commit:             sanitizeJSONText(commit),
+		Name:               displayBranchName(branch),
+		Commit:             commit,
 		Protected:          branch.Protected.Bool(),
-		Default:            branch.Default.Bool(),
+		Default:            branch.Default.Bool() || branch.DefaultBranch.Bool(),
 		Merged:             branch.Merged.Bool(),
 		CanPush:            branch.CanPush.Bool(),
 		DevelopersCanPush:  branch.DevelopersCanPush.Bool(),
 		DevelopersCanMerge: branch.DevelopersCanMerge.Bool(),
-		CreatedAt:          sanitizeJSONText(branch.CreatedAt),
-		Creator:            sanitizeJSONText(branch.Creator.Login),
+		CreatedAt:          branch.CreatedAt,
+		Creator:            branch.Creator.Login,
 	}
-}
-
-func sanitizeJSONText(value string) string {
-	value = strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) {
-			return ' '
-		}
-		return r
-	}, value)
-	return strings.Join(strings.Fields(value), " ")
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api/actions"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -143,17 +144,25 @@ func runsJSON(runs []actions.Run) []runJSON {
 	result := make([]runJSON, len(runs))
 	for i, workflowRun := range runs {
 		result[i] = runJSON{
-			Status:    singleLine(fallback(workflowRun.Status, "UNKNOWN")),
+			Status:    workflowRun.Status,
 			RunNumber: workflowRun.RunNumber,
-			Title:     singleLine(fallback(workflowRun.Title, "-")),
-			Workflow:  singleLine(fallback(workflowRun.WorkflowName, "-")),
-			Branch:    singleLine(fallback(workflowRun.HeadBranch, "-")),
-			Event:     singleLine(fallback(workflowRun.Event, "-")),
-			RunID:     singleLine(fallback(workflowRun.WorkflowRunID, "-")),
-			StartedAt: formatTimestamp(workflowRun.StartTime),
+			Title:     workflowRun.Title,
+			Workflow:  workflowRun.WorkflowName,
+			Branch:    workflowRun.HeadBranch,
+			Event:     workflowRun.Event,
+			RunID:     workflowRun.WorkflowRunID,
+			StartedAt: formatJSONTimestamp(workflowRun.StartTime),
 		}
 	}
 	return result
+}
+
+func formatJSONTimestamp(value actions.Timestamp) string {
+	timestamp := value.Time()
+	if timestamp.IsZero() {
+		return ""
+	}
+	return timestamp.UTC().Format(time.RFC3339)
 }
 
 func listRuns(client *actions.Client, owner, repo string, opts listOptions, status, event string) ([]actions.Run, error) {

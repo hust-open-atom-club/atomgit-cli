@@ -171,7 +171,7 @@ func TestBranchListJSONUsesStableFieldsAndLimit(t *testing.T) {
 	transport := branchRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 		requests++
 		return branchResponse(http.StatusOK, `[
-			{"name":"main\u001b[31m","protected":true,"default":true,"can_push":true,"created_at":"2026-08-22T00:00:00Z","creator":{"login":"alice"},"commit":{"sha":"abcdef1234567890"}},
+			{"name":"main\u001b[31m","protected":true,"default_branch":true,"can_push":true,"created_at":"2026-08-22T00:00:00Z","creator":{"login":"alice"},"commit":{"sha":"abcdef1234567890"}},
 			{"name":"develop"}
 		]`), nil
 	})
@@ -194,7 +194,7 @@ func TestBranchListJSONUsesStableFieldsAndLimit(t *testing.T) {
 	if err := json.Unmarshal(out.Bytes(), &values); err != nil {
 		t.Fatalf("invalid JSON %q: %v", out.String(), err)
 	}
-	if len(values) != 1 || values[0].Name != "main [31m" || values[0].Commit != "abcdef1234567890" || !values[0].Protected || !values[0].Default || !values[0].CanPush || values[0].Creator != "alice" {
+	if len(values) != 1 || values[0].Name != "main\x1b[31m" || values[0].Commit != "abcdef1234567890" || !values[0].Protected || !values[0].Default || !values[0].CanPush || values[0].Creator != "alice" {
 		t.Fatalf("values = %#v", values)
 	}
 }

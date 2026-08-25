@@ -3,7 +3,6 @@ package label
 import (
 	"fmt"
 	"strings"
-	"unicode"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -90,17 +89,7 @@ type labelJSON struct {
 func labelsJSON(labels []api.Label) []labelJSON {
 	result := make([]labelJSON, len(labels))
 	for i, label := range labels {
-		result[i] = labelJSON{ID: label.ID, Name: sanitizeJSONText(label.Name), Color: sanitizeJSONText(label.Color), Description: sanitizeJSONText(label.Description)}
+		result[i] = labelJSON{ID: label.ID, Name: label.Name, Color: label.Color, Description: label.Description}
 	}
 	return result
-}
-
-func sanitizeJSONText(value string) string {
-	value = strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) {
-			return ' '
-		}
-		return r
-	}, value)
-	return strings.Join(strings.Fields(value), " ")
 }
