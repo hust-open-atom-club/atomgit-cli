@@ -13,7 +13,7 @@ const kanbanMaxPerPage = 100
 // Kanban is an organization dashboard board exposed by the AtomGit API.
 type Kanban struct {
 	ID          string `json:"id"`
-	IID         int    `json:"iid"`
+	IID         *int   `json:"iid,omitempty"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Status      int    `json:"status"`
@@ -56,8 +56,7 @@ func (item *KanbanItem) GetNumber() string {
 func (item *KanbanItem) Column() string {
 	for _, value := range item.Values {
 		fieldType := strings.ToLower(strings.TrimSpace(value.FieldType))
-		fieldName := strings.ToLower(strings.TrimSpace(value.FieldName))
-		if (fieldType == "status" || fieldType == "column" || strings.Contains(fieldName, "status") || strings.Contains(fieldName, "状态")) && strings.TrimSpace(value.Value) != "" {
+		if fieldType == "status" && strings.TrimSpace(value.Value) != "" {
 			return strings.TrimSpace(value.Value)
 		}
 	}

@@ -79,7 +79,8 @@ func TestGetKanbansPaginatesEnvelopeAndHonorsLimit(t *testing.T) {
 		if requests == 1 {
 			content := make([]Kanban, 100)
 			for i := range content {
-				content[i] = Kanban{ID: fmt.Sprint(i + 1), IID: i + 1, Name: fmt.Sprintf("board-%d", i+1)}
+				iid := i + 1
+				content[i] = Kanban{ID: fmt.Sprint(i + 1), IID: &iid, Name: fmt.Sprintf("board-%d", i+1)}
 			}
 			body, err := json.Marshal(kanbanListResponse{AllCount: 101, Content: content})
 			if err != nil {
@@ -95,6 +96,16 @@ func TestGetKanbansPaginatesEnvelopeAndHonorsLimit(t *testing.T) {
 	}
 	if requests != 2 || len(boards) != 101 || boards[100].Name != "three" {
 		t.Fatalf("requests=%d boards=%#v", requests, boards)
+	}
+}
+
+func TestKanbanItemColumnIgnoresSourceItemStatus(t *testing.T) {
+	var item KanbanItem
+	if err := json.Unmarshal([]byte(`{"id":1,"number":42,"title":"Issue","source_type":"issue","status":"closed","values":[{"field_name":"状态","field_type":"status"},{"field_name":"源数据状态","field_type":"artsStatus","value":"closed"}]}`), &item); err != nil {
+		t.Fatal(err)
+	}
+	if got := item.Column(); got != "" {
+		t.Fatalf("Column() = %q, want empty for source item status", got)
 	}
 }
 

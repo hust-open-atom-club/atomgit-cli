@@ -66,7 +66,8 @@ func TestKanbanListTextAndJSONOutput(t *testing.T) {
 			t.Fatalf("request = %s %s?%s", req.Method, req.URL.Path, req.URL.RawQuery)
 		}
 		content := make([]api.Kanban, 0, 2)
-		content = append(content, api.Kanban{ID: "123", IID: 7, Name: "Board", Status: 0, UpdatedAt: "today"})
+		iid := 7
+		content = append(content, api.Kanban{ID: "123", IID: &iid, Name: "Board", Status: 0, UpdatedAt: "today"})
 		body, err := json.Marshal(map[string]any{"content": content, "all_count": 1})
 		if err != nil {
 			t.Fatal(err)
@@ -95,6 +96,44 @@ func TestKanbanListTextAndJSONOutput(t *testing.T) {
 	var got []kanbanJSON
 	if err := json.Unmarshal(out.Bytes(), &got); err != nil || len(got) != 1 || got[0].ID != "123" {
 		t.Fatalf("json=%q err=%v", out.String(), err)
+	}
+}
+
+func TestKanbanViewOmitsUnavailableDetailFields(t *testing.T) {
+	factory := commandFactory(kanbanCommandConfig{}, func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path != "/api/v5/org/team/kanban/123/detail" {
+			t.Fatalf("path = %q", req.URL.Path)
+		}
+		return commandResponse(http.StatusOK, `{"id":"123","name":"Board","status":0,"visibility":1}`), nil
+	})
+
+	cmd := newCmdKanbanView(factory)
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	if err := cmd.RunE(cmd, []string{"team", "123"}); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out.String(), "IID:") {
+		t.Fatalf("text output reports unavailable IID: %s", out.String())
+	}
+
+	cmd = newCmdKanbanView(factory)
+	if err := cmd.Flags().Set("json", "true"); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	cmd.SetOut(&out)
+	if err := cmd.RunE(cmd, []string{"team", "123"}); err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"iid", "updatedAt"} {
+		if _, exists := got[field]; exists {
+			t.Fatalf("JSON reports unavailable %s: %s", field, out.String())
+		}
 	}
 }
 

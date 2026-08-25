@@ -25,12 +25,12 @@ type itemOptions struct {
 
 type kanbanJSON struct {
 	ID          string `json:"id"`
-	IID         int    `json:"iid"`
+	IID         *int   `json:"iid,omitempty"`
 	Name        string `json:"name"`
-	Description string `json:"description"`
+	Description string `json:"description,omitempty"`
 	Status      int    `json:"status"`
 	Visibility  int    `json:"visibility"`
-	UpdatedAt   string `json:"updatedAt"`
+	UpdatedAt   string `json:"updatedAt,omitempty"`
 }
 
 type kanbanItemJSON struct {
@@ -190,7 +190,7 @@ func writeKanbanList(out io.Writer, boards []api.Kanban, jsonOutput bool) error 
 		return err
 	}
 	for _, board := range boards {
-		if _, err := fmt.Fprintf(w, "%s\t%d\t%s\t%s\t%s\n", board.ID, board.IID, boardStatus(board.Status), displayValue(board.Name), displayValue(board.UpdatedAt)); err != nil {
+		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", board.ID, displayIID(board.IID), boardStatus(board.Status), displayValue(board.Name), displayValue(board.UpdatedAt)); err != nil {
 			return err
 		}
 	}
@@ -199,7 +199,9 @@ func writeKanbanList(out io.Writer, boards []api.Kanban, jsonOutput bool) error 
 
 func writeKanbanDetail(out io.Writer, board api.Kanban) {
 	fmt.Fprintf(out, "ID: %s\n", displayValue(board.ID))
-	fmt.Fprintf(out, "IID: %d\n", board.IID)
+	if board.IID != nil {
+		fmt.Fprintf(out, "IID: %d\n", *board.IID)
+	}
 	fmt.Fprintf(out, "Name: %s\n", displayValue(board.Name))
 	fmt.Fprintf(out, "Status: %s\n", boardStatus(board.Status))
 	fmt.Fprintf(out, "Visibility: %d\n", board.Visibility)
@@ -283,4 +285,11 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func displayIID(iid *int) string {
+	if iid == nil {
+		return "-"
+	}
+	return fmt.Sprint(*iid)
 }
