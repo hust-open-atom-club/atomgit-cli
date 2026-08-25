@@ -2,6 +2,16 @@
 
 本文档介绍 AtomGit CLI 的 GoReleaser 打包、npm 制品发布、Homebrew tap 和 Nix package 维护流程。
 
+## 目录
+
+- [发布打包](#发布打包)
+- [自动发布 AtomGit Release](#自动发布-atomgit-release)
+- [发布到 npm registry](#发布到-npm-registry)
+- [维护 Homebrew tap](#维护-homebrew-tap)
+- [维护 Nix package](#维护-nix-package)
+- [维护 WinGet](#维护-winget)
+- [维护 Scoop](#维护-scoop)
+
 ## 发布打包
 
 发布版使用 [GoReleaser](https://goreleaser.com/install/) 打包，tag 统一使用 `vX.Y.Z` 三段式 SemVer。先同步 npm 版本并提交改动，再在该提交上创建版本 tag：

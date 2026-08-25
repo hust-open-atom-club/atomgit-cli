@@ -47,6 +47,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 		"edit":      {"default-branch", "description", "name", "private", "public", "visibility", "yes"},
 		"fork":      {"clone", "description", "name", "private", "public"},
 		"list":      {"limit"},
+		"push-rule": nil,
 		"read-dir":  {"json", "ref"},
 		"read-file": {"json", "ref"},
 		"sync":      {"branch", "force", "yes"},
@@ -75,6 +76,21 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	edit, _, _ := cmd.Find([]string{"edit"})
 	if err := edit.Args(edit, []string{"owner/repo", "extra"}); err == nil {
 		t.Fatal("edit accepted too many repositories")
+	}
+	pushRuleView, _, _ := cmd.Find([]string{"push-rule", "view"})
+	for _, flag := range []string{"json"} {
+		if pushRuleView.Flags().Lookup(flag) == nil {
+			t.Errorf("push-rule view --%s flag was not registered", flag)
+		}
+	}
+	pushRuleEdit, _, _ := cmd.Find([]string{"push-rule", "edit"})
+	for _, flag := range []string{"reject-not-signed-by-gpg", "commit-message-regex", "max-file-size", "skip-rule-for-owner", "deny-force-push", "yes", "json"} {
+		if pushRuleEdit.Flags().Lookup(flag) == nil {
+			t.Errorf("push-rule edit --%s flag was not registered", flag)
+		}
+	}
+	if err := pushRuleEdit.Args(pushRuleEdit, []string{"owner/repo", "extra"}); err == nil {
+		t.Fatal("push-rule edit accepted too many repositories")
 	}
 	for _, name := range []string{"view", "edit", "fork", "sync", "delete"} {
 		child, _, _ := cmd.Find([]string{name})
