@@ -10,6 +10,8 @@
 
 AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 
+English onboarding: [README.en.md](README.en.md)
+
 ## 功能
 
 | 类别 | 能力 |
