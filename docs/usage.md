@@ -157,6 +157,11 @@ ag repo fork
 ag repo fork owner/repo
 ag repo fork owner/repo --name my-fork --public
 
+# 列出现有 Fork（只读；默认最多 30 条）
+ag repo fork list owner/repo
+ag repo fork list owner/repo --limit 100 --json
+ag repo fork list
+
 
 # 将 Fork 的默认分支与上游同步（不修改本地 Git 工作区）
 ag repo sync
@@ -180,6 +185,8 @@ ag repo delete owner/repo --yes
 `ag repo push-rule view` 展示签名提交要求、提交信息正则、单文件大小限制、管理员豁免和强推限制。`ag repo push-rule edit` 只发送命令行中明确指定的字段，并保留显式的 `false`、空字符串和 `0`；未指定的远端规则保持不变。所有更新默认需要确认，可使用 `--yes` 跳过。仓库级推送规则与分支、标签保护规则相互独立。
 
 `ag repo sync` 仅更新 AtomGit 上的远端 Fork。命令会先验证仓库确为 Fork、上游存在且目标分支在两端都可读取；未指定 `--branch` 时使用 Fork 的默认分支。默认同步不会覆盖分叉提交，冲突时返回非零退出码。`--force` 可能覆盖 Fork 上的分叉提交，因此需要交互确认；仅在已审查目标后才应结合 `--yes` 使用。
+
+`ag repo fork list` 通过 `GET /repos/{owner}/{repo}/forks` 只读列出已有 Fork，支持仓库推断、分页、`--limit` 和 `--json`；不会创建或修改任何仓库。
 
 ### 仓库内容读取
 
