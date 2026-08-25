@@ -221,7 +221,7 @@ AUR（Arch User Repository）上维护了三个包，均由维护者 `moyigeek`�
 
 新版本发布后，更新对应 AUR 仓库的 PKGBUILD：
 
-- **atomgit-cli**：将 `pkgver` 更新为新版本号，必要时更新源码 `git+...#tag=v${pkgver}` 指向的 tag 与 `_commit`。
+- **atomgit-cli**：将 `pkgver` 更新为新版本号，并**必须**把 `_commit` 更新为新 tag `v${pkgver}` 指向的 commit，同时确认源码 `git+...#tag=v${pkgver}` 已指向同一 tag。PKGBUILD 会无条件把 `_commit` 注入 `internal/version.Commit`；若仅更新 `pkgver` 而漏更 `_commit`，新 tag 的源码仍可正常构建，但 `ag version` 会继续报告上一个版本的 SHA。可用 `git rev-list -n 1 "v${pkgver}"` 取得目标 commit 后再写入 `_commit`。
 - **atomgit-cli-bin**：将 `pkgver` 更新为新版本号，并更新各架构归档的下载 URL 和对应的 `_sha256sums_*`。
 
 维护流程：
@@ -245,4 +245,4 @@ git push                            # 推送到 AUR
 
 ### 校验
 
-推送前应在本机用 `makepkg -f` 实际构建一次，确认能产出 `.pkg.tar.*` 包且 `ag version` 显示的版本、commit 符合预期，再推送 AUR。
+推送前应在本机用 `makepkg -f` 实际构建一次，确认能产出 `.pkg.tar.*` 包且 `ag version` 显示的版本符合预期。对于 `atomgit-cli`，还需精确核对 `ag version` 输出的 commit 与 `git rev-list -n 1 "v${pkgver}"`（即新 tag 指向的 commit）完全一致；若仍显示上一个版本的 SHA，说明 `_commit` 未同步更新，必须修正后重新构建、再次校验通过，再推送 AUR。
