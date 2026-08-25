@@ -46,14 +46,6 @@ func authenticatedClient(f *cmdutil.Factory) (*api.Client, error) {
 	return f.NewAPIClient(token)
 }
 
-func parseRepositoryArg(repository string) (repositoryRef, error) {
-	owner, repo, err := parseRepository(repository)
-	if err != nil {
-		return repositoryRef{}, err
-	}
-	return repositoryRef{Owner: owner, Repo: repo}, nil
-}
-
 func resolveRepositoryArgs(f *cmdutil.Factory, args []string, trailingArgs int) (repositoryRef, []string, error) {
 	repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, trailingArgs)
 	if err != nil {

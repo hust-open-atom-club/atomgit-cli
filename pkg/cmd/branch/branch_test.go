@@ -304,6 +304,46 @@ func TestBranchCommandsInferRepositoryContext(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
+
+	t.Run("delete", func(t *testing.T) {
+		cmd := newCmdBranchDelete(factoryFor(func(req *http.Request) (*http.Response, error) {
+			switch {
+			case req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo":
+				return branchResponse(http.StatusOK, `{"default_branch":"main"}`), nil
+			case req.Method == http.MethodGet && req.URL.EscapedPath() == "/api/v5/repos/alice/demo/branches/feature%2Ffoo":
+				return branchResponse(http.StatusOK, `{"name":"feature/foo","protected":false}`), nil
+			case req.Method == http.MethodDelete && req.URL.EscapedPath() == "/api/v5/repos/alice/demo/branches/feature%2Ffoo":
+				return branchResponse(http.StatusNoContent, ""), nil
+			default:
+				t.Fatalf("unexpected request = %s %s", req.Method, req.URL.EscapedPath())
+				return nil, nil
+			}
+		}))
+		_ = cmd.Flags().Set("yes", "true")
+		if err := cmd.RunE(cmd, []string{"feature/foo"}); err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestBranchDeletePropagatesRepositoryResolverError(t *testing.T) {
+	requests := 0
+	factory := branchFactory(branchCommandConfig{token: "token"}, func(*http.Request) (*http.Response, error) {
+		requests++
+		return branchResponse(http.StatusOK, `{}`), nil
+	})
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{}, errors.New("repository lookup failed")
+	}
+	cmd := newCmdBranchDelete(factory)
+	_ = cmd.Flags().Set("yes", "true")
+	err := cmd.RunE(cmd, []string{"feature/foo"})
+	if err == nil || !strings.Contains(err.Error(), "repository lookup failed") {
+		t.Fatalf("error = %v, want resolver error", err)
+	}
+	if requests != 0 {
+		t.Fatalf("requests = %d, want 0", requests)
+	}
 }
 
 func TestBranchExplicitRepositoryOverridesContext(t *testing.T) {
@@ -548,29 +588,5 @@ func TestBranchCommandsReportAuthenticationErrorsWithoutRequest(t *testing.T) {
 	}
 	if requests != 0 {
 		t.Fatalf("request count = %d", requests)
-	}
-}
-
-func TestParseRepositoryArg(t *testing.T) {
-	if _, err := parseRepositoryArg("demo"); err == nil {
-		t.Fatal("accepted repository without owner")
-	}
-	if _, err := parseRepositoryArg("alice/demo/extra"); err == nil {
-		t.Fatal("accepted repository with extra path segment")
-	}
-	repository, err := parseRepositoryArg("alice/demo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if repository.Owner != "alice" || repository.Repo != "demo" {
-		t.Fatalf("repository = %#v", repository)
-	}
-
-	repository, err = parseRepositoryArg(" alice / demo ")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if repository.Owner != "alice" || repository.Repo != "demo" {
-		t.Fatalf("trimmed repository = %#v", repository)
 	}
 }
