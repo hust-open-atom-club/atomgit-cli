@@ -50,6 +50,11 @@ type ListWorkflowsOptions struct {
 	PerPage int
 }
 
+type ListRunnersOptions struct {
+	Page    int
+	PerPage int
+}
+
 type HTTPError struct {
 	Operation  string
 	StatusCode int
@@ -227,6 +232,31 @@ func (c *Client) ListWorkflows(owner, repo string, opts ListWorkflowsOptions) (W
 	path := repositoryPath(owner, repo) + "/actions/workflows" + encodeQuery(query)
 	if err := c.getJSON("list repository workflows", path, &result); err != nil {
 		return WorkflowListResponse{}, err
+	}
+	return result, nil
+}
+
+// ListRunners lists host runners configured directly on a repository.
+func (c *Client) ListRunners(owner, repo string, opts ListRunnersOptions) (RunnerListResponse, error) {
+	return c.listRunners("list repository runners", repositoryPath(owner, repo)+"/actions/runners", opts)
+}
+
+// ListSharedRunners lists host runners shared with a repository.
+func (c *Client) ListSharedRunners(owner, repo string, opts ListRunnersOptions) (RunnerListResponse, error) {
+	return c.listRunners("list shared runners", repositoryPath(owner, repo)+"/actions/runners/shared-runners", opts)
+}
+
+func (c *Client) listRunners(operation, path string, opts ListRunnersOptions) (RunnerListResponse, error) {
+	query := url.Values{}
+	setPositiveInt(query, "page", opts.Page)
+	setPositiveInt(query, "per_page", opts.PerPage)
+
+	var result RunnerListResponse
+	if err := c.getJSON(operation, path+encodeQuery(query), &result); err != nil {
+		return RunnerListResponse{}, err
+	}
+	if result.Runners == nil {
+		result.Runners = make([]Runner, 0)
 	}
 	return result, nil
 }
