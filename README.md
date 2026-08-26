@@ -97,8 +97,6 @@ go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 
 运行 `ag --help` 查看命令概览，或运行 `ag <command> --help` 查看具体命令的参数。完整示例和说明参阅[使用指南](docs/usage.md)。
 
-完整命令参阅[使用指南](docs/usage.md)。
-`branch list`、`label list`、`release list` 和 `run list` 可使用 `--json` 输出稳定的机器可读数组。
 安装、认证、使用和故障排查中的常见问题请参阅[常见问题（FAQ）](docs/faq.md)。
 
 ## 更多文档
