@@ -316,22 +316,28 @@ ag user namespaces --json
 # 列出远程分支（默认显示 30 条）
 ag branch list owner/repo
 ag branch list owner/repo --limit 100
+ag branch list --limit 100
 
 # 查看远程分支详情
 ag branch view owner/repo main
 ag branch view owner/repo feature/foo
+ag branch view main
 
 # 从指定 ref 创建远程分支
 ag branch create owner/repo feature/foo --ref main
+ag branch create feature/foo --ref main
 
 # 删除远程分支（默认需要确认；不会删除本地 Git 分支）
 ag branch delete owner/repo feature/foo
 ag branch delete owner/repo feature/foo --yes
+ag branch delete feature/foo --yes
 
 # 查看保护分支规则（输出会区分 exact 与 wildcard）
 ag branch protection list owner/repo --limit 30
 ag branch protection view owner/repo main
 ag branch protection view owner/repo "release/*"
+ag branch protection list
+ag branch protection view main
 
 # 创建保护规则；新规则必须同时指定 push 与 merge 权限
 ag branch protection set owner/repo main --push admin --merge admin
@@ -346,7 +352,7 @@ ag branch protection delete owner/repo "release/*"
 ag branch protection delete owner/repo "release/*" --yes
 ```
 
-保护规则的 `--push` 与 `--merge` 接受由英文分号分隔的 `develop`、`admin`、`maintainer` 或用户名；显式传入空字符串表示不允许任何人执行该操作。AtomGit 对精确分支规则的优先级高于匹配的 wildcard 规则。CLI 只管理官方 API 暴露的推送与合并白名单，不修改评审、流水线等其他保护设置。更新接口要求同时提交两类权限，因此 CLI 会先读取现有规则并保留未显式修改的一侧；若服务端返回无法无损表示的旧权限，命令会停止并要求显式提供该权限。
+保护规则的 `--push` 与 `--merge` 接受由英文分号分隔的 `develop`、`admin`、`maintainer` 或用户名；显式传入空字符串表示不允许任何人执行该操作。AtomGit 对精确分支规则的优先级高于匹配的 wildcard 规则。CLI 只管理官方 API 暴露的推送与合并白名单，不修改评审、流水线等其他保护设置。更新接口要求同时提交两类权限，因此 CLI 会先读取现有规则并保留未显式修改的一侧；若服务端返回无法无损表示的旧权限，命令会停止并要求显式提供该权限。branch 命令省略 `owner/repo` 时使用当前 Git 仓库推断结果，显式参数始终优先。
 
 ## Commit
 
@@ -759,7 +765,7 @@ ag milestone delete owner/repo 12 --yes
 
 ## Actions 运行记录 (run)
 
-`ag run` 目前只提供只读的运行检查能力，不会触发、重跑、取消或删除工作流运行。
+`ag run` 提供工作流运行检查能力，并支持删除单个 artifact；不会触发、重跑、取消或删除工作流运行。
 
 ```bash
 # 列出运行记录（默认最多 30 条）
@@ -800,9 +806,13 @@ ag run step-log owner/repo <run-id> <job-id> <step-id> --output step.log --overw
 ag run artifact view owner/repo <artifact-id>
 ag run artifact view <artifact-id>
 ag run artifact view owner/repo <artifact-id> --json
+
+# 删除 artifact；默认先显示元数据并要求确认
+ag run artifact delete owner/repo <artifact-id>
+ag run artifact delete <artifact-id> --yes
 ```
 
-`--log` 会先把 AtomGit 返回的日志 ZIP 流式写入临时文件，再逐项输出其中的日志文本；若服务端返回纯文本也会直接兼容。`--log-file` 保留服务端原始 ZIP。`ag run view --artifact` 下载的是 artifact 归档，而 `ag run artifact view` 只读取元数据。日志、step-log `--output` 和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
+`--log` 会先把 AtomGit 返回的日志 ZIP 流式写入临时文件，再逐项输出其中的日志文本；若服务端返回纯文本也会直接兼容。`--log-file` 保留服务端原始 ZIP。`ag run view --artifact` 下载的是 artifact 归档，而 `ag run artifact view` 只读取元数据。`ag run artifact delete` 会先读取 artifact 元数据并显示仓库、ID、名称、workflow run ID 和过期时间，只有输入 `y` 或 `yes` 才会继续；`--yes` 可跳过确认，但不会跳过元数据读取。artifact 删除后无法恢复。日志、step-log `--output` 和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
 
 ## Actions 工作流管理 (workflow)
 
