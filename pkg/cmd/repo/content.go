@@ -51,7 +51,7 @@ func validateContentPath(path string, allowRoot bool) error {
 	}
 	if path == "." {
 		if !allowRoot {
-			return errors.New("'.' is only valid for directory listing; use read-dir for repository root")
+			return errors.New("'.' is only valid for directory listing; use 'ag repo content list' for repository root")
 		}
 		return nil
 	}
@@ -276,9 +276,10 @@ func newCmdRepoReadFile(f *cmdutil.Factory) *cobra.Command {
 	opts := &readFileOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "read-file [<owner>/<repo>] <path>",
-		Short: "Read a file from a repository",
-		Args:  cobra.RangeArgs(1, 2),
+		Use:        "read-file [<owner>/<repo>] <path>",
+		Short:      "Read a file from a repository",
+		Deprecated: "use 'ag repo content view' instead",
+		Args:       cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
@@ -352,9 +353,10 @@ func newCmdRepoReadDir(f *cmdutil.Factory) *cobra.Command {
 	opts := &readDirOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "read-dir [<owner>/<repo>] <path>",
-		Short: "List contents of a repository directory",
-		Args:  cobra.RangeArgs(1, 2),
+		Use:        "read-dir [<owner>/<repo>] <path>",
+		Short:      "List contents of a repository directory",
+		Deprecated: "use 'ag repo content list' instead",
+		Args:       cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {

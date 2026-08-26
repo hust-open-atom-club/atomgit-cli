@@ -202,7 +202,7 @@ ag repo content view owner/repo README.md --json
 
 路径必须是仓库相对路径，不能以 `/` 开头或结尾，不能包含连续斜杠或 `.`/`..` 段（`content list` 的 `.` 是唯一例外，表示仓库根目录）。不带参数的 `content list` 会推断当前仓库并列出根目录；单个参数始终作为推断仓库内的路径，因此列出显式仓库根目录时应使用 `owner/repo .`。每个路径段独立转义。文件内容默认经过终端清理；如需保留原始字节，使用根级 `--raw-output`。这些命令只发送 GET 请求，不会修改仓库内容。
 
-原有的 `ag repo read-file` 和 `ag repo read-dir` 入口继续保留以兼容已有脚本；新用法应优先使用 `ag repo content view` 和 `ag repo content list`。
+原有的 `ag repo read-file` 和 `ag repo read-dir` 已弃用，但会继续保留以兼容已有脚本；请分别迁移到 `ag repo content view` 和 `ag repo content list`。
 
 ### 仓库协作者
 
