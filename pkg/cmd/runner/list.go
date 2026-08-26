@@ -156,8 +156,12 @@ func runnerKey(runner actions.Runner) string {
 
 func writeRunnerTable(cmd *cobra.Command, source string, runners []actions.Runner) error {
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 8, 2, ' ', 0)
-	fmt.Fprintln(w, "SOURCE\tID\tNAME\tSTATUS\tBUSY\tONLINE\tPLATFORM\tOS\tLABELS")
+	fmt.Fprintln(w, "SOURCE\tSCOPE\tID\tNAME\tSTATUS\tBUSY\tONLINE\tPLATFORM\tOS\tLABELS")
 	for _, runner := range runners {
+		scope := strings.TrimSpace(runner.Scope)
+		if scope == "" {
+			scope = "-"
+		}
 		id := string(runner.ID)
 		if id == "" {
 			id = "-"
@@ -182,8 +186,8 @@ func writeRunnerTable(cmd *cobra.Command, source string, runners []actions.Runne
 		if labels == "" {
 			labels = "-"
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
-			source, id, name, status, optionalBool(runner.Busy), optionalBool(runner.Online), platform, osName, labels)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+			source, scope, id, name, status, optionalBool(runner.Busy), optionalBool(runner.Online), platform, osName, labels)
 	}
 	return w.Flush()
 }

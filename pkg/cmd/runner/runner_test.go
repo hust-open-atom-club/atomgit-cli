@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api/actions"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
@@ -83,6 +84,35 @@ func TestRunnerListTextAndJSON(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestRunnerListTextPreservesReturnedScope(t *testing.T) {
+	cmd := NewCmdRunner(&cmdutil.Factory{})
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	if err := writeRunnerTable(cmd, "repository", []actions.Runner{
+		{ID: "scoped", Name: "scoped-runner", Scope: "repository"},
+		{ID: "unscoped", Name: "unscoped-runner"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("output lines = %d, want 3: %q", len(lines), out.String())
+	}
+	header := strings.Fields(lines[0])
+	if len(header) < 2 || header[0] != "SOURCE" || header[1] != "SCOPE" {
+		t.Fatalf("header = %v, want SOURCE SCOPE first", header)
+	}
+	returned := strings.Fields(lines[1])
+	if len(returned) < 2 || returned[1] != "repository" {
+		t.Fatalf("returned-scope row = %v", returned)
+	}
+	absent := strings.Fields(lines[2])
+	if len(absent) < 2 || absent[1] != "-" {
+		t.Fatalf("absent-scope row = %v, want '-' scope", absent)
+	}
 }
 
 func TestRunnerListPaginatesAndHonorsLimit(t *testing.T) {
