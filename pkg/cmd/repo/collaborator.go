@@ -28,7 +28,13 @@ func newCmdRepoCollaborator(f *cmdutil.Factory) *cobra.Command {
 		Long: `List, inspect, add, edit, and remove direct repository collaborators.
 
 The built-in AtomGit permissions are pull, push, and admin. Organization-
-inherited permissions are displayed but cannot be changed by these commands.`,
+inherited permissions are displayed but cannot be changed by these commands.
+
+AtomGit API v5 exposes accepted collaborators only. Pending invitations are
+not shown by list or view; remove attempts to revoke a possible pending
+invitation when the user is not an accepted collaborator. In text mode, list
+writes this API limitation as a note to stderr; JSON output contains only the
+accepted-collaborator data returned by the API.`,
 	}
 	cmd.AddCommand(newCmdRepoCollaboratorList(f))
 	cmd.AddCommand(newCmdRepoCollaboratorView(f))
@@ -252,8 +258,14 @@ func newCmdRepoCollaboratorEdit(f *cmdutil.Factory) *cobra.Command {
 func newCmdRepoCollaboratorRemove(f *cmdutil.Factory) *cobra.Command {
 	var yes bool
 	cmd := &cobra.Command{
-		Use:     "remove [<owner>/<repo>] <username>",
-		Short:   "Remove a direct repository collaborator",
+		Use:   "remove [<owner>/<repo>] <username>",
+		Short: "Remove a direct repository collaborator",
+		Long: `Remove an accepted direct collaborator or attempt to revoke a pending invitation.
+
+Because AtomGit API v5 does not expose pending invitations, this command first
+checks accepted collaborators. If the user is not found, it sends the delete
+request as a possible invitation revocation. JSON output is not available for
+this mutation.`,
 		Example: "  ag repo collaborator remove owner/repo octocat --yes",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {

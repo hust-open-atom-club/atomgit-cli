@@ -32,6 +32,11 @@ func TestRepoCollaboratorRegistersCommandsAndFlags(t *testing.T) {
 	}
 
 	cmd := newCmdRepoCollaborator(&cmdutil.Factory{})
+	for _, want := range []string{"Pending invitations", "list or view", "remove attempts", "stderr", "JSON"} {
+		if !strings.Contains(cmd.Long, want) {
+			t.Errorf("collaborator help missing %q: %s", want, cmd.Long)
+		}
+	}
 	want := map[string][]string{
 		"list":   {"limit", "json"},
 		"view":   {"json"},
@@ -51,6 +56,16 @@ func TestRepoCollaboratorRegistersCommandsAndFlags(t *testing.T) {
 			if child.Flags().Lookup(flag) == nil {
 				t.Errorf("%s --%s flag was not registered", name, flag)
 			}
+		}
+	}
+	remove, _, err := cmd.Find([]string{"remove"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	removeHelp := strings.Join(strings.Fields(remove.Long), " ")
+	for _, want := range []string{"pending invitation", "not found", "delete request", "JSON output is not available"} {
+		if !strings.Contains(removeHelp, want) {
+			t.Errorf("remove help missing %q: %s", want, remove.Long)
 		}
 	}
 }
