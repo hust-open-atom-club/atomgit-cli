@@ -212,7 +212,7 @@ ag repo collaborator list owner/repo --limit 50
 ag repo collaborator view owner/repo octocat
 ag repo collaborator view owner/repo octocat --json
 
-# 添加、调整或移除直接协作者
+# 添加、调整或移除直接协作者；移除命令也会尝试撤销待处理邀请
 ag repo collaborator add owner/repo octocat --permission push
 ag repo collaborator edit owner/repo octocat --permission admin
 ag repo collaborator edit owner/repo octocat --permission pull --yes
@@ -220,7 +220,9 @@ ag repo collaborator remove owner/repo octocat
 ag repo collaborator remove owner/repo octocat --yes
 ```
 
-AtomGit 内置协作者权限为 `pull`（参与者）、`push`（开发者）和 `admin`（仓库维护者）。`list` 和 `view` 会明确标记直接权限或权限来源；组织继承权限不能通过仓库级命令修改。降权和移除操作默认要求确认，可使用 `--yes` 跳过确认。
+AtomGit 内置协作者权限为 `pull`（参与者）、`push`（开发者）和 `admin`（仓库维护者）。`list` 和 `view` 只显示已接受的协作者，并会明确标记直接权限或权限来源；AtomGit API v5 不公开待处理邀请，因此这两个命令无法列出或查看待处理邀请。组织继承权限不能通过仓库级命令修改。
+
+`remove` 对已接受的直接协作者执行移除；如果用户不在已接受列表中，则会尝试撤销可能存在的待处理邀请。由于 API 不公开邀请状态，找不到邀请时命令会返回相应错误。降权和移除操作默认要求确认，可使用 `--yes` 跳过确认。文本模式下，关于 API 不公开待处理邀请的提示写入 stderr；这些变更命令不提供 `--json` 输出。
 
 ### 仓库 Webhook
 

@@ -19,6 +19,8 @@ var collaboratorPermissionRank = map[string]int{
 	"admin": 3,
 }
 
+const pendingCollaboratorInvitationsNote = "Note: AtomGit API v5 does not expose pending collaborator invitations; only accepted collaborators are shown."
+
 func newCmdRepoCollaborator(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "collaborator",
@@ -26,7 +28,13 @@ func newCmdRepoCollaborator(f *cmdutil.Factory) *cobra.Command {
 		Long: `List, inspect, add, edit, and remove direct repository collaborators.
 
 The built-in AtomGit permissions are pull, push, and admin. Organization-
-inherited permissions are displayed but cannot be changed by these commands.`,
+inherited permissions are displayed but cannot be changed by these commands.
+
+AtomGit API v5 exposes accepted collaborators only. Pending invitations are
+not shown by list or view; remove attempts to revoke a possible pending
+invitation when the user is not an accepted collaborator. In text mode, list
+writes this API limitation as a note to stderr; JSON output contains only the
+accepted-collaborator data returned by the API.`,
 	}
 	cmd.AddCommand(newCmdRepoCollaboratorList(f))
 	cmd.AddCommand(newCmdRepoCollaboratorView(f))
@@ -43,6 +51,7 @@ func newCmdRepoCollaboratorList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
 		Short:   "List repository collaborators",
+		Long:    "List accepted repository collaborators. Pending invitations are not exposed by AtomGit API v5 and cannot be included in this listing.",
 		Example: "  ag repo collaborator list owner/repo --limit 50",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -68,6 +77,7 @@ func newCmdRepoCollaboratorList(f *cmdutil.Factory) *cobra.Command {
 			}
 			if len(items) == 0 {
 				fmt.Fprintln(cmd.OutOrStdout(), "No collaborators found.")
+				fmt.Fprintln(cmd.ErrOrStderr(), pendingCollaboratorInvitationsNote)
 				return nil
 			}
 			for _, item := range items {
@@ -77,6 +87,7 @@ func newCmdRepoCollaboratorList(f *cmdutil.Factory) *cobra.Command {
 				}
 				fmt.Fprintln(cmd.OutOrStdout())
 			}
+			fmt.Fprintln(cmd.ErrOrStderr(), pendingCollaboratorInvitationsNote)
 			return nil
 		},
 	}
@@ -110,7 +121,7 @@ func newCmdRepoCollaboratorView(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("failed to view collaborator %q: %w", username, err)
 			}
 			if !found {
-				return fmt.Errorf("collaborator %q was not found in %s", username, repository.String())
+				return collaboratorNotFoundError(username, repository)
 			}
 			if jsonOutput {
 				return cmdutil.WriteJSON(cmd.OutOrStdout(), newCollaboratorJSON(item, repository))
@@ -173,7 +184,7 @@ func newCmdRepoCollaboratorAdd(f *cmdutil.Factory) *cobra.Command {
 			if err := client.Put(collaboratorPath(repository, username), map[string]string{"permission": permission}, &added); err != nil {
 				return fmt.Errorf("failed to add collaborator %q: %w", username, err)
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Added collaborator %s with %s permission\n", username, permission)
+			fmt.Fprintf(cmd.OutOrStdout(), "Sent collaborator invitation to %s with %s permission\n", username, permission)
 			return nil
 		},
 	}
@@ -247,8 +258,14 @@ func newCmdRepoCollaboratorEdit(f *cmdutil.Factory) *cobra.Command {
 func newCmdRepoCollaboratorRemove(f *cmdutil.Factory) *cobra.Command {
 	var yes bool
 	cmd := &cobra.Command{
-		Use:     "remove [<owner>/<repo>] <username>",
-		Short:   "Remove a direct repository collaborator",
+		Use:   "remove [<owner>/<repo>] <username>",
+		Short: "Remove a direct repository collaborator",
+		Long: `Remove an accepted direct collaborator or attempt to revoke a pending invitation.
+
+Because AtomGit API v5 does not expose pending invitations, this command first
+checks accepted collaborators. If the user is not found, it sends the delete
+request as a possible invitation revocation. JSON output is not available for
+this mutation.`,
 		Example: "  ag repo collaborator remove owner/repo octocat --yes",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -268,26 +285,38 @@ func newCmdRepoCollaboratorRemove(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to check collaborator %q: %w", username, err)
 			}
-			if !found {
-				return fmt.Errorf("collaborator %q was not found in %s", username, repository.String())
-			}
-			if err := ensureMutableDirectCollaborator(current, repository); err != nil {
-				return err
+			prompt := fmt.Sprintf("Remove %s from %s", username, repository.String())
+			cancelMessage := "Removal cancelled."
+			successMessage := fmt.Sprintf("Removed collaborator %s", username)
+			if found {
+				if err := ensureMutableDirectCollaborator(current, repository); err != nil {
+					return err
+				}
+			} else {
+				prompt = fmt.Sprintf("Revoke %s's possible pending invitation to %s", username, repository.String())
+				cancelMessage = "Invitation revocation cancelled."
+				successMessage = fmt.Sprintf("Revoked pending invitation for %s", username)
 			}
 			if !yes {
-				confirmed, err := confirmCollaboratorAction(cmd.InOrStdin(), cmd.OutOrStdout(), fmt.Sprintf("Remove %s from %s", username, repository.String()))
+				confirmed, err := confirmCollaboratorAction(cmd.InOrStdin(), cmd.OutOrStdout(), prompt)
 				if err != nil {
 					return err
 				}
 				if !confirmed {
-					fmt.Fprintln(cmd.OutOrStdout(), "Removal cancelled.")
+					fmt.Fprintln(cmd.OutOrStdout(), cancelMessage)
 					return nil
 				}
 			}
 			if err := client.Delete(collaboratorPath(repository, username)); err != nil {
+				if !found && api.IsHTTPStatus(err, http.StatusNotFound) {
+					return fmt.Errorf("%w; no pending invitation could be revoked through AtomGit API v5", collaboratorNotFoundError(username, repository))
+				}
+				if !found {
+					return fmt.Errorf("failed to revoke possible pending collaborator invitation %q: %w", username, err)
+				}
 				return fmt.Errorf("failed to remove collaborator %q: %w", username, err)
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Removed collaborator %s\n", username)
+			fmt.Fprintln(cmd.OutOrStdout(), successMessage)
 			return nil
 		},
 	}
@@ -387,6 +416,10 @@ func collaboratorAccess(item api.Collaborator, repository cmdutil.Repository) st
 		return "inherited from " + source
 	}
 	return "inherited or unknown source"
+}
+
+func collaboratorNotFoundError(username string, repository cmdutil.Repository) error {
+	return fmt.Errorf("collaborator %q was not found among accepted collaborators in %s; the user may have a pending invitation, which AtomGit API v5 does not expose", username, repository.String())
 }
 
 func inheritedCollaboratorError(item api.Collaborator, repository cmdutil.Repository) error {
