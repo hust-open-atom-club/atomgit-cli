@@ -1,6 +1,6 @@
 # 发布指南
 
-本文档介绍 AtomGit CLI 的 GoReleaser 打包、npm 制品发布、Homebrew tap 和 Nix package 维护流程。
+本文档介绍 AtomGit CLI 的 GoReleaser 打包、npm 制品发布，以及 Homebrew tap、Nix package、WinGet、Scoop 和 AUR package 的维护流程。
 
 ## 发布打包
 
@@ -221,7 +221,14 @@ AUR（Arch User Repository）上维护了三个包，均由维护者 `moyigeek`�
 
 新版本发布后，更新对应 AUR 仓库的 PKGBUILD：
 
-- **atomgit-cli**：将 `pkgver` 更新为新版本号，并**必须**把 `_commit` 更新为新 tag `v${pkgver}` 指向的 commit，同时确认源码 `git+...#tag=v${pkgver}` 已指向同一 tag。PKGBUILD 会无条件把 `_commit` 注入 `internal/version.Commit`；若仅更新 `pkgver` 而漏更 `_commit`，新 tag 的源码仍可正常构建，但 `ag version` 会继续报告上一个版本的 SHA。可用 `git rev-list -n 1 "v${pkgver}"` 取得目标 commit 后再写入 `_commit`。
+- **atomgit-cli**：将 `pkgver` 更新为新版本号，并**必须**把 `_commit` 更新为新 tag `v${pkgver}` 指向的 commit，同时确认源码 `git+...#tag=v${pkgver}` 已指向同一 tag。PKGBUILD 会无条件把 `_commit` 注入 `internal/version.Commit`；若仅更新 `pkgver` 而漏更 `_commit`，新 tag 的源码仍可正常构建，但 `ag version` 会继续报告上一个版本的 SHA。注意：本地 AUR 仓库（如 `~/atomgit-cli`）不包含上游 tag，在其中执行 `git rev-list -n 1 "v${pkgver}"` 会报 `unknown revision`（exit 128）。请改用以下任一方式在新 tag 指向的上游仓库中取得目标 commit 后再写入 `_commit`：
+  ```bash
+  # 方式 A：远程查询（可在任意目录执行，无需克隆）
+  git ls-remote https://atomgit.com/hust-open-atom-club/atomgit-cli.git "refs/tags/v${pkgver}" \
+    | awk '{print $1}'
+  # 方式 B：在上游 atomgit-cli 检出中执行
+  git rev-list -n 1 "v${pkgver}"
+  ```
 - **atomgit-cli-bin**：将 `pkgver` 更新为新版本号，并更新各架构归档的下载 URL 和对应的 `_sha256sums_*`。
 
 维护流程：
@@ -245,4 +252,4 @@ git push                            # 推送到 AUR
 
 ### 校验
 
-推送前应在本机用 `makepkg -f` 实际构建一次，确认能产出 `.pkg.tar.*` 包且 `ag version` 显示的版本符合预期。对于 `atomgit-cli`，还需精确核对 `ag version` 输出的 commit 与 `git rev-list -n 1 "v${pkgver}"`（即新 tag 指向的 commit）完全一致；若仍显示上一个版本的 SHA，说明 `_commit` 未同步更新，必须修正后重新构建、再次校验通过，再推送 AUR。
+推送前应在本机用 `makepkg -f` 实际构建一次，确认能产出 `.pkg.tar.*` 包且 `ag version` 显示的版本符合预期。对于 `atomgit-cli`，还需精确核对 `ag version` 输出的 commit 与新 tag `v${pkgver}` 指向的 commit 完全一致。注意本地 AUR 仓库不包含上游 tag，不能在其中查询；请使用 `git ls-remote https://atomgit.com/hust-open-atom-club/atomgit-cli.git "refs/tags/v${pkgver}" | awk '{print $1}'`（任意目录），或在上游 atomgit-cli 检出中执行 `git rev-list -n 1 "v${pkgver}"` 取得参照值。若 `ag version` 仍显示上一个版本的 SHA，说明 `_commit` 未同步更新，必须修正后重新构建、再次校验通过，再推送 AUR。

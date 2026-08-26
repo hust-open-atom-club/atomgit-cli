@@ -254,7 +254,7 @@ nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#latest -- versio
 
 ## AUR / Arch Linux 安装
 
-如果使用 Arch Linux 或基于 Arch Linux 的发行版，可以直接使用 AUR 仓库中的包进行安装。AUR 中提供了三个包，可按需选择：
+AUR 是用户仓库，并非 Arch 官方仓库；安装与使用按 AUR 规则自行承担风险。三个包由项目维护者 `moyigeek` 在 AUR 维护并随 Release 更新。如果使用 Arch Linux 或基于 Arch Linux 的发行版，可以直接使用 AUR 仓库中的包进行安装。AUR 中提供了三个包，可按需选择：
 
 ```bash
 # 二进制安装（免编译，稳定版）
