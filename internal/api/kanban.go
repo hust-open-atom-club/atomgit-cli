@@ -87,10 +87,8 @@ func ValidateKanbanID(value string) (string, error) {
 	if value == "" {
 		return "", fmt.Errorf("kanban ID is required")
 	}
-	if value == "0" {
-		return "", fmt.Errorf("invalid kanban ID %q (expected a positive integer)", value)
-	}
-	if _, err := strconv.ParseUint(value, 10, 64); err != nil {
+	parsed, err := strconv.ParseUint(value, 10, 64)
+	if err != nil || parsed == 0 {
 		return "", fmt.Errorf("invalid kanban ID %q (expected a positive integer)", value)
 	}
 	return value, nil

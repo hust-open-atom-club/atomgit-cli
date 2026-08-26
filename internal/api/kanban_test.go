@@ -52,7 +52,7 @@ func TestValidateKanbanInputs(t *testing.T) {
 			}
 		})
 	}
-	for _, value := range []string{"", "0", "-1", "abc", "1/2"} {
+	for _, value := range []string{"", "0", "00", "000", "-1", "abc", "1/2"} {
 		if _, err := ValidateKanbanID(value); err == nil {
 			t.Fatalf("ValidateKanbanID(%q) succeeded", value)
 		}
