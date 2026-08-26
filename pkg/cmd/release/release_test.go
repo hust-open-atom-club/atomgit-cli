@@ -2,6 +2,7 @@ package release
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -86,6 +87,9 @@ func TestNewCmdReleaseRegistersCommands(t *testing.T) {
 		t.Fatal("release list --limit flag was not registered")
 	} else if flag.Shorthand != "L" {
 		t.Fatalf("release list --limit shorthand = %q, want L", flag.Shorthand)
+	}
+	if list.Flags().Lookup("json") == nil {
+		t.Fatal("release list --json flag was not registered")
 	}
 	view, _, err := cmd.Find([]string{"view"})
 	if err != nil || view == nil {
@@ -180,6 +184,40 @@ func TestReleaseListEmptyResults(t *testing.T) {
 	}
 	if got := out.String(); got != "No releases found\n" {
 		t.Fatalf("output = %q, want %q", got, "No releases found\n")
+	}
+}
+
+func TestReleaseListJSONAndEmpty(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		body string
+		want int
+	}{
+		{name: "release", body: `[{"tag_name":"v1.0.0","name":"First","release_status":"latest","target_commitish":"main","created_at":"2026-01-01T00:00:00Z","author":{"login":"alice"}}]`, want: 1},
+		{name: "empty", body: `[]`, want: 0},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := releaseTestFactory(releaseRoundTripFunc(func(*http.Request) (*http.Response, error) {
+				return releaseResponse(http.StatusOK, tt.body), nil
+			}))
+			cmd := newCmdReleaseList(factory)
+			_ = cmd.Flags().Set("json", "true")
+			var out bytes.Buffer
+			cmd.SetOut(&out)
+			if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+				t.Fatal(err)
+			}
+			var values []releaseJSON
+			if err := json.Unmarshal(out.Bytes(), &values); err != nil {
+				t.Fatalf("invalid JSON %q: %v", out.String(), err)
+			}
+			if len(values) != tt.want {
+				t.Fatalf("values = %#v", values)
+			}
+			if tt.want == 1 && (values[0].TagName != "v1.0.0" || values[0].Status != "latest" || values[0].TargetCommitish != "main" || values[0].Author != "alice") {
+				t.Fatalf("values = %#v", values)
+			}
+		})
 	}
 }
 
