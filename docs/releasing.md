@@ -11,6 +11,7 @@
 - [维护 Nix package](#维护-nix-package)
 - [维护 WinGet](#维护-winget)
 - [维护 Scoop](#维护-scoop)
+- [维护 AUR package](#维护-aur-package)
 
 ## 发布打包
 

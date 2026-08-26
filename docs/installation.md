@@ -9,6 +9,7 @@ AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、WinGet
 - [WinGet 安装](#winget-安装)
 - [Scoop 安装](#scoop-安装)
 - [Nix / NixOS 安装](#nix--nixos-安装)
+- [AUR / Arch Linux 安装](#aur--arch-linux-安装)
 - [Go 安装](#go-安装)
 - [AtomGit Release 安装](#atomgit-release-安装)
 - [源码安装](#源码安装)
