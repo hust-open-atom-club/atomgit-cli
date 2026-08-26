@@ -21,7 +21,7 @@ func TestRepoForkListTextAndPagination(t *testing.T) {
 		if req.URL.Query().Get("per_page") != "100" || req.URL.Query().Get("page") != "1" {
 			t.Fatalf("query = %q", req.URL.RawQuery)
 		}
-		return forkResponse(http.StatusOK, `[{"id":1,"name":"demo-copy","full_name":"alice/demo-copy","web_url":"https://atomgit.com/alice/demo-copy","owner":{"login":"alice"},"default_branch":"develop"},{"id":2,"name":"demo-copy-2","namespace":{"path":"team"},"web_url":"https://atomgit.com/team/demo-copy-2","private":true}]`), nil
+		return forkResponse(http.StatusOK, `[{"id":1,"full_name":"alice/demo-copy","url":"https://api.atomgit.com/api/v5/repos/alice/demo-copy","namespace":{"path":"alice","html_url":"https://atomgit.com/alice"},"owner":{"login":"alice"},"parent":{"full_name":"team/demo"},"private":false,"public":true},{"id":2,"full_name":"team/demo-copy-2","url":"https://api.atomgit.com/api/v5/repos/team/demo-copy-2","namespace":{"path":"team","html_url":"https://atomgit.com/team"},"owner":{"login":"team"},"parent":{"full_name":"team/demo"},"private":true,"public":false}]`), nil
 	})
 
 	cmd := newCmdRepoForkList(repoFactory(repoCommandConfig{token: "token"}, transport))
@@ -35,7 +35,7 @@ func TestRepoForkListTextAndPagination(t *testing.T) {
 		t.Fatalf("requests = %d", requests)
 	}
 	for _, value := range []string{
-		"alice/demo-copy [public] owner=alice default=develop https://atomgit.com/alice/demo-copy",
+		"alice/demo-copy [public] owner=alice https://atomgit.com/alice/demo-copy",
 		"team/demo-copy-2 [private] owner=team https://atomgit.com/team/demo-copy-2",
 	} {
 		if !strings.Contains(out.String(), value) {
@@ -46,7 +46,7 @@ func TestRepoForkListTextAndPagination(t *testing.T) {
 
 func TestRepoForkListJSONAndEmptyResults(t *testing.T) {
 	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-		return forkResponse(http.StatusOK, `[{"id":1,"name":"copy","full_name":"alice/copy","html_url":"https://atomgit.com/alice/copy","fork":true,"parentfull_name":"team/demo","owner":{"login":"alice"}}]`), nil
+		return forkResponse(http.StatusOK, `[{"id":1,"full_name":"alice/copy","url":"https://api.atomgit.com/api/v5/repos/alice/copy","namespace":{"path":"alice","html_url":"https://atomgit.com/alice"},"owner":{"login":"alice"},"parent":{"full_name":"team/demo"},"private":false,"public":true}]`), nil
 	})
 	cmd := newCmdRepoForkList(repoFactory(repoCommandConfig{token: "token"}, transport))
 	var out bytes.Buffer
@@ -55,8 +55,10 @@ func TestRepoForkListJSONAndEmptyResults(t *testing.T) {
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), `"fullName": "alice/copy"`) || !strings.Contains(out.String(), `"parent": "team/demo"`) {
-		t.Fatalf("json = %q", out.String())
+	for _, want := range []string{`"name": "copy"`, `"fullName": "alice/copy"`, `"url": "https://atomgit.com/alice/copy"`, `"fork": true`, `"parent": "team/demo"`} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("json missing %q: %q", want, out.String())
+		}
 	}
 
 	empty := newCmdRepoForkList(repoFactory(repoCommandConfig{token: "token"}, forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -78,7 +80,7 @@ func TestRepoForkListInfersRepository(t *testing.T) {
 		if req.URL.Path != "/api/v5/repos/inferred/repo/forks" {
 			t.Fatalf("path = %q", req.URL.Path)
 		}
-		return forkResponse(http.StatusOK, `[{"name":"copy","full_name":"alice/copy"}]`), nil
+		return forkResponse(http.StatusOK, `[{"full_name":"alice/copy","namespace":{"path":"alice"},"parent":{"full_name":"inferred/repo"}}]`), nil
 	})
 	factory := repoFactory(repoCommandConfig{token: "token"}, transport)
 	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
