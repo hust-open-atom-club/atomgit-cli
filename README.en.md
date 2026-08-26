@@ -1,19 +1,46 @@
-# AtomGit CLI (`ag`) English quickstart
+# AtomGit CLI (ag)
 
-AtomGit CLI is a command-line client for [AtomGit](https://atomgit.com/). It
-supports macOS, Linux, and Windows and provides repository, Issue, pull
-request, Actions, release, and account workflows from a terminal.
+[![License](https://img.shields.io/badge/license-MulanPSL--2.0-blue.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/%40hust-open-atom-club%2Fatomgit-cli?logo=npm)](https://www.npmjs.com/package/@hust-open-atom-club/atomgit-cli)
+[![Latest Release](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.atomgit.com%2Fapi%2Fv5%2Frepos%2Fhust-open-atom-club%2Fatomgit-cli%2Freleases%2Flatest&query=%24.tag_name&label=release)](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)
+[![CI Status](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.atomgit.com%2Fapi%2Fv8%2Frepos%2Fhust-open-atom-club%2Fatomgit-cli%2Factions%2Fruns%3Fworkflow_name%3DCI%26branch%3Dmain%26per_page%3D1&query=%24.workflow_runs%5B0%5D.status&label=CI%20status)](https://atomgit.com/hust-open-atom-club/atomgit-cli/actions)
+[![Homebrew](https://img.shields.io/badge/homebrew-core-FBB040?logo=homebrew&logoColor=white)](https://formulae.brew.sh/formula/atomgit-cli)
+[![Go Reference](https://pkg.go.dev/badge/atomgit.com/hust-open-atom-club/atomgit-cli.svg)](https://pkg.go.dev/atomgit.com/hust-open-atom-club/atomgit-cli)
+[![GoReleaser](https://img.shields.io/badge/powered_by-GoReleaser-69D7E4?logo=goreleaser&logoColor=white)](https://goreleaser.com/)
 
-This page is a concise English onboarding path. The [Chinese usage guide](docs/usage.md)
-remains the complete reference while more translations are maintained.
+A command-line client for AtomGit, developed with reference to GitHub CLI (`gh`).
 
-## Install
+中文说明：[README.md](README.md)
 
-Choose one channel. Homebrew Core, WinGet, Scoop, Nix, and npm publish the
-stable release; the project Homebrew tap and source builds track development
-snapshots.
+## Features
 
-### npm (Node.js 18+)
+| Category | Capabilities |
+| --- | --- |
+| 📦 Repositories | List, view, create, edit, clone, delete, fork, and synchronize repositories; manage repository push rules |
+| 👥 Collaborators | List, view, add, edit, and remove repository collaborators |
+| 🔔 Webhooks | List, view, create, edit, delete, and test repository webhooks |
+| 🌿 Branches | List, view, create, and delete branches; manage branch protection rules |
+| 🔀 Pull Requests | List, view, create, edit, close, reopen, review, merge, and check out PRs; inspect diffs and checks; manage comments and linked Issues |
+| 🐛 Issues | List, view, create, edit, close, and reopen Issues; manage labels and comments |
+| 🔖 Labels | List, create, edit, and delete repository labels |
+| 🎯 Milestones | List, view, create, edit, close, reopen, and delete milestones |
+| 🏷️ Tags | List, create, and delete Git tags |
+| 🚀 Releases | List, view, create, and edit Releases; upload and download assets |
+| ⚙️ Actions | List, validate, and trigger workflows; inspect workflow runs, jobs, logs, and artifacts; download logs and artifacts |
+| 🏢 Organizations | List organizations joined by the current account |
+| 🔍 Search | Search repositories, users, and Issues |
+| 💬 Discussions | List repository Discussions |
+| 🔔 Notifications | List repository notifications and mark them as read |
+| 🔐 Authentication and SSH keys | OAuth login, token refresh, account switching, authentication status, and SSH public-key management |
+| 🌐 API | Call AtomGit API v5 with pagination, JSON request bodies, and GET, POST, PATCH, PUT, and DELETE methods |
+
+## AI Agent Skills
+
+[AtomGit Skills](https://atomgit.com/hust-open-atom-club/atomgit-skills) provides Codex Skills powered by `ag` for Issue, Pull Request, CLI release, and GitHub mirroring workflows. See that repository for installation instructions and the complete list.
+
+## Installation
+
+### npm
 
 ```bash
 npm install -g @hust-open-atom-club/atomgit-cli
@@ -21,197 +48,83 @@ npm install -g @hust-open-atom-club/atomgit-cli
 
 ### Homebrew
 
-```bash
-# Latest stable release (recommended)
-brew install atomgit-cli
+Install the latest stable release from Homebrew Core (recommended):
 
-# Development snapshot from the project tap
+```bash
+brew install atomgit-cli
+```
+
+To track a development snapshot from the latest commit on AtomGit `main`, use the project-maintained Homebrew tap instead:
+
+```bash
 brew install hust-open-atom-club/tap/atomgit-cli
 ```
 
-Do not install both Homebrew formulas at the same time. See the
-[installation guide](docs/installation.md#homebrew-安装) for switching and
-upgrade details.
+Homebrew Core provides stable releases, while the project tap provides development snapshots. Both formulas use the same name and cannot be installed together. See the [complete installation guide](docs/installation.md#homebrew-安装) for differences and switching instructions.
 
-### Windows package managers
+### WinGet
 
 ```powershell
 winget install HUSTOpenAtomClub.AtomGitCLI
+```
 
+### Scoop
+
+```powershell
 scoop bucket add hust-open-atom-club https://github.com/hust-open-atom-club/ScoopBucket
 scoop install atomgit-cli
 ```
 
-### Nix or Go
+### Nix / NixOS
+
+`atomgit-cli` is currently available only in `nixos-unstable`. Make sure `nixpkgs` points to unstable; stable channels do not include it yet.
 
 ```bash
-# Nix stable package from nixos-unstable
 nix profile install nixpkgs#atomgit-cli
+```
 
-# Go 1.24.2+
+### Go
+
+```bash
 go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 ```
 
-Release archives and source-build instructions are in the
-[installation guide](docs/installation.md). Verify an installation with:
+See the [complete installation guide](docs/installation.md) for requirements, upgrades, AtomGit Releases, and source installation.
 
-```bash
-ag version
-```
+## Configuration
 
-## Authenticate safely
+Run `ag auth login` for the initial OAuth login. In an environment without a browser, such as a sandbox, container, or CI job, use `echo "$TOKEN" | ag auth login --with-token` to authenticate with an existing access token. See the [configuration guide](docs/configuration.md) for credentials, output safety, and repository inference.
 
-### Browser OAuth (recommended)
+## Usage
 
-```bash
-ag auth login
-```
+Run `ag --help` for a command overview or `ag <command> --help` for command-specific options. See the [usage guide](docs/usage.md) for complete examples and explanations.
 
-The command opens AtomGit in a browser, validates the authorization, and
-saves the account locally. Check the current account with:
+See the [FAQ](docs/faq.md) for common installation, authentication, usage, and troubleshooting questions.
 
-```bash
-ag auth status
-```
+## More Documentation
 
-### Existing token, stdin only
+- [Release guide](docs/releasing.md)
+- [Project structure](docs/project-structure.md)
 
-For a sandbox, container, or CI job without a browser, pass a PAT or OAuth
-access token through stdin. Keep the value in an environment variable or a
-protected secret store; do not put it in shell history, a command argument,
-or a committed file.
+## API
 
-```bash
-printf '%s' "$ATOMGIT_TOKEN" | ag auth login --with-token
-# A protected file is also accepted:
-ag auth login --with-token < "$HOME/.config/atomgit/token.txt"
-```
+General repository features use AtomGit API v5: `https://api.atomgit.com/api/v5`.
 
-`--with-token` reads stdin to EOF, validates the token against AtomGit, and
-only then saves it. PAT logins do not have a refresh token; log in again when
-the PAT expires.
+Actions run checks use the separate AtomGit API v8: `https://api.atomgit.com/api/v8`.
 
-Credentials are stored in the per-user configuration directory, normally:
+### References
 
-- Linux: `~/.config/ag-cli/token.json`
-- macOS: `~/.config/ag-cli/token.json`
-- Windows: `%USERPROFILE%\.config\ag-cli\token.json`
-
-The file is private to the current user. Do not commit or share it. See the
-[configuration guide](docs/configuration.md) for multi-account selection,
-token rotation, and output-safety details.
-
-## Repository inference
-
-Many commands accept either an explicit `owner/repo` or no repository at all.
-When omitted, `ag` inspects the current Git repository's AtomGit remote.
-Explicit input always wins.
-
-```bash
-git clone https://atomgit.com/hust-open-atom-club/atomgit-cli.git
-cd atomgit-cli
-
-ag repo view
-ag issue list
-ag pr list
-```
-
-If a checkout has multiple remotes and no unambiguous AtomGit remote, pass
-`owner/repo` explicitly. GitHub and unrelated GitLab remotes are not used for
-inference.
-
-## Inspect repositories, Issues, and PRs
-
-```bash
-# Repository details; --json is suitable for scripts
-ag repo view owner/repo
-ag repo view owner/repo --json
-
-# List open items (defaults to 30)
-ag issue list owner/repo --limit 50
-ag pr list owner/repo --state open --limit 50
-
-# Inspect one item
-ag issue view owner/repo 42
-ag pr view owner/repo 123
-```
-
-Use `--state open`, `closed`, or `all` where supported. `--json` emits
-machine-readable output; keep normal output for humans and pipelines that do
-not need a schema.
-
-## Common read/write workflows
-
-Create an Issue:
-
-```bash
-ag issue create owner/repo --title "Improve the documentation" --body "Details"
-```
-
-Create a branch and inspect its status:
-
-```bash
-ag branch create owner/repo docs/quickstart --ref main
-ag branch view owner/repo docs/quickstart
-```
-
-Open a pull request from a pushed branch:
-
-```bash
-ag pr create owner/repo \
-  --title "docs: improve quickstart" \
-  --body "Summary and test notes" \
-  --head "your-user:docs/quickstart" \
-  --base main
-```
-
-Destructive and high-impact commands ask for confirmation by default. Use
-`--yes` only in a deliberate, reviewed automation step. Run each command's
-help before scripting it:
-
-```bash
-ag pr create --help
-ag issue edit --help
-ag repo delete --help
-```
-
-## Actions and JSON examples
-
-```bash
-ag workflow list owner/repo --json
-ag run list owner/repo --status failed --json
-```
-
-Actions commands use AtomGit API v8. The general repository API uses API v5.
-See the [AtomGit API documentation](https://docs.atomgit.com/docs/apis/) for
-endpoint details.
-
-## Get help and contribute
-
-```bash
-ag --help
-ag repo --help
-ag pr --help
-```
-
-- [Complete usage guide](docs/usage.md)
-- [Installation guide](docs/installation.md)
-- [Configuration guide](docs/configuration.md)
-- [Credential and output-safety guidance](docs/configuration.md#认证)
-- [AtomGit PAT security guidance](https://docs.gitcode.com/docs/help/home/user_center/security_management/user_pat/)
-- [Contribution guide](CONTRIBUTING.md)
 - [AtomGit API documentation](https://docs.atomgit.com/docs/apis/)
-- [Releases](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)
-- [Issue tracker](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues)
-
-### Maintenance rule
-
-When a command, authentication flow, installation channel, credential path,
-or output flag changes, update the matching section above in the same pull
-request. Keep every example executable against the current `--help` output;
-run the repository's Markdown/link checks before submitting documentation
-changes.
+- [GitHub CLI](https://cli.github.com/)
 
 ## License
 
 [Mulan Permissive Software License, Version 2](LICENSE)
+
+Copyright (c) 2026 HUST OpenAtom Club, AtomGit, and the AtomGit CLI contributors
+
+## Contributors
+
+<a href="https://github.com/hust-open-atom-club/atomgit-cli/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=hust-open-atom-club/atomgit-cli" alt="AtomGit CLI contributors" />
+</a>
