@@ -63,7 +63,7 @@ func runFactory(config runTestConfig, transport runRoundTripFunc) *cmdutil.Facto
 
 func TestNewCmdRunRegistersCommandsAndFlags(t *testing.T) {
 	cmd := NewCmdRun(&cmdutil.Factory{})
-	for _, value := range []string{"read-only", "dispatch", "rerun", "cancel", "delete"} {
+	for _, value := range []string{"artifact", "dispatch", "rerun", "cancel", "delete"} {
 		if !strings.Contains(strings.ToLower(cmd.Long), value) {
 			t.Errorf("run help does not mention %q: %s", value, cmd.Long)
 		}
@@ -85,6 +85,18 @@ func TestNewCmdRunRegistersCommandsAndFlags(t *testing.T) {
 				t.Errorf("%s --%s flag was not registered", name, flag)
 			}
 		}
+	}
+
+	artifact, _, err := cmd.Find([]string{"artifact"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	deleteCmd, _, err := artifact.Find([]string{"delete"})
+	if err != nil || deleteCmd.Name() != "delete" {
+		t.Fatalf("artifact delete command: %v", err)
+	}
+	if deleteCmd.Flags().Lookup("yes") == nil {
+		t.Error("artifact delete --yes flag was not registered")
 	}
 }
 

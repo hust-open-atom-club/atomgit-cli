@@ -43,15 +43,15 @@ func newCmdProtectionList(f *cmdutil.Factory) *cobra.Command {
 	var limit int
 
 	cmd := &cobra.Command{
-		Use:     "list <owner>/<repo>",
+		Use:     "list [<owner>/<repo>]",
 		Short:   "List protected branch rules",
 		Example: "  ag branch protection list owner/repo --limit 50",
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", limit)
 			}
-			repository, err := parseRepositoryArg(args[0])
+			repository, _, err := resolveRepositoryArgs(f, args, 0)
 			if err != nil {
 				return err
 			}
@@ -78,15 +78,15 @@ func newCmdProtectionList(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdProtectionView(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:   "view <owner>/<repo> <branch-or-pattern>",
+		Use:   "view [<owner>/<repo>] <branch-or-pattern>",
 		Short: "View a protected branch rule",
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			repository, err := parseRepositoryArg(args[0])
+			repository, remaining, err := resolveRepositoryArgs(f, args, 1)
 			if err != nil {
 				return err
 			}
-			pattern, err := validateProtectionPattern(args[1])
+			pattern, err := validateProtectionPattern(remaining[0])
 			if err != nil {
 				return err
 			}
@@ -111,7 +111,7 @@ func newCmdProtectionView(f *cmdutil.Factory) *cobra.Command {
 func newCmdProtectionSet(f *cmdutil.Factory) *cobra.Command {
 	opts := &protectionSetOptions{}
 	cmd := &cobra.Command{
-		Use:   "set <owner>/<repo> <branch-or-pattern>",
+		Use:   "set [<owner>/<repo>] <branch-or-pattern>",
 		Short: "Create or update a protected branch rule",
 		Long: `Create or update a protected branch rule.
 
@@ -124,13 +124,13 @@ requires confirmation unless --yes is supplied.`,
   ag branch protection set owner/repo main --push maintainer --merge admin
   ag branch protection set owner/repo "release/*" --push "develop;alice" --merge admin
   ag branch protection set owner/repo main --push "" --yes`,
-		Args: cobra.ExactArgs(2),
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			repository, err := parseRepositoryArg(args[0])
+			repository, remaining, err := resolveRepositoryArgs(f, args, 1)
 			if err != nil {
 				return err
 			}
-			pattern, err := validateProtectionPattern(args[1])
+			pattern, err := validateProtectionPattern(remaining[0])
 			if err != nil {
 				return err
 			}
@@ -221,15 +221,15 @@ requires confirmation unless --yes is supplied.`,
 func newCmdProtectionDelete(f *cmdutil.Factory) *cobra.Command {
 	var yes bool
 	cmd := &cobra.Command{
-		Use:   "delete <owner>/<repo> <branch-or-pattern>",
+		Use:   "delete [<owner>/<repo>] <branch-or-pattern>",
 		Short: "Delete a protected branch rule",
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			repository, err := parseRepositoryArg(args[0])
+			repository, remaining, err := resolveRepositoryArgs(f, args, 1)
 			if err != nil {
 				return err
 			}
-			pattern, err := validateProtectionPattern(args[1])
+			pattern, err := validateProtectionPattern(remaining[0])
 			if err != nil {
 				return err
 			}

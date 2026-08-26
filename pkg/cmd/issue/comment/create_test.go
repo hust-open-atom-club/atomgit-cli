@@ -10,10 +10,13 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
-type issueCommentTestConfig struct{ tokenErr error }
+type issueCommentTestConfig struct {
+	tokenErr error
+	userErr  error
+}
 
 func (c issueCommentTestConfig) GetToken() (string, error) { return "token", c.tokenErr }
-func (issueCommentTestConfig) GetUser() (string, error)    { return "alice", nil }
+func (c issueCommentTestConfig) GetUser() (string, error)  { return "alice", c.userErr }
 func (issueCommentTestConfig) GetHost() string             { return "atomgit.com" }
 
 type issueCommentRoundTripFunc func(*http.Request) (*http.Response, error)

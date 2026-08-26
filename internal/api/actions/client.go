@@ -213,6 +213,21 @@ func (c *Client) GetArtifact(owner, repo, artifactID string) (Artifact, error) {
 	return result, nil
 }
 
+func (c *Client) DeleteArtifact(owner, repo, artifactID string) error {
+	const operation = "delete artifact"
+	path := repositoryPath(owner, repo) + "/actions/artifacts/" + url.PathEscape(artifactID)
+	resp, err := c.client.DoRequestRawWithAccept(http.MethodDelete, path, "application/json")
+	if err != nil {
+		return fmt.Errorf("%s: %w", operation, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		return responseError(operation, resp)
+	}
+	return nil
+}
+
 func (c *Client) DownloadArtifact(owner, repo, artifactID string) (*http.Response, error) {
 	path := repositoryPath(owner, repo) + "/actions/artifacts/" + url.PathEscape(artifactID) + "/zip"
 	return c.download("download artifact", path)

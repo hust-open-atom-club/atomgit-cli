@@ -62,7 +62,10 @@ func TestPRCommentDeleteConfirmation(t *testing.T) {
 			transport := prDeleteRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				switch req.Method {
 				case http.MethodGet:
-					return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"user":{"login":"alice"}}`)), Request: req}, nil
+					if req.URL.Path != "/api/v5/repos/alice/demo/pulls/3/comments" || req.URL.Query().Get("view") != "all" {
+						t.Fatalf("unexpected GET request: %s?%s", req.URL.Path, req.URL.RawQuery)
+					}
+					return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`[{"id":7,"user":{"login":"alice"}}]`)), Request: req}, nil
 				case http.MethodDelete:
 					deletes++
 					return &http.Response{StatusCode: http.StatusNoContent, Status: "204 No Content", Header: make(http.Header), Body: http.NoBody, Request: req}, nil
