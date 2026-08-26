@@ -40,7 +40,10 @@ func newCmdDelete(f *cmdutil.Factory) *cobra.Command {
 				return cmdutil.AuthenticationError(err)
 			}
 
-			client := api.NewClient(token)
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
 			currentUser, _ := f.Config.GetUser()
 
 			// Verify PR exists (number is validated but not used directly)
