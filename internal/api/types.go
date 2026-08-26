@@ -877,3 +877,37 @@ type PullRequestReaction struct {
 	Content   string `json:"content"`
 	CreatedAt string `json:"created_at"`
 }
+
+// UserEventAuthor represents the author of a user activity event. Only fields
+// that are safe for stable, privacy-conscious CLI output are modeled.
+type UserEventAuthor struct {
+	Name     string `json:"name"`
+	Username string `json:"username"`
+	WebURL   string `json:"web_url"`
+}
+
+// UserEvent represents one personal activity event returned by
+// GET /api/v5/users/:username/events.
+type UserEvent struct {
+	Action           int             `json:"action"`
+	ActionName       string          `json:"action_name"`
+	Author           UserEventAuthor `json:"author"`
+	AuthorID         int64           `json:"author_id"`
+	AuthorUsername   string          `json:"author_username"`
+	CreatedAt        string          `json:"created_at"`
+	ProjectID        int64           `json:"project_id"`
+	ProjectName      string          `json:"project_name"`
+	TargetID         int64           `json:"target_id"`
+	TargetIID        int64           `json:"target_iid"`
+	TargetTitle      string          `json:"target_title"`
+	TargetType       string          `json:"target_type"`
+	TargetTypeFormat string          `json:"target_type_format"`
+}
+
+// UserEventsPage is the cursor-paginated response for personal activity
+// events. Events are keyed by date (YYYY-MM-DD); Next is the cursor for the
+// following page or an empty string when no more events remain.
+type UserEventsPage struct {
+	Events map[string][]UserEvent `json:"events"`
+	Next   string                 `json:"next"`
+}
