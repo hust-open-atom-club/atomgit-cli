@@ -77,6 +77,6 @@
 
 ## 当前仓库推断
 
-`issue`、`pr`、`tag`、`label`、`release`、`run` 命令以及 `repo view`、`repo edit`、`repo fork`、`repo delete` 可以省略 `owner/repo`。省略时，`ag` 会从当前 Git 仓库的 AtomGit remote 推断目标仓库；显式传入的 `owner/repo` 始终优先。
+`issue`、`pr`、`tag`、`label`、`release`、`run`、`branch` 命令以及 `repo view`、`repo edit`、`repo fork`、`repo delete` 可以省略 `owner/repo`。省略时，`ag` 会从当前 Git 仓库的 AtomGit remote 推断目标仓库；显式传入的 `owner/repo` 始终优先。
 
 支持 `git@atomgit.com:owner/repo.git`、`ssh://git@atomgit.com/owner/repo.git` 和 `https://atomgit.com/owner/repo.git`。存在多个 remote 时，依次选择 `remote.pushDefault`、当前分支的 upstream remote、AtomGit `origin` 或唯一的 AtomGit remote。GitHub、GitLab 等其他服务的 remote 不会被识别为 AtomGit 仓库；无法唯一确定时，请显式传入 `owner/repo`。
