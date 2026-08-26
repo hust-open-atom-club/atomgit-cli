@@ -1,11 +1,22 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 )
+
+// RepositoryContentsResponse preserves the complete JSON returned by the
+// repository contents endpoint while also exposing its file or directory
+// representation for command-specific rendering.
+type RepositoryContentsResponse struct {
+	Raw     json.RawMessage
+	File    *RepositoryContent
+	Entries []RepositoryContent
+}
 
 func buildContentsPath(owner, repo, path string, allowRoot bool) (string, error) {
 	escapedOwner := url.PathEscape(owner)
@@ -33,55 +44,92 @@ func buildContentsPath(owner, repo, path string, allowRoot bool) (string, error)
 	return fmt.Sprintf("/repos/%s/%s/contents/%s", escapedOwner, escapedRepo, strings.Join(escapedSegments, "/")), nil
 }
 
-// GetRepositoryContent fetches a single file from a repository.
-// path is a repository-relative content path.
-// ref, when non-empty, selects a branch, tag, or commit.
-func GetRepositoryContent(client *Client, owner, repo, path, ref string) (*RepositoryContent, error) {
-	contentPath, err := buildContentsPath(owner, repo, path, false)
+func repositoryContentsContext(owner, repo, path, ref string) string {
+	refDescription := "default branch"
+	if ref != "" {
+		refDescription = fmt.Sprintf("ref %q", ref)
+	}
+	return fmt.Sprintf("repository %s/%s path %q at %s", owner, repo, path, refDescription)
+}
+
+func getRepositoryContents(client *Client, owner, repo, path, ref string, allowRoot bool) (*RepositoryContentsResponse, error) {
+	context := repositoryContentsContext(owner, repo, path, ref)
+	contentPath, err := buildContentsPath(owner, repo, path, allowRoot)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get contents for %s: %w", context, err)
 	}
 	if ref != "" {
 		contentPath += "?ref=" + url.QueryEscape(ref)
 	}
 
-	var content RepositoryContent
+	var raw json.RawMessage
 	err = client.doJSONRequest(
 		http.MethodGet, contentPath, nil,
 		"application/json", "application/json",
 		RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: true},
-		&content,
+		&raw,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("get contents for %s: %w", context, err)
+	}
+
+	trimmed := bytes.TrimSpace(raw)
+	response := &RepositoryContentsResponse{Raw: raw}
+	if len(trimmed) == 0 {
+		return nil, fmt.Errorf("get contents for %s: API returned an empty JSON response", context)
+	}
+
+	switch trimmed[0] {
+	case '{':
+		var file RepositoryContent
+		if err := json.Unmarshal(trimmed, &file); err != nil {
+			return nil, fmt.Errorf("decode file contents for %s: %w", context, err)
+		}
+		response.File = &file
+	case '[':
+		if err := json.Unmarshal(trimmed, &response.Entries); err != nil {
+			return nil, fmt.Errorf("decode directory contents for %s: %w", context, err)
+		}
+		if response.Entries == nil {
+			response.Entries = []RepositoryContent{}
+		}
+	default:
+		return nil, fmt.Errorf("get contents for %s: expected a file object or directory array", context)
+	}
+
+	return response, nil
+}
+
+// GetRepositoryContents fetches a file or directory response from the
+// repository contents endpoint. Use "." as path for the repository root.
+func GetRepositoryContents(client *Client, owner, repo, path, ref string) (*RepositoryContentsResponse, error) {
+	return getRepositoryContents(client, owner, repo, path, ref, true)
+}
+
+// GetRepositoryContent fetches a single file from a repository.
+// path is a repository-relative content path.
+// ref, when non-empty, selects a branch, tag, or commit.
+func GetRepositoryContent(client *Client, owner, repo, path, ref string) (*RepositoryContent, error) {
+	response, err := getRepositoryContents(client, owner, repo, path, ref, false)
 	if err != nil {
 		return nil, err
 	}
-	return &content, nil
+	if response.File == nil {
+		return nil, fmt.Errorf("repository content path %q is a directory, not a file", path)
+	}
+	return response.File, nil
 }
 
 // ListRepositoryContent fetches directory contents from a repository.
 // path is a repository-relative content path; use "." for root.
 // ref, when non-empty, selects a branch, tag, or commit.
 func ListRepositoryContent(client *Client, owner, repo, path, ref string) ([]RepositoryContent, error) {
-	contentPath, err := buildContentsPath(owner, repo, path, true)
+	response, err := getRepositoryContents(client, owner, repo, path, ref, true)
 	if err != nil {
 		return nil, err
 	}
-	if ref != "" {
-		contentPath += "?ref=" + url.QueryEscape(ref)
+	if response.File != nil {
+		return nil, fmt.Errorf("repository content path %q is a file, not a directory", path)
 	}
-
-	var entries []RepositoryContent
-	err = client.doJSONRequest(
-		http.MethodGet, contentPath, nil,
-		"application/json", "application/json",
-		RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: true},
-		&entries,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if entries == nil {
-		entries = []RepositoryContent{}
-	}
-	return entries, nil
+	return response.Entries, nil
 }

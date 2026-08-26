@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -583,10 +584,81 @@ func TestGetRepositoryContentDirJSONDecoding(t *testing.T) {
 
 	_, err := GetRepositoryContent(client, "alice", "demo", "dir", "")
 	if err == nil {
-		t.Fatal("expected JSON decode error when directory array returned for single-get")
+		t.Fatal("expected type mismatch when directory array returned for single-get")
 	}
-	if !strings.Contains(err.Error(), "cannot unmarshal") {
-		t.Fatalf("expected unmarshal error, got: %v", err)
+	if !strings.Contains(err.Error(), "is a directory, not a file") {
+		t.Fatalf("expected directory guidance, got: %v", err)
+	}
+}
+
+func TestGetRepositoryContentsPreservesRawVariants(t *testing.T) {
+	t.Run("file object", func(t *testing.T) {
+		body := `{"name":"f.txt","path":"f.txt","sha":"abc","size":1,"type":"file","encoding":"base64","content":"eA==","_links":{"self":"https://example.test/file"},"future_field":"kept"}`
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, body)
+		})
+
+		response, err := GetRepositoryContents(client, "alice", "demo", "f.txt", "main")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if response.File == nil || response.File.Path != "f.txt" {
+			t.Fatalf("file = %#v", response.File)
+		}
+		if response.Entries != nil {
+			t.Fatalf("entries = %#v, want nil", response.Entries)
+		}
+		var raw map[string]json.RawMessage
+		if err := json.Unmarshal(response.Raw, &raw); err != nil {
+			t.Fatal(err)
+		}
+		for _, key := range []string{"_links", "future_field", "content"} {
+			if _, ok := raw[key]; !ok {
+				t.Errorf("raw response lost %q", key)
+			}
+		}
+	})
+
+	t.Run("empty directory array", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[]`)
+		})
+
+		response, err := GetRepositoryContents(client, "alice", "demo", ".", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if response.File != nil {
+			t.Fatalf("file = %#v, want nil", response.File)
+		}
+		if response.Entries == nil || len(response.Entries) != 0 {
+			t.Fatalf("entries = %#v, want non-nil empty slice", response.Entries)
+		}
+		if string(response.Raw) != "[]" {
+			t.Fatalf("raw = %q, want []", response.Raw)
+		}
+	})
+}
+
+func TestGetRepositoryContentsErrorContext(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = io.WriteString(w, `{"token":"secret-value","message":"missing"}`)
+	})
+
+	_, err := GetRepositoryContents(client, "alice", "demo", "missing.txt", "feature/x")
+	if err == nil {
+		t.Fatal("expected API error")
+	}
+	for _, want := range []string{"alice/demo", `path "missing.txt"`, `ref "feature/x"`, "404"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error = %q, want %q", err, want)
+		}
+	}
+	if strings.Contains(err.Error(), "secret-value") {
+		t.Fatalf("error leaked credential: %v", err)
 	}
 }
 

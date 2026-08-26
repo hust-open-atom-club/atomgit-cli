@@ -184,21 +184,25 @@ ag repo delete owner/repo --yes
 ### 仓库内容读取
 
 ```bash
-# 读取默认分支上的文件内容
-ag repo read-file owner/repo README.md
-ag repo read-file owner/repo src/main.go --json
+# 列出当前仓库默认分支的根目录或嵌套目录
+ag repo content list
+ag repo content list docs/guides
 
-# 在指定分支、tag 或 commit 上读取文件
-ag repo read-file owner/repo README.md --ref dev
+# 列出显式仓库的根目录或指定 ref 下的嵌套目录
+ag repo content list owner/repo .
+ag repo content list owner/repo src --ref v1.0.0 --json
 
-# 列出目录内容（使用 . 表示仓库根目录）
-ag repo read-dir owner/repo .
-ag repo read-dir owner/repo src --ref v1.0.0 --json
+# 读取默认分支或指定 ref 上的文件
+ag repo content view README.md
+ag repo content view owner/repo src/main.go --ref dev
+ag repo content view owner/repo README.md --json
 ```
 
-`read-file` 输出解码后的文件文本；`read-dir` 每行输出一个条目（类型、大小、路径），字段中的反斜杠、制表符、换行和回车分别显示为 `\\`、`\t`、`\n` 和 `\r`。`--json` 输出稳定的 lowerCamelCase 字段：文件对象包含 `name`、`path`、`sha`、`size`、`encoding`、`content`（base64）和 `ref`；目录条目数组包含 `name`、`path`、`type`、`sha`、`size`，空目录输出 `[]`。
+`content list` 每行输出一个目录条目的类型、路径和对象 ID；`content view` 输出解码后的文件字节。字段中的反斜杠、制表符、换行和回车分别显示为 `\\`、`\t`、`\n` 和 `\r`。`--json` 保留 AtomGit API 返回的完整目录数组或文件对象，包括文件的 Base64 编码 `content` 和 `_links` 等元数据；空目录输出 `[]`。
 
-路径必须是仓库相对路径，不能以 `/` 开头或结尾，不能包含连续斜杠或 `.`/`..` 段（`read-dir .` 是唯一例外，映射到仓库根目录）。每个路径段独立转义。文件内容默认经过终端清理；如需保留原始字节，使用根级 `--raw-output`。这些命令只发送 GET 请求，不会修改仓库内容。
+路径必须是仓库相对路径，不能以 `/` 开头或结尾，不能包含连续斜杠或 `.`/`..` 段（`content list` 的 `.` 是唯一例外，表示仓库根目录）。不带参数的 `content list` 会推断当前仓库并列出根目录；单个参数始终作为推断仓库内的路径，因此列出显式仓库根目录时应使用 `owner/repo .`。每个路径段独立转义。文件内容默认经过终端清理；如需保留原始字节，使用根级 `--raw-output`。这些命令只发送 GET 请求，不会修改仓库内容。
+
+原有的 `ag repo read-file` 和 `ag repo read-dir` 已弃用，但会继续保留以兼容已有脚本；请分别迁移到 `ag repo content view` 和 `ag repo content list`。
 
 ### 仓库协作者
 
