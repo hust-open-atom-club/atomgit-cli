@@ -11,11 +11,11 @@ import (
 func NewCmdRun(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run",
-		Short: "Inspect AtomGit Actions workflow runs",
+		Short: "Inspect AtomGit Actions workflow runs and artifacts",
 		Long: `List and inspect AtomGit Actions workflow runs, jobs, logs, and artifacts.
 
-This command is read-only. Workflow dispatch, rerun, cancel, and delete
-operations are not supported.`,
+Artifacts can also be deleted after confirmation. Workflow run dispatch,
+rerun, cancel, and deletion operations are not supported.`,
 	}
 
 	cmd.AddCommand(newCmdRunList(f))

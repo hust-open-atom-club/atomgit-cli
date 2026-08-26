@@ -5,10 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
+	"github.com/spf13/cobra"
 )
 
 const protectionRulesJSON = `[
@@ -80,6 +84,27 @@ func TestProtectionPermissionValueMapsOwnerAccessToAdmin(t *testing.T) {
 	merge, err := protectionPermissionValue(rule, false)
 	if err != nil || merge != "admin" {
 		t.Fatalf("merge = %q, err = %v; want admin", merge, err)
+	}
+}
+
+func TestProtectionCommandsInferRepositoryContext(t *testing.T) {
+	factory := branchFactory(branchCommandConfig{token: "token"}, func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path != "/api/v5/repos/alice/demo/protect_branches" {
+			t.Fatalf("path = %s", req.URL.Path)
+		}
+		return branchResponse(http.StatusOK, `[{"name":"main","no_one_can_push":true,"no_one_can_merge":true}]`), nil
+	})
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+	}
+
+	list := newCmdProtectionList(factory)
+	if err := list.RunE(list, nil); err != nil {
+		t.Fatal(err)
+	}
+	view := newCmdProtectionView(factory)
+	if err := view.RunE(view, []string{"main"}); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -344,5 +369,180 @@ func TestProtectionAuthenticationErrorDoesNotRequest(t *testing.T) {
 	err := cmd.RunE(cmd, []string{"alice/demo"})
 	if err == nil || !strings.Contains(err.Error(), "missing token") || requests != 0 {
 		t.Fatalf("error = %v, requests = %d", err, requests)
+	}
+}
+
+func protectionRulesWithNames(names ...string) string {
+	rules := make([]map[string]string, len(names))
+	for i, name := range names {
+		rules[i] = map[string]string{"name": name}
+	}
+	body, err := json.Marshal(rules)
+	if err != nil {
+		panic(err)
+	}
+	return string(body)
+}
+
+func protectionFirstPage() string {
+	names := make([]string, 100)
+	for i := range names {
+		names[i] = "rule-" + strconv.Itoa(i)
+	}
+	return protectionRulesWithNames(names...)
+}
+
+func TestProtectionListPaginatesAndHonorsLimit(t *testing.T) {
+	pages := []int{}
+	transport := branchRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		page, err := strconv.Atoi(req.URL.Query().Get("page"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		pages = append(pages, page)
+		if req.URL.Query().Get("per_page") != "100" {
+			t.Fatalf("per_page = %q", req.URL.Query().Get("per_page"))
+		}
+		return branchResponse(http.StatusOK, protectionRulesWithNames("main", "release/*")), nil
+	})
+	cmd := newCmdProtectionList(branchFactory(branchCommandConfig{token: "token"}, transport))
+	_ = cmd.Flags().Set("limit", "1")
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(pages, []int{1}) {
+		t.Fatalf("pages = %v, want [1]", pages)
+	}
+	if strings.Contains(out.String(), "release/*") || !strings.Contains(out.String(), "main") {
+		t.Fatalf("output did not honor limit: %q", out.String())
+	}
+}
+
+func TestProtectionListCollectsLaterPage(t *testing.T) {
+	pages := []int{}
+	transport := branchRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		page, _ := strconv.Atoi(req.URL.Query().Get("page"))
+		pages = append(pages, page)
+		if page == 1 {
+			return branchResponse(http.StatusOK, protectionFirstPage()), nil
+		}
+		return branchResponse(http.StatusOK, protectionRulesWithNames("release/*")), nil
+	})
+	cmd := newCmdProtectionList(branchFactory(branchCommandConfig{token: "token"}, transport))
+	_ = cmd.Flags().Set("limit", "101")
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(pages, []int{1, 2}) {
+		t.Fatalf("pages = %v, want [1 2]", pages)
+	}
+	if !strings.Contains(out.String(), "release/*") {
+		t.Fatalf("later-page rule missing from output")
+	}
+}
+
+func TestProtectionViewFindsRuleOnLaterPage(t *testing.T) {
+	pages := []int{}
+	transport := branchRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		page, _ := strconv.Atoi(req.URL.Query().Get("page"))
+		pages = append(pages, page)
+		if page == 1 {
+			return branchResponse(http.StatusOK, protectionFirstPage()), nil
+		}
+		return branchResponse(http.StatusOK, `[{"name":"release/*","maintainer_can_push":true,"master_can_merge":true}]`), nil
+	})
+	cmd := newCmdProtectionView(branchFactory(branchCommandConfig{token: "token"}, transport))
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "release/*"}); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(pages, []int{1, 2}) {
+		t.Fatalf("pages = %v, want [1 2]", pages)
+	}
+	if !strings.Contains(out.String(), "Rule: release/*") {
+		t.Fatalf("output = %q", out.String())
+	}
+}
+
+func TestProtectionSetAndDeleteFindRulesOnLaterPage(t *testing.T) {
+	for _, operation := range []string{"set", "delete"} {
+		t.Run(operation, func(t *testing.T) {
+			pages := []int{}
+			writes := 0
+			transport := branchRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method == http.MethodGet {
+					page, _ := strconv.Atoi(req.URL.Query().Get("page"))
+					pages = append(pages, page)
+					if page == 1 {
+						return branchResponse(http.StatusOK, protectionFirstPage()), nil
+					}
+					return branchResponse(http.StatusOK, `[{"name":"release/*","maintainer_can_merge":true}]`), nil
+				}
+				writes++
+				if operation == "set" && req.Method != http.MethodPut {
+					t.Fatalf("set method = %s", req.Method)
+				}
+				if operation == "delete" && req.Method != http.MethodDelete {
+					t.Fatalf("delete method = %s", req.Method)
+				}
+				if operation == "set" {
+					return branchResponse(http.StatusOK, `{}`), nil
+				}
+				return branchResponse(http.StatusNoContent, ""), nil
+			})
+			factory := branchFactory(branchCommandConfig{token: "token"}, transport)
+			var cmd *cobra.Command
+			if operation == "set" {
+				cmd = newCmdProtectionSet(factory)
+				_ = cmd.Flags().Set("push", "admin")
+				_ = cmd.Flags().Set("yes", "true")
+			} else {
+				cmd = newCmdProtectionDelete(factory)
+				_ = cmd.Flags().Set("yes", "true")
+			}
+			if err := cmd.RunE(cmd, []string{"alice/demo", "release/*"}); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(pages, []int{1, 2}) || writes != 1 {
+				t.Fatalf("pages = %v, writes = %d", pages, writes)
+			}
+		})
+	}
+}
+
+func TestProtectionListRejectsNonPositiveLimitBeforeAuthentication(t *testing.T) {
+	requests := 0
+	cmd := newCmdProtectionList(branchFactory(branchCommandConfig{tokenErr: errors.New("missing token")}, func(*http.Request) (*http.Response, error) {
+		requests++
+		return branchResponse(http.StatusOK, `[]`), nil
+	}))
+	_ = cmd.Flags().Set("limit", "0")
+	err := cmd.RunE(cmd, []string{"alice/demo"})
+	if err == nil || !strings.Contains(err.Error(), "invalid limit") || requests != 0 {
+		t.Fatalf("error = %v, requests = %d", err, requests)
+	}
+}
+
+func TestProtectionPaginationReportsLaterPageError(t *testing.T) {
+	requests := 0
+	transport := branchRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		requests++
+		if req.URL.Query().Get("page") == "1" {
+			return branchResponse(http.StatusOK, protectionFirstPage()), nil
+		}
+		return branchResponse(http.StatusInternalServerError, `{"message":"temporary failure"}`), nil
+	})
+	cmd := newCmdProtectionView(branchFactory(branchCommandConfig{token: "token"}, transport))
+	err := cmd.RunE(cmd, []string{"alice/demo", "release/*"})
+	if err == nil || !strings.Contains(err.Error(), "Internal Server Error") {
+		t.Fatalf("error = %v, want later-page API error", err)
+	}
+	if requests != 2 {
+		t.Fatalf("requests = %d, want 2", requests)
 	}
 }
