@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api/actions"
@@ -120,11 +121,11 @@ func displayRun(cmd *cobra.Command, f *cmdutil.Factory, client *actions.Client, 
 		}
 		jobs = []actions.Job{job}
 	} else {
-		response, err := client.ListJobs(owner, repo, runID)
+		apiJobs, err := listRunJobs(client, owner, repo, runID)
 		if err != nil {
 			return err
 		}
-		jobs = mergeJobs(response.Jobs, jobsFromStages(workflowRun.Stages))
+		jobs = mergeJobs(apiJobs, jobsFromStages(workflowRun.Stages))
 	}
 
 	artifacts := []actions.Artifact(nil)
@@ -158,6 +159,105 @@ func displayRun(cmd *cobra.Command, f *cmdutil.Factory, client *actions.Client, 
 		printArtifacts(out, artifacts)
 	}
 	return nil
+}
+
+func listRunJobs(client *actions.Client, owner, repo, runID string) ([]actions.Job, error) {
+	const (
+		perPage  = 100
+		maxPages = 100
+	)
+
+	jobs := make([]actions.Job, 0)
+	seenJobs := make(map[string]struct{})
+	seenPages := make(map[string]struct{})
+	expectedTotal := 0
+	totalTrusted := true
+
+	for page := 1; page <= maxPages; page++ {
+		response, err := client.ListJobs(owner, repo, runID, actions.ListJobsOptions{Page: page, PerPage: perPage})
+		if err != nil {
+			return nil, err
+		}
+
+		if response.TotalCount > 0 {
+			if expectedTotal == 0 {
+				expectedTotal = response.TotalCount
+			} else if response.TotalCount != expectedTotal {
+				totalTrusted = false
+			}
+		}
+		if len(response.Jobs) == 0 {
+			if totalTrusted && expectedTotal > len(jobs) {
+				return nil, jobsPaginationNoProgressError(page, len(jobs), expectedTotal, totalTrusted)
+			}
+			return jobs, nil
+		}
+
+		fingerprint := jobPageFingerprint(response.Jobs)
+		if _, exists := seenPages[fingerprint]; exists {
+			return nil, jobsPaginationNoProgressError(page, len(jobs), expectedTotal, totalTrusted)
+		}
+		seenPages[fingerprint] = struct{}{}
+
+		added := 0
+		for _, job := range response.Jobs {
+			if key := jobIdentity(job); key != "" {
+				if _, exists := seenJobs[key]; exists {
+					continue
+				}
+				seenJobs[key] = struct{}{}
+			}
+			jobs = append(jobs, job)
+			added++
+		}
+
+		if expectedTotal > 0 && expectedTotal < len(jobs) {
+			totalTrusted = false
+		}
+		if totalTrusted && expectedTotal > 0 && len(jobs) >= expectedTotal {
+			return jobs, nil
+		}
+		if len(response.Jobs) < perPage {
+			return jobs, nil
+		}
+		if added == 0 {
+			return nil, jobsPaginationNoProgressError(page, len(jobs), expectedTotal, totalTrusted)
+		}
+	}
+
+	return nil, fmt.Errorf("workflow run jobs pagination exceeded %d pages", maxPages)
+}
+
+func jobsPaginationNoProgressError(page, collected, expectedTotal int, totalTrusted bool) error {
+	if totalTrusted && expectedTotal > 0 {
+		return fmt.Errorf("workflow run jobs pagination made no progress on page %d: collected %d of %d jobs", page, collected, expectedTotal)
+	}
+	return fmt.Errorf("workflow run jobs pagination made no progress on page %d after collecting %d jobs: total_count was unavailable or inconsistent", page, collected)
+}
+
+func jobIdentity(job actions.Job) string {
+	if id := strings.TrimSpace(job.ID); id != "" {
+		return "id:" + id
+	}
+	if identifier := strings.TrimSpace(job.Identifier); identifier != "" {
+		return "identifier:" + identifier
+	}
+	return ""
+}
+
+func jobPageFingerprint(jobs []actions.Job) string {
+	var fingerprint strings.Builder
+	for _, job := range jobs {
+		fingerprint.WriteString(jobIdentity(job))
+		fingerprint.WriteByte(0)
+		fingerprint.WriteString(job.Name)
+		fingerprint.WriteByte(0)
+		fingerprint.WriteString(job.Status)
+		fingerprint.WriteByte(0)
+		fingerprint.WriteString(strconv.FormatInt(int64(job.StartTime), 10))
+		fingerprint.WriteByte('\n')
+	}
+	return fingerprint.String()
 }
 
 func writeJobLog(out io.Writer, client *actions.Client, owner, repo, runID, jobID string) error {
@@ -293,16 +393,16 @@ func mergeJobs(primary, fallback []actions.Job) []actions.Job {
 	jobs := append([]actions.Job(nil), primary...)
 	seen := make(map[string]struct{}, len(primary))
 	for _, job := range primary {
-		if job.ID != "" {
-			seen[job.ID] = struct{}{}
+		if key := jobIdentity(job); key != "" {
+			seen[key] = struct{}{}
 		}
 	}
 	for _, job := range fallback {
-		if job.ID != "" {
-			if _, exists := seen[job.ID]; exists {
+		if key := jobIdentity(job); key != "" {
+			if _, exists := seen[key]; exists {
 				continue
 			}
-			seen[job.ID] = struct{}{}
+			seen[key] = struct{}{}
 		}
 		jobs = append(jobs, job)
 	}
