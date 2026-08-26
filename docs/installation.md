@@ -1,6 +1,6 @@
 # 安装指南
 
-AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、WinGet、Scoop、Nix 或 Go 安装，也可以通过 AtomGit Release 自动或手动安装，或从源码构建。
+AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、WinGet、Scoop、Nix、AUR 或 Go 安装，也可以通过 AtomGit Release 自动或手动安装，或从源码构建。
 
 ## 目录
 
@@ -310,6 +310,23 @@ nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#latest -- versio
     };
 }
 ```
+
+## AUR / Arch Linux 安装
+
+AUR 是用户仓库，并非 Arch 官方仓库；安装与使用按 AUR 规则自行承担风险。三个包由项目维护者 `moyigeek` 在 AUR 维护并随 Release 更新。如果使用 Arch Linux 或基于 Arch Linux 的发行版，可以直接使用 AUR 仓库中的包进行安装。AUR 中提供了三个包，可按需选择：
+
+```bash
+# 二进制安装（免编译，稳定版）
+yay -S atomgit-cli-bin
+# 从源码安装（稳定版）
+yay -S atomgit-cli
+# 开发版安装（跟随 main 分支最新提交）
+yay -S atomgit-cli-git
+```
+
+三个包共用 `provides=('ag')` 并互相声明 `conflicts`，同时安装会冲突；支持的架构覆盖 `x86_64`、`aarch64` 和 `loong64`。
+
+升级随 AUR 助手的常规更新一起完成，例如 `yay -Syu`。卸载使用 `yay -R atomgit-cli-bin`（替换为实际安装的包名）。
 
 ## Go 安装
 
