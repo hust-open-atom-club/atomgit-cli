@@ -188,17 +188,14 @@ func listRunJobs(client *actions.Client, owner, repo, runID string) ([]actions.J
 		}
 		if len(response.Jobs) == 0 {
 			if totalTrusted && expectedTotal > len(jobs) {
-				return nil, jobsPaginationNoProgressError(page, len(jobs), expectedTotal)
+				return nil, jobsPaginationNoProgressError(page, len(jobs), expectedTotal, totalTrusted)
 			}
 			return jobs, nil
 		}
 
 		fingerprint := jobPageFingerprint(response.Jobs)
 		if _, exists := seenPages[fingerprint]; exists {
-			if totalTrusted && expectedTotal > len(jobs) {
-				return nil, jobsPaginationNoProgressError(page, len(jobs), expectedTotal)
-			}
-			return jobs, nil
+			return nil, jobsPaginationNoProgressError(page, len(jobs), expectedTotal, totalTrusted)
 		}
 		seenPages[fingerprint] = struct{}{}
 
@@ -220,22 +217,22 @@ func listRunJobs(client *actions.Client, owner, repo, runID string) ([]actions.J
 		if totalTrusted && expectedTotal > 0 && len(jobs) >= expectedTotal {
 			return jobs, nil
 		}
-		if added == 0 {
-			if totalTrusted && expectedTotal > len(jobs) {
-				return nil, jobsPaginationNoProgressError(page, len(jobs), expectedTotal)
-			}
-			return jobs, nil
-		}
 		if len(response.Jobs) < perPage {
 			return jobs, nil
+		}
+		if added == 0 {
+			return nil, jobsPaginationNoProgressError(page, len(jobs), expectedTotal, totalTrusted)
 		}
 	}
 
 	return nil, fmt.Errorf("workflow run jobs pagination exceeded %d pages", maxPages)
 }
 
-func jobsPaginationNoProgressError(page, collected, expectedTotal int) error {
-	return fmt.Errorf("workflow run jobs pagination made no progress on page %d: collected %d of %d jobs", page, collected, expectedTotal)
+func jobsPaginationNoProgressError(page, collected, expectedTotal int, totalTrusted bool) error {
+	if totalTrusted && expectedTotal > 0 {
+		return fmt.Errorf("workflow run jobs pagination made no progress on page %d: collected %d of %d jobs", page, collected, expectedTotal)
+	}
+	return fmt.Errorf("workflow run jobs pagination made no progress on page %d after collecting %d jobs: total_count was unavailable or inconsistent", page, collected)
 }
 
 func jobIdentity(job actions.Job) string {

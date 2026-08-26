@@ -544,6 +544,95 @@ func TestRunViewStopsOnRepeatedJobsPage(t *testing.T) {
 	}
 }
 
+func TestRunViewRejectsRepeatedJobsPageWithoutTrustedTotal(t *testing.T) {
+	page := make([]actions.Job, 100)
+	for i := range page {
+		page[i] = actions.Job{ID: fmt.Sprintf("job-%d", i), Name: fmt.Sprintf("build-%d", i), Status: "COMPLETED"}
+	}
+
+	for _, tt := range []struct {
+		name       string
+		totalCount func(request int) int
+	}{
+		{name: "missing total count", totalCount: func(int) int { return 0 }},
+		{name: "inconsistent total count", totalCount: func(request int) int {
+			if request == 1 {
+				return 300
+			}
+			return 200
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			requests := 0
+			transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				switch req.URL.Path {
+				case "/api/v8/repos/team/demo/actions/runs/run-1":
+					return runResponse(req, http.StatusOK, `{"workflow_run_id":"run-1","status":"RUNNING","stages":[]}`), nil
+				case "/api/v8/repos/team/demo/actions/runs/run-1/jobs":
+					requests++
+					body, err := json.Marshal(actions.JobListResponse{TotalCount: tt.totalCount(requests), Jobs: page})
+					if err != nil {
+						t.Fatal(err)
+					}
+					return runResponse(req, http.StatusOK, string(body)), nil
+				default:
+					t.Fatalf("unexpected path %s", req.URL.Path)
+					return nil, nil
+				}
+			})
+			factory := runFactory(runTestConfig{token: "secret"}, transport)
+			cmd := newCmdRunView(factory)
+			cmd.SetOut(io.Discard)
+			err := runView(cmd, factory, viewOptions{}, "team/demo", "run-1")
+			if err == nil || !strings.Contains(err.Error(), "pagination made no progress on page 2 after collecting 100 jobs") || !strings.Contains(err.Error(), "total_count was unavailable or inconsistent") {
+				t.Fatalf("error = %v, want untrusted-total pagination error", err)
+			}
+			if requests != 2 {
+				t.Fatalf("jobs requests = %d, want 2", requests)
+			}
+		})
+	}
+}
+
+func TestRunViewRejectsFullJobsPageWithNoNewJobsAndNoTotal(t *testing.T) {
+	pageOne := make([]actions.Job, 100)
+	pageTwo := make([]actions.Job, 100)
+	for i := range pageOne {
+		id := fmt.Sprintf("job-%d", i)
+		pageOne[i] = actions.Job{ID: id, Name: fmt.Sprintf("build-%d", i), Status: "COMPLETED"}
+		pageTwo[i] = actions.Job{ID: id, Name: fmt.Sprintf("renamed-%d", i), Status: "COMPLETED"}
+	}
+
+	requests := 0
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		switch req.URL.Path {
+		case "/api/v8/repos/team/demo/actions/runs/run-1":
+			return runResponse(req, http.StatusOK, `{"workflow_run_id":"run-1","status":"RUNNING","stages":[]}`), nil
+		case "/api/v8/repos/team/demo/actions/runs/run-1/jobs":
+			requests++
+			jobs := pageOne
+			if requests == 2 {
+				jobs = pageTwo
+			}
+			body, err := json.Marshal(actions.JobListResponse{Jobs: jobs})
+			if err != nil {
+				t.Fatal(err)
+			}
+			return runResponse(req, http.StatusOK, string(body)), nil
+		default:
+			t.Fatalf("unexpected path %s", req.URL.Path)
+			return nil, nil
+		}
+	})
+	factory := runFactory(runTestConfig{token: "secret"}, transport)
+	cmd := newCmdRunView(factory)
+	cmd.SetOut(io.Discard)
+	err := runView(cmd, factory, viewOptions{}, "team/demo", "run-1")
+	if err == nil || !strings.Contains(err.Error(), "pagination made no progress on page 2 after collecting 100 jobs") {
+		t.Fatalf("error = %v, want no-new-jobs pagination error", err)
+	}
+}
+
 func TestRunViewStopsWhenJobsPageFails(t *testing.T) {
 	page := make([]actions.Job, 100)
 	for i := range page {
