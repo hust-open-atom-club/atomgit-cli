@@ -393,23 +393,14 @@ func protectionPermissionValue(rule api.ProtectedBranchRule, push bool) (string,
 		}
 		values = append(values, name)
 	}
-	// AtomGit may report the administrator allowlist through either the
-	// historical master_can_* field or owner_can_*.  The CLI exposes both as
-	// the documented admin permission, so an owner-only response must not be
-	// rendered as unsupported.
-	if owner && !containsPermission(values, "admin") {
+	// AtomGit may report administrator access through owner_can_* when no
+	// other allowlist value is present.  Do not add admin to a more specific
+	// role or user allowlist: doing so would widen permissions when an existing
+	// rule is read back and written unchanged.
+	if owner && len(values) == 0 {
 		values = append(values, "admin")
 	}
 	return strings.Join(values, ";"), nil
-}
-
-func containsPermission(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
 }
 
 func protectionRuleKind(name string) string {

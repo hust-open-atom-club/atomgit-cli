@@ -87,6 +87,24 @@ func TestProtectionPermissionValueMapsOwnerAccessToAdmin(t *testing.T) {
 	}
 }
 
+func TestProtectionPermissionValueDoesNotWidenOtherAccessWithOwnerFlag(t *testing.T) {
+	rule := api.ProtectedBranchRule{
+		MaintainerCanPush:  api.FlexibleBool(true),
+		MaintainerCanMerge: api.FlexibleBool(true),
+		OwnerCanPush:       api.FlexibleBool(true),
+		OwnerCanMerge:      api.FlexibleBool(true),
+	}
+
+	push, err := protectionPermissionValue(rule, true)
+	if err != nil || push != "maintainer" {
+		t.Fatalf("push = %q, err = %v; want maintainer", push, err)
+	}
+	merge, err := protectionPermissionValue(rule, false)
+	if err != nil || merge != "maintainer" {
+		t.Fatalf("merge = %q, err = %v; want maintainer", merge, err)
+	}
+}
+
 func TestProtectionCommandsInferRepositoryContext(t *testing.T) {
 	factory := branchFactory(branchCommandConfig{token: "token"}, func(req *http.Request) (*http.Response, error) {
 		if req.URL.Path != "/api/v5/repos/alice/demo/protect_branches" {
