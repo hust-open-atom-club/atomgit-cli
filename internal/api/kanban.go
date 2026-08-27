@@ -105,9 +105,9 @@ func GetKanbans(client *Client, owner string, limit int) ([]Kanban, error) {
 	}
 
 	boards := make([]Kanban, 0, min(limit, kanbanMaxPerPage))
+	perPage := min(kanbanMaxPerPage, limit)
 	for page := 1; len(boards) < limit; page++ {
 		var response kanbanListResponse
-		perPage := min(kanbanMaxPerPage, limit-len(boards))
 		path := fmt.Sprintf("/org/%s/kanban/list?page=%d&per_page=%d", url.PathEscape(owner), page, perPage)
 		if err := client.Get(path, &response); err != nil {
 			return nil, err
@@ -160,9 +160,9 @@ func GetKanbanItems(client *Client, owner, kanbanID string, limit int) ([]Kanban
 	}
 
 	items := make([]KanbanItem, 0, min(limit, kanbanMaxPerPage))
+	perPage := min(kanbanMaxPerPage, limit)
 	for page := 1; len(items) < limit; page++ {
 		var pageItems []KanbanItem
-		perPage := min(kanbanMaxPerPage, limit-len(items))
 		path := fmt.Sprintf("/org/%s/kanban/%s/item_list?page=%d&per_page=%d", url.PathEscape(owner), url.PathEscape(kanbanID), page, perPage)
 		if err := client.Get(path, &pageItems); err != nil {
 			return nil, err

@@ -69,11 +69,7 @@ func TestGetKanbansPaginatesEnvelopeAndHonorsLimit(t *testing.T) {
 		if req.URL.Path != "/api/v5/org/team/kanban/list" {
 			t.Fatalf("path = %q", req.URL.Path)
 		}
-		wantPerPage := "100"
-		if requests == 2 {
-			wantPerPage = "1"
-		}
-		if req.URL.Query().Get("page") != fmt.Sprint(requests) || req.URL.Query().Get("per_page") != wantPerPage {
+		if req.URL.Query().Get("page") != fmt.Sprint(requests) || req.URL.Query().Get("per_page") != "100" {
 			t.Fatalf("query = %q", req.URL.RawQuery)
 		}
 		if requests == 1 {
@@ -88,14 +84,42 @@ func TestGetKanbansPaginatesEnvelopeAndHonorsLimit(t *testing.T) {
 			}
 			return kanbanResponse(http.StatusOK, string(body)), nil
 		}
-		return kanbanResponse(http.StatusOK, `{"all_count":101,"content":[{"id":"3","iid":3,"name":"three"}]}`), nil
+		return kanbanResponse(http.StatusOK, `{"all_count":101,"content":[{"id":"101","iid":101,"name":"board-101"}]}`), nil
 	})
 	boards, err := GetKanbans(client, "team", 101)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if requests != 2 || len(boards) != 101 || boards[100].Name != "three" {
+	if requests != 2 || len(boards) != 101 || boards[100].Name != "board-101" {
 		t.Fatalf("requests=%d boards=%#v", requests, boards)
+	}
+}
+
+func TestGetKanbanItemsKeepsPageSizeFixedAndTruncates(t *testing.T) {
+	requests := 0
+	client := kanbanClient(func(req *http.Request) (*http.Response, error) {
+		requests++
+		if req.URL.Query().Get("page") != fmt.Sprint(requests) || req.URL.Query().Get("per_page") != "100" {
+			t.Fatalf("query = %q", req.URL.RawQuery)
+		}
+		items := make([]KanbanItem, 100)
+		start := (requests - 1) * 100
+		for i := range items {
+			items[i] = KanbanItem{ID: int64(start + i + 1), Title: fmt.Sprintf("item-%d", start+i+1)}
+		}
+		body, err := json.Marshal(items)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return kanbanResponse(http.StatusOK, string(body)), nil
+	})
+
+	items, err := GetKanbanItems(client, "team", "123", 101)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requests != 2 || len(items) != 101 || items[100].Title != "item-101" {
+		t.Fatalf("requests=%d items=%#v", requests, items)
 	}
 }
 
