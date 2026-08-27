@@ -65,6 +65,15 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 			}
 		}
 	}
+	forkList, _, err := cmd.Find([]string{"fork", "list"})
+	if err != nil || forkList.Name() != "list" {
+		t.Fatalf("fork list command: %v", err)
+	}
+	for _, flag := range []string{"limit", "json"} {
+		if forkList.Flags().Lookup(flag) == nil {
+			t.Errorf("fork list --%s flag was not registered", flag)
+		}
+	}
 
 	clone, _, _ := cmd.Find([]string{"clone"})
 	if err := clone.Args(clone, nil); err == nil {

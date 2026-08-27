@@ -3,6 +3,7 @@ package repo
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -45,8 +46,85 @@ Use --private or --public to override.`,
 	cmd.Flags().BoolVar(&opts.Private, "private", false, "Make the forked repository private")
 	cmd.Flags().BoolVarP(&opts.Clone, "clone", "c", false, "Clone the forked repository")
 	cmdutil.AddRepositoryContextHelp(cmd)
+	cmd.AddCommand(newCmdRepoForkList(f))
 
 	return cmd
+}
+
+func newCmdRepoForkList(f *cmdutil.Factory) *cobra.Command {
+	var opts struct {
+		Limit int
+		JSON  bool
+	}
+	cmd := &cobra.Command{
+		Use:   "list [<owner>/<repo>]",
+		Short: "List forks of a repository",
+		Long:  "List existing forks of a repository.\n\nThis is read-only and is separate from `ag repo fork`, which creates a new fork.\nThe repository can be supplied explicitly or inferred from the current Git repository.",
+		Example: `  ag repo fork list owner/repo
+  ag repo fork list owner/repo --limit 100 --json
+  ag repo fork list`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.Limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
+			}
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
+			forks, err := api.ListRepositoryForks(client, repository.Owner, repository.Name, opts.Limit)
+			if err != nil {
+				return fmt.Errorf("failed to list forks for %s: %w", repository, err)
+			}
+			if opts.JSON {
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), repositoriesJSON(forks))
+			}
+
+			for _, fork := range forks {
+				fmt.Fprintln(cmd.OutOrStdout(), forkListLine(fork))
+			}
+			return nil
+		},
+	}
+	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of forks to list")
+	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output forks as JSON")
+	cmdutil.AddRepositoryContextHelp(cmd)
+	return cmd
+}
+
+func forkListLine(fork api.Repository) string {
+	name := strings.TrimSpace(repositoryListName(fork))
+	if name == "" {
+		name = "-"
+	}
+	owner := strings.TrimSpace(repositoryOwner(fork))
+	visibility := repositoryVisibility(fork)
+	defaultBranch := strings.TrimSpace(fork.DefaultBranch)
+	urlValue := strings.TrimSpace(fork.HTMLURL)
+	if urlValue == "" {
+		urlValue = strings.TrimSpace(fork.AlternateHTMLURL)
+	}
+
+	line := fmt.Sprintf("%s [%s]", name, visibility)
+	if owner != "" {
+		line += fmt.Sprintf(" owner=%s", owner)
+	}
+	if defaultBranch != "" {
+		line += fmt.Sprintf(" default=%s", defaultBranch)
+	}
+	if urlValue != "" {
+		line += " " + urlValue
+	}
+	return line
 }
 
 func runFork(out io.Writer, f *cmdutil.Factory, opts *ForkOptions, repoArg string) error {
