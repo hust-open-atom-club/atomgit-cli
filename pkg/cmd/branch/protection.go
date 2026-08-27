@@ -392,8 +392,12 @@ func protectionPermissionValue(rule api.ProtectedBranchRule, push bool) (string,
 		}
 		values = append(values, name)
 	}
-	if len(values) == 0 && owner {
-		return "", fmt.Errorf("the API response contains unsupported owner-only access; specify this permission explicitly")
+	// AtomGit may report administrator access through owner_can_* when no
+	// other allowlist value is present.  Do not add admin to a more specific
+	// role or user allowlist: doing so would widen permissions when an existing
+	// rule is read back and written unchanged.
+	if owner && len(values) == 0 {
+		values = append(values, "admin")
 	}
 	return strings.Join(values, ";"), nil
 }
