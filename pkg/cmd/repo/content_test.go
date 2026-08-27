@@ -527,6 +527,9 @@ func TestReadFileCommandRegistration(t *testing.T) {
 	if child.Short != "Read a file from a repository" {
 		t.Errorf("read-file Short = %q", child.Short)
 	}
+	if child.Deprecated != "use 'ag repo content view' instead" {
+		t.Errorf("read-file Deprecated = %q", child.Deprecated)
+	}
 
 	for _, flag := range []string{"ref", "json"} {
 		if child.Flags().Lookup(flag) == nil {
@@ -552,6 +555,9 @@ func TestReadDirCommandRegistration(t *testing.T) {
 
 	if child.Short != "List contents of a repository directory" {
 		t.Errorf("read-dir Short = %q", child.Short)
+	}
+	if child.Deprecated != "use 'ag repo content list' instead" {
+		t.Errorf("read-dir Deprecated = %q", child.Deprecated)
 	}
 
 	for _, flag := range []string{"ref", "json"} {
