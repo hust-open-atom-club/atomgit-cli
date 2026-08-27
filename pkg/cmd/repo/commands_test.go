@@ -42,6 +42,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	cmd := NewCmdRepo(&cmdutil.Factory{})
 	want := map[string][]string{
 		"clone":     {"branch"},
+		"content":   nil,
 		"create":    {"clone", "description", "private", "public"},
 		"delete":    {"yes"},
 		"edit":      {"default-branch", "description", "name", "private", "public", "visibility", "yes"},
@@ -96,6 +97,17 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	for _, flag := range []string{"reject-not-signed-by-gpg", "commit-message-regex", "max-file-size", "skip-rule-for-owner", "deny-force-push", "yes", "json"} {
 		if pushRuleEdit.Flags().Lookup(flag) == nil {
 			t.Errorf("push-rule edit --%s flag was not registered", flag)
+		}
+	}
+	for _, name := range []string{"list", "view"} {
+		contentCommand, _, err := cmd.Find([]string{"content", name})
+		if err != nil || contentCommand.Name() != name {
+			t.Fatalf("content %s subcommand: %v", name, err)
+		}
+		for _, flag := range []string{"json", "ref"} {
+			if contentCommand.Flags().Lookup(flag) == nil {
+				t.Errorf("content %s --%s flag was not registered", name, flag)
+			}
 		}
 	}
 	if err := pushRuleEdit.Args(pushRuleEdit, []string{"owner/repo", "extra"}); err == nil {
