@@ -3,7 +3,6 @@ package comment
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -65,10 +64,11 @@ func newCmdDelete(f *cmdutil.Factory) *cobra.Command {
 
 			// Confirm deletion
 			if !opts.Yes {
-				fmt.Fprintf(out, "确定要删除评论 #%d 吗? [y/N]: ", commentID)
-				var response string
-				fmt.Scanln(&response)
-				if strings.ToLower(response) != "y" && strings.ToLower(response) != "yes" {
+				confirmed, err := cmdutil.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), fmt.Sprintf("确定要删除评论 #%d 吗? [y/N]: ", commentID))
+				if err != nil {
+					return err
+				}
+				if !confirmed {
 					fmt.Fprintln(out, "取消删除")
 					return nil
 				}

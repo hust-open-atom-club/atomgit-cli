@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"bufio"
 	"fmt"
 	"strings"
 
@@ -68,18 +67,11 @@ the confirmation prompt.`,
 
 			// Confirm deletion unless --yes flag is used
 			if !force {
-				fmt.Fprintf(out, "Are you sure you want to delete %s/%s? This action cannot be undone. [y/N] ", owner, repoName)
-				scanner := bufio.NewScanner(cmd.InOrStdin())
-				if !scanner.Scan() {
-					if err := scanner.Err(); err != nil {
-						return fmt.Errorf("failed to read confirmation: %w", err)
-					}
-					// EOF without input — treat as cancellation
-					fmt.Fprintln(out, "Deletion cancelled.")
-					return nil
+				confirmed, err := cmdutil.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), fmt.Sprintf("Are you sure you want to delete %s/%s? This action cannot be undone. [y/N] ", owner, repoName))
+				if err != nil {
+					return err
 				}
-				response := strings.TrimSpace(scanner.Text())
-				if response != "y" && response != "Y" {
+				if !confirmed {
 					fmt.Fprintln(out, "Deletion cancelled.")
 					return nil
 				}

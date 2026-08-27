@@ -1,11 +1,9 @@
 package repo
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"net/url"
-	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -259,15 +257,5 @@ func printPushRuleChanges(out io.Writer, request api.UpdateRepositoryPushRuleReq
 func confirmPushRuleEdit(in io.Reader, out io.Writer, repository cmdutil.Repository, request api.UpdateRepositoryPushRuleRequest) (bool, error) {
 	fmt.Fprintf(out, "Repository: %s\n", repository)
 	printPushRuleChanges(out, request)
-	fmt.Fprint(out, "Apply these push-rule changes? [y/N] ")
-
-	scanner := bufio.NewScanner(in)
-	if !scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			return false, fmt.Errorf("failed to read confirmation: %w", err)
-		}
-		return false, nil
-	}
-	answer := strings.ToLower(strings.TrimSpace(scanner.Text()))
-	return answer == "y" || answer == "yes", nil
+	return cmdutil.Confirm(in, out, "Apply these push-rule changes? [y/N] ")
 }

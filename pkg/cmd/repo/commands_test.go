@@ -625,7 +625,6 @@ func TestRepoDeleteConfirmationCancels(t *testing.T) {
 		{name: "EOF without input", input: ""},
 		{name: "explicit no", input: "n\n"},
 		{name: "other input", input: "maybe\n"},
-		{name: "unrecognized yes", input: "yes\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -654,7 +653,7 @@ func TestRepoDeleteConfirmationCancels(t *testing.T) {
 }
 
 func TestRepoDeleteConfirmationProceeds(t *testing.T) {
-	for _, input := range []string{"y\n", "Y\n"} {
+	for _, input := range []string{"y\n", "Y\n", "yes\n", "YES\n"} {
 		t.Run(strings.TrimSpace(input), func(t *testing.T) {
 			requests := 0
 			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -693,8 +692,8 @@ func TestRepoDeleteConfirmationReadError(t *testing.T) {
 	cmd.SetIn(errorReader{})
 	if err := cmd.RunE(cmd, []string{"demo"}); err == nil {
 		t.Fatal("expected confirmation read error")
-	} else if !strings.Contains(err.Error(), "failed to read confirmation") {
-		t.Fatalf("error = %v, want 'failed to read confirmation'", err)
+	} else if !strings.Contains(err.Error(), "read confirmation response") {
+		t.Fatalf("error = %v, want 'read confirmation response'", err)
 	}
 	if requests != 0 {
 		t.Fatalf("request count = %d, want 0 (deletion must not be called)", requests)

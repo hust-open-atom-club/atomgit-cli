@@ -79,7 +79,7 @@ supplied.`,
 					return nil
 				}
 				if !opts.yes {
-					confirmed, err := confirmMarkAll(cmd.InOrStdin(), out, len(notifications), repository.String())
+					confirmed, err := confirmMarkAll(cmd.InOrStdin(), cmd.ErrOrStderr(), len(notifications), repository.String())
 					if err != nil {
 						return err
 					}
@@ -109,17 +109,7 @@ supplied.`,
 // confirmMarkAll asks the user to confirm marking count unread notifications
 // as read. It accepts y, Y, yes, and YES; anything else declines.
 func confirmMarkAll(in io.Reader, out io.Writer, count int, repository string) (bool, error) {
-	fmt.Fprintf(out, "Mark %d unread notification(s) as read in %s? [y/N] ", count, repository)
-	var response string
-	if _, err := fmt.Fscan(in, &response); err != nil && err != io.EOF {
-		return false, fmt.Errorf("read confirmation: %w", err)
-	}
-	switch strings.ToLower(response) {
-	case "y", "yes":
-		return true, nil
-	default:
-		return false, nil
-	}
+	return cmdutil.Confirm(in, out, fmt.Sprintf("Mark %d unread notification(s) as read in %s? [y/N] ", count, repository))
 }
 
 func notificationIDs(notifications []api.Notification) []string {

@@ -1,7 +1,6 @@
 package key
 
 import (
-	"bufio"
 	"fmt"
 	"strconv"
 	"strings"
@@ -75,21 +74,10 @@ func parseSSHKeyID(value string) (int64, error) {
 }
 
 func confirmSSHKeyDelete(cmd *cobra.Command, sshKey api.SSHKey) (bool, error) {
-	fmt.Fprintf(
-		cmd.OutOrStdout(),
+	return cmdutil.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), fmt.Sprintf(
 		"Delete SSH key %d (%s, %s)? [y/N] ",
 		sshKey.ID,
 		displaySSHKeyValue(sshKey.Title),
 		displaySSHKeyValue(sshKeyFingerprint(sshKey)),
-	)
-
-	scanner := bufio.NewScanner(cmd.InOrStdin())
-	if !scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			return false, fmt.Errorf("failed to read confirmation: %w", err)
-		}
-		return false, nil
-	}
-	answer := strings.ToLower(strings.TrimSpace(scanner.Text()))
-	return answer == "y" || answer == "yes", nil
+	))
 }

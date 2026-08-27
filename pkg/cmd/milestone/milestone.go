@@ -311,7 +311,7 @@ func newCmdMilestoneDelete(f *cmdutil.Factory) *cobra.Command {
 			}
 			out := cmd.OutOrStdout()
 			if !yes {
-				confirmed, err := confirmMilestoneDelete(cmd.InOrStdin(), out, repository, number)
+				confirmed, err := confirmMilestoneDelete(cmd.InOrStdin(), cmd.ErrOrStderr(), repository, number)
 				if err != nil {
 					return err
 				}
@@ -404,12 +404,7 @@ func validateMilestoneListOptions(state, sortBy, direction string, limit int) er
 }
 
 func confirmMilestoneDelete(in io.Reader, out io.Writer, repository cmdutil.Repository, number string) (bool, error) {
-	fmt.Fprintf(out, "Permanently delete milestone #%s from %s? [y/N] ", number, repository.String())
-	var response string
-	if _, err := fmt.Fscan(in, &response); err != nil && err != io.EOF {
-		return false, fmt.Errorf("read confirmation: %w", err)
-	}
-	return strings.EqualFold(response, "y") || strings.EqualFold(response, "yes"), nil
+	return cmdutil.Confirm(in, out, fmt.Sprintf("Permanently delete milestone #%s from %s? [y/N] ", number, repository.String()))
 }
 
 func milestoneResultURL(item api.Milestone, host string, repository cmdutil.Repository, fallbackNumber string) string {

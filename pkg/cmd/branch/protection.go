@@ -1,7 +1,6 @@
 package branch
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"net/url"
@@ -188,7 +187,7 @@ requires confirmation unless --yes is supplied.`,
 				printProtectionDetail(cmd.OutOrStdout(), existing)
 				fmt.Fprintf(cmd.OutOrStdout(), "New Push: %s\n", protectionValueDisplay(request.Pusher))
 				fmt.Fprintf(cmd.OutOrStdout(), "New Merge: %s\n", protectionValueDisplay(request.Merger))
-				confirmed, err := confirmProtectionChange(cmd.InOrStdin(), cmd.OutOrStdout(), "Update", pattern)
+				confirmed, err := confirmProtectionChange(cmd.InOrStdin(), cmd.ErrOrStderr(), "Update", pattern)
 				if err != nil {
 					return err
 				}
@@ -248,7 +247,7 @@ func newCmdProtectionDelete(f *cmdutil.Factory) *cobra.Command {
 			}
 			if !yes {
 				printProtectionDetail(cmd.OutOrStdout(), rule)
-				confirmed, err := confirmProtectionChange(cmd.InOrStdin(), cmd.OutOrStdout(), "Delete", pattern)
+				confirmed, err := confirmProtectionChange(cmd.InOrStdin(), cmd.ErrOrStderr(), "Delete", pattern)
 				if err != nil {
 					return err
 				}
@@ -440,14 +439,5 @@ func printProtectionDetail(out io.Writer, rule api.ProtectedBranchRule) {
 }
 
 func confirmProtectionChange(in io.Reader, out io.Writer, action, pattern string) (bool, error) {
-	fmt.Fprintf(out, "%s protected branch rule %s? [y/N] ", action, pattern)
-	scanner := bufio.NewScanner(in)
-	if !scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			return false, fmt.Errorf("failed to read confirmation: %w", err)
-		}
-		return false, nil
-	}
-	answer := strings.ToLower(strings.TrimSpace(scanner.Text()))
-	return answer == "y" || answer == "yes", nil
+	return cmdutil.Confirm(in, out, fmt.Sprintf("%s protected branch rule %s? [y/N] ", action, pattern))
 }

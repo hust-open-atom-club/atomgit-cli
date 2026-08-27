@@ -60,8 +60,9 @@ func TestNotificationMarkReadAllConfirmedSendsExactlyFetchedIDs(t *testing.T) {
 
 	cmd := newCmdNotificationMarkRead(factory)
 	var out bytes.Buffer
+	var errOut bytes.Buffer
 	cmd.SetOut(&out)
-	cmd.SetErr(io.Discard)
+	cmd.SetErr(&errOut)
 	cmd.SetIn(strings.NewReader("y\n"))
 
 	if err := cmd.Flags().Set("all", "true"); err != nil {
@@ -71,8 +72,8 @@ func TestNotificationMarkReadAllConfirmedSendsExactlyFetchedIDs(t *testing.T) {
 		t.Fatalf("RunE: %v", err)
 	}
 
-	if !strings.Contains(out.String(), "Mark 2 unread notification(s) as read in owner/repo?") {
-		t.Fatalf("prompt = %q", out.String())
+	if !strings.Contains(errOut.String(), "Mark 2 unread notification(s) as read in owner/repo?") {
+		t.Fatalf("prompt = %q", errOut.String())
 	}
 	if !strings.Contains(out.String(), "Marked 2 notification(s) as read") {
 		t.Fatalf("output = %q", out.String())
