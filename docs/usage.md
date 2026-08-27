@@ -288,6 +288,15 @@ ag user namespaces --mode all
 
 # 输出固定字段的 JSON 数组
 ag user namespaces --json
+
+# 列出当前认证账号的个人动态
+ag user events
+
+# 列出指定用户的个人动态，按年份过滤并限制总条数
+ag user events alice --year 2026 --limit 50
+
+# 输出稳定的 JSON 数组
+ag user events alice --json
 ```
 
 `ag user view --json` 输出稳定的 JSON 对象，字段始终齐全（空字符串、零计数和空数组也会输出，便于自动化区分"值为零/空"与"字段缺失"）：
@@ -315,6 +324,8 @@ ag user namespaces --json
 `ag user emails` 需要认证，并且只会在明确调用时将当前账号的邮件地址输出到标准输出。文本模式显示邮件地址和状态；`--json` 输出固定 `email`、`state` 字段的数组。没有邮件地址时，文本模式输出 `No email addresses found.`，JSON 模式输出 `[]`。
 
 `ag user namespaces` 需要认证，用于列出当前账号通过成员关系或项目关联可见的用户及群组命名空间。`--mode` 支持 `intrant`（默认值）、`project` 和 `all`；文本模式显示路径、名称、类型和 URL，`--json` 输出固定的 `id`、`path`、`name`、`url`、`type` 字段。`ag org list` 仍只列出组织，不受此命令影响。
+
+`ag user events` 需要认证，用于列出用户个人动态。省略用户名时默认使用当前认证账号，显式用户名优先。`--year` 用于按年份过滤（`0` 表示不过滤，合法范围为 `1970`–`9999`）；`--limit` 控制跨游标页返回的总条数（默认 `30`，必须为正整数）。命令会跟随 API 返回的 `next` 游标继续请求，直到满足条数或没有更多游标，并检测重复游标以避免无限翻页。文本模式按日期从新到旧输出 `DATE`、`ACTION`、`PROJECT`、`TITLE` 四列；`--json` 输出稳定的数组（不是 API 按日期分组的对象），每个元素包含 `date`、`action`、`actionName`、`authorId`、`authorUsername`、`authorName`、`authorUrl`、`createdAt`、`projectId`、`projectName`、`targetId`、`targetIid`、`targetTitle`、`targetType`、`targetTypeFormat` 字段。没有动态时，文本模式输出 `No events found.`，JSON 模式输出 `[]`。
 
 ## Branch
 
