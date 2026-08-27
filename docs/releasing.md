@@ -1,6 +1,6 @@
 # 发布指南
 
-本文档介绍 AtomGit CLI 的 GoReleaser 打包、npm 制品发布、Homebrew tap 和 Nix package 维护流程。
+本文档介绍 AtomGit CLI 的 GoReleaser 打包、npm 制品发布，以及 Homebrew tap、Nix package、WinGet、Scoop 和 AUR package 的维护流程。
 
 ## 目录
 
@@ -11,6 +11,7 @@
 - [维护 Nix package](#维护-nix-package)
 - [维护 WinGet](#维护-winget)
 - [维护 Scoop](#维护-scoop)
+- [维护 AUR package](#维护-aur-package)
 
 ## 发布打包
 
@@ -216,3 +217,50 @@ Komac 将自动根据传入的 URL 下载包，计算 SHA-256 并更新清单。
 Scoop bucket 位于 [hust-open-atom-club/ScoopBucket](https://github.com/hust-open-atom-club/ScoopBucket)，使用 Excavator GitHub Actions 工作流自动维护。Excavator 每 4 个小时检测一次新版本。如果检测到新版本，将自动更新清单中的版本号、下载链接和 SHA-256 并提交合并请求。
 
 如果距离版本发布超过 4 个小时仍没能正确更新，请[发起一个 Issue](https://github.com/hust-open-atom-club/ScoopBucket/issues)，或者手动更新 [bucket/atomgit-cli.json](https://github.com/hust-open-atom-club/ScoopBucket/blob/main/bucket/atomgit-cli.json) 清单中的相应字段后发起合并请求。
+
+## 维护 AUR package
+
+AUR（Arch User Repository）上维护了三个包，均由维护者 `moyigeek`（`moyi@openatom.club`）负责：
+
+- [atomgit-cli](https://aur.archlinux.org/packages/atomgit-cli)：稳定版，从上游源码构建。
+- [atomgit-cli-bin](https://aur.archlinux.org/packages/atomgit-cli-bin)：稳定版，直接使用 Release 预编译二进制。
+- [atomgit-cli-git](https://aur.archlinux.org/packages/atomgit-cli-git)：开发版，跟随上游 `main` 分支最新提交。
+
+三个包共用 `provides=('ag')`，并互相声明 `conflicts`，避免同时安装冲突。arch 覆盖 `x86_64`、`aarch64`、`loong64`。
+
+### 稳定版（atomgit-cli / atomgit-cli-bin）
+
+新版本发布后，更新对应 AUR 仓库的 PKGBUILD：
+
+- **atomgit-cli**：将 `pkgver` 更新为新版本号，并**必须**把 `_commit` 更新为新 tag `v${pkgver}` 指向的 commit，同时确认源码 `git+...#tag=v${pkgver}` 已指向同一 tag。PKGBUILD 会无条件把 `_commit` 注入 `internal/version.Commit`；若仅更新 `pkgver` 而漏更 `_commit`，新 tag 的源码仍可正常构建，但 `ag version` 会继续报告上一个版本的 SHA。注意：本地 AUR 仓库（如 `~/atomgit-cli`）不包含上游 tag，在其中执行 `git rev-list -n 1 "v${pkgver}"` 会报 `unknown revision`（exit 128）。请改用以下任一方式在新 tag 指向的上游仓库中取得目标 commit 后再写入 `_commit`：
+  ```bash
+  # 方式 A：远程查询（可在任意目录执行，无需克隆）
+  git ls-remote https://atomgit.com/hust-open-atom-club/atomgit-cli.git "refs/tags/v${pkgver}" \
+    | awk '{print $1}'
+  # 方式 B：在上游 atomgit-cli 检出中执行
+  git rev-list -n 1 "v${pkgver}"
+  ```
+- **atomgit-cli-bin**：将 `pkgver` 更新为新版本号，并更新各架构归档的下载 URL 和对应的 `_sha256sums_*`。
+
+维护流程：
+
+```bash
+# 在本地 AUR 仓库中
+cd atomgit-cli      # 或 atomgit-cli-bin
+# 编辑 PKGBUILD 更新版本号
+makepkg --printsrcinfo > .SRCINFO   # 重新生成 .SRCINFO
+git add PKGBUILD .SRCINFO
+git commit -m "atomgit-cli X.Y.Z-1" # 包名替换为对应 pkgname
+git push                            # 推送到 AUR
+```
+
+> [!NOTE]
+> `-pkgrel`（包发布修订号）：当上游版本号不变、但打包方式有改动时递增（如 `0.7.2-1` → `0.7.2-2`）。版本号本身更新时通常重置回 `-1`。
+
+### 开发版（atomgit-cli-git）
+
+跟随 `main` 分支，无需随每个版本手动更新。PKGBUILD 的 `pkgver()` 函数用 `git describe --long --tags` 生成规范版本号（如 `0.7.2.r27.gdb67692`），并在 `build()` 中注入对应 commit 与构建日期。只有当上游仓库或打包配置有结构性改动时才需要更新提交。
+
+### 校验
+
+推送前应在本机用 `makepkg -f` 实际构建一次，确认能产出 `.pkg.tar.*` 包且 `ag version` 显示的版本符合预期。对于 `atomgit-cli`，还需精确核对 `ag version` 输出的 commit 与新 tag `v${pkgver}` 指向的 commit 完全一致。注意本地 AUR 仓库不包含上游 tag，不能在其中查询；请使用 `git ls-remote https://atomgit.com/hust-open-atom-club/atomgit-cli.git "refs/tags/v${pkgver}" | awk '{print $1}'`（任意目录），或在上游 atomgit-cli 检出中执行 `git rev-list -n 1 "v${pkgver}"` 取得参照值。若 `ag version` 仍显示上一个版本的 SHA，说明 `_commit` 未同步更新，必须修正后重新构建、再次校验通过，再推送 AUR。

@@ -1,11 +1,8 @@
 package run
 
 import (
-	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api/actions"
@@ -168,7 +165,7 @@ Name: %s
 Workflow run: %s
 Expires: %s
 Deleting this artifact cannot be undone.
-Delete this artifact? [y/N] `,
+`,
 		repositoryName,
 		singleLine(artifactID),
 		singleLine(fallback(artifact.Name, "-")),
@@ -178,11 +175,5 @@ Delete this artifact? [y/N] `,
 		return false, fmt.Errorf("write deletion confirmation: %w", err)
 	}
 
-	reader := bufio.NewReader(cmd.InOrStdin())
-	line, err := reader.ReadString('\n')
-	if err != nil && !errors.Is(err, io.EOF) {
-		return false, fmt.Errorf("read deletion confirmation: %w", err)
-	}
-	answer := strings.ToLower(strings.TrimSpace(line))
-	return answer == "y" || answer == "yes", nil
+	return cmdutil.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), "Delete this artifact? [y/N] ")
 }

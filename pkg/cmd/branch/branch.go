@@ -59,6 +59,7 @@ func branchPath(repository repositoryRef, branchName string) string {
 
 func newCmdBranchList(f *cmdutil.Factory) *cobra.Command {
 	var limit int
+	var jsonOutput bool
 
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
@@ -86,6 +87,9 @@ func newCmdBranchList(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to list branches for %s/%s: %w", repository.Owner, repository.Repo, err)
 			}
+			if jsonOutput {
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), branchesJSON(branches))
+			}
 
 			for _, branch := range branches {
 				printBranchSummary(cmd.OutOrStdout(), branch)
@@ -95,6 +99,7 @@ func newCmdBranchList(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().IntVarP(&limit, "limit", "L", 30, "Maximum number of branches to list")
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output branches as JSON")
 	return cmd
 }
 
@@ -321,4 +326,47 @@ func displayCommit(commit api.BranchCommit) string {
 	}
 	message = strings.ReplaceAll(message, "\n", " ")
 	return fmt.Sprintf("%s %s", sha, message)
+}
+
+type branchJSON struct {
+	Name               string `json:"name"`
+	Commit             string `json:"commit"`
+	Protected          bool   `json:"protected"`
+	Default            bool   `json:"default"`
+	Merged             bool   `json:"merged"`
+	CanPush            bool   `json:"canPush"`
+	DevelopersCanPush  bool   `json:"developersCanPush"`
+	DevelopersCanMerge bool   `json:"developersCanMerge"`
+	CreatedAt          string `json:"createdAt"`
+	Creator            string `json:"creator"`
+}
+
+func branchesJSON(branches []api.Branch) []branchJSON {
+	result := make([]branchJSON, len(branches))
+	for i, branch := range branches {
+		result[i] = newBranchJSON(branch)
+	}
+	return result
+}
+
+func newBranchJSON(branch api.Branch) branchJSON {
+	commit := branch.Commit.SHA
+	if commit == "" {
+		commit = branch.Commit.ID
+	}
+	if commit == "" {
+		commit = branch.Commit.ShortID
+	}
+	return branchJSON{
+		Name:               displayBranchName(branch),
+		Commit:             commit,
+		Protected:          branch.Protected.Bool(),
+		Default:            branch.Default.Bool() || branch.DefaultBranch.Bool(),
+		Merged:             branch.Merged.Bool(),
+		CanPush:            branch.CanPush.Bool(),
+		DevelopersCanPush:  branch.DevelopersCanPush.Bool(),
+		DevelopersCanMerge: branch.DevelopersCanMerge.Bool(),
+		CreatedAt:          branch.CreatedAt,
+		Creator:            branch.Creator.Login,
+	}
 }

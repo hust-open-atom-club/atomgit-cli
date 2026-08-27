@@ -10,6 +10,8 @@
 
 AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 
+English: [README.en.md](README.en.md)
+
 ## 功能
 
 | 类别 | 能力 |
@@ -79,6 +81,19 @@ scoop install atomgit-cli
 
 ```bash
 nix profile install nixpkgs#atomgit-cli
+```
+
+### Aur / Archlinux
+
+目前atomgit 已经上传到aur 中，用户可以用yay/paru自行选择从二进制、源码或开发版安装
+
+```bash
+# 从源码安装（稳定版）
+yay -S atomgit-cli
+# 二进制安装（稳定版，免编译）
+yay -S atomgit-cli-bin
+# 开发版安装（跟随 main 分支最新提交）
+yay -S atomgit-cli-git
 ```
 
 ### Go

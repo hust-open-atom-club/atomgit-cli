@@ -59,7 +59,7 @@ func (c ioNopCloser) Close() error { return nil }
 func TestNewCmdBranchRegistersSubcommandsAndHelp(t *testing.T) {
 	cmd := NewCmdBranch(&cmdutil.Factory{})
 	want := map[string][]string{
-		"list":       {"limit"},
+		"list":       {"json", "limit"},
 		"view":       {},
 		"create":     {"ref"},
 		"delete":     {"yes"},
@@ -163,6 +163,39 @@ func TestBranchListPaginatesHonorsLimitAndFormatsOutput(t *testing.T) {
 		!strings.Contains(output, "branch-100") ||
 		strings.Contains(output, "branch-101") {
 		t.Fatalf("output =\n%s", output)
+	}
+}
+
+func TestBranchListJSONUsesStableFieldsAndLimit(t *testing.T) {
+	requests := 0
+	transport := branchRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		requests++
+		return branchResponse(http.StatusOK, `[
+			{"name":"main\u001b[31m","protected":true,"default_branch":true,"can_push":true,"created_at":"2026-08-22T00:00:00Z","creator":{"login":"alice"},"commit":{"sha":"abcdef1234567890"}},
+			{"name":"develop"}
+		]`), nil
+	})
+	cmd := newCmdBranchList(branchFactory(branchCommandConfig{token: "token"}, transport))
+	_ = cmd.Flags().Set("limit", "1")
+	_ = cmd.Flags().Set("json", "true")
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+
+	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+		t.Fatal(err)
+	}
+	if requests != 1 {
+		t.Fatalf("request count = %d", requests)
+	}
+	if strings.Contains(out.String(), "\x1b") {
+		t.Fatalf("JSON output contains terminal escape: %q", out.String())
+	}
+	var values []branchJSON
+	if err := json.Unmarshal(out.Bytes(), &values); err != nil {
+		t.Fatalf("invalid JSON %q: %v", out.String(), err)
+	}
+	if len(values) != 1 || values[0].Name != "main\x1b[31m" || values[0].Commit != "abcdef1234567890" || !values[0].Protected || !values[0].Default || !values[0].CanPush || values[0].Creator != "alice" {
+		t.Fatalf("values = %#v", values)
 	}
 }
 

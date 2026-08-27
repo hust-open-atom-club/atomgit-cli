@@ -160,7 +160,7 @@ func TestRunJobAndArtifactJSONPaths(t *testing.T) {
 	if _, err := client.GetRun("team", "demo", "run-1"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.ListJobs("team", "demo", "run-1"); err != nil {
+	if _, err := client.ListJobs("team", "demo", "run-1", ListJobsOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := client.GetJob("team", "demo", "run-1", "job-1"); err != nil {
@@ -181,6 +181,26 @@ func TestRunJobAndArtifactJSONPaths(t *testing.T) {
 	}
 	if request != len(expected) {
 		t.Fatalf("request count = %d", request)
+	}
+}
+
+func TestListJobsUsesPaginationQuery(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path != "/api/v8/repos/team/demo/actions/runs/run-1/jobs" {
+			t.Fatalf("path = %q", req.URL.Path)
+		}
+		if got := req.URL.Query().Encode(); got != "page=2&per_page=25" {
+			t.Fatalf("query = %q", got)
+		}
+		return response(req, http.StatusOK, `{"total_count":1,"jobs":[{"id":"job-1"}]}`), nil
+	})
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+	result, err := client.ListJobs("team", "demo", "run-1", ListJobsOptions{Page: 2, PerPage: 25})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.TotalCount != 1 || len(result.Jobs) != 1 {
+		t.Fatalf("result = %#v", result)
 	}
 }
 

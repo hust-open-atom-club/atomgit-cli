@@ -26,6 +26,7 @@ func NewCmdLabel(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdLabelList(f *cmdutil.Factory) *cobra.Command {
 	var limit int
+	var jsonOutput bool
 
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
@@ -59,6 +60,9 @@ func newCmdLabelList(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			out := cmd.OutOrStdout()
+			if jsonOutput {
+				return cmdutil.WriteJSON(out, labelsJSON(labels))
+			}
 			for _, label := range labels {
 				fmt.Fprintf(out, "%s [%s]", label.Name, label.Color)
 				if description := strings.TrimSpace(label.Description); description != "" {
@@ -71,5 +75,21 @@ func newCmdLabelList(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.Flags().IntVarP(&limit, "limit", "L", 30, "Maximum number of labels to list")
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output labels as JSON")
 	return cmd
+}
+
+type labelJSON struct {
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	Color       string `json:"color"`
+	Description string `json:"description"`
+}
+
+func labelsJSON(labels []api.Label) []labelJSON {
+	result := make([]labelJSON, len(labels))
+	for i, label := range labels {
+		result[i] = labelJSON{ID: label.ID, Name: label.Name, Color: label.Color, Description: label.Description}
+	}
+	return result
 }

@@ -184,21 +184,25 @@ ag repo delete owner/repo --yes
 ### 仓库内容读取
 
 ```bash
-# 读取默认分支上的文件内容
-ag repo read-file owner/repo README.md
-ag repo read-file owner/repo src/main.go --json
+# 列出当前仓库默认分支的根目录或嵌套目录
+ag repo content list
+ag repo content list docs/guides
 
-# 在指定分支、tag 或 commit 上读取文件
-ag repo read-file owner/repo README.md --ref dev
+# 列出显式仓库的根目录或指定 ref 下的嵌套目录
+ag repo content list owner/repo .
+ag repo content list owner/repo src --ref v1.0.0 --json
 
-# 列出目录内容（使用 . 表示仓库根目录）
-ag repo read-dir owner/repo .
-ag repo read-dir owner/repo src --ref v1.0.0 --json
+# 读取默认分支或指定 ref 上的文件
+ag repo content view README.md
+ag repo content view owner/repo src/main.go --ref dev
+ag repo content view owner/repo README.md --json
 ```
 
-`read-file` 输出解码后的文件文本；`read-dir` 每行输出一个条目（类型、大小、路径），字段中的反斜杠、制表符、换行和回车分别显示为 `\\`、`\t`、`\n` 和 `\r`。`--json` 输出稳定的 lowerCamelCase 字段：文件对象包含 `name`、`path`、`sha`、`size`、`encoding`、`content`（base64）和 `ref`；目录条目数组包含 `name`、`path`、`type`、`sha`、`size`，空目录输出 `[]`。
+`content list` 每行输出一个目录条目的类型、路径和对象 ID；`content view` 输出解码后的文件字节。字段中的反斜杠、制表符、换行和回车分别显示为 `\\`、`\t`、`\n` 和 `\r`。`--json` 保留 AtomGit API 返回的完整目录数组或文件对象，包括文件的 Base64 编码 `content` 和 `_links` 等元数据；空目录输出 `[]`。
 
-路径必须是仓库相对路径，不能以 `/` 开头或结尾，不能包含连续斜杠或 `.`/`..` 段（`read-dir .` 是唯一例外，映射到仓库根目录）。每个路径段独立转义。文件内容默认经过终端清理；如需保留原始字节，使用根级 `--raw-output`。这些命令只发送 GET 请求，不会修改仓库内容。
+路径必须是仓库相对路径，不能以 `/` 开头或结尾，不能包含连续斜杠或 `.`/`..` 段（`content list` 的 `.` 是唯一例外，表示仓库根目录）。不带参数的 `content list` 会推断当前仓库并列出根目录；单个参数始终作为推断仓库内的路径，因此列出显式仓库根目录时应使用 `owner/repo .`。每个路径段独立转义。文件内容默认经过终端清理；如需保留原始字节，使用根级 `--raw-output`。这些命令只发送 GET 请求，不会修改仓库内容。
+
+原有的 `ag repo read-file` 和 `ag repo read-dir` 已弃用，但会继续保留以兼容已有脚本；请分别迁移到 `ag repo content view` 和 `ag repo content list`。
 
 ### 仓库协作者
 
@@ -208,7 +212,7 @@ ag repo collaborator list owner/repo --limit 50
 ag repo collaborator view owner/repo octocat
 ag repo collaborator view owner/repo octocat --json
 
-# 添加、调整或移除直接协作者
+# 添加、调整或移除直接协作者；移除命令也会尝试撤销待处理邀请
 ag repo collaborator add owner/repo octocat --permission push
 ag repo collaborator edit owner/repo octocat --permission admin
 ag repo collaborator edit owner/repo octocat --permission pull --yes
@@ -216,7 +220,9 @@ ag repo collaborator remove owner/repo octocat
 ag repo collaborator remove owner/repo octocat --yes
 ```
 
-AtomGit 内置协作者权限为 `pull`（参与者）、`push`（开发者）和 `admin`（仓库维护者）。`list` 和 `view` 会明确标记直接权限或权限来源；组织继承权限不能通过仓库级命令修改。降权和移除操作默认要求确认，可使用 `--yes` 跳过确认。
+AtomGit 内置协作者权限为 `pull`（参与者）、`push`（开发者）和 `admin`（仓库维护者）。`list` 和 `view` 只显示已接受的协作者，并会明确标记直接权限或权限来源；AtomGit API v5 不公开待处理邀请，因此这两个命令无法列出或查看待处理邀请。组织继承权限不能通过仓库级命令修改。
+
+`remove` 对已接受的直接协作者执行移除；如果用户不在已接受列表中，则会尝试撤销可能存在的待处理邀请。由于 API 不公开邀请状态，找不到邀请时命令会返回相应错误。降权和移除操作默认要求确认，可使用 `--yes` 跳过确认。文本模式下，关于 API 不公开待处理邀请的提示写入 stderr；这些变更命令不提供 `--json` 输出。
 
 ### 仓库 Webhook
 
@@ -282,6 +288,15 @@ ag user namespaces --mode all
 
 # 输出固定字段的 JSON 数组
 ag user namespaces --json
+
+# 列出当前认证账号的个人动态
+ag user events
+
+# 列出指定用户的个人动态，按年份过滤并限制总条数
+ag user events alice --year 2026 --limit 50
+
+# 输出稳定的 JSON 数组
+ag user events alice --json
 ```
 
 `ag user view --json` 输出稳定的 JSON 对象，字段始终齐全（空字符串、零计数和空数组也会输出，便于自动化区分"值为零/空"与"字段缺失"）：
@@ -310,12 +325,15 @@ ag user namespaces --json
 
 `ag user namespaces` 需要认证，用于列出当前账号通过成员关系或项目关联可见的用户及群组命名空间。`--mode` 支持 `intrant`（默认值）、`project` 和 `all`；文本模式显示路径、名称、类型和 URL，`--json` 输出固定的 `id`、`path`、`name`、`url`、`type` 字段。`ag org list` 仍只列出组织，不受此命令影响。
 
+`ag user events` 需要认证，用于列出用户个人动态。省略用户名时默认使用当前认证账号，显式用户名优先。`--year` 用于按年份过滤（`0` 表示不过滤，合法范围为 `1970`–`9999`）；`--limit` 控制跨游标页返回的总条数（默认 `30`，必须为正整数）。命令会跟随 API 返回的 `next` 游标继续请求，直到满足条数或没有更多游标，并检测重复游标以避免无限翻页。文本模式按日期从新到旧输出 `DATE`、`ACTION`、`PROJECT`、`TITLE` 四列；`--json` 输出稳定的数组（不是 API 按日期分组的对象），每个元素包含 `date`、`action`、`actionName`、`authorId`、`authorUsername`、`authorName`、`authorUrl`、`createdAt`、`projectId`、`projectName`、`targetId`、`targetIid`、`targetTitle`、`targetType`、`targetTypeFormat` 字段。没有动态时，文本模式输出 `No events found.`，JSON 模式输出 `[]`。
+
 ## Branch
 
 ```bash
 # 列出远程分支（默认显示 30 条）
 ag branch list owner/repo
 ag branch list owner/repo --limit 100
+ag branch list owner/repo --json
 ag branch list --limit 100
 
 # 查看远程分支详情
@@ -711,7 +729,7 @@ ag tag delete v1.0.0 --yes
 
 ## 资源命令的 JSON 输出
 
-`repo list/view`、`issue list/view`、`pr list/view`、`tag list` 和 `commit list/view/compare` 支持布尔参数 `--json`。list 命令输出完整 JSON 数组，view 与 compare 命令输出完整 JSON 对象；没有结果时 list 输出 `[]`。默认文本输出保持不变。
+`repo list/view`、`issue list/view`、`pr list/view`、`tag list`、`branch list`、`label list`、`release list`、`run list` 和 `commit list/view/compare` 支持布尔参数 `--json`。list 命令输出完整 JSON 数组，view 与 compare 命令输出完整 JSON 对象；没有结果时 list 输出 `[]`。默认文本输出保持不变。
 
 JSON 字段使用 lowerCamelCase，并由 CLI 显式定义，不会因为 AtomGit API 增加字段而自动改变。Issue 和 PR 的 `number` 始终是字符串，标签输出为名称数组，PR 的 `head` 和 `base` 输出分支名称。可选的服务端字段缺失时仍输出对应的零值，以保持固定结构。
 
@@ -723,6 +741,7 @@ JSON 字段使用 lowerCamelCase，并由 CLI 显式定义，不会因为 AtomGi
 # 列出仓库标签（默认显示 30 条）
 ag label list owner/repo
 ag label list owner/repo --limit 50
+ag label list owner/repo --json
 
 # 创建标签
 ag label create owner/repo --name bug --color "#ff0000"
@@ -770,6 +789,7 @@ ag milestone delete owner/repo 12 --yes
 ```bash
 # 列出运行记录（默认最多 30 条）
 ag run list owner/repo
+ag run list owner/repo --json
 ag run list
 
 # 按分支、状态和触发事件过滤
@@ -871,6 +891,7 @@ ag api /repos/owner/repo/issues --paginate
 # 列出仓库 Release（默认最多 30 条）
 ag release list
 ag release list owner/repo --limit 50
+ag release list owner/repo --json
 
 # 按 tag 查看 Release 详情（附件列表、作者、时间、状态等）
 ag release view v1.0.0
