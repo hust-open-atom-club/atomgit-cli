@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -66,10 +67,29 @@ func TestIssueCollaborationCreate(t *testing.T) {
 	}
 }
 
-func TestIssueCollaborationCreateRejectsNon201(t *testing.T) {
+func TestIssueCollaborationCreateAccepts200And201(t *testing.T) {
+	for _, status := range []int{http.StatusOK, http.StatusCreated} {
+		t.Run(fmt.Sprintf("%d", status), func(t *testing.T) {
+			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(status)
+				_, _ = io.WriteString(w, `{"number":"42","html_url":"https://atomgit.com/alice/demo/issues/42","title":"Test","state":"open"}`)
+			})
+
+			issue, err := CreateIssueWithAssignee(client, "alice", "demo", "Test", "Body", "")
+			if err != nil {
+				t.Fatalf("error = %v, want nil for status %d", err, status)
+			}
+			if issue.GetNumber() != "42" {
+				t.Fatalf("issue number = %q", issue.GetNumber())
+			}
+		})
+	}
+}
+
+func TestIssueCollaborationCreateRejects404(t *testing.T) {
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, `{}`)
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = io.WriteString(w, `{"message":"repo not found"}`)
 	})
 
 	_, err := CreateIssueWithAssignee(client, "alice", "demo", "Test", "Body", "")
