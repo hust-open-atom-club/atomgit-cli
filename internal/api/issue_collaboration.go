@@ -9,7 +9,7 @@ import (
 )
 
 // CreateIssueWithAssignee creates an issue with an optional assignee.
-// Uses exact HTTP 201 status and no retry.
+// Accepts HTTP 200 or 201 and does not retry.
 func CreateIssueWithAssignee(client *Client, owner, repo, title, body, assignee string) (*Issue, error) {
 	requestBody := map[string]string{
 		"title": title,
