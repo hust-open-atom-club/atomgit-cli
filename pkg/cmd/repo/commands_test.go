@@ -52,6 +52,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 		"read-dir":  {"json", "ref"},
 		"read-file": {"json", "ref"},
 		"sync":      {"branch", "force", "yes"},
+		"transfer":  {"password-stdin", "to", "yes"},
 		"view":      {"web"},
 	}
 	for name, flags := range want {
@@ -113,7 +114,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	if err := pushRuleEdit.Args(pushRuleEdit, []string{"owner/repo", "extra"}); err == nil {
 		t.Fatal("push-rule edit accepted too many repositories")
 	}
-	for _, name := range []string{"view", "edit", "fork", "sync", "delete"} {
+	for _, name := range []string{"view", "edit", "fork", "sync", "transfer", "delete"} {
 		child, _, _ := cmd.Find([]string{name})
 		if !strings.Contains(child.Long, cmdutil.RepositoryContextHelp) {
 			t.Errorf("%s help does not explain repository inference", name)
