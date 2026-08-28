@@ -27,7 +27,7 @@
 - [搜索](#搜索)
 - [讨论](#讨论)
 - [版本](#版本)
-- [检查 CLI 更新](#检查-cli-更新)
+- [更新 CLI](#更新-cli)
 - [命令别名 (alias)](#命令别名-alias)
 
 所有命令均可通过 `--help` 查看完整参数，例如：
@@ -1084,13 +1084,23 @@ ag version --json
 
 文本输出包含版本号以及可用的 commit 和构建时间；JSON 输出固定包含 `version`、`commit` 和 `buildDate` 三个字段。
 
-## 检查 CLI 更新
+## 更新 CLI
 
 ```bash
-ag check-update
+# 检查最新稳定版，不安装
+ag update --check
+
+# 检查并更新；当前自动支持全局 npm 和 Homebrew Core 安装
+ag update
 ```
 
-`ag check-update` 公开查询 `hust-open-atom-club/atomgit-cli` 的稳定 Release，并按 SemVer 比较当前版本。命令不需要登录或仓库上下文，不下载制品，也不会修改当前安装。输出包含当前版本、最新稳定 Release 和比较状态；`dev`、dirty、提交哈希或其他无法比较的本地版本会返回清晰错误。
+`ag update` 公开查询 `hust-open-atom-club/atomgit-cli` 的稳定 Release，并按 SemVer 比较当前版本。命令不需要登录或仓库上下文。`--check` 只输出当前版本、最新稳定 Release 和比较状态，不识别安装来源、不调用包管理器，也不修改当前安装。
+
+不带 `--check` 且发现新版本时，命令根据当前实际运行的 `ag` 二进制路径识别安装来源：全局 npm 安装会先确认精确目标版本已经发布到官方 npm registry，再执行安装并通过 npm 生成的真实命令入口核对版本；Homebrew Core 安装会依次执行 `brew update` 和 `brew upgrade atomgit-cli`，随后运行新二进制核对版本。这样不会把 npm 启动器损坏或“Formula 尚未更新”等情况误报为升级成功。
+
+Windows 上全局 npm 更新可能无法覆盖正在运行的 `ag.exe`。如果 npm 破坏了命令入口，或者 npm 报告成功但入口仍是旧版本，`ag update` 会下载 AtomGit Release 的 Windows 归档、使用 `checksums.txt` 校验 SHA-256，并以可回滚方式将 npm 命令入口修复为独立的 `ag.exe`。如果 npm 报错但旧入口仍可用，命令会保留原入口并报告 npm 错误。修复发生时会明确提示该入口不再由 npm 管理；重新执行 npm 全局安装可恢复 npm 管理。
+
+项目 Homebrew Tap 暂不属于 `ag update` 支持范围，也不会被当成 Homebrew Core 自动升级。Tap、WinGet、Scoop、Nix、AUR、Go、Release 安装器、源码或无法识别的安装当前都不会被修改。`dev`、dirty、提交哈希或其他无法比较的本地版本会在安装来源识别和包管理器调用之前返回清晰错误。
 
 ## 命令别名 (alias)
 
