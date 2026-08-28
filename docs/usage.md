@@ -265,6 +265,24 @@ ag org list --limit 100
 ag org list --json
 ```
 
+## 组织看板 (kanban)
+
+```bash
+# 列出组织看板（默认最多 30 个）
+ag kanban list hust-open-atom-club
+ag kanban list hust-open-atom-club --limit 100 --json
+
+# 查看看板详情
+ag kanban view hust-open-atom-club 1234567890
+ag kanban view hust-open-atom-club 1234567890 --json
+
+# 查看看板中的 Issue 和 Pull Request
+ag kanban items hust-open-atom-club 1234567890
+ag kanban items hust-open-atom-club 1234567890 --limit 100 --json
+```
+
+这些命令只读访问组织看板。`list` 使用组织看板列表接口，`view` 使用看板详情接口，`items` 使用看板内容接口；看板 ID 和 `--limit` 会在认证与网络请求前校验。文本输出会区分 Issue 与 Pull Request，并在服务端返回时显示看板列状态。
+
 ## 用户 (user)
 
 ```bash
