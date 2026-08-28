@@ -14,11 +14,13 @@ import (
 func NewCmdUser(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "user",
-		Short: "View AtomGit users, namespaces, and activity",
-		Long:  "View AtomGit user profiles, email addresses, authenticated namespaces, and personal activity events.",
+		Short: "View AtomGit users, repositories, namespaces, and activity",
+		Long:  "View AtomGit user profiles, email addresses, starred and watched repositories, authenticated namespaces, and personal activity events.",
 	}
 	cmd.AddCommand(newCmdUserView(f))
 	cmd.AddCommand(newCmdUserEmails(f))
+	cmd.AddCommand(newCmdUserStarred(f))
+	cmd.AddCommand(newCmdUserWatching(f))
 	cmd.AddCommand(newCmdUserNamespaces(f))
 	cmd.AddCommand(newCmdUserEvents(f))
 	return cmd
