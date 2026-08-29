@@ -106,6 +106,9 @@ func runRepositoryTransfer(cmd *cobra.Command, client *api.Client, repository cm
 	if err := client.Get(sourcePath, &source); err != nil {
 		return fmt.Errorf("failed to inspect source repository %s: %w", repository, err)
 	}
+	if source.ID <= 0 {
+		return fmt.Errorf("cannot safely transfer repository %s: source repository response omitted a valid repository ID", repository)
+	}
 
 	resolvedDestination, err := resolveTransferDestination(client, destination)
 	if err != nil {
@@ -140,7 +143,7 @@ func runRepositoryTransfer(cmd *cobra.Command, client *api.Client, repository cm
 		}
 		response, err := api.TransferRepository(client, repository.Owner, repository.Name, destination)
 		if err != nil {
-			return handleTransferRequestError(out, client, repository, destination, repository.Name, fmt.Sprintf("failed to transfer repository %s to %s", repository, destination), err)
+			return handleTransferRequestError(out, client, repository, source.ID, destination, repository.Name, fmt.Sprintf("failed to transfer repository %s to %s", repository, destination), err)
 		}
 		if value := strings.TrimSpace(response.NewOwner); value != "" {
 			if !strings.EqualFold(value, destination) {
@@ -162,7 +165,7 @@ func runRepositoryTransfer(cmd *cobra.Command, client *api.Client, repository cm
 		response, err := api.TransferOrganizationRepository(client, repository.Owner, repository.Name, destination, password)
 		password = ""
 		if err != nil {
-			return handleTransferRequestError(out, client, repository, destination, repository.Name, fmt.Sprintf("failed to transfer organization repository %s to %s", repository, destination), err)
+			return handleTransferRequestError(out, client, repository, source.ID, destination, repository.Name, fmt.Sprintf("failed to transfer organization repository %s to %s", repository, destination), err)
 		}
 		if response.Code != 1 {
 			return fmt.Errorf("ambiguous transfer result for %s: organization transfer returned code %d", repository, response.Code)
@@ -171,7 +174,7 @@ func runRepositoryTransfer(cmd *cobra.Command, client *api.Client, repository cm
 		return fmt.Errorf("cannot determine transfer endpoint for %s", repository)
 	}
 
-	return verifyAndReportTransferredRepository(out, client, repository, newOwner, newName)
+	return verifyAndReportTransferredRepository(out, client, repository, source.ID, newOwner, newName)
 }
 
 func resolveTransferDestination(client *api.Client, destination string) (string, error) {
@@ -205,7 +208,7 @@ func resolveTransferDestination(client *api.Client, destination string) (string,
 	return "", fmt.Errorf("destination organization %q could not be resolved within %d namespace pages", destination, maxTransferNamespacePages)
 }
 
-func handleTransferRequestError(out io.Writer, client *api.Client, repository cmdutil.Repository, destination, name, httpErrorContext string, transferErr error) error {
+func handleTransferRequestError(out io.Writer, client *api.Client, repository cmdutil.Repository, sourceID int64, destination, name, httpErrorContext string, transferErr error) error {
 	var httpErr *api.HTTPError
 	if errors.As(transferErr, &httpErr) {
 		return fmt.Errorf("%s: %w", httpErrorContext, transferErr)
@@ -215,7 +218,7 @@ func handleTransferRequestError(out io.Writer, client *api.Client, repository cm
 	if readBackErr != nil {
 		return fmt.Errorf("transfer request for %s may have completed, but its final state is unknown: the transfer result could not be read (%v), and destination read-back for %s/%s failed: %w", repository, transferErr, destination, name, readBackErr)
 	}
-	fullName, repositoryURL, verifyErr := verifiedTransferredIdentity(transferred, destination, name)
+	fullName, repositoryURL, verifyErr := verifiedTransferredIdentity(transferred, sourceID, destination, name)
 	if verifyErr != nil {
 		return fmt.Errorf("transfer request for %s may have completed, but its final state is unknown: the transfer result could not be read (%v), and destination read-back was ambiguous: %w", repository, transferErr, verifyErr)
 	}
@@ -223,12 +226,12 @@ func handleTransferRequestError(out io.Writer, client *api.Client, repository cm
 	return nil
 }
 
-func verifyAndReportTransferredRepository(out io.Writer, client *api.Client, repository cmdutil.Repository, newOwner, newName string) error {
+func verifyAndReportTransferredRepository(out io.Writer, client *api.Client, repository cmdutil.Repository, sourceID int64, newOwner, newName string) error {
 	transferred, err := readBackTransferredRepository(client, newOwner, newName)
 	if err != nil {
 		return fmt.Errorf("transfer request for %s succeeded, but the final repository %s/%s could not be verified: %w", repository, newOwner, newName, err)
 	}
-	fullName, repositoryURL, err := verifiedTransferredIdentity(transferred, newOwner, newName)
+	fullName, repositoryURL, err := verifiedTransferredIdentity(transferred, sourceID, newOwner, newName)
 	if err != nil {
 		return fmt.Errorf("transfer request for %s succeeded, but the final state is ambiguous: %w", repository, err)
 	}
@@ -327,7 +330,13 @@ func readBackTransferredRepository(client *api.Client, owner, repo string) (api.
 	return repository, nil
 }
 
-func verifiedTransferredIdentity(repository api.Repository, expectedOwner, expectedName string) (string, string, error) {
+func verifiedTransferredIdentity(repository api.Repository, expectedID int64, expectedOwner, expectedName string) (string, string, error) {
+	if repository.ID <= 0 {
+		return "", "", fmt.Errorf("API response omitted a valid repository ID; expected source repository ID %d", expectedID)
+	}
+	if repository.ID != expectedID {
+		return "", "", fmt.Errorf("API returned repository ID %d, expected source repository ID %d", repository.ID, expectedID)
+	}
 	owner := strings.TrimSpace(repository.Namespace.Path)
 	if owner == "" {
 		owner = strings.TrimSpace(repository.Owner.Login)

@@ -36,7 +36,7 @@ func TestRepoTransferUserOwnedRepositoryToOrganization(t *testing.T) {
 		requests = append(requests, req.Method+" "+req.URL.Path)
 		switch len(requests) {
 		case 1:
-			return forkResponse(http.StatusOK, `{"name":"demo","full_name":"alice/demo","web_url":"https://atomgit.com/alice/demo","owner":{"login":"alice","type":"User"}}`), nil
+			return forkResponse(http.StatusOK, `{"id":101,"name":"demo","full_name":"alice/demo","web_url":"https://atomgit.com/alice/demo","owner":{"login":"alice","type":"User"}}`), nil
 		case 2:
 			if req.Method != http.MethodGet || req.URL.Path != "/api/v5/user/namespaces" || req.URL.RawQuery != "mode=all&page=1&perPage=100" {
 				t.Fatalf("destination request = %s %s?%s", req.Method, req.URL.Path, req.URL.RawQuery)
@@ -58,7 +58,7 @@ func TestRepoTransferUserOwnedRepositoryToOrganization(t *testing.T) {
 			if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/target-org/renamed" {
 				t.Fatalf("read-back request = %s %s", req.Method, req.URL.Path)
 			}
-			return forkResponse(http.StatusOK, `{"name":"renamed","full_name":"target-org/renamed","web_url":"https://atomgit.com/target-org/renamed","namespace":{"path":"target-org"}}`), nil
+			return forkResponse(http.StatusOK, `{"id":101,"name":"renamed","full_name":"target-org/renamed","web_url":"https://atomgit.com/target-org/renamed","namespace":{"path":"target-org"}}`), nil
 		default:
 			t.Fatalf("unexpected request %s %s", req.Method, req.URL.Path)
 			return nil, nil
@@ -89,7 +89,7 @@ func TestRepoTransferOrganizationOwnedRepository(t *testing.T) {
 		requests = append(requests, req.Method+" "+req.URL.Path)
 		switch len(requests) {
 		case 1:
-			return forkResponse(http.StatusOK, `{"name":"demo","namespace":{"path":"source-org"},"web_url":"https://atomgit.com/source-org/demo"}`), nil
+			return forkResponse(http.StatusOK, `{"id":202,"name":"demo","namespace":{"path":"source-org"},"web_url":"https://atomgit.com/source-org/demo"}`), nil
 		case 2:
 			return forkResponse(http.StatusOK, `[{"path":"target-org","type":"group"}]`), nil
 		case 3:
@@ -105,7 +105,7 @@ func TestRepoTransferOrganizationOwnedRepository(t *testing.T) {
 			}
 			return forkResponse(http.StatusOK, `{"code":1,"msg":"success"}`), nil
 		case 4:
-			return forkResponse(http.StatusOK, `{"name":"demo","namespace":{"path":"target-org"},"web_url":"https://atomgit.com/target-org/demo"}`), nil
+			return forkResponse(http.StatusOK, `{"id":202,"name":"demo","namespace":{"path":"target-org"},"web_url":"https://atomgit.com/target-org/demo"}`), nil
 		default:
 			t.Fatalf("unexpected request %s %s", req.Method, req.URL.Path)
 			return nil, nil
@@ -132,7 +132,7 @@ func TestRepoTransferCancellationSendsNoPost(t *testing.T) {
 			t.Fatalf("cancellation sent %s %s", req.Method, req.URL.Path)
 		}
 		if len(requests) == 1 {
-			return forkResponse(http.StatusOK, `{"name":"demo","owner":{"login":"alice","type":"User"}}`), nil
+			return forkResponse(http.StatusOK, `{"id":101,"name":"demo","owner":{"login":"alice","type":"User"}}`), nil
 		}
 		return forkResponse(http.StatusOK, `[{"path":"target-org","type":"group"}]`), nil
 	})
@@ -176,19 +176,38 @@ func TestRepoTransferValidatesBeforeAuthentication(t *testing.T) {
 	}
 }
 
+func TestRepoTransferRejectsMissingSourceIDBeforeMutation(t *testing.T) {
+	requests := 0
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		requests++
+		if requests > 1 || req.Method != http.MethodGet {
+			t.Fatalf("unexpected request %s %s", req.Method, req.URL.Path)
+		}
+		return forkResponse(http.StatusOK, `{"name":"demo","owner":{"login":"alice","type":"User"}}`), nil
+	})
+
+	_, _, err := runTransferCommand(t, repoFactory(repoCommandConfig{token: "token"}, transport), []string{"alice/demo", "--to", "target-org", "--yes"}, panicReader{})
+	if err == nil || !strings.Contains(err.Error(), "source repository response omitted a valid repository ID") {
+		t.Fatalf("error = %v", err)
+	}
+	if requests != 1 {
+		t.Fatalf("requests = %d, want only the source GET", requests)
+	}
+}
+
 func TestRepoTransferInfersRepositoryAndYesSkipsPrompt(t *testing.T) {
 	requests := 0
 	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 		requests++
 		switch requests {
 		case 1:
-			return forkResponse(http.StatusOK, `{"name":"demo","owner":{"login":"alice","type":"User"}}`), nil
+			return forkResponse(http.StatusOK, `{"id":101,"name":"demo","owner":{"login":"alice","type":"User"}}`), nil
 		case 2:
 			return forkResponse(http.StatusOK, `[{"path":"target-org","type":"group"}]`), nil
 		case 3:
 			return forkResponse(http.StatusOK, `{"new_owner":"target-org","new_name":"demo"}`), nil
 		case 4:
-			return forkResponse(http.StatusOK, `{"name":"demo","namespace":{"path":"target-org"},"web_url":"https://atomgit.com/target-org/demo"}`), nil
+			return forkResponse(http.StatusOK, `{"id":101,"name":"demo","namespace":{"path":"target-org"},"web_url":"https://atomgit.com/target-org/demo"}`), nil
 		default:
 			t.Fatal("unexpected request")
 			return nil, nil
@@ -223,7 +242,7 @@ func TestRepoTransferReportsContextualAPIErrorsWithoutSecrets(t *testing.T) {
 				}
 				switch requests {
 				case 1:
-					return forkResponse(http.StatusOK, `{"name":"demo","owner":{"login":"alice","type":"User"}}`), nil
+					return forkResponse(http.StatusOK, `{"id":101,"name":"demo","owner":{"login":"alice","type":"User"}}`), nil
 				case 2:
 					return forkResponse(http.StatusOK, `[{"path":"target-org","type":"group"}]`), nil
 				default:
@@ -267,7 +286,7 @@ func TestRepoTransferRejectsUnsupportedDestinationBeforePost(t *testing.T) {
 					t.Fatal("unsupported destination sent a POST")
 				}
 				if requests == 1 {
-					return forkResponse(http.StatusOK, `{"name":"demo","owner":{"login":"alice","type":"User"}}`), nil
+					return forkResponse(http.StatusOK, `{"id":101,"name":"demo","owner":{"login":"alice","type":"User"}}`), nil
 				}
 				return forkResponse(http.StatusOK, test.namespaces), nil
 			})
@@ -327,10 +346,11 @@ func TestRepoTransferRejectsAmbiguousSuccess(t *testing.T) {
 		wantError    string
 		organization bool
 	}{
-		{name: "mismatched response owner", responses: []string{`{"name":"demo","owner":{"login":"alice","type":"User"}}`, `[{"path":"target-org","type":"group"}]`, `{"new_owner":"mallory","new_name":"demo"}`}, wantError: "reported destination owner"},
-		{name: "mismatched read back", responses: []string{`{"name":"demo","owner":{"login":"alice","type":"User"}}`, `[{"path":"target-org","type":"group"}]`, `{"new_owner":"target-org","new_name":"demo"}`, `{"name":"other","namespace":{"path":"target-org"},"web_url":"https://atomgit.com/target-org/other"}`}, wantError: "final state is ambiguous"},
-		{name: "missing read-back URL", responses: []string{`{"name":"demo","owner":{"login":"alice","type":"User"}}`, `[{"path":"target-org","type":"group"}]`, `{"new_owner":"target-org","new_name":"demo"}`, `{"name":"demo","namespace":{"path":"target-org"}}`}, wantError: "omitted the repository URL"},
-		{name: "organization code", responses: []string{`{"name":"demo","namespace":{"path":"source-org"}}`, `[{"path":"target-org","type":"group"}]`, `{"code":0,"msg":"unknown"}`}, wantError: "returned code 0", organization: true},
+		{name: "mismatched response owner", responses: []string{`{"id":101,"name":"demo","owner":{"login":"alice","type":"User"}}`, `[{"path":"target-org","type":"group"}]`, `{"new_owner":"mallory","new_name":"demo"}`}, wantError: "reported destination owner"},
+		{name: "mismatched read back", responses: []string{`{"id":101,"name":"demo","owner":{"login":"alice","type":"User"}}`, `[{"path":"target-org","type":"group"}]`, `{"new_owner":"target-org","new_name":"demo"}`, `{"id":101,"name":"other","namespace":{"path":"target-org"},"web_url":"https://atomgit.com/target-org/other"}`}, wantError: "final state is ambiguous"},
+		{name: "missing read-back ID", responses: []string{`{"id":101,"name":"demo","owner":{"login":"alice","type":"User"}}`, `[{"path":"target-org","type":"group"}]`, `{"new_owner":"target-org","new_name":"demo"}`, `{"name":"demo","namespace":{"path":"target-org"},"web_url":"https://atomgit.com/target-org/demo"}`}, wantError: "omitted a valid repository ID"},
+		{name: "missing read-back URL", responses: []string{`{"id":101,"name":"demo","owner":{"login":"alice","type":"User"}}`, `[{"path":"target-org","type":"group"}]`, `{"new_owner":"target-org","new_name":"demo"}`, `{"id":101,"name":"demo","namespace":{"path":"target-org"}}`}, wantError: "omitted the repository URL"},
+		{name: "organization code", responses: []string{`{"id":202,"name":"demo","namespace":{"path":"source-org"}}`, `[{"path":"target-org","type":"group"}]`, `{"code":0,"msg":"unknown"}`}, wantError: "returned code 0", organization: true},
 	}
 
 	for _, test := range tests {
@@ -362,7 +382,7 @@ func TestRepoTransferTransportErrorReportsUnknownState(t *testing.T) {
 		requests++
 		switch requests {
 		case 1:
-			return forkResponse(http.StatusOK, `{"name":"demo","owner":{"login":"alice","type":"User"}}`), nil
+			return forkResponse(http.StatusOK, `{"id":101,"name":"demo","owner":{"login":"alice","type":"User"}}`), nil
 		case 2:
 			return forkResponse(http.StatusOK, `[{"path":"target-org","type":"group"}]`), nil
 		case 3:
@@ -397,13 +417,13 @@ func TestRepoTransferTransportErrorConfirmedByReadBack(t *testing.T) {
 		requests++
 		switch requests {
 		case 1:
-			return forkResponse(http.StatusOK, `{"name":"demo","owner":{"login":"alice","type":"User"}}`), nil
+			return forkResponse(http.StatusOK, `{"id":101,"name":"demo","owner":{"login":"alice","type":"User"}}`), nil
 		case 2:
 			return forkResponse(http.StatusOK, `[{"path":"target-org","type":"group"}]`), nil
 		case 3:
 			return nil, errors.New("connection reset after request was observed")
 		case 4:
-			return forkResponse(http.StatusOK, `{"name":"demo","namespace":{"path":"target-org"},"web_url":"https://atomgit.com/target-org/demo"}`), nil
+			return forkResponse(http.StatusOK, `{"id":101,"name":"demo","namespace":{"path":"target-org"},"web_url":"https://atomgit.com/target-org/demo"}`), nil
 		default:
 			t.Fatal("unexpected request")
 			return nil, nil
@@ -416,6 +436,34 @@ func TestRepoTransferTransportErrorConfirmedByReadBack(t *testing.T) {
 	}
 	if !strings.Contains(out, "Confirmed by destination read-back") || !strings.Contains(out, "target-org/demo") {
 		t.Fatalf("output = %q", out)
+	}
+}
+
+func TestRepoTransferTransportErrorRejectsPreexistingSameNameRepository(t *testing.T) {
+	requests := 0
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		requests++
+		switch requests {
+		case 1:
+			return forkResponse(http.StatusOK, `{"id":101,"name":"demo","owner":{"login":"alice","type":"User"}}`), nil
+		case 2:
+			return forkResponse(http.StatusOK, `[{"path":"target-org","type":"group"}]`), nil
+		case 3:
+			return nil, errors.New("connection reset after request was observed")
+		case 4:
+			return forkResponse(http.StatusOK, `{"id":202,"name":"demo","namespace":{"path":"target-org"},"web_url":"https://atomgit.com/target-org/demo"}`), nil
+		default:
+			t.Fatal("unexpected request")
+			return nil, nil
+		}
+	})
+
+	out, _, err := runTransferCommand(t, repoFactory(repoCommandConfig{token: "token"}, transport), []string{"alice/demo", "--to", "target-org", "--yes"}, panicReader{})
+	if err == nil || !strings.Contains(err.Error(), "may have completed") || !strings.Contains(err.Error(), "repository ID 202") || !strings.Contains(err.Error(), "source repository ID 101") {
+		t.Fatalf("error = %v", err)
+	}
+	if strings.Contains(out, "Transferred repository") {
+		t.Fatalf("pre-existing repository was reported as a successful transfer: %q", out)
 	}
 }
 
