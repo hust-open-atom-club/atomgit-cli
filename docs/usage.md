@@ -173,6 +173,13 @@ ag repo sync owner/fork --branch develop
 ag repo sync owner/fork --branch develop --force
 ag repo sync owner/fork --branch develop --force --yes
 
+# 将仓库转移到其他组织命名空间（默认需要确认）
+ag repo transfer owner/repo --to target-organization
+ag repo transfer owner/repo --to target-organization --yes
+
+# 组织所属仓库需要账户密码；非交互使用时从标准输入安全读取
+printf '%s\n' "$PASSWORD" | ag repo transfer source-organization/repo --to target-organization --yes --password-stdin
+
 # 删除仓库
 ag repo delete --yes
 ag repo delete owner/repo --yes
@@ -185,6 +192,8 @@ ag repo delete owner/repo --yes
 `ag repo push-rule view` 展示签名提交要求、提交信息正则、单文件大小限制、管理员豁免和强推限制。`ag repo push-rule edit` 只发送命令行中明确指定的字段，并保留显式的 `false`、空字符串和 `0`；未指定的远端规则保持不变。所有更新默认需要确认，可使用 `--yes` 跳过。仓库级推送规则与分支、标签保护规则相互独立。
 
 `ag repo sync` 仅更新 AtomGit 上的远端 Fork。命令会先验证仓库确为 Fork、上游存在且目标分支在两端都可读取；未指定 `--branch` 时使用 Fork 的默认分支。默认同步不会覆盖分叉提交，冲突时返回非零退出码。`--force` 可能覆盖 Fork 上的分叉提交，因此需要交互确认；仅在已审查目标后才应结合 `--yes` 使用。
+
+`ag repo transfer` 会改变仓库所有者，并可能影响仓库 URL、访问权限和自动化配置。当前公开的 AtomGit 转移接口仅描述组织目标，因此命令会先从当前账户可见的命名空间中解析 `--to`，并在确认或 POST 前拒绝个人用户、不可见目标和未知命名空间类型。命令随后显示源仓库和已解析的目标组织并要求确认，`--yes` 只跳过确认；组织所属仓库仍需输入 AtomGit 账户密码。交互终端中密码会隐藏输入，非交互场景必须结合 `--yes --password-stdin` 从标准输入读取。POST 返回后命令会读取目标仓库，只有仓库 ID 与源仓库一致，且完整名称和浏览器 URL 得到确认时才报告成功；如果 POST 未返回可判定的 HTTP 结果，命令会尝试目标回读，无法确认时将明确报告转移可能已完成但最终状态未知。该命令**不会修改本地 Git remote**，转移完成后请根据输出的新 URL 手动检查并更新本地 remote。
 
 `ag repo fork list` 通过 `GET /repos/{owner}/{repo}/forks` 只读列出已有 Fork，支持仓库推断、分页、`--limit` 和 `--json`；不会创建或修改任何仓库。
 
