@@ -139,69 +139,91 @@ func newCmdUpdateWithDeps(f *cmdutil.Factory, deps updateDeps) *cobra.Command {
 		Short: "Update AtomGit CLI to the latest stable release",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			current := internalversion.Get().Version
-			if err := validateComparableVersion(current); err != nil {
-				return err
-			}
-
-			client, err := publicAPIClient(f)
-			if err != nil {
-				return err
-			}
-			releases, err := api.ListReleases(client, projectOwner, projectRepo, releaseLimit)
-			if err != nil {
-				return fmt.Errorf("check AtomGit CLI releases: %w", err)
-			}
-			latest, err := selectLatestStableRelease(releases)
-			if err != nil {
-				return err
-			}
-			result, err := compareVersions(current, latest)
-			if err != nil {
-				return err
-			}
-			if _, err := fmt.Fprintf(
-				cmd.OutOrStdout(),
-				"Current version: %s\nLatest release: %s\nStatus: %s\n",
-				current,
-				latest,
-				result,
-			); err != nil {
-				return err
-			}
-
-			if check || result != statusUpdateAvailable {
-				return nil
-			}
-
-			installed, err := detectInstallation(cmd.Context(), deps)
-			if err != nil {
-				return err
-			}
-			choice, err := deps.chooseUpdate(cmd.InOrStdin(), cmd.ErrOrStderr(), installed, latest)
-			if err != nil {
-				return err
-			}
-			switch choice {
-			case choiceSkip:
-				_, err := fmt.Fprintln(cmd.OutOrStdout(), "Update skipped.")
-				return err
-			case choiceUpdate:
-			default:
-				return fmt.Errorf("unsupported update choice %q", choice)
-			}
-			switch installed.source {
-			case sourceNPM:
-				return updateViaNPM(cmd, deps, latest)
-			case sourceHomebrewCore:
-				return updateViaHomebrewCore(cmd, deps, installed, latest)
-			default:
-				return fmt.Errorf("unsupported AtomGit CLI installation source %q", installed.source)
-			}
+			return runUpdate(cmd, f, deps, check)
 		},
 	}
 	cmd.Flags().BoolVarP(&check, "check", "c", false, "Check for an update without installing it")
 	return cmd
+}
+
+// NewCmdCheckUpdate preserves the legacy read-only command while users migrate
+// to "ag update --check".
+func NewCmdCheckUpdate(f *cmdutil.Factory) *cobra.Command {
+	return newCmdCheckUpdateWithDeps(f, defaultUpdateDeps())
+}
+
+func newCmdCheckUpdateWithDeps(f *cmdutil.Factory, deps updateDeps) *cobra.Command {
+	return &cobra.Command{
+		Use:        "check-update",
+		Short:      "Check for a newer AtomGit CLI release",
+		Deprecated: `use "ag update --check" instead`,
+		Args:       cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runUpdate(cmd, f, deps, true)
+		},
+	}
+}
+
+func runUpdate(cmd *cobra.Command, f *cmdutil.Factory, deps updateDeps, check bool) error {
+	current := internalversion.Get().Version
+	if err := validateComparableVersion(current); err != nil {
+		return err
+	}
+
+	client, err := publicAPIClient(f)
+	if err != nil {
+		return err
+	}
+	releases, err := api.ListReleases(client, projectOwner, projectRepo, releaseLimit)
+	if err != nil {
+		return fmt.Errorf("check AtomGit CLI releases: %w", err)
+	}
+	latest, err := selectLatestStableRelease(releases)
+	if err != nil {
+		return err
+	}
+	result, err := compareVersions(current, latest)
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(
+		cmd.OutOrStdout(),
+		"Current version: %s\nLatest release: %s\nStatus: %s\n",
+		current,
+		latest,
+		result,
+	); err != nil {
+		return err
+	}
+
+	if check || result != statusUpdateAvailable {
+		return nil
+	}
+
+	installed, err := detectInstallation(cmd.Context(), deps)
+	if err != nil {
+		return err
+	}
+	choice, err := deps.chooseUpdate(cmd.InOrStdin(), cmd.ErrOrStderr(), installed, latest)
+	if err != nil {
+		return err
+	}
+	switch choice {
+	case choiceSkip:
+		_, err := fmt.Fprintln(cmd.OutOrStdout(), "Update skipped.")
+		return err
+	case choiceUpdate:
+	default:
+		return fmt.Errorf("unsupported update choice %q", choice)
+	}
+	switch installed.source {
+	case sourceNPM:
+		return updateViaNPM(cmd, deps, latest)
+	case sourceHomebrewCore:
+		return updateViaHomebrewCore(cmd, deps, installed, latest)
+	default:
+		return fmt.Errorf("unsupported AtomGit CLI installation source %q", installed.source)
+	}
 }
 
 func promptUpdateChoice(
@@ -221,6 +243,7 @@ func promptUpdateChoice(
 		return "", fmt.Errorf("write update choices: %w", err)
 	}
 	reader := bufio.NewReader(in)
+	hadInvalidAnswer := false
 	for {
 		if _, err := fmt.Fprint(out, "Select an option [1-2] (default: 1): "); err != nil {
 			return "", fmt.Errorf("write update choice prompt: %w", err)
@@ -229,8 +252,14 @@ func promptUpdateChoice(
 		if err != nil && !errors.Is(err, io.EOF) {
 			return "", fmt.Errorf("read update choice: %w", err)
 		}
-		switch strings.ToLower(strings.TrimSpace(line)) {
-		case "", "1", "u", "update":
+		answer := strings.ToLower(strings.TrimSpace(line))
+		switch answer {
+		case "":
+			if errors.Is(err, io.EOF) && hadInvalidAnswer {
+				return "", fmt.Errorf("read update choice: input ended after an invalid answer")
+			}
+			return choiceUpdate, nil
+		case "1", "u", "update":
 			return choiceUpdate, nil
 		case "2", "s", "skip":
 			return choiceSkip, nil
@@ -238,9 +267,10 @@ func promptUpdateChoice(
 			if _, writeErr := fmt.Fprintln(out, "Please choose 1 or 2."); writeErr != nil {
 				return "", fmt.Errorf("write invalid update choice message: %w", writeErr)
 			}
+			hadInvalidAnswer = true
 		}
 		if errors.Is(err, io.EOF) {
-			return choiceUpdate, nil
+			return "", fmt.Errorf("read update choice: input ended after an invalid answer")
 		}
 	}
 }

@@ -84,7 +84,7 @@ Go 模块代理提供的源码包不包含 `.git` 目录，因此通过 `go inst
 ### 如何升级？
 
 - 全局 npm 或 Homebrew Core：运行 `ag update`，命令会识别当前实际运行的二进制来源、调用对应包管理器并验证真实命令入口的新版本
-- 只检查：`ag update --check`，不会识别安装来源、调用包管理器或修改安装
+- 只检查：推荐使用 `ag update --check`；为兼容旧脚本，已弃用的 `ag check-update` 暂时保留。两者都不会识别安装来源、调用包管理器或修改安装
 - npm 手动升级：`npm update -g @hust-open-atom-club/atomgit-cli`
 - Homebrew Core 手动升级：`brew update && brew upgrade atomgit-cli`
 - 项目 Homebrew Tap：`brew update && brew upgrade hust-open-atom-club/tap/atomgit-cli`（当前不受 `ag update` 支持，也不会被当成 Core 升级）
@@ -93,7 +93,7 @@ Go 模块代理提供的源码包不包含 `.git` 目录，因此通过 `go inst
 - Nix：`nix profile upgrade`（升级 profile 中使用未锁定 flake 引用安装的全部包）；NixOS 系统级安装则通过 `nixos-rebuild switch` 跟随系统升级
 - AUR：`yay -S atomgit-cli`、`yay -S atomgit-cli-bin` 或 `yay -S atomgit-cli-git`（注意：更推荐使用 `yay -Syu` 进行滚动更新，由于滚动发行版的特性，部分更新可能会有兼容问题）
 
-`ag update` 识别 npm 或 Homebrew Core 后会提供两个选择：立即通过对应包管理器更新，或 `Skip`（仅跳过本次）。直接回车或标准输入 EOF 时默认更新。
+`ag update` 识别 npm 或 Homebrew Core 后会提供两个选择：立即通过对应包管理器更新，或 `Skip`（仅跳过本次）。首次输入直接回车或尚未输入内容时到达 EOF 会默认更新；无效答案后到达 EOF 会报错且不会更新。
 
 Windows 上 npm 可能无法覆盖正在运行的 `ag.exe`。如果 npm 破坏了命令入口，或者 npm 报告成功但入口仍是旧版本，`ag update` 会用经过 Release 校验和验证的独立 `ag.exe` 修复入口，并提示该入口不再由 npm 管理。如果 npm 报错但旧入口仍可用，命令会保留原入口并报告错误。之后重新执行 npm 全局安装即可恢复 npm 管理。
 

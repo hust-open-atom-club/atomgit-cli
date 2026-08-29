@@ -115,6 +115,38 @@ func TestUpdateCheckDoesNotDetectOrInstall(t *testing.T) {
 	}
 }
 
+func TestCheckUpdateCompatibilityCommandDoesNotDetectOrInstall(t *testing.T) {
+	setCurrentVersion(t, "v1.2.3")
+	deps := testDeps()
+	deps.executable = func() (string, error) {
+		t.Fatal("check-update detected the installation source")
+		return "", nil
+	}
+	deps.chooseUpdate = func(io.Reader, io.Writer, installation, string) (updateChoice, error) {
+		t.Fatal("check-update prompted for an update")
+		return "", nil
+	}
+	deps.run = func(context.Context, io.Reader, io.Writer, io.Writer, string, ...string) error {
+		t.Fatal("check-update invoked a package manager")
+		return nil
+	}
+	cmd := newCmdCheckUpdateWithDeps(releaseFactory(t, "v1.3.0"), deps)
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	want := "Current version: v1.2.3\nLatest release: v1.3.0\nStatus: update available\n"
+	if !strings.Contains(out.String(), `Command "check-update" is deprecated`) ||
+		!strings.HasSuffix(out.String(), want) {
+		t.Fatalf("output = %q, want deprecation warning followed by %q", out.String(), want)
+	}
+	if cmd.Deprecated == "" {
+		t.Fatal("check-update is not marked deprecated")
+	}
+}
+
 func TestUpdateAlreadyCurrentDoesNotDetectOrInstall(t *testing.T) {
 	setCurrentVersion(t, "v1.3.0")
 	deps := testDeps()
@@ -135,6 +167,7 @@ func TestPromptUpdateChoice(t *testing.T) {
 		installed installation
 		want      updateChoice
 		wantText  string
+		wantErr   string
 	}{
 		{name: "update", input: "1\n", installed: installation{source: sourceNPM}, want: choiceUpdate, wantText: "Update via npm"},
 		{name: "default update", input: "\n", installed: installation{source: sourceNPM}, want: choiceUpdate, wantText: "default: 1"},
@@ -142,16 +175,24 @@ func TestPromptUpdateChoice(t *testing.T) {
 		{name: "skip", input: "2\n", installed: installation{source: sourceNPM}, want: choiceSkip, wantText: "Skip"},
 		{name: "Homebrew Core", input: "1\n", installed: installation{source: sourceHomebrewCore}, want: choiceUpdate, wantText: "Update via Homebrew Core"},
 		{name: "retry invalid", input: "later\n1\n", installed: installation{source: sourceNPM}, want: choiceUpdate, wantText: "Please choose 1 or 2."},
+		{name: "invalid then EOF", input: "n\n", installed: installation{source: sourceNPM}, wantText: "Please choose 1 or 2.", wantErr: "input ended after an invalid answer"},
+		{name: "invalid at EOF", input: "n", installed: installation{source: sourceNPM}, wantText: "Please choose 1 or 2.", wantErr: "input ended after an invalid answer"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var out bytes.Buffer
 			got, err := promptUpdateChoice(strings.NewReader(tt.input), &out, tt.installed, "v1.3.0")
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got != tt.want {
-				t.Fatalf("promptUpdateChoice() = %q, want %q", got, tt.want)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("promptUpdateChoice() error = %v, want %q", err, tt.wantErr)
+				}
+			} else {
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got != tt.want {
+					t.Fatalf("promptUpdateChoice() = %q, want %q", got, tt.want)
+				}
 			}
 			if !strings.Contains(out.String(), tt.wantText) {
 				t.Fatalf("prompt output does not contain %q:\n%s", tt.wantText, out.String())

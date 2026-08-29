@@ -60,7 +60,7 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 
 	want := map[string]bool{
 		"api": false, "auth": false, "branch": false, "commit": false, "discussion": false, "issue": false, "kanban": false, "label": false, "license": false, "milestone": false,
-		"update":       false,
+		"check-update": false, "update": false,
 		"notification": false,
 		"org":          false, "pr": false, "release": false, "repo": false, "run": false, "ssh-key": false, "tag": false, "version": false,
 	}
@@ -74,10 +74,12 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 			t.Errorf("command %q was not registered", name)
 		}
 	}
-	for _, child := range cmd.Commands() {
-		if child.Name() == "check-update" {
-			t.Fatal("legacy check-update command is still registered")
-		}
+	legacy, _, err := cmd.Find([]string{"check-update"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if legacy.Deprecated == "" {
+		t.Fatal("legacy check-update command is not marked deprecated")
 	}
 	if cmd.Use != "ag <command> <subcommand> [flags]" {
 		t.Fatalf("Use = %q", cmd.Use)

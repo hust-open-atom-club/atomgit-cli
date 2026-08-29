@@ -98,6 +98,7 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	cmd.AddCommand(search.NewCmdSearch(f))
 	cmd.AddCommand(discussion.NewCmdDiscussion(f))
 	cmd.AddCommand(update.NewCmdUpdate(f))
+	cmd.AddCommand(update.NewCmdCheckUpdate(f))
 	cmd.AddCommand(version.NewCmdVersion())
 	cmd.AddCommand(alias.NewCmdAlias(f))
 

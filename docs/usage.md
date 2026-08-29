@@ -1090,13 +1090,16 @@ ag version --json
 # 检查最新稳定版，不安装
 ag update --check
 
+# 兼容旧脚本；已弃用，行为等同于 ag update --check
+ag check-update
+
 # 检查并更新；当前自动支持全局 npm 和 Homebrew Core 安装
 ag update
 ```
 
-`ag update` 公开查询 `hust-open-atom-club/atomgit-cli` 的稳定 Release，并按 SemVer 比较当前版本。命令不需要登录或仓库上下文。`--check` 只输出当前版本、最新稳定 Release 和比较状态，不识别安装来源、不调用包管理器，也不修改当前安装。
+`ag update` 公开查询 `hust-open-atom-club/atomgit-cli` 的稳定 Release，并按 SemVer 比较当前版本。命令不需要登录或仓库上下文。`--check` 只输出当前版本、最新稳定 Release 和比较状态，不识别安装来源、不调用包管理器，也不修改当前安装。为兼容已有脚本，弃用的 `ag check-update` 暂时保留，并转发到同一只读检查逻辑。
 
-不带 `--check` 且发现新版本时，命令根据当前实际运行的 `ag` 二进制路径识别安装来源，然后提供两个选择：`Update via npm` 或 `Update via Homebrew Core` 会调用对应包管理器；`Skip` 只跳过本次运行。直接回车或标准输入 EOF 时默认更新。
+不带 `--check` 且发现新版本时，命令根据当前实际运行的 `ag` 二进制路径识别安装来源，然后提供两个选择：`Update via npm` 或 `Update via Homebrew Core` 会调用对应包管理器；`Skip` 只跳过本次运行。首次输入直接回车或尚未输入内容时到达 EOF 会默认更新；无效答案后到达 EOF 则返回错误，不会调用包管理器。
 
 用户选择更新后，全局 npm 安装会先确认精确目标版本已经发布到官方 npm registry，再执行安装并通过 npm 生成的真实命令入口核对版本；Homebrew Core 安装会依次执行 `brew update` 和 `brew upgrade atomgit-cli`，随后运行新二进制核对版本。这样不会把 npm 启动器损坏或“Formula 尚未更新”等情况误报为升级成功。
 
