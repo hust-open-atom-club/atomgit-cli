@@ -93,6 +93,8 @@ Go 模块代理提供的源码包不包含 `.git` 目录，因此通过 `go inst
 - Nix：`nix profile upgrade`（升级 profile 中使用未锁定 flake 引用安装的全部包）；NixOS 系统级安装则通过 `nixos-rebuild switch` 跟随系统升级
 - AUR：`yay -S atomgit-cli`、`yay -S atomgit-cli-bin` 或 `yay -S atomgit-cli-git`（注意：更推荐使用 `yay -Syu` 进行滚动更新，由于滚动发行版的特性，部分更新可能会有兼容问题）
 
+`ag update` 识别 npm 或 Homebrew Core 后会提供两个选择：立即通过对应包管理器更新，或 `Skip`（仅跳过本次）。直接回车或标准输入 EOF 时默认更新。
+
 Windows 上 npm 可能无法覆盖正在运行的 `ag.exe`。如果 npm 破坏了命令入口，或者 npm 报告成功但入口仍是旧版本，`ag update` 会用经过 Release 校验和验证的独立 `ag.exe` 修复入口，并提示该入口不再由 npm 管理。如果 npm 报错但旧入口仍可用，命令会保留原入口并报告错误。之后重新执行 npm 全局安装即可恢复 npm 管理。
 
 ### 为什么不应混用不同的安装来源？

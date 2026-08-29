@@ -39,7 +39,7 @@ npm 主包通过 `optionalDependencies` 声明七个平台二进制包。npm 根
 ag update
 ```
 
-命令会先确认目标版本已经发布到官方 npm registry，更新后再执行 npm 生成的 `ag` 命令入口核对版本，而不只检查平台包中的二进制。Windows 上如果 npm 因正在运行的 `ag.exe` 被锁定而破坏入口，或者 npm 报告成功但入口仍是旧版本，命令会下载 AtomGit Release 中校验和匹配的 Windows 二进制修复该入口。修复后的入口不再由 npm 管理；以后可重新执行下面的 npm 安装命令恢复 npm 管理。
+发现新版本后，命令会让用户选择 `Update via npm` 或仅本次 `Skip`；直接回车或标准输入 EOF 时默认更新。选择更新时会先确认目标版本已经发布到官方 npm registry，更新后再执行 npm 生成的 `ag` 命令入口核对版本，而不只检查平台包中的二进制。Windows 上如果 npm 因正在运行的 `ag.exe` 被锁定而破坏入口，或者 npm 报告成功但入口仍是旧版本，命令会下载 AtomGit Release 中校验和匹配的 Windows 二进制修复该入口。修复后的入口不再由 npm 管理；以后可重新执行下面的 npm 安装命令恢复 npm 管理。
 
 也可以手动升级：
 
@@ -70,6 +70,8 @@ brew install atomgit-cli
 ```bash
 ag update
 ```
+
+发现新版本后可选择 `Update via Homebrew Core` 或仅本次 `Skip`；直接回车或标准输入 EOF 时默认更新。
 
 也可以手动升级：
 

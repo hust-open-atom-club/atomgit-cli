@@ -2,6 +2,7 @@ package update
 
 import (
 	"archive/zip"
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -60,6 +61,13 @@ type installation struct {
 	formula    string
 }
 
+type updateChoice string
+
+const (
+	choiceUpdate updateChoice = "update"
+	choiceSkip   updateChoice = "skip"
+)
+
 type commandResult struct {
 	stdout string
 	stderr string
@@ -86,6 +94,7 @@ type updateDeps struct {
 	capture      func(context.Context, string, ...string) (commandResult, error)
 	run          func(context.Context, io.Reader, io.Writer, io.Writer, string, ...string) error
 	download     func(context.Context, string, int64) ([]byte, error)
+	chooseUpdate func(io.Reader, io.Writer, installation, string) (updateChoice, error)
 	goos         string
 	goarch       string
 }
@@ -111,8 +120,11 @@ func defaultUpdateDeps() updateDeps {
 			return command.Run()
 		},
 		download: downloadUpdateAsset,
-		goos:     runtime.GOOS,
-		goarch:   runtime.GOARCH,
+		chooseUpdate: func(in io.Reader, out io.Writer, installed installation, latest string) (updateChoice, error) {
+			return promptUpdateChoice(in, out, installed, latest)
+		},
+		goos:   runtime.GOOS,
+		goarch: runtime.GOARCH,
 	}
 }
 
@@ -166,6 +178,18 @@ func newCmdUpdateWithDeps(f *cmdutil.Factory, deps updateDeps) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			choice, err := deps.chooseUpdate(cmd.InOrStdin(), cmd.ErrOrStderr(), installed, latest)
+			if err != nil {
+				return err
+			}
+			switch choice {
+			case choiceSkip:
+				_, err := fmt.Fprintln(cmd.OutOrStdout(), "Update skipped.")
+				return err
+			case choiceUpdate:
+			default:
+				return fmt.Errorf("unsupported update choice %q", choice)
+			}
 			switch installed.source {
 			case sourceNPM:
 				return updateViaNPM(cmd, deps, latest)
@@ -178,6 +202,58 @@ func newCmdUpdateWithDeps(f *cmdutil.Factory, deps updateDeps) *cobra.Command {
 	}
 	cmd.Flags().BoolVarP(&check, "check", "c", false, "Check for an update without installing it")
 	return cmd
+}
+
+func promptUpdateChoice(
+	in io.Reader,
+	out io.Writer,
+	installed installation,
+	latest string,
+) (updateChoice, error) {
+	manager := installationDisplayName(installed)
+	if _, err := fmt.Fprintf(
+		out,
+		"Update AtomGit CLI to %s using %s?\n  1. Update via %s\n  2. Skip\n",
+		latest,
+		manager,
+		manager,
+	); err != nil {
+		return "", fmt.Errorf("write update choices: %w", err)
+	}
+	reader := bufio.NewReader(in)
+	for {
+		if _, err := fmt.Fprint(out, "Select an option [1-2] (default: 1): "); err != nil {
+			return "", fmt.Errorf("write update choice prompt: %w", err)
+		}
+		line, err := reader.ReadString('\n')
+		if err != nil && !errors.Is(err, io.EOF) {
+			return "", fmt.Errorf("read update choice: %w", err)
+		}
+		switch strings.ToLower(strings.TrimSpace(line)) {
+		case "", "1", "u", "update":
+			return choiceUpdate, nil
+		case "2", "s", "skip":
+			return choiceSkip, nil
+		default:
+			if _, writeErr := fmt.Fprintln(out, "Please choose 1 or 2."); writeErr != nil {
+				return "", fmt.Errorf("write invalid update choice message: %w", writeErr)
+			}
+		}
+		if errors.Is(err, io.EOF) {
+			return choiceUpdate, nil
+		}
+	}
+}
+
+func installationDisplayName(installed installation) string {
+	switch installed.source {
+	case sourceNPM:
+		return "npm"
+	case sourceHomebrewCore:
+		return "Homebrew Core"
+	default:
+		return string(installed.source)
+	}
 }
 
 func publicAPIClient(f *cmdutil.Factory) (*api.Client, error) {
