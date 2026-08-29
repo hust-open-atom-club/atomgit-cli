@@ -50,6 +50,7 @@ func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdRepoCreate(f))
 	cmd.AddCommand(newCmdRepoEdit(f))
 	cmd.AddCommand(newCmdRepoPushRule(f))
+	cmd.AddCommand(newCmdRepoMirror(f))
 	cmd.AddCommand(newCmdRepoClone(f))
 	cmd.AddCommand(newCmdRepoDelete(f))
 	cmd.AddCommand(newCmdRepoFork(f))

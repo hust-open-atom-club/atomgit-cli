@@ -48,6 +48,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 		"edit":      {"default-branch", "description", "name", "private", "public", "visibility", "yes"},
 		"fork":      {"clone", "description", "name", "private", "public"},
 		"list":      {"limit"},
+		"mirror":    nil,
 		"push-rule": nil,
 		"read-dir":  {"json", "ref"},
 		"read-file": {"json", "ref"},
@@ -93,6 +94,22 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 		if pushRuleView.Flags().Lookup(flag) == nil {
 			t.Errorf("push-rule view --%s flag was not registered", flag)
 		}
+	}
+	mirrorList, _, err := cmd.Find([]string{"mirror", "list"})
+	if err != nil || mirrorList.Name() != "list" {
+		t.Fatalf("mirror list command: %v", err)
+	}
+	for _, flag := range []string{"limit", "json"} {
+		if mirrorList.Flags().Lookup(flag) == nil {
+			t.Errorf("mirror list --%s flag was not registered", flag)
+		}
+	}
+	mirrorView, _, err := cmd.Find([]string{"mirror", "view"})
+	if err != nil || mirrorView.Name() != "view" {
+		t.Fatalf("mirror view command: %v", err)
+	}
+	if mirrorView.Flags().Lookup("json") == nil {
+		t.Error("mirror view --json flag was not registered")
 	}
 	pushRuleEdit, _, _ := cmd.Find([]string{"push-rule", "edit"})
 	for _, flag := range []string{"reject-not-signed-by-gpg", "commit-message-regex", "max-file-size", "skip-rule-for-owner", "deny-force-push", "yes", "json"} {
