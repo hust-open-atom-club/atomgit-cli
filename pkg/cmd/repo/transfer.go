@@ -1,10 +1,12 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -14,7 +16,11 @@ import (
 	"golang.org/x/term"
 )
 
-const maxTransferPasswordBytes = 64 << 10
+const (
+	maxTransferPasswordBytes  = 64 << 10
+	transferNamespacePageSize = 100
+	maxTransferNamespacePages = 100
+)
 
 type transferOptions struct {
 	Destination   string
@@ -33,21 +39,23 @@ const (
 func newCmdRepoTransfer(f *cmdutil.Factory) *cobra.Command {
 	opts := &transferOptions{}
 	cmd := &cobra.Command{
-		Use:   "transfer [<owner>/<repo>] --to <namespace>",
-		Short: "Transfer a repository to another namespace",
-		Long: `Transfer a repository to another AtomGit namespace.
+		Use:   "transfer [<owner>/<repo>] --to <organization>",
+		Short: "Transfer a repository to an organization",
+		Long: `Transfer a repository to an AtomGit organization.
 
 Repository transfer can change access, URLs, and automation. The command shows
-the source and destination and requires confirmation unless --yes is supplied.
-After the transfer, the authoritative repository name and URL are read back
-from AtomGit. Local Git remotes are never modified.
+the source and resolved destination organization and requires confirmation
+unless --yes is supplied. The currently documented AtomGit transfer APIs only
+describe organization destinations, so personal-user destinations are rejected.
+After the transfer, the authoritative repository name and URL are read back from
+AtomGit. Local Git remotes are never modified.
 
 AtomGit requires the account password when the source repository is owned by
 an organization. It is read without echo from an interactive terminal, or from
 standard input when --password-stdin is combined with --yes.`,
-		Example: `  ag repo transfer owner/repo --to destination
-  ag repo transfer owner/repo --to destination --yes
-  printf '%s\n' "$PASSWORD" | ag repo transfer organization/repo --to destination --yes --password-stdin`,
+		Example: `  ag repo transfer owner/repo --to target-organization
+  ag repo transfer owner/repo --to target-organization --yes
+  printf '%s\n' "$PASSWORD" | ag repo transfer source-organization/repo --to target-organization --yes --password-stdin`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
@@ -73,7 +81,7 @@ standard input when --password-stdin is combined with --yes.`,
 			return runRepositoryTransfer(cmd, client, repository, destination, opts)
 		},
 	}
-	cmd.Flags().StringVar(&opts.Destination, "to", "", "Destination user or organization namespace (required)")
+	cmd.Flags().StringVar(&opts.Destination, "to", "", "Destination organization namespace (required)")
 	cmd.Flags().BoolVarP(&opts.Yes, "yes", "y", false, "Skip the confirmation prompt")
 	cmd.Flags().BoolVar(&opts.PasswordStdin, "password-stdin", false, "Read the organization-transfer password from standard input (requires --yes)")
 	_ = cmd.MarkFlagRequired("to")
@@ -99,14 +107,19 @@ func runRepositoryTransfer(cmd *cobra.Command, client *api.Client, repository cm
 		return fmt.Errorf("failed to inspect source repository %s: %w", repository, err)
 	}
 
+	resolvedDestination, err := resolveTransferDestination(client, destination)
+	if err != nil {
+		return err
+	}
+	destination = resolvedDestination
 	kind, err := classifyRepositoryOwner(source, repository.Owner)
 	if err != nil {
-		return fmt.Errorf("cannot determine transfer endpoint for %s: %w", repository, err)
+		return fmt.Errorf("cannot determine documented transfer path for %s to organization %s: %w", repository, destination, err)
 	}
 
 	out := cmd.OutOrStdout()
 	fmt.Fprintf(out, "Source: %s\n", repository)
-	fmt.Fprintf(out, "Destination: %s\n", destination)
+	fmt.Fprintf(out, "Destination organization: %s\n", destination)
 	if !opts.Yes {
 		confirmed, err := cmdutil.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), fmt.Sprintf("Transfer %s to %s? Repository URLs and access may change. [y/N] ", repository, destination))
 		if err != nil {
@@ -127,7 +140,7 @@ func runRepositoryTransfer(cmd *cobra.Command, client *api.Client, repository cm
 		}
 		response, err := api.TransferRepository(client, repository.Owner, repository.Name, destination)
 		if err != nil {
-			return fmt.Errorf("failed to transfer repository %s to %s: %w", repository, destination, err)
+			return handleTransferRequestError(out, client, repository, destination, repository.Name, fmt.Sprintf("failed to transfer repository %s to %s", repository, destination), err)
 		}
 		if value := strings.TrimSpace(response.NewOwner); value != "" {
 			if !strings.EqualFold(value, destination) {
@@ -149,7 +162,7 @@ func runRepositoryTransfer(cmd *cobra.Command, client *api.Client, repository cm
 		response, err := api.TransferOrganizationRepository(client, repository.Owner, repository.Name, destination, password)
 		password = ""
 		if err != nil {
-			return fmt.Errorf("failed to transfer organization repository %s to %s: %w", repository, destination, err)
+			return handleTransferRequestError(out, client, repository, destination, repository.Name, fmt.Sprintf("failed to transfer organization repository %s to %s", repository, destination), err)
 		}
 		if response.Code != 1 {
 			return fmt.Errorf("ambiguous transfer result for %s: organization transfer returned code %d", repository, response.Code)
@@ -158,6 +171,59 @@ func runRepositoryTransfer(cmd *cobra.Command, client *api.Client, repository cm
 		return fmt.Errorf("cannot determine transfer endpoint for %s", repository)
 	}
 
+	return verifyAndReportTransferredRepository(out, client, repository, newOwner, newName)
+}
+
+func resolveTransferDestination(client *api.Client, destination string) (string, error) {
+	for page := 1; page <= maxTransferNamespacePages; page++ {
+		query := url.Values{}
+		query.Set("mode", "all")
+		query.Set("page", strconv.Itoa(page))
+		query.Set("perPage", strconv.Itoa(transferNamespacePageSize))
+		var namespaces []api.Namespace
+		if err := client.Get("/user/namespaces?"+query.Encode(), &namespaces); err != nil {
+			return "", fmt.Errorf("failed to resolve destination organization %q: %w", destination, err)
+		}
+		for _, namespace := range namespaces {
+			path := strings.TrimSpace(namespace.Path)
+			if !strings.EqualFold(path, destination) {
+				continue
+			}
+			switch strings.ToLower(strings.TrimSpace(namespace.Type)) {
+			case "group", "organization", "org":
+				return path, nil
+			case "user", "personal":
+				return "", fmt.Errorf("destination %q is a personal-user namespace; the documented AtomGit transfer APIs only support organization destinations", destination)
+			default:
+				return "", fmt.Errorf("destination %q has unsupported namespace type %q; the documented AtomGit transfer APIs only support organization destinations", destination, namespace.Type)
+			}
+		}
+		if len(namespaces) < transferNamespacePageSize {
+			return "", fmt.Errorf("destination organization %q was not found among namespaces visible to the authenticated user", destination)
+		}
+	}
+	return "", fmt.Errorf("destination organization %q could not be resolved within %d namespace pages", destination, maxTransferNamespacePages)
+}
+
+func handleTransferRequestError(out io.Writer, client *api.Client, repository cmdutil.Repository, destination, name, httpErrorContext string, transferErr error) error {
+	var httpErr *api.HTTPError
+	if errors.As(transferErr, &httpErr) {
+		return fmt.Errorf("%s: %w", httpErrorContext, transferErr)
+	}
+
+	transferred, readBackErr := readBackTransferredRepository(client, destination, name)
+	if readBackErr != nil {
+		return fmt.Errorf("transfer request for %s may have completed, but its final state is unknown: the transfer result could not be read (%v), and destination read-back for %s/%s failed: %w", repository, transferErr, destination, name, readBackErr)
+	}
+	fullName, repositoryURL, verifyErr := verifiedTransferredIdentity(transferred, destination, name)
+	if verifyErr != nil {
+		return fmt.Errorf("transfer request for %s may have completed, but its final state is unknown: the transfer result could not be read (%v), and destination read-back was ambiguous: %w", repository, transferErr, verifyErr)
+	}
+	reportTransferredRepository(out, fullName, repositoryURL, true)
+	return nil
+}
+
+func verifyAndReportTransferredRepository(out io.Writer, client *api.Client, repository cmdutil.Repository, newOwner, newName string) error {
 	transferred, err := readBackTransferredRepository(client, newOwner, newName)
 	if err != nil {
 		return fmt.Errorf("transfer request for %s succeeded, but the final repository %s/%s could not be verified: %w", repository, newOwner, newName, err)
@@ -167,10 +233,17 @@ func runRepositoryTransfer(cmd *cobra.Command, client *api.Client, repository cm
 		return fmt.Errorf("transfer request for %s succeeded, but the final state is ambiguous: %w", repository, err)
 	}
 
+	reportTransferredRepository(out, fullName, repositoryURL, false)
+	return nil
+}
+
+func reportTransferredRepository(out io.Writer, fullName, repositoryURL string, recovered bool) {
 	fmt.Fprintf(out, "✓ Transferred repository to %s\n", fullName)
 	fmt.Fprintf(out, "  URL: %s\n", repositoryURL)
+	if recovered {
+		fmt.Fprintln(out, "  Confirmed by destination read-back after the transfer result could not be read.")
+	}
 	fmt.Fprintln(out, "  Local Git remotes were not changed.")
-	return nil
 }
 
 func classifyRepositoryOwner(repository api.Repository, expectedOwner string) (repositoryOwnerKind, error) {
