@@ -33,7 +33,15 @@ npm 主包通过 `optionalDependencies` 声明七个平台二进制包。npm 根
 | Linux | x64 / amd64、arm64 / aarch64、loong64 / loongarch64 |
 | Windows | x64 / amd64、arm64 |
 
-升级已安装的 AtomGit CLI：
+升级全局 npm 安装的 AtomGit CLI，可直接让 `ag` 识别当前二进制来源并调用 npm：
+
+```bash
+ag update
+```
+
+发现新版本后，命令会让用户选择 `Update via npm` 或仅本次 `Skip`；直接回车或标准输入 EOF 时默认更新。选择更新时会先确认目标版本已经发布到官方 npm registry，更新后再执行 npm 生成的 `ag` 命令入口核对版本，而不只检查平台包中的二进制。Windows 上如果 npm 因正在运行的 `ag.exe` 被锁定而破坏入口，或者 npm 报告成功但入口仍是旧版本，命令会下载 AtomGit Release 中校验和匹配的 Windows 二进制修复该入口。修复后的入口不再由 npm 管理；以后可重新执行下面的 npm 安装命令恢复 npm 管理。
+
+也可以手动升级：
 
 ```bash
 npm update -g @hust-open-atom-club/atomgit-cli
@@ -57,7 +65,15 @@ Homebrew Core 中的 `atomgit-cli` 跟随项目正式发布的稳定版本，适
 brew install atomgit-cli
 ```
 
-升级 Homebrew Core 版本：
+升级 Homebrew Core 版本，可直接让 `ag` 识别 Formula 来源、调用 Homebrew 并验证新版本：
+
+```bash
+ag update
+```
+
+发现新版本后可选择 `Update via Homebrew Core` 或仅本次 `Skip`；直接回车或标准输入 EOF 时默认更新。
+
+也可以手动升级：
 
 ```bash
 brew update
@@ -81,7 +97,7 @@ brew tap hust-open-atom-club/tap
 brew install hust-open-atom-club/tap/atomgit-cli
 ```
 
-升级项目 Tap 版本：
+升级项目 Tap 版本仍使用完整 Formula 名称；当前 `ag update` 不处理项目 Tap，也不会将其当成 Homebrew Core：
 
 ```bash
 brew update

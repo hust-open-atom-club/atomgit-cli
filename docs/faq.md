@@ -83,14 +83,19 @@ Go 模块代理提供的源码包不包含 `.git` 目录，因此通过 `go inst
 
 ### 如何升级？
 
-- npm：`npm update -g @hust-open-atom-club/atomgit-cli`
-- Homebrew：`brew update && brew upgrade atomgit-cli`
+- 全局 npm 或 Homebrew Core：运行 `ag update`，命令会识别当前实际运行的二进制来源、调用对应包管理器并验证真实命令入口的新版本
+- 只检查：推荐使用 `ag update --check`；为兼容旧脚本，已弃用的 `ag check-update` 暂时保留。两者都不会识别安装来源、调用包管理器或修改安装
+- npm 手动升级：`npm update -g @hust-open-atom-club/atomgit-cli`
+- Homebrew Core 手动升级：`brew update && brew upgrade atomgit-cli`
+- 项目 Homebrew Tap：`brew update && brew upgrade hust-open-atom-club/tap/atomgit-cli`（当前不受 `ag update` 支持，也不会被当成 Core 升级）
 - WinGet：`winget upgrade HUSTOpenAtomClub.AtomGitCLI`
 - Scoop：`scoop update atomgit-cli`
 - Nix：`nix profile upgrade`（升级 profile 中使用未锁定 flake 引用安装的全部包）；NixOS 系统级安装则通过 `nixos-rebuild switch` 跟随系统升级
 - AUR：`yay -S atomgit-cli`、`yay -S atomgit-cli-bin` 或 `yay -S atomgit-cli-git`（注意：更推荐使用 `yay -Syu` 进行滚动更新，由于滚动发行版的特性，部分更新可能会有兼容问题）
 
-也可以先运行 `ag check-update` 查看是否有新版本，再使用对应的安装方式升级。
+`ag update` 识别 npm 或 Homebrew Core 后会提供两个选择：立即通过对应包管理器更新，或 `Skip`（仅跳过本次）。首次输入直接回车或尚未输入内容时到达 EOF 会默认更新；无效答案后到达 EOF 会报错且不会更新。
+
+Windows 上 npm 可能无法覆盖正在运行的 `ag.exe`。如果 npm 破坏了命令入口，或者 npm 报告成功但入口仍是旧版本，`ag update` 会用经过 Release 校验和验证的独立 `ag.exe` 修复入口，并提示该入口不再由 npm 管理。如果 npm 报错但旧入口仍可用，命令会保留原入口并报告错误。之后重新执行 npm 全局安装即可恢复 npm 管理。
 
 ### 为什么不应混用不同的安装来源？
 
@@ -179,9 +184,9 @@ ag auth switch <account>    # 切换活动账号
 
 `ag` 默认会对输出做终端安全清理：把控制字符转换为可见的转义表示，防止仓库、Issue、PR 或 Git 服务端返回的内容注入终端控制序列（CWE-150），管道转发时同样生效。需要为机器处理保留原始字节时，可显式使用全局参数 `--raw-output`（如 `ag --raw-output pr diff owner/repo 123`）。请勿将未经检查的原始输出直接转发到终端。
 
-### `ag check-update` 报错说版本不可比较？
+### `ag update` 报错说版本不可比较？
 
-`ag check-update` 按 SemVer 比较当前版本与最新稳定 Release。如果本地版本是 `dev`、dirty、提交哈希或其他无法比较的值，会返回清晰错误。这属于预期行为；从源码构建且未注入发布元数据时属于正常情况，改用官方预编译版本即可获得可比较的版本号。
+`ag update` 和 `ag update --check` 都按 SemVer 比较当前版本与最新稳定 Release。如果本地版本是 `dev`、dirty、提交哈希或其他无法比较的值，会返回清晰错误，并且不会识别安装来源或调用包管理器。这属于预期行为；从源码构建且未注入发布元数据时属于正常情况，改用官方预编译版本即可获得可比较的版本号。
 
 ### 如何查看某个命令的完整参数？
 
