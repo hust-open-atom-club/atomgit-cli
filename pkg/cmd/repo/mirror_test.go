@@ -102,6 +102,7 @@ func TestRepoMirrorViewJSONPreservesReturnedZeroValuesAndOmitsAbsentFields(t *te
   "number_of_failures": 0,
   "mirroring_enabled": false,
   "force": false,
+  "message": "request rejected for Authorization: Bearer mirror-bearer-789",
   "last_successful_update_at": "2026-08-29T02:03:04Z"
 }`), nil
 	})
@@ -126,17 +127,18 @@ func TestRepoMirrorViewJSONPreservesReturnedZeroValuesAndOmitsAbsentFields(t *te
 		"failureCount": float64(0),
 		"enabled":      false,
 		"force":        false,
+		"message":      "request rejected for Authorization: <redacted>",
 	} {
 		if got := result[key]; got != want {
 			t.Errorf("%s = %#v, want %#v", key, got, want)
 		}
 	}
-	for _, absent := range []string{"lastError", "message", "createdAt", "updatedAt", "private"} {
+	for _, absent := range []string{"lastError", "createdAt", "updatedAt", "private"} {
 		if _, exists := result[absent]; exists {
 			t.Errorf("absent field %q was emitted: %s", absent, out.String())
 		}
 	}
-	if strings.Contains(out.String(), "secret") || strings.Contains(out.String(), "token") || strings.Contains(out.String(), "hidden") {
+	if strings.Contains(out.String(), "secret") || strings.Contains(out.String(), "token") || strings.Contains(out.String(), "hidden") || strings.Contains(out.String(), "mirror-bearer-789") {
 		t.Fatalf("JSON leaked credentials: %s", out.String())
 	}
 }
@@ -147,7 +149,7 @@ func TestRepoMirrorViewTextRendersFailedState(t *testing.T) {
   "update_status": "failed",
   "mirroring_enabled": true,
   "last_update_at": "2026-08-29T03:04:05Z",
-  "last_error": "authentication failed for https://user:secret@example.com/team/demo.git?token=hidden"
+  "last_error": "authentication failed: password=mirror-password-123; token=mirror-token-456; push to https://user:secret@example.com/team/demo.git?token=hidden"
 }`), nil
 	})
 
@@ -162,14 +164,16 @@ func TestRepoMirrorViewTextRendersFailedState(t *testing.T) {
 		"Status: failed",
 		"Enabled: true",
 		"Last update: 2026-08-29T03:04:05Z",
-		"Last error: authentication failed for https://example.com/team/demo.git",
+		"Last error: authentication failed: password=<redacted>; token=<redacted>; push to https://example.com/team/demo.git",
 	} {
 		if !strings.Contains(out.String(), want) {
 			t.Fatalf("output missing %q:\n%s", want, out.String())
 		}
 	}
-	if strings.Contains(out.String(), "secret") || strings.Contains(out.String(), "token") || strings.Contains(out.String(), "hidden") {
-		t.Fatalf("text output leaked credentials: %s", out.String())
+	for _, secret := range []string{"secret", "hidden", "mirror-password-123", "mirror-token-456"} {
+		if strings.Contains(out.String(), secret) {
+			t.Fatalf("text output leaked %q: %s", secret, out.String())
+		}
 	}
 }
 

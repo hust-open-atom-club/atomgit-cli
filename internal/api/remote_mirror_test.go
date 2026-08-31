@@ -96,6 +96,39 @@ func TestGetRepositoryRemoteMirrorPreservesOptionalValuesAndSanitizes(t *testing
 	}
 }
 
+func TestGetRepositoryRemoteMirrorRedactsStandaloneCredentials(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/repos/team/demo/repo_remote_mirror" {
+			t.Fatalf("path = %q", r.URL.Path)
+		}
+		fmt.Fprint(w, `{
+  "last_error": "authentication failed: password=mirror-password-123; token=mirror-token-456",
+  "message": "request rejected for Authorization: Bearer mirror-bearer-789"
+}`)
+	})
+
+	mirror, err := GetRepositoryRemoteMirror(client, "team", "demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for field, value := range map[string]*string{
+		"last_error": mirror.LastError,
+		"message":    mirror.Message,
+	} {
+		if value == nil {
+			t.Fatalf("%s is absent", field)
+		}
+		for _, secret := range []string{"mirror-password-123", "mirror-token-456", "mirror-bearer-789"} {
+			if strings.Contains(*value, secret) {
+				t.Fatalf("%s leaked %q: %q", field, secret, *value)
+			}
+		}
+		if !strings.Contains(*value, "<redacted>") {
+			t.Fatalf("%s did not mark redacted credentials: %q", field, *value)
+		}
+	}
+}
+
 func TestRemoteMirrorErrorsRedactCredentialBearingURLs(t *testing.T) {
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)

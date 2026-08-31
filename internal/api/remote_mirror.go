@@ -109,7 +109,8 @@ func sanitizeRemoteMirrorURL(value string) string {
 func sanitizeRemoteMirrorText(value string) string {
 	value = strings.ReplaceAll(value, `\/`, "/")
 	value = remoteMirrorURLPattern.ReplaceAllStringFunc(value, sanitizeRemoteMirrorURL)
-	return remoteMirrorSCPPattern.ReplaceAllString(value, "$1")
+	value = remoteMirrorSCPPattern.ReplaceAllString(value, "$1")
+	return redactCredentials(value)
 }
 
 type remoteMirrorError struct {
