@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -20,6 +22,20 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
 }
+
+type contextBlockingBody struct {
+	ctx     context.Context
+	started chan struct{}
+	once    sync.Once
+}
+
+func (b *contextBlockingBody) Read([]byte) (int, error) {
+	b.once.Do(func() { close(b.started) })
+	<-b.ctx.Done()
+	return 0, b.ctx.Err()
+}
+
+func (*contextBlockingBody) Close() error { return nil }
 
 func newTestClient(t *testing.T, handler http.HandlerFunc) *Client {
 	t.Helper()
@@ -66,6 +82,128 @@ func TestNewClientWithBaseURL(t *testing.T) {
 	}
 	if client.token != "secret" {
 		t.Fatalf("token = %q", client.token)
+	}
+}
+
+func TestMetadataHTTPClientAddsBoundedTimeoutWithoutMutatingSource(t *testing.T) {
+	source := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return nil, errors.New("unused")
+	})}
+	bounded := metadataHTTPClient(source)
+	if bounded == source {
+		t.Fatal("zero-timeout client was not cloned")
+	}
+	if bounded.Timeout != defaultMetadataTimeout {
+		t.Fatalf("bounded timeout = %s, want %s", bounded.Timeout, defaultMetadataTimeout)
+	}
+	if source.Timeout != 0 {
+		t.Fatalf("source timeout = %s, want unchanged zero timeout", source.Timeout)
+	}
+
+	custom := &http.Client{Timeout: 5 * time.Second}
+	if got := metadataHTTPClient(custom); got != custom {
+		t.Fatal("explicit finite timeout client was not retained")
+	}
+}
+
+func TestClientContextCancelsStalledResponseHeaders(t *testing.T) {
+	started := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
+		close(started)
+		<-req.Context().Done()
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	client := NewClientWithBaseURL("token", server.URL, server.Client()).WithContext(ctx)
+	result := make(chan error, 1)
+	go func() {
+		var payload map[string]any
+		result <- client.Get("/resource", &payload)
+	}()
+
+	<-started
+	cancel()
+	select {
+	case err := <-result:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("error = %v, want context canceled", err)
+		}
+		if !strings.Contains(err.Error(), "API request GET /resource") {
+			t.Fatalf("error = %v, want request operation context", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("request did not stop promptly after cancellation")
+	}
+}
+
+func TestClientContextCancelsStalledJSONBody(t *testing.T) {
+	readStarted := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Status:     "200 OK",
+				Header:     make(http.Header),
+				Body:       &contextBlockingBody{ctx: req.Context(), started: readStarted},
+				Request:    req,
+			}, nil
+		}),
+	}).WithContext(ctx)
+	result := make(chan error, 1)
+	go func() {
+		var payload map[string]any
+		result <- client.Get("/resource", &payload)
+	}()
+
+	<-readStarted
+	cancel()
+	select {
+	case err := <-result:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("error = %v, want context canceled", err)
+		}
+		if !strings.Contains(err.Error(), "API request GET /resource: decode response") {
+			t.Fatalf("error = %v, want decode operation context", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("JSON decode did not stop promptly after cancellation")
+	}
+}
+
+func TestClientRetryBackoffObservesCancellation(t *testing.T) {
+	var calls int32
+	firstAttempt := make(chan struct{})
+	client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
+		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+			if atomic.AddInt32(&calls, 1) == 1 {
+				close(firstAttempt)
+			}
+			return nil, errors.New("temporary network failure")
+		}),
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	client = client.WithContext(ctx)
+	result := make(chan error, 1)
+	go func() {
+		var payload map[string]any
+		result <- client.Get("/resource", &payload)
+	}()
+
+	<-firstAttempt
+	time.Sleep(20 * time.Millisecond)
+	cancel()
+	select {
+	case err := <-result:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("error = %v, want context canceled", err)
+		}
+	case <-time.After(150 * time.Millisecond):
+		t.Fatal("retry backoff delayed cancellation")
+	}
+	if got := atomic.LoadInt32(&calls); got != 1 {
+		t.Fatalf("request calls = %d, want 1", got)
 	}
 }
 

@@ -2,6 +2,7 @@ package root
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -10,7 +11,9 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	internalversion "atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
@@ -119,6 +122,52 @@ func TestRootReturnsErrorsWithoutPrintingThem(t *testing.T) {
 	}
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %q, want no Cobra error output", stderr.String())
+	}
+}
+
+func TestRootContextCancelsV5AndActionsRequests(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "v5 issue request", args: []string{"issue", "view", "alice/demo", "1"}},
+		{name: "v8 Actions request", args: []string{"run", "view", "alice/demo", "run-1"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requestStarted := make(chan struct{})
+			var once sync.Once
+			factory := &cmdutil.Factory{
+				Config: rootTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						once.Do(func() { close(requestStarted) })
+						<-req.Context().Done()
+						return nil, req.Context().Err()
+					})}, nil
+				},
+			}
+			cmd, err := newCmdRootWithWriters(factory, io.Discard, io.Discard)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cmd.SetArgs(tt.args)
+			ctx, cancel := context.WithCancel(context.Background())
+			result := make(chan error, 1)
+			go func() { result <- cmd.ExecuteContext(ctx) }()
+
+			<-requestStarted
+			cancel()
+			select {
+			case err := <-result:
+				if !errors.Is(err, context.Canceled) {
+					t.Fatalf("ExecuteContext() error = %v, want context canceled", err)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("root command did not stop promptly after cancellation")
+			}
+		})
 	}
 }
 

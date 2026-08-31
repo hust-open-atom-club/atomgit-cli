@@ -39,7 +39,10 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 				return cmdutil.AuthenticationError(err)
 			}
 
-			client := api.NewClient(token)
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
 
 			var comments []api.Comment
 			// view=all returns both 普通评论 (pr_comment) and 检视意见 (diff_comment),

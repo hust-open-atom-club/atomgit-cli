@@ -33,15 +33,7 @@ func NewCmdWorkflow(f *cmdutil.Factory) *cobra.Command {
 const maxWorkflowsPerPage = 100
 
 func newActionsClient(f *cmdutil.Factory, token string) (*actions.Client, error) {
-	if f == nil || f.HttpClient == nil {
-		return actions.NewClient(token), nil
-	}
-
-	httpClient, err := f.HttpClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
-	}
-	return actions.NewClientWithHTTPClient(token, httpClient), nil
+	return f.NewActionsClient(token)
 }
 
 // listAllWorkflows fetches every workflow in a repository, following pages
@@ -80,15 +72,7 @@ func requireToken(f *cmdutil.Factory) (string, error) {
 }
 
 func newAPIClient(f *cmdutil.Factory, token string) (*api.Client, error) {
-	if f == nil || f.HttpClient == nil {
-		return api.NewClient(token), nil
-	}
-
-	httpClient, err := f.HttpClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
-	}
-	return api.NewClientWithHTTPClient(token, httpClient), nil
+	return f.NewAPIClient(token)
 }
 
 func resolveDefaultBranch(f *cmdutil.Factory, token, owner, repo string) (string, error) {

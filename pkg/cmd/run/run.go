@@ -26,15 +26,7 @@ rerun, cancel, and deletion operations are not supported.`,
 }
 
 func newActionsClient(f *cmdutil.Factory, token string) (*actions.Client, error) {
-	if f.HttpClient == nil {
-		return actions.NewClient(token), nil
-	}
-
-	httpClient, err := f.HttpClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
-	}
-	return actions.NewClientWithHTTPClient(token, httpClient), nil
+	return f.NewActionsClient(token)
 }
 
 func parseRepository(value string) (string, string, error) {

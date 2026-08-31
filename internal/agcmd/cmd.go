@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/browser"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
@@ -39,7 +40,9 @@ func Main() int {
 	}
 	rootCmd.SetArgs(expanded)
 
-	executeErr := rootCmd.ExecuteContext(context.Background())
+	ctx, stopSignals := newSignalContext(context.Background(), signal.NotifyContext)
+	defer stopSignals()
+	executeErr := rootCmd.ExecuteContext(ctx)
 	stdoutFlushErr := cmdutil.FlushWriter(rootCmd.OutOrStdout())
 	stderrFlushErr := cmdutil.FlushWriter(rootCmd.ErrOrStderr())
 	if executeErr != nil {
