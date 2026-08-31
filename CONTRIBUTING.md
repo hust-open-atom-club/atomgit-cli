@@ -4,6 +4,13 @@
 
 ## 如何贡献
 
+提交 Issue 或 Pull Request 前，请先查看仓库提供的模板。模板会帮助补充版本、环境、复现步骤、验证结果和安全脱敏信息。
+
+- [支持说明](SUPPORT.md)：安装、配置、使用问题和安全问题的分流入口。
+- [行为准则](CODE_OF_CONDUCT.md)：参与 Issue、Pull Request 和 Discussion 时请遵守。
+- AtomGit 模板位于 `.gitcode/ISSUE_TEMPLATE/` 和 `.gitcode/PULL_REQUEST_TEMPLATE.md`。
+- GitHub 镜像模板位于对应的 `.github/` 路径；修改模板时请保持两处内容一致。
+
 ### 报告问题
 
 如果你发现了 bug 或有功能建议，请通过以下方式提交：
