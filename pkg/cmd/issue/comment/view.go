@@ -34,7 +34,10 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 				return cmdutil.AuthenticationError(err)
 			}
 
-			client := api.NewClient(token)
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
 
 			var comments []api.Comment
 			path := fmt.Sprintf("/repos/%s/%s/issues/%d/comments", owner, repo, number)

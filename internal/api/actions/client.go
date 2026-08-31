@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -128,6 +129,17 @@ func newClientWithBaseURL(token, baseURL string, httpClient *http.Client) *Clien
 	return &Client{
 		client: baseapi.NewClientWithBaseURL(token, baseURL, httpClient),
 	}
+}
+
+// WithContext returns a shallow copy whose metadata and streaming requests
+// inherit ctx.
+func (c *Client) WithContext(ctx context.Context) *Client {
+	if c == nil {
+		return nil
+	}
+	clone := *c
+	clone.client = c.client.WithContext(ctx)
+	return &clone
 }
 
 func (c *Client) ListRuns(owner, repo string, opts ListRunsOptions) (RunListResponse, error) {
@@ -322,7 +334,7 @@ func (c *Client) getJSON(operation, path string, result interface{}) error {
 }
 
 func (c *Client) download(operation, path string) (*http.Response, error) {
-	resp, err := c.client.DoRequestRawWithAccept(http.MethodGet, path, "*/*")
+	resp, err := c.client.DoRequestRawStreamingWithAccept(http.MethodGet, path, "*/*")
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", operation, err)
 	}

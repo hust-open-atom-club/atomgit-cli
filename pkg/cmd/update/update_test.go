@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	internalversion "atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
@@ -112,6 +113,42 @@ func TestUpdateCheckDoesNotDetectOrInstall(t *testing.T) {
 	want := "Current version: v1.2.3\nLatest release: v1.3.0\nStatus: update available\n"
 	if out.String() != want {
 		t.Fatalf("output = %q, want %q", out.String(), want)
+	}
+}
+
+func TestUpdateCheckCancelsReleaseRequestWithCommandContext(t *testing.T) {
+	setCurrentVersion(t, "v1.2.3")
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	requestStarted := make(chan struct{})
+	factory := &cmdutil.Factory{
+		Context: func() context.Context { return ctx },
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				close(requestStarted)
+				<-req.Context().Done()
+				return nil, req.Context().Err()
+			})}, nil
+		},
+	}
+	cmd := newCmdUpdateWithDeps(factory, testDeps())
+	cmd.SetArgs([]string{"--check"})
+	result := make(chan error, 1)
+	go func() { result <- cmd.ExecuteContext(ctx) }()
+
+	select {
+	case <-requestStarted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("release request did not start")
+	}
+	cancel()
+	select {
+	case err := <-result:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("ExecuteContext() error = %v, want context canceled", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("release request did not stop after cancellation")
 	}
 }
 

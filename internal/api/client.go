@@ -26,7 +26,10 @@ type Client struct {
 	baseURL    string
 	token      string
 	httpClient *http.Client
+	ctx        context.Context
 }
+
+const defaultMetadataTimeout = 30 * time.Second
 
 // HTTPError describes a non-successful API response. The Error method keeps
 // the established "API error: <status> - <context>" message shape so existing
@@ -51,7 +54,7 @@ func IsHTTPStatus(err error, statusCode int) bool {
 
 func NewClient(token string) *Client {
 	return NewClientWithHTTPClient(token, &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: defaultMetadataTimeout,
 	})
 }
 
@@ -67,14 +70,51 @@ func NewClientWithHTTPClient(token string, httpClient *http.Client) *Client {
 func NewClientWithBaseURL(token, baseURL string, httpClient *http.Client) *Client {
 	if httpClient == nil {
 		httpClient = &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: defaultMetadataTimeout,
 		}
 	}
 	return &Client{
 		baseURL:    strings.TrimRight(baseURL, "/"),
 		token:      token,
 		httpClient: httpClient,
+		ctx:        context.Background(),
 	}
+}
+
+// WithContext returns a shallow copy of the client whose requests inherit ctx.
+// The HTTP client and transport remain shared with the original client.
+func (c *Client) WithContext(ctx context.Context) *Client {
+	if c == nil {
+		return nil
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	clone := *c
+	clone.ctx = ctx
+	return &clone
+}
+
+func (c *Client) requestContext() context.Context {
+	if c == nil || c.ctx == nil {
+		return context.Background()
+	}
+	return c.ctx
+}
+
+// metadataHTTPClient guarantees that regular JSON and raw metadata responses
+// have a finite whole-request timeout, including response-body reads. Explicit
+// shorter or longer non-zero caller timeouts are preserved.
+func metadataHTTPClient(client *http.Client) *http.Client {
+	if client == nil {
+		return &http.Client{Timeout: defaultMetadataTimeout}
+	}
+	if client.Timeout > 0 {
+		return client
+	}
+	clone := *client
+	clone.Timeout = defaultMetadataTimeout
+	return &clone
 }
 
 // streamingHTTPClient clones the configured client without its whole-request
@@ -143,8 +183,8 @@ func (c *Client) doRequestWithPolicy(
 	canRetry bool,
 ) (*http.Response, error) {
 	return c.doRequestWithPolicyContext(
-		context.Background(),
-		httpClient,
+		c.requestContext(),
+		metadataHTTPClient(httpClient),
 		method,
 		path,
 		body,
@@ -233,7 +273,7 @@ func (c *Client) Get(path string, result interface{}) error {
 		return newAPIError(resp)
 	}
 
-	return json.NewDecoder(resp.Body).Decode(result)
+	return decodeJSONResponse(http.MethodGet, path, resp.Body, result)
 }
 
 func (c *Client) Post(path string, body, result interface{}) error {
@@ -259,7 +299,7 @@ func (c *Client) Post(path string, body, result interface{}) error {
 	if result == nil || resp.StatusCode == http.StatusNoContent {
 		return nil
 	}
-	return json.NewDecoder(resp.Body).Decode(result)
+	return decodeJSONResponse(http.MethodPost, path, resp.Body, result)
 }
 
 // PostForm sends an application/x-www-form-urlencoded POST request.
@@ -278,7 +318,7 @@ func (c *Client) PostForm(path string, fields url.Values, result interface{}) er
 	if result == nil || resp.StatusCode == http.StatusNoContent {
 		return nil
 	}
-	return json.NewDecoder(resp.Body).Decode(result)
+	return decodeJSONResponse(http.MethodPost, path, resp.Body, result)
 }
 
 // PutForm sends an application/x-www-form-urlencoded PUT request. Some
@@ -299,7 +339,7 @@ func (c *Client) PutForm(path string, fields url.Values, result interface{}) err
 	if result == nil {
 		return nil
 	}
-	return json.NewDecoder(resp.Body).Decode(result)
+	return decodeJSONResponse(http.MethodPut, path, resp.Body, result)
 }
 
 func (c *Client) Put(path string, body, result interface{}) error {
@@ -323,7 +363,7 @@ func (c *Client) Put(path string, body, result interface{}) error {
 	}
 
 	if result != nil {
-		return json.NewDecoder(resp.Body).Decode(result)
+		return decodeJSONResponse(http.MethodPut, path, resp.Body, result)
 	}
 	return nil
 }
@@ -349,7 +389,7 @@ func (c *Client) Patch(path string, body, result interface{}) error {
 	}
 
 	if result != nil {
-		if err := json.NewDecoder(resp.Body).Decode(result); err != nil && err != io.EOF {
+		if err := decodeJSONResponse(http.MethodPatch, path, resp.Body, result); err != nil && !errors.Is(err, io.EOF) {
 			return err
 		}
 	}
@@ -380,7 +420,7 @@ func (c *Client) PatchForm(path string, fields map[string]string, result interfa
 	}
 
 	if result != nil {
-		return json.NewDecoder(resp.Body).Decode(result)
+		return decodeJSONResponse(http.MethodPatch, path, resp.Body, result)
 	}
 	return nil
 }
@@ -443,6 +483,30 @@ func (c *Client) DoRequestRawWithBody(method, path string, body []byte, contentT
 		bodyReader = bytes.NewReader(body)
 	}
 	return c.doRequestWithContentTypeAndAccept(method, path, bodyReader, contentType, accept)
+}
+
+// DoRequestRawStreamingWithAccept performs a cancellable raw request without
+// the metadata client's whole-request timeout. It retains connection and
+// response-header safeguards and is intended for large response bodies whose
+// lifetime is controlled by the client's bound context.
+func (c *Client) DoRequestRawStreamingWithAccept(method, path, accept string) (*http.Response, error) {
+	return c.doRequestWithPolicyContext(
+		c.requestContext(),
+		streamingHTTPClient(c),
+		method,
+		path,
+		nil,
+		"",
+		accept,
+		isIdempotent(method),
+	)
+}
+
+func decodeJSONResponse(method, path string, body io.Reader, result interface{}) error {
+	if err := json.NewDecoder(body).Decode(result); err != nil {
+		return fmt.Errorf("API request %s %s: decode response: %w", method, path, err)
+	}
+	return nil
 }
 
 // maxErrorBodyBytes caps how much of a non-success response body is included
@@ -552,7 +616,7 @@ func statusAllowed(code int, allowed []int) bool {
 // they can request only their contracted 200 or 201 status and disable retry
 // for state-sensitive operations such as related-branch PUT.
 func (c *Client) doJSONRequest(method, path string, body io.Reader, contentType, accept string, policy RequestPolicy, result interface{}) error {
-	return c.doJSONRequestContext(context.Background(), c.httpClient, method, path, body, contentType, accept, policy, result)
+	return c.doJSONRequestContext(c.requestContext(), c.httpClient, method, path, body, contentType, accept, policy, result)
 }
 
 // doJSONRequestContext is doJSONRequest with caller-controlled cancellation
@@ -562,7 +626,7 @@ func (c *Client) doJSONRequestContext(ctx context.Context, httpClient *http.Clie
 		return fmt.Errorf("API request %s %s: allowed statuses cannot be empty", method, path)
 	}
 
-	resp, err := c.doRequestWithPolicyContext(ctx, httpClient, method, path, body, contentType, accept, policy.CanRetry)
+	resp, err := c.doRequestWithPolicyContext(ctx, metadataHTTPClient(httpClient), method, path, body, contentType, accept, policy.CanRetry)
 	if err != nil {
 		return fmt.Errorf("API request %s %s: %w", method, path, err)
 	}
@@ -575,8 +639,5 @@ func (c *Client) doJSONRequestContext(ctx context.Context, httpClient *http.Clie
 	if result == nil {
 		return nil
 	}
-	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
-		return fmt.Errorf("decode API response: %w", err)
-	}
-	return nil
+	return decodeJSONResponse(method, path, resp.Body, result)
 }

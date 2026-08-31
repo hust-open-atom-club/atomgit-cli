@@ -37,14 +37,7 @@ reopen read the current milestone first and preserve those required fields.`,
 }
 
 func newAPIClient(f *cmdutil.Factory, token string) (*api.Client, error) {
-	if f.HttpClient == nil {
-		return api.NewClient(token), nil
-	}
-	httpClient, err := f.HttpClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
-	}
-	return api.NewClientWithHTTPClient(token, httpClient), nil
+	return f.NewAPIClient(token)
 }
 
 func newCmdMilestoneList(f *cmdutil.Factory) *cobra.Command {

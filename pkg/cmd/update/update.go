@@ -288,16 +288,16 @@ func installationDisplayName(installed installation) string {
 
 func publicAPIClient(f *cmdutil.Factory) (*api.Client, error) {
 	if f == nil || f.HttpClient == nil {
-		return api.NewClient(""), nil
+		return api.NewClient("").WithContext(f.CommandContext()), nil
 	}
 	httpClient, err := f.HttpClient()
 	if err != nil {
 		return nil, fmt.Errorf("create update HTTP client: %w", err)
 	}
 	if httpClient == nil {
-		return api.NewClient(""), nil
+		return api.NewClient("").WithContext(f.CommandContext()), nil
 	}
-	return api.NewClientWithHTTPClient("", httpClient), nil
+	return api.NewClientWithHTTPClient("", httpClient).WithContext(f.CommandContext()), nil
 }
 
 func selectLatestStableRelease(releases []api.Release) (string, error) {

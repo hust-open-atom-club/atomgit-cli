@@ -50,6 +50,11 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 		SilenceErrors: true,
 		SilenceUsage:  true,
 	}
+	if f != nil {
+		// Resolve the context lazily so ExecuteContext can install it after the
+		// command tree and its shared factory have already been constructed.
+		f.Context = cmd.Context
+	}
 	cmd.SetVersionTemplate(`{{.Version}}`)
 	cmd.Flags().Bool("version", false, "Show version information")
 

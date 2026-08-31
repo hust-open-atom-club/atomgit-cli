@@ -1,6 +1,7 @@
 package cmdutil
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -10,6 +11,23 @@ import (
 
 type failingReader struct {
 	read bool
+}
+
+type cancellableReader struct {
+	ctx     context.Context
+	started chan struct{}
+	read    bool
+}
+
+func (r *cancellableReader) Read(p []byte) (int, error) {
+	if !r.read {
+		r.read = true
+		copy(p, "partial")
+		return len("partial"), nil
+	}
+	close(r.started)
+	<-r.ctx.Done()
+	return 0, r.ctx.Err()
 }
 
 func (r *failingReader) Read(p []byte) (int, error) {
@@ -116,6 +134,37 @@ func TestWriteDownloadOverwritePreservesOldOnReadFailure(t *testing.T) {
 	matches, err := filepath.Glob(filepath.Join(directory, ".download.zip.tmp-*"))
 	if err != nil || len(matches) != 0 {
 		t.Fatalf("temporary files = %v, %v", matches, err)
+	}
+}
+
+func TestWriteDownloadCancellationPreservesDestinationAndCleansTemporaryFile(t *testing.T) {
+	directory := t.TempDir()
+	destination := filepath.Join(directory, "download.zip")
+	const old = "old-payload"
+	if err := os.WriteFile(destination, []byte(old), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	reader := &cancellableReader{ctx: ctx, started: make(chan struct{})}
+	result := make(chan error, 1)
+	go func() {
+		_, err := WriteDownload(destination, reader, true)
+		result <- err
+	}()
+	<-reader.started
+	cancel()
+
+	err := <-result
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v, want context canceled", err)
+	}
+	if data, readErr := os.ReadFile(destination); readErr != nil || string(data) != old {
+		t.Fatalf("destination = %q, %v; want %q", data, readErr, old)
+	}
+	matches, globErr := filepath.Glob(filepath.Join(directory, ".download.zip.tmp-*"))
+	if globErr != nil || len(matches) != 0 {
+		t.Fatalf("temporary files = %v, %v", matches, globErr)
 	}
 }
 

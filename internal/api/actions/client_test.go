@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -25,6 +27,20 @@ type errorReader struct {
 func (r errorReader) Read([]byte) (int, error) {
 	return 0, r.err
 }
+
+type contextBlockingBody struct {
+	ctx     context.Context
+	started chan struct{}
+	once    sync.Once
+}
+
+func (b *contextBlockingBody) Read([]byte) (int, error) {
+	b.once.Do(func() { close(b.started) })
+	<-b.ctx.Done()
+	return 0, b.ctx.Err()
+}
+
+func (*contextBlockingBody) Close() error { return nil }
 
 func response(req *http.Request, status int, body string) *http.Response {
 	return &http.Response{
@@ -301,6 +317,126 @@ func TestDownloadJobLogReturnsRawBody(t *testing.T) {
 	}
 	if string(body) != "raw\x00log\n" {
 		t.Fatalf("body = %q", body)
+	}
+}
+
+func TestActionsContextCancelsStalledMetadataBody(t *testing.T) {
+	readStarted := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		resp := response(req, http.StatusOK, "")
+		resp.Body = &contextBlockingBody{ctx: req.Context(), started: readStarted}
+		return resp, nil
+	})}).WithContext(ctx)
+	result := make(chan error, 1)
+	go func() {
+		_, err := client.GetRun("team", "demo", "run-1")
+		result <- err
+	}()
+
+	<-readStarted
+	cancel()
+	select {
+	case err := <-result:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("error = %v, want context canceled", err)
+		}
+		if !strings.Contains(err.Error(), "get workflow run: decode response") {
+			t.Fatalf("error = %v, want operation and decode context", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Actions metadata decode did not stop promptly")
+	}
+}
+
+func TestActionsMetadataTimeoutCoversStalledBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush()
+		<-req.Context().Done()
+	}))
+	defer server.Close()
+
+	httpClient := server.Client()
+	httpClient.Timeout = 40 * time.Millisecond
+	client := newClientWithBaseURL("secret", server.URL+APIVersion, httpClient)
+	started := time.Now()
+	_, err := client.GetRun("team", "demo", "run-1")
+	if err == nil {
+		t.Fatal("expected metadata timeout")
+	}
+	if time.Since(started) > time.Second {
+		t.Fatalf("metadata timeout took too long: %s", time.Since(started))
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("error = %v, want deadline exceeded", err)
+	}
+	if !strings.Contains(err.Error(), "get workflow run: decode response") {
+		t.Fatalf("error = %v, want operation and decode context", err)
+	}
+}
+
+func TestActionsStreamingDownloadIgnoresMetadataTimeout(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		reader, writer := io.Pipe()
+		go func() {
+			time.Sleep(40 * time.Millisecond)
+			_, _ = io.WriteString(writer, "long-stream")
+			_ = writer.Close()
+		}()
+		resp := response(req, http.StatusOK, "")
+		resp.Body = reader
+		return resp, nil
+	})
+	client := NewClientWithHTTPClient("secret", &http.Client{
+		Timeout:   10 * time.Millisecond,
+		Transport: transport,
+	})
+
+	resp, err := client.DownloadArtifact("team", "demo", "artifact-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read long stream: %v", err)
+	}
+	if string(body) != "long-stream" {
+		t.Fatalf("body = %q", body)
+	}
+}
+
+func TestActionsStreamingDownloadStopsOnContextCancellation(t *testing.T) {
+	readStarted := make(chan struct{})
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		resp := response(req, http.StatusOK, "")
+		resp.Body = &contextBlockingBody{ctx: req.Context(), started: readStarted}
+		return resp, nil
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport}).WithContext(ctx)
+	resp, err := client.DownloadJobLog("team", "demo", "run-1", "job-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	result := make(chan error, 1)
+	go func() {
+		_, err := io.ReadAll(resp.Body)
+		result <- err
+	}()
+	<-readStarted
+	cancel()
+	select {
+	case err := <-result:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("stream read error = %v, want context canceled", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("stream did not stop promptly after cancellation")
 	}
 }
 

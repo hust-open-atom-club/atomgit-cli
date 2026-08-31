@@ -236,7 +236,7 @@ func execute(cmd *cobra.Command, f *cmdutil.Factory, request preparedRequest) er
 	if err != nil {
 		return redact(err, token)
 	}
-	client := internalapi.NewClientWithHTTPClient(token, cloneRedirectSafeClient(httpClient))
+	client := internalapi.NewClientWithHTTPClient(token, cloneRedirectSafeClient(httpClient)).WithContext(cmd.Context())
 	if request.pagination != nil {
 		return executePagination(cmd.OutOrStdout(), client, request, token)
 	}
