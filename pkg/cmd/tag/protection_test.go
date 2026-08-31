@@ -201,12 +201,14 @@ func TestProtectionSetCreatesRule(t *testing.T) {
 		switch {
 		case req.Method == http.MethodGet && req.URL.EscapedPath() == "/api/v5/repos/alice/demo/protected_tags/v%2A":
 			return tagProtectionResponse(http.StatusNotFound, `{"message":"not found"}`), nil
+		case req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/protected_tags":
+			return tagProtectionResponse(http.StatusOK, `[]`), nil
 		case req.Method == http.MethodPost && req.URL.Path == "/api/v5/repos/alice/demo/protected_tags":
 			var body api.ProtectedTagRequest
 			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 				t.Fatal(err)
 			}
-			if body.Name != "v*" || body.CreateAccessLevel != api.ProtectedTagCreateAccessDeveloper {
+			if body.Name != "v*" || body.CreateAccessLevel == nil || *body.CreateAccessLevel != api.ProtectedTagCreateAccessDeveloper {
 				t.Fatalf("body = %#v", body)
 			}
 			return tagProtectionResponse(http.StatusCreated, `{"name":"v*","create_access_level":30}`), nil
@@ -222,8 +224,62 @@ func TestProtectionSetCreatesRule(t *testing.T) {
 	if err := cmd.RunE(cmd, []string{"alice/demo", "v*"}); err != nil {
 		t.Fatal(err)
 	}
-	if requests != 2 || !strings.Contains(out.String(), "Created protected tag rule v*") {
+	if requests != 3 || !strings.Contains(out.String(), "Created protected tag rule v*") {
 		t.Fatalf("requests = %d, output = %q", requests, out.String())
+	}
+}
+
+func TestProtectionSetCreatesRuleWithServerDefaultAccess(t *testing.T) {
+	requests := 0
+	transport := tagRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		requests++
+		switch {
+		case req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/protected_tags/v1.0.0":
+			return tagProtectionResponse(http.StatusNotFound, `{"message":"not found"}`), nil
+		case req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/protected_tags":
+			return tagProtectionResponse(http.StatusOK, `[]`), nil
+		case req.Method == http.MethodPost && req.URL.Path == "/api/v5/repos/alice/demo/protected_tags":
+			var body map[string]any
+			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			if body["name"] != "v1.0.0" {
+				t.Fatalf("body = %#v", body)
+			}
+			if _, present := body["create_access_level"]; present {
+				t.Fatalf("create_access_level should be omitted: %#v", body)
+			}
+			return tagProtectionResponse(http.StatusCreated, `{"name":"v1.0.0","create_access_level":40}`), nil
+		default:
+			t.Fatalf("unexpected request = %s %s", req.Method, req.URL.EscapedPath())
+			return nil, nil
+		}
+	})
+	cmd := newCmdTagProtectionSet(tagProtectionFactory(tagProtectionConfig{token: "token"}, transport))
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "v1.0.0"}); err != nil {
+		t.Fatal(err)
+	}
+	if requests != 3 || !strings.Contains(out.String(), "Created protected tag rule v1.0.0") {
+		t.Fatalf("requests = %d, output = %q", requests, out.String())
+	}
+}
+
+func TestProtectionSetDoesNotCreateWhenRepositoryIsMissing(t *testing.T) {
+	writes := 0
+	transport := tagRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method == http.MethodPost || req.Method == http.MethodPut {
+			writes++
+			return tagProtectionResponse(http.StatusCreated, `{}`), nil
+		}
+		return tagProtectionResponse(http.StatusNotFound, `{"message":"repo missing"}`), nil
+	})
+	cmd := newCmdTagProtectionSet(tagProtectionFactory(tagProtectionConfig{token: "token"}, transport))
+	_ = cmd.Flags().Set("create-access", "maintainer")
+	err := cmd.RunE(cmd, []string{"alice/missing", "v1.0.0"})
+	if err == nil || !strings.Contains(err.Error(), "Not Found") || writes != 0 {
+		t.Fatalf("error = %v, writes = %d", err, writes)
 	}
 }
 
@@ -257,7 +313,7 @@ func TestProtectionSetPreservesOmittedAccessAndConfirms(t *testing.T) {
 					if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 						t.Fatal(err)
 					}
-					if body.Name != "v1.0.0" || body.CreateAccessLevel != api.ProtectedTagCreateAccessNone {
+					if body.Name != "v1.0.0" || body.CreateAccessLevel == nil || *body.CreateAccessLevel != api.ProtectedTagCreateAccessNone {
 						t.Fatalf("body = %#v", body)
 					}
 					return tagProtectionResponse(http.StatusOK, `{}`), nil
@@ -302,7 +358,7 @@ func TestProtectionSetPreservesCurrentAccessWhenFlagOmitted(t *testing.T) {
 			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 				t.Fatal(err)
 			}
-			if body.Name != "v1.0.0" || body.CreateAccessLevel != api.ProtectedTagCreateAccessDeveloper {
+			if body.Name != "v1.0.0" || body.CreateAccessLevel == nil || *body.CreateAccessLevel != api.ProtectedTagCreateAccessDeveloper {
 				t.Fatalf("body = %#v", body)
 			}
 			return tagProtectionResponse(http.StatusOK, `{}`), nil
@@ -435,18 +491,31 @@ func TestProtectionValidationStopsBeforeRequests(t *testing.T) {
 	}
 }
 
-func TestProtectionSetRequiresAccessForNewRule(t *testing.T) {
-	transport := tagRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-		if req.Method == http.MethodGet {
-			return tagProtectionResponse(http.StatusNotFound, `{"message":"not found"}`), nil
-		}
-		t.Fatalf("unexpected write request = %s %s", req.Method, req.URL.EscapedPath())
-		return nil, nil
-	})
-	cmd := newCmdTagProtectionSet(tagProtectionFactory(tagProtectionConfig{token: "token"}, transport))
-	err := cmd.RunE(cmd, []string{"alice/demo", "v1.0.0"})
-	if err == nil || !strings.Contains(err.Error(), "require --create-access") {
-		t.Fatalf("error = %v", err)
+func TestProtectionViewAndDeleteDistinguishMissingRepository(t *testing.T) {
+	commands := []struct {
+		name string
+		run  func(*cmdutil.Factory) error
+	}{
+		{name: "view", run: func(f *cmdutil.Factory) error {
+			cmd := newCmdTagProtectionView(f)
+			return cmd.RunE(cmd, []string{"alice/missing", "v1.0.0"})
+		}},
+		{name: "delete", run: func(f *cmdutil.Factory) error {
+			cmd := newCmdTagProtectionDelete(f)
+			_ = cmd.Flags().Set("yes", "true")
+			return cmd.RunE(cmd, []string{"alice/missing", "v1.0.0"})
+		}},
+	}
+	for _, command := range commands {
+		t.Run(command.name, func(t *testing.T) {
+			factory := tagProtectionFactory(tagProtectionConfig{token: "token"}, func(*http.Request) (*http.Response, error) {
+				return tagProtectionResponse(http.StatusNotFound, `{"message":"repo missing"}`), nil
+			})
+			err := command.run(factory)
+			if err == nil || !strings.Contains(err.Error(), "Not Found") || strings.Contains(err.Error(), "was not found") {
+				t.Fatalf("error = %v", err)
+			}
+		})
 	}
 }
 
@@ -474,7 +543,10 @@ func TestProtectionCommandsReportAPIErrors(t *testing.T) {
 }
 
 func TestProtectionViewReportsMissingRuleWithoutRawAPIError(t *testing.T) {
-	factory := tagProtectionFactory(tagProtectionConfig{token: "token"}, func(*http.Request) (*http.Response, error) {
+	factory := tagProtectionFactory(tagProtectionConfig{token: "token"}, func(req *http.Request) (*http.Response, error) {
+		if req.Method == http.MethodGet && strings.HasSuffix(req.URL.Path, "/protected_tags") && !strings.Contains(req.URL.EscapedPath(), "/protected_tags/") {
+			return tagProtectionResponse(http.StatusOK, `[]`), nil
+		}
 		return tagProtectionResponse(http.StatusNotFound, `{"message":"failed"}`), nil
 	})
 	cmd := newCmdTagProtectionView(factory)

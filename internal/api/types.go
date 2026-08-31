@@ -562,11 +562,11 @@ const (
 
 // ProtectedTagRequest is the body for POST and PUT
 // /repos/{owner}/{repo}/protected_tags. Name identifies the exact tag or
-// wildcard pattern. CreateAccessLevel is required on update and optional on
-// create, where the server default is Maintainer/Admin.
+// wildcard pattern. CreateAccessLevel is required on update. On create it may
+// be omitted so the server default (Maintainer/Admin) applies.
 type ProtectedTagRequest struct {
 	Name              string `json:"name"`
-	CreateAccessLevel int    `json:"create_access_level"`
+	CreateAccessLevel *int   `json:"create_access_level,omitempty"`
 }
 
 // Commit represents a repository commit returned by the commits endpoints.

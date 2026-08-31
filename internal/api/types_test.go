@@ -373,7 +373,8 @@ func TestProtectedTagJSON(t *testing.T) {
 		t.Fatalf("rule = %#v", rule)
 	}
 
-	request := ProtectedTagRequest{Name: "v1.0.0", CreateAccessLevel: ProtectedTagCreateAccessNone}
+	none := ProtectedTagCreateAccessNone
+	request := ProtectedTagRequest{Name: "v1.0.0", CreateAccessLevel: &none}
 	data, err := json.Marshal(request)
 	if err != nil {
 		t.Fatal(err)
@@ -385,5 +386,17 @@ func TestProtectedTagJSON(t *testing.T) {
 	want := map[string]interface{}{"name": "v1.0.0", "create_access_level": float64(0)}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("JSON = %#v, want %#v", got, want)
+	}
+
+	omitted, err := json.Marshal(ProtectedTagRequest{Name: "v1.0.0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var omittedBody map[string]interface{}
+	if err := json.Unmarshal(omitted, &omittedBody); err != nil {
+		t.Fatal(err)
+	}
+	if _, present := omittedBody["create_access_level"]; present || omittedBody["name"] != "v1.0.0" {
+		t.Fatalf("omitted JSON = %#v", omittedBody)
 	}
 }

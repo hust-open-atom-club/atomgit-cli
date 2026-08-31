@@ -108,12 +108,12 @@ func newCmdTagProtectionView(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			rule, err := getProtectedTag(client, repository, name)
+			rule, found, err := lookupProtectedTag(client, repository, name)
 			if err != nil {
-				if api.IsHTTPStatus(err, http.StatusNotFound) {
-					return fmt.Errorf("protected tag rule %q was not found in %s", name, repository)
-				}
 				return fmt.Errorf("failed to view protected tag rule %q for %s: %w", name, repository, err)
+			}
+			if !found {
+				return fmt.Errorf("protected tag rule %q was not found in %s", name, repository)
 			}
 			if jsonOutput {
 				return cmdutil.WriteJSON(cmd.OutOrStdout(), newProtectedTagJSON(rule))
@@ -135,11 +135,13 @@ func newCmdTagProtectionSet(f *cmdutil.Factory) *cobra.Command {
 
 --create-access accepts none, developer, or maintainer. These map to AtomGit
 create_access_level values 0, 30, and 40: nobody; Developer/Maintainer/Admin;
-and Maintainer/Admin. New rules require --create-access. Existing rules keep
-the current access level when the flag is omitted. Updating an existing rule
-requires confirmation unless --yes is supplied.`,
+and Maintainer/Admin. Omitting the flag on create uses the server default
+(maintainer). Existing rules keep the current access level when the flag is
+omitted. Updating an existing rule requires confirmation unless --yes is
+supplied.`,
 		Example: `  ag tag protection set owner/repo v1.0.0 --create-access maintainer
   ag tag protection set owner/repo "v*" --create-access developer
+  ag tag protection set owner/repo v1.0.0
   ag tag protection set owner/repo v1.0.0 --create-access none --yes`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -152,37 +154,35 @@ requires confirmation unless --yes is supplied.`,
 				return err
 			}
 			accessChanged := cmd.Flags().Changed("create-access")
-			var accessLevel int
+			var accessLevel *int
 			if accessChanged {
-				accessLevel, err = parseCreateAccess(opts.CreateAccess)
+				parsed, err := parseCreateAccess(opts.CreateAccess)
 				if err != nil {
 					return fmt.Errorf("invalid --create-access value: %w", err)
 				}
+				accessLevel = &parsed
 			}
 
 			client, err := tagAPIClient(f)
 			if err != nil {
 				return err
 			}
-			existing, err := getProtectedTag(client, repository, name)
-			found := err == nil
-			if err != nil && !api.IsHTTPStatus(err, http.StatusNotFound) {
+			existing, found, err := lookupProtectedTag(client, repository, name)
+			if err != nil {
 				return fmt.Errorf("failed to read protected tag rule %q for %s: %w", name, repository, err)
 			}
-			if !found && !accessChanged {
-				return fmt.Errorf("new protected tag rules require --create-access")
-			}
-			if found && !accessChanged {
-				accessLevel, err = requireCreateAccessLevel(existing)
+			if found && accessLevel == nil {
+				preserved, err := requireCreateAccessLevel(existing)
 				if err != nil {
 					return fmt.Errorf("cannot preserve create access for %q: %w", name, err)
 				}
+				accessLevel = &preserved
 			}
 
 			request := api.ProtectedTagRequest{Name: name, CreateAccessLevel: accessLevel}
 			if found && !opts.Yes {
 				printProtectedTagDetail(cmd.OutOrStdout(), repository, existing)
-				fmt.Fprintf(cmd.OutOrStdout(), "New create access: %s\n", mustCreateAccessName(accessLevel))
+				fmt.Fprintf(cmd.OutOrStdout(), "New create access: %s\n", createAccessDisplay(accessLevel))
 				confirmed, err := confirmProtectedTagChange(cmd.InOrStdin(), cmd.ErrOrStderr(), "Update", name, repository)
 				if err != nil {
 					return err
@@ -237,12 +237,12 @@ to confirm. Use --yes to skip the confirmation prompt.`,
 			if err != nil {
 				return err
 			}
-			rule, err := getProtectedTag(client, repository, name)
+			rule, found, err := lookupProtectedTag(client, repository, name)
 			if err != nil {
-				if api.IsHTTPStatus(err, http.StatusNotFound) {
-					return fmt.Errorf("protected tag rule %q was not found in %s", name, repository)
-				}
 				return fmt.Errorf("failed to read protected tag rule %q for %s: %w", name, repository, err)
+			}
+			if !found {
+				return fmt.Errorf("protected tag rule %q was not found in %s", name, repository)
 			}
 			if !yes {
 				printProtectedTagDetail(cmd.OutOrStdout(), repository, rule)
@@ -303,6 +303,27 @@ func getProtectedTag(client *api.Client, repository cmdutil.Repository, name str
 		return api.ProtectedTag{}, err
 	}
 	return rule, nil
+}
+
+func lookupProtectedTag(client *api.Client, repository cmdutil.Repository, name string) (api.ProtectedTag, bool, error) {
+	rule, err := getProtectedTag(client, repository, name)
+	if err == nil {
+		return rule, true, nil
+	}
+	if !api.IsHTTPStatus(err, http.StatusNotFound) {
+		return api.ProtectedTag{}, false, err
+	}
+	if _, listErr := listProtectedTags(client, repository, 1); listErr != nil {
+		return api.ProtectedTag{}, false, listErr
+	}
+	return api.ProtectedTag{}, false, nil
+}
+
+func createAccessDisplay(level *int) string {
+	if level == nil {
+		return "server default (maintainer)"
+	}
+	return mustCreateAccessName(*level)
 }
 
 func validateProtectedTagName(value string) (string, error) {

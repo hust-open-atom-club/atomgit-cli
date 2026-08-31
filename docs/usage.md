@@ -778,9 +778,10 @@ ag tag protection view owner/repo "v*"
 ag tag protection list --json
 ag tag protection view v1.0.0 --json
 
-# 创建保护规则；新规则必须指定 --create-access
+# 创建保护规则；省略 --create-access 时使用服务端默认 maintainer
 ag tag protection set owner/repo v1.0.0 --create-access maintainer
 ag tag protection set owner/repo "v*" --create-access developer
+ag tag protection set owner/repo v1.0.0
 
 # 将已有规则改为不允许任何人推送；更新默认要求确认
 ag tag protection set owner/repo v1.0.0 --create-access none --yes
@@ -794,7 +795,7 @@ ag tag protection delete owner/repo "v*" --yes
 
 `ag tag delete` 默认会显示目标仓库和标签名并要求确认；可使用 `--yes`（或 `-y`）跳过确认提示。
 
-保护 tag 规则的 `--create-access` 接受 `none`、`developer` 或 `maintainer`，分别对应 AtomGit `create_access_level` 的 `0`（不允许任何人推送）、`30`（Developer / Maintainer / Admin）和 `40`（Maintainer / Admin）。CLI 只管理官方 API 暴露的创建/推送权限，不修改其他保护设置。更新接口要求同时提交规则名和权限，因此更新已有规则时若省略 `--create-access`，CLI 会先读取现有规则并保留当前权限；若服务端返回无法识别的权限值，命令会停止并要求显式提供 `--create-access`。更新或删除已有规则时默认显示仓库和当前规则并要求确认，可用 `--yes` 跳过。tag 命令省略 `owner/repo` 时使用当前 Git 仓库推断结果，显式参数始终优先。
+保护 tag 规则的 `--create-access` 接受 `none`、`developer` 或 `maintainer`，分别对应 AtomGit `create_access_level` 的 `0`（不允许任何人推送）、`30`（Developer / Maintainer / Admin）和 `40`（Maintainer / Admin）。创建时省略该标志则不发送 `create_access_level`，由服务端使用默认值 `40`（Maintainer / Admin）。CLI 只管理官方 API 暴露的创建/推送权限，不修改其他保护设置。更新接口要求同时提交规则名和权限，因此更新已有规则时若省略 `--create-access`，CLI 会先读取现有规则并保留当前权限；若服务端返回无法识别的权限值，命令会停止并要求显式提供 `--create-access`。更新或删除已有规则时默认显示仓库和当前规则并要求确认，可用 `--yes` 跳过。tag 命令省略 `owner/repo` 时使用当前 Git 仓库推断结果，显式参数始终优先。
 
 ## 资源命令的 JSON 输出
 
