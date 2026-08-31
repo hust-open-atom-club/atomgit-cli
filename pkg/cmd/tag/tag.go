@@ -15,12 +15,13 @@ func NewCmdTag(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tag",
 		Short: "Manage tags",
-		Long:  `List, create, and delete tags.`,
+		Long:  `List, create, and delete tags, and manage protected tag rules.`,
 	}
 
 	cmd.AddCommand(newCmdTagList(f))
 	cmd.AddCommand(newCmdTagCreate(f))
 	cmd.AddCommand(newCmdTagDelete(f))
+	cmd.AddCommand(newCmdTagProtection(f))
 	cmdutil.AddRepositoryContextHelp(cmd)
 
 	return cmd

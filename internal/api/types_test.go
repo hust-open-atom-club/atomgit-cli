@@ -362,3 +362,28 @@ func TestPullRequestCollaborationFields(t *testing.T) {
 		}
 	})
 }
+
+func TestProtectedTagJSON(t *testing.T) {
+	raw := `{"name":"v*","create_access_level":30,"create_access_level_desc":"Developer, Maintainer, Admin"}`
+	var rule ProtectedTag
+	if err := json.Unmarshal([]byte(raw), &rule); err != nil {
+		t.Fatal(err)
+	}
+	if rule.Name != "v*" || rule.CreateAccessLevel != ProtectedTagCreateAccessDeveloper || rule.CreateAccessLevelDesc == "" {
+		t.Fatalf("rule = %#v", rule)
+	}
+
+	request := ProtectedTagRequest{Name: "v1.0.0", CreateAccessLevel: ProtectedTagCreateAccessNone}
+	data, err := json.Marshal(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]interface{}
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]interface{}{"name": "v1.0.0", "create_access_level": float64(0)}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("JSON = %#v, want %#v", got, want)
+	}
+}
