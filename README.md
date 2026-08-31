@@ -24,7 +24,7 @@ English: [README.en.md](README.en.md)
 | 🐛 Issue | 列出、查看、创建、编辑、关闭和重开 Issue，管理标签和评论 |
 | 🔖 标签 | 列出、创建、编辑和删除仓库标签 |
 | 🎯 里程碑 | 列出、查看、创建、编辑、关闭、重开和删除里程碑 |
-| 🏷️ Tag | 列出、创建和删除 Git tag |
+| 🏷️ Tag | 列出、创建和删除 Git tag，管理保护 tag 规则 |
 | 🚀 Release | 列出、查看、创建和编辑 Release，上传和下载附件 |
 | ⚙️ Actions | 列出、校验和触发 workflow；查看 workflow 运行、job、日志与 artifact，并下载日志和 artifact |
 | 🏢 组织 | 列出当前账号加入的组织 |

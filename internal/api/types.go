@@ -541,6 +541,34 @@ type TagRequest struct {
 	Refs    string `json:"refs"`
 }
 
+// ProtectedTag is a protected-tag rule returned by
+// GET /repos/{owner}/{repo}/protected_tags and
+// GET /repos/{owner}/{repo}/protected_tags/{tag_name}.
+type ProtectedTag struct {
+	Name                  string `json:"name"`
+	CreateAccessLevel     int    `json:"create_access_level"`
+	CreateAccessLevelDesc string `json:"create_access_level_desc"`
+}
+
+// ProtectedTagCreateAccessNone, ProtectedTagCreateAccessDeveloper, and
+// ProtectedTagCreateAccessMaintainer are the documented create_access_level
+// values for protected tags: nobody; Developer/Maintainer/Admin; and
+// Maintainer/Admin.
+const (
+	ProtectedTagCreateAccessNone       = 0
+	ProtectedTagCreateAccessDeveloper  = 30
+	ProtectedTagCreateAccessMaintainer = 40
+)
+
+// ProtectedTagRequest is the body for POST and PUT
+// /repos/{owner}/{repo}/protected_tags. Name identifies the exact tag or
+// wildcard pattern. CreateAccessLevel is required on update. On create it may
+// be omitted so the server default (Maintainer/Admin) applies.
+type ProtectedTagRequest struct {
+	Name              string `json:"name"`
+	CreateAccessLevel *int   `json:"create_access_level,omitempty"`
+}
+
 // Commit represents a repository commit returned by the commits endpoints.
 type Commit struct {
 	URL         string         `json:"url"`

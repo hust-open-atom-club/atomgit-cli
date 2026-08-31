@@ -64,7 +64,7 @@ atomgit-cli/
 │       ├── run/                # Actions run、job、日志与 artifact
 │       ├── search/             # 用户、仓库和 Issue 搜索
 │       ├── ssh-key/            # SSH Key 管理
-│       ├── tag/                # Git tag 管理
+│       ├── tag/                # Git tag 与保护 tag 规则管理
 │       └── version/            # 版本输出命令
 ├── nix/                        # stable/latest Nix package 表达式与共享构建参数
 ├── bin/

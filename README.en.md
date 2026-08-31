@@ -24,7 +24,7 @@ A command-line client for AtomGit, developed with reference to GitHub CLI (`gh`)
 | 🐛 Issues | List, view, create, edit, close, and reopen Issues; manage labels and comments |
 | 🔖 Labels | List, create, edit, and delete repository labels |
 | 🎯 Milestones | List, view, create, edit, close, reopen, and delete milestones |
-| 🏷️ Tags | List, create, and delete Git tags |
+| 🏷️ Tags | List, create, and delete Git tags; manage protected tag rules |
 | 🚀 Releases | List, view, create, and edit Releases; upload and download assets |
 | ⚙️ Actions | List, validate, and trigger workflows; inspect workflow runs, jobs, logs, and artifacts; download logs and artifacts |
 | 🏢 Organizations | List organizations joined by the current account |

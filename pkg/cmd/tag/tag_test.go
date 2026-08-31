@@ -51,7 +51,7 @@ func tagNoContentResponse() *http.Response {
 
 func TestNewCmdTagRegistersSubcommands(t *testing.T) {
 	cmd := NewCmdTag(&cmdutil.Factory{})
-	want := map[string]bool{"create": false, "delete": false, "list": false}
+	want := map[string]bool{"create": false, "delete": false, "list": false, "protection": false}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
 			want[child.Name()] = true
@@ -111,6 +111,47 @@ func TestNewCmdTagRegistersSubcommands(t *testing.T) {
 	}
 	if !strings.Contains(delete.Example, "--yes") {
 		t.Fatalf("delete example does not explain --yes: %q", delete.Example)
+	}
+
+	protection, _, err := cmd.Find([]string{"protection"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"list", "view", "set", "delete"} {
+		child, _, findErr := protection.Find([]string{name})
+		if findErr != nil || child.Name() != name {
+			t.Fatalf("protection subcommand %q: %v", name, findErr)
+		}
+	}
+	listProtection, _, err := protection.Find([]string{"list"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, flag := range []string{"limit", "json"} {
+		if listProtection.Flags().Lookup(flag) == nil {
+			t.Errorf("protection list --%s flag was not registered", flag)
+		}
+	}
+	viewProtection, _, err := protection.Find([]string{"view"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if viewProtection.Flags().Lookup("json") == nil {
+		t.Fatal("protection view --json flag was not registered")
+	}
+	setProtection, _, err := protection.Find([]string{"set"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if setProtection.Flags().Lookup("create-access") == nil || setProtection.Flags().Lookup("yes") == nil {
+		t.Fatal("protection set flags were not registered")
+	}
+	deleteProtection, _, err := protection.Find([]string{"delete"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if deleteProtection.Flags().Lookup("yes") == nil {
+		t.Fatal("protection delete --yes flag was not registered")
 	}
 }
 

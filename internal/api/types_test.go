@@ -362,3 +362,41 @@ func TestPullRequestCollaborationFields(t *testing.T) {
 		}
 	})
 }
+
+func TestProtectedTagJSON(t *testing.T) {
+	raw := `{"name":"v*","create_access_level":30,"create_access_level_desc":"Developer, Maintainer, Admin"}`
+	var rule ProtectedTag
+	if err := json.Unmarshal([]byte(raw), &rule); err != nil {
+		t.Fatal(err)
+	}
+	if rule.Name != "v*" || rule.CreateAccessLevel != ProtectedTagCreateAccessDeveloper || rule.CreateAccessLevelDesc == "" {
+		t.Fatalf("rule = %#v", rule)
+	}
+
+	none := ProtectedTagCreateAccessNone
+	request := ProtectedTagRequest{Name: "v1.0.0", CreateAccessLevel: &none}
+	data, err := json.Marshal(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]interface{}
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]interface{}{"name": "v1.0.0", "create_access_level": float64(0)}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("JSON = %#v, want %#v", got, want)
+	}
+
+	omitted, err := json.Marshal(ProtectedTagRequest{Name: "v1.0.0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var omittedBody map[string]interface{}
+	if err := json.Unmarshal(omitted, &omittedBody); err != nil {
+		t.Fatal(err)
+	}
+	if _, present := omittedBody["create_access_level"]; present || omittedBody["name"] != "v1.0.0" {
+		t.Fatalf("omitted JSON = %#v", omittedBody)
+	}
+}

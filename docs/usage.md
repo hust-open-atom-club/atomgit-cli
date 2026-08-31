@@ -770,15 +770,36 @@ ag tag create v1.0.0 --ref main
 # 删除标签（默认要求确认；自动化场景请使用 --yes）
 ag tag delete v1.0.0
 ag tag delete v1.0.0 --yes
+
+# 查看保护 tag 规则（输出会区分 exact 与 wildcard）
+ag tag protection list owner/repo --limit 30
+ag tag protection view owner/repo v1.0.0
+ag tag protection view owner/repo "v*"
+ag tag protection list --json
+ag tag protection view v1.0.0 --json
+
+# 创建保护规则；省略 --create-access 时使用服务端默认 maintainer
+ag tag protection set owner/repo v1.0.0 --create-access maintainer
+ag tag protection set owner/repo "v*" --create-access developer
+ag tag protection set owner/repo v1.0.0
+
+# 将已有规则改为不允许任何人推送；更新默认要求确认
+ag tag protection set owner/repo v1.0.0 --create-access none --yes
+
+# 删除规则（默认显示当前仓库和规则并要求确认）
+ag tag protection delete owner/repo "v*"
+ag tag protection delete owner/repo "v*" --yes
 ```
 
 `tag create` 必须显式传入非空的 `--ref`，值可以是 branch、tag 或 commit SHA。
 
 `ag tag delete` 默认会显示目标仓库和标签名并要求确认；可使用 `--yes`（或 `-y`）跳过确认提示。
 
+保护 tag 规则的 `--create-access` 接受 `none`、`developer` 或 `maintainer`，分别对应 AtomGit `create_access_level` 的 `0`（不允许任何人推送）、`30`（Developer / Maintainer / Admin）和 `40`（Maintainer / Admin）。创建时省略该标志则不发送 `create_access_level`，由服务端使用默认值 `40`（Maintainer / Admin）。CLI 只管理官方 API 暴露的创建/推送权限，不修改其他保护设置。更新接口要求同时提交规则名和权限，因此更新已有规则时若省略 `--create-access`，CLI 会先读取现有规则并保留当前权限；若服务端返回无法识别的权限值，命令会停止并要求显式提供 `--create-access`。更新或删除已有规则时默认显示仓库和当前规则并要求确认，可用 `--yes` 跳过。tag 命令省略 `owner/repo` 时使用当前 Git 仓库推断结果，显式参数始终优先。
+
 ## 资源命令的 JSON 输出
 
-`repo list/view`、`issue list/view`、`pr list/view`、`tag list`、`branch list`、`label list`、`release list`、`run list` 和 `commit list/view/compare` 支持布尔参数 `--json`。list 命令输出完整 JSON 数组，view 与 compare 命令输出完整 JSON 对象；没有结果时 list 输出 `[]`。默认文本输出保持不变。
+`repo list/view`、`issue list/view`、`pr list/view`、`tag list`、`tag protection list/view`、`branch list`、`label list`、`release list`、`run list` 和 `commit list/view/compare` 支持布尔参数 `--json`。list 命令输出完整 JSON 数组，view 与 compare 命令输出完整 JSON 对象；没有结果时 list 输出 `[]`。默认文本输出保持不变。
 
 JSON 字段使用 lowerCamelCase，并由 CLI 显式定义，不会因为 AtomGit API 增加字段而自动改变。Issue 和 PR 的 `number` 始终是字符串，标签输出为名称数组，PR 的 `head` 和 `base` 输出分支名称。可选的服务端字段缺失时仍输出对应的零值，以保持固定结构。
 
