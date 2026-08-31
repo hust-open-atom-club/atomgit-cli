@@ -116,6 +116,9 @@ go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 
 ## 更多文档
 
+- [支持说明](SUPPORT.md)
+- [安全策略](SECURITY.md)
+- [行为准则](CODE_OF_CONDUCT.md)
 - [发布指南](docs/releasing.md)
 - [项目结构](docs/project-structure.md)
 
