@@ -1,0 +1,44 @@
+name: 文档问题
+description: 报告项目文档缺失、错误或表述不清的问题。
+title: "[文档] "
+body:
+  - type: input
+    id: location
+    attributes:
+      label: 文档位置
+      description: 请填写出现问题的文件路径、标题或 URL。
+      placeholder: "docs/usage.md#pull-requests"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题描述
+      description: 请说明缺少、错误、含糊或过时的内容。
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 改进建议
+      description: 请提出可以让文档更清晰的措辞、示例或结构调整方案。
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 补充信息
+      description: 如适用，请填写受影响的平台、CLI 版本或相关命令。不要包含凭据或私有数据。
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已搜索现有 Issue，确认这不是重复问题。
+          required: true
+        - label: 我没有包含凭据或私有仓库信息。
+          required: true
