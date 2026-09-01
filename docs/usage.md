@@ -148,6 +148,12 @@ ag repo push-rule edit owner/my-project --deny-force-push --yes
 ag repo push-rule edit owner/my-project --reject-not-signed-by-gpg=false --yes
 ag repo push-rule edit owner/my-project --commit-message-regex "" --max-file-size 0 --yes
 
+# 只读查看推送远程镜像列表和仓库远程镜像状态
+ag repo mirror list
+ag repo mirror list owner/my-project --limit 100 --json
+ag repo mirror view
+ag repo mirror view owner/my-project --json
+
 # 克隆仓库
 ag repo clone owner/repo
 ag repo clone owner/repo --branch dev
@@ -190,6 +196,8 @@ ag repo delete owner/repo --yes
 该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。
 
 `ag repo push-rule view` 展示签名提交要求、提交信息正则、单文件大小限制、管理员豁免和强推限制。`ag repo push-rule edit` 只发送命令行中明确指定的字段，并保留显式的 `false`、空字符串和 `0`；未指定的远端规则保持不变。所有更新默认需要确认，可使用 `--yes` 跳过。仓库级推送规则与分支、标签保护规则相互独立。
+
+`ag repo mirror list` 通过 `/push_remote_mirrors` 分页列出 AtomGit 上配置的推送镜像，`ag repo mirror view` 通过 `/repo_remote_mirror` 查看仓库镜像状态。两个命令都只发送 GET 请求，不会创建、修改或触发镜像同步，也不会同步或修改本地 Git remote。文本和 JSON 输出会删除镜像 URL 中的 userinfo、查询参数和 fragment，并对返回的错误或消息中的嵌入 URL 做同样处理；未由 API 返回的状态、时间和错误字段不会被补造。
 
 `ag repo sync` 仅更新 AtomGit 上的远端 Fork。命令会先验证仓库确为 Fork、上游存在且目标分支在两端都可读取；未指定 `--branch` 时使用 Fork 的默认分支。默认同步不会覆盖分叉提交，冲突时返回非零退出码。`--force` 可能覆盖 Fork 上的分叉提交，因此需要交互确认；仅在已审查目标后才应结合 `--yes` 使用。
 
