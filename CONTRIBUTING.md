@@ -179,4 +179,3 @@ atomgit-cli/
 - 在 [AtomGit CLI Issues](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues) 中提交问题
 
 再次感谢你的贡献！
-
