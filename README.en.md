@@ -83,6 +83,19 @@ scoop install atomgit-cli
 nix profile install nixpkgs#atomgit-cli
 ```
 
+### AUR / Arch Linux
+
+`atomgit-cli` is available in the Arch User Repository (AUR). Use `yay` or `paru` to choose a stable source package, a stable prebuilt binary, or a development package.
+
+```bash
+# Stable release built from source
+yay -S atomgit-cli
+# Stable prebuilt binary
+yay -S atomgit-cli-bin
+# Development version tracking the latest commit on main
+yay -S atomgit-cli-git
+```
+
 ### Go
 
 ```bash
@@ -122,9 +135,3 @@ Actions run checks use the separate AtomGit API v8: `https://api.atomgit.com/api
 [Mulan Permissive Software License, Version 2](LICENSE)
 
 Copyright (c) 2026 HUST OpenAtom Club, AtomGit, and the AtomGit CLI contributors
-
-## Contributors
-
-<a href="https://github.com/hust-open-atom-club/atomgit-cli/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=hust-open-atom-club/atomgit-cli" alt="AtomGit CLI contributors" />
-</a>
