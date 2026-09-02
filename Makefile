@@ -12,10 +12,14 @@ endif
 BIN := $(BIN_DIR)/$(BINARY)$(EXE)
 COVERAGE_FILE ?= coverage.out
 VERSION ?=
+REPOSITORY ?= hust-open-atom-club/atomgit-cli
+NOTES_FILE ?=
+RELEASE_NAME ?=
+PRERELEASE ?=
 
 .DEFAULT_GOAL := build
 
-.PHONY: all build install uninstall test test-race vet lint fmt fmt-check coverage release release-snapshot clean help
+.PHONY: all build install uninstall test test-race vet lint fmt fmt-check docs-reference docs-reference-check coverage release release-snapshot publish clean help
 
 all: lint test build
 
@@ -50,23 +54,49 @@ fmt-check:
 		exit 1; \
 	}
 
+docs-reference:
+	$(GO) run ./scripts/generate-command-reference
+
+docs-reference-check:
+	$(GO) run ./scripts/generate-command-reference --check
+
 coverage:
 	$(GO) test ./... -coverprofile=$(COVERAGE_FILE)
 	$(GO) tool cover -func=$(COVERAGE_FILE)
 
 release:
 	@test -n "$(VERSION)" || { \
-		echo "VERSION is required (example: make release VERSION=v0.5.0)"; \
+		echo "VERSION is required (example: make release VERSION=vX.Y.Z)"; \
 		exit 1; \
 	}
 	GORELEASER=$(GORELEASER) TAG=$(VERSION) ./scripts/build-release.sh
 
 release-snapshot:
 	@test -n "$(VERSION)" || { \
-		echo "VERSION is required (example: make release-snapshot VERSION=v0.5.0)"; \
+		echo "VERSION is required (example: make release-snapshot VERSION=vX.Y.Z)"; \
 		exit 1; \
 	}
 	AG_RELEASE_SNAPSHOT=1 GORELEASER=$(GORELEASER) TAG=$(VERSION) ./scripts/build-release.sh
+
+publish:
+	@test -n "$(VERSION)" || { \
+		echo "VERSION is required (example: make publish VERSION=v0.5.0 NOTES_FILE=notes.md)"; \
+		exit 1; \
+	}
+	@test -n "$(NOTES_FILE)" || { \
+		echo "NOTES_FILE is required (example: make publish VERSION=v0.5.0 NOTES_FILE=notes.md)"; \
+		exit 1; \
+	}
+	$(MAKE) lint
+	$(MAKE) test
+	$(MAKE) build
+	$(MAKE) release VERSION="$(VERSION)" GORELEASER="$(GORELEASER)"
+	AG_RELEASE_CLI="$(abspath $(BIN))" node scripts/publish-atomgit-release.js \
+		--repo "$(REPOSITORY)" \
+		--version "$(VERSION)" \
+		--dir "dist/$(VERSION)" \
+		--notes-file "$(NOTES_FILE)" \
+		--target "$$(git rev-parse HEAD)" $(if $(RELEASE_NAME),--name "$(RELEASE_NAME)",) $(if $(filter 1 true yes,$(PRERELEASE)),--prerelease,)
 
 clean:
 	@rm -rf $(BIN_DIR) dist
@@ -85,10 +115,15 @@ help:
 	@echo "  make test-race              Run the full test suite with race detection"
 	@echo "  make lint                   Check formatting and run go vet (no file changes)"
 	@echo "  make coverage               Run tests and generate $(COVERAGE_FILE)"
+	@echo "  make docs-reference        Regenerate docs/command-reference.md"
+	@echo "  make docs-reference-check  Check command reference is up to date"
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make fmt                    Format Go source files in place"
 	@echo "  make release VERSION=vX.Y.Z Build a tagged release from a clean worktree"
 	@echo "  make release-snapshot VERSION=vX.Y.Z"
 	@echo "                              Build local test archives without tag validation"
+	@echo "  make publish VERSION=vX.Y.Z NOTES_FILE=notes.md"
+	@echo "                              Validate, build, upload, and verify an AtomGit Release"
 	@echo "  make clean                  Remove local build, release, and coverage files"
+
