@@ -1,327 +1,132 @@
 # AtomGit CLI (ag)
 
+[![License](https://img.shields.io/badge/license-MulanPSL--2.0-blue.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/%40hust-open-atom-club%2Fatomgit-cli?logo=npm)](https://www.npmjs.com/package/@hust-open-atom-club/atomgit-cli)
+[![Latest Release](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.atomgit.com%2Fapi%2Fv5%2Frepos%2Fhust-open-atom-club%2Fatomgit-cli%2Freleases%2Flatest&query=%24.tag_name&label=release)](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)
+[![CI Status](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.atomgit.com%2Fapi%2Fv8%2Frepos%2Fhust-open-atom-club%2Fatomgit-cli%2Factions%2Fruns%3Fworkflow_name%3DCI%26branch%3Dmain%26per_page%3D1&query=%24.workflow_runs%5B0%5D.status&label=CI%20status)](https://atomgit.com/hust-open-atom-club/atomgit-cli/actions)
+[![Homebrew](https://img.shields.io/badge/homebrew-core-FBB040?logo=homebrew&logoColor=white)](https://formulae.brew.sh/formula/atomgit-cli)
+[![Go Reference](https://pkg.go.dev/badge/atomgit.com/hust-open-atom-club/atomgit-cli.svg)](https://pkg.go.dev/atomgit.com/hust-open-atom-club/atomgit-cli)
+[![GoReleaser](https://img.shields.io/badge/powered_by-GoReleaser-69D7E4?logo=goreleaser&logoColor=white)](https://goreleaser.com/)
+
 AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
+
+English: [README.en.md](README.en.md)
+
+## 功能
+
+| 类别 | 能力 |
+| --- | --- |
+| 📦 仓库 | 列出、查看、创建、编辑、克隆、删除、复刻和同步仓库，管理仓库级推送规则 |
+| 👥 协作者 | 列出、查看、添加、修改和移除仓库协作者 |
+| 🔔 Webhook | 列出、查看、创建、编辑、删除和测试仓库 Webhook |
+| 🌿 分支 | 列出、查看、创建和删除分支，管理分支保护规则 |
+| 🔀 Pull Request | 列出、查看、创建、编辑、关闭、重开、审查、合并和检出 PR，查看差异与检查结果，管理评论和关联 Issue |
+| 🐛 Issue | 列出、查看、创建、编辑、关闭和重开 Issue，管理标签和评论 |
+| 🔖 标签 | 列出、创建、编辑和删除仓库标签 |
+| 🎯 里程碑 | 列出、查看、创建、编辑、关闭、重开和删除里程碑 |
+| 🏷️ Tag | 列出、创建和删除 Git tag，管理保护 tag 规则 |
+| 🚀 Release | 列出、查看、创建和编辑 Release，上传和下载附件 |
+| ⚙️ Actions | 列出、校验和触发 workflow；查看 workflow 运行、job、日志与 artifact，并下载日志和 artifact |
+| 🏢 组织 | 列出当前账号加入的组织 |
+| 🔍 搜索 | 搜索仓库、用户和 Issue |
+| 💬 Discussion | 列出仓库 Discussion |
+| 🔔 通知 | 列出仓库通知并标记已读 |
+| 🔐 认证与 SSH Key | OAuth 登录、刷新和切换账号，查看认证状态，管理 SSH 公钥 |
+| 🌐 API | 调用 AtomGit API v5，支持分页、JSON 请求体和 GET、POST、PATCH、PUT、DELETE 方法 |
+
+## AI Agent Skills
+
+[AtomGit Skills](https://atomgit.com/hust-open-atom-club/atomgit-skills) 提供由 `ag` 驱动的 Codex Skills，覆盖 Issue、Pull Request、CLI 发布和 GitHub 镜像工作流。安装方式和完整清单见该仓库。
 
 ## 安装
 
-```bash
-# 构建到 bin/ag（Windows 为 bin/ag.exe）
-make build
-
-# 安装到 $GOPATH/bin
-make install
-```
-
-### 使用 Nix 安装
-
-仓库提供支持 Linux 和 macOS（x86_64、aarch64）的 Nix flake。安装到当前用户的 Nix profile：
+### npm
 
 ```bash
-nix profile install .#ag
-ag version
+npm install -g @hust-open-atom-club/atomgit-cli
 ```
 
-也可以在不安装的情况下直接运行，或只构建 package：
+### Homebrew
+
+安装 Homebrew Core 提供的最新稳定版（推荐）：
 
 ```bash
-# 直接运行
-nix run .#ag -- version
-
-# 构建，产物位于 ./result/bin/ag
-nix build .#ag
-./result/bin/ag version --json
+brew install atomgit-cli
 ```
+
+如需跟踪 AtomGit `main` 最新 commit 的开发快照，可改用项目维护的 Homebrew Tap：
+
+```bash
+brew install hust-open-atom-club/tap/atomgit-cli
+```
+
+Homebrew Core 面向稳定版，项目 Tap 面向开发快照；两者使用同名 Formula，不能同时安装。区别和切换方法请参阅[完整安装指南](docs/installation.md#homebrew-安装)。
+
+### WinGet
+
+```powershell
+winget install HUSTOpenAtomClub.AtomGitCLI
+```
+
+### Scoop
+
+```powershell
+scoop bucket add hust-open-atom-club https://github.com/hust-open-atom-club/ScoopBucket
+scoop install atomgit-cli
+```
+
+### Nix / NixOS
+
+目前仅 `nixos-unstable` 提供 `atomgit-cli`，请确保 `nixpkgs` 指向 unstable；stable 尚未收录。
+
+```bash
+nix profile install nixpkgs#atomgit-cli
+```
+
+### Aur / Archlinux
+
+目前atomgit 已经上传到aur 中，用户可以用yay/paru自行选择从二进制、源码或开发版安装
+
+```bash
+# 从源码安装（稳定版）
+yay -S atomgit-cli
+# 二进制安装（稳定版，免编译）
+yay -S atomgit-cli-bin
+# 开发版安装（跟随 main 分支最新提交）
+yay -S atomgit-cli-git
+```
+
+### Go
+
+```bash
+go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
+```
+
+安装要求、升级方式、AtomGit Release 和源码安装请参阅[完整安装指南](docs/installation.md)。
 
 ## 配置
 
-首次使用本工具前，需要选择以下任一方式配置访问令牌：
+首次使用时运行 `ag auth login` 完成 OAuth 登录；无浏览器环境（沙箱、容器、CI）可改用 `echo "$TOKEN" | ag auth login --with-token` 通过已有访问令牌登录。凭据、输出安全和仓库推断参阅[配置指南](docs/configuration.md)。
 
-- 使用 OAuth 登录（推荐）：运行 `ag auth login`，在浏览器中完成 AtomGit 授权。登录成功后，`ag` 会自动将认证信息写入令牌文件。
+## 使用
 
-- 手动创建访问令牌：参考 [AtomGit 访问令牌（PAT）文档](https://docs.gitcode.com/docs/help/home/user_center/security_management/user_pat/)，依次进入「个人设置」->「访问令牌」->「新建访问令牌」，按需设置权限范围和到期时间，再将生成的 PAT 写入令牌文件。PAT 创建后只显示一次，请立即妥善保存，不要将其提交到代码仓库或分享给他人。
+运行 `ag --help` 查看命令概览，或运行 `ag <command> --help` 查看具体命令的参数。完整示例和说明参阅[使用指南](docs/usage.md)，命令索引参阅[命令参考](docs/command-reference.md)。
 
-令牌文件的默认路径因操作系统而异：
+安装、认证、使用和故障排查中的常见问题请参阅[常见问题（FAQ）](docs/faq.md)。
 
-- Linux：`/home/<用户名>/.config/ag-cli/token.json`
-- macOS：`/Users/<用户名>/.config/ag-cli/token.json`
-- Windows：`C:\Users\<用户名>\.config\ag-cli\token.json`
+## 更多文档
 
-手动配置 PAT 时，文件内容至少包括：
-
-```json
-{
-  "access_token": "your-personal-access-token",
-  "user": "your-atomgit-login",
-  "token_type": "Bearer"
-}
-```
-
-配置文件字段说明：
-
-| 字段 | 是否必填 | 说明 |
-| --- | --- | --- |
-| `access_token` | 是 | 用于调用 AtomGit API 的访问令牌。手动配置时填写刚创建的 PAT；请勿泄露或提交到版本控制。 |
-| `user` | 是 | AtomGit 登录用户名（账号标识），不是昵称或邮箱。 |
-| `refresh_token` | 否 | OAuth 刷新令牌，仅由 `ag auth login` 获取，并供 `ag auth refresh` 换取新的访问令牌。PAT 没有该字段。 |
-| `expires_in` | 否 | OAuth 访问令牌从签发时刻起的有效秒数，由服务端返回。PAT 的有效期在创建 PAT 时设置，手动配置可省略。 |
-| `created_at` | 否 | CLI 保存或刷新 OAuth 凭据时记录的 Unix 时间戳（秒），用于表示签发/保存时间。手动配置 PAT 时可省略。 |
-| `token_type` | 是 | 令牌认证类型。当前 PAT 和 OAuth 访问令牌均使用 `Bearer`。 |
-
-`ag auth login` 会自动写入上述 OAuth 字段；手动使用 PAT 时不要自行编造 `refresh_token`、`expires_in` 或 `created_at`。请确保配置文件仅允许当前用户读取和写入令牌文件。
-
-## 命令
-
-### 认证
-
-```bash
-# 浏览器 OAuth 登录并写入令牌文件
-ag auth login
-# 已登录时会提示无需重复登录；若要重新走浏览器：ag auth login --force
-
-# 用 refresh_token 刷新 access_token（需之前登录响应里包含 refresh_token）
-ag auth refresh
-
-# 查看认证状态
-ag auth status
-
-# 显示当前 token
-ag auth token
-
-# 删除本地令牌文件
-ag auth logout
-```
-
-可选环境变量（覆盖默认 OAuth 应用）：`AG_OAUTH_CLIENT_ID`、`AG_OAUTH_CLIENT_SECRET`；若本机 **8765** 端口被占用，可设置 **`AG_OAUTH_REDIRECT_PORT`**（需与 AtomGit 应用配置的回调地址一致）。
-
-### 仓库 (repo)
-
-```bash
-# 列出仓库（默认显示 30 条）
-ag repo list
-
-# 指定最多列出100条仓库
-ag repo list --limit 100
-
-# 查看仓库详情
-ag repo view owner/repo
-
-# 创建仓库
-# 在当前用户账号下创建
-ag repo create my-project --public
-
-# 在指定个人或组织账号下创建
-ag repo create owner/my-project --public --description "My project"
-
-# 克隆仓库
-ag repo clone owner/repo
-ag repo clone owner/repo --branch dev
-
-# Fork 仓库
-ag repo fork owner/repo
-ag repo fork owner/repo --name my-fork --public
-
-# 删除仓库
-ag repo delete owner/repo --yes
-```
-
-### Pull Request (pr)
-
-```bash
-# 列出 PR
-ag pr list owner/repo
-ag pr list owner/repo --state closed
-
-# 查看 PR
-ag pr view owner/repo 123
-
-# 查看 PR diff
-ag pr diff owner/repo 123
-
-# 创建 PR
-ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch
-
-# 关闭 PR
-ag pr close owner/repo 123
-```
-
-#### PR 评论
-
-```bash
-# 创建评论
-ag pr comment create owner/repo 123 --body "LGTM!"
-ag pr comment create owner/repo 123 --body-file review.md
-
-# 查看所有评论（树形结构显示）
-ag pr comment view owner/repo 123
-
-# 编辑评论（交互式编辑）
-ag pr comment edit owner/repo 123 456
-ag pr comment edit owner/repo 123 456 --body "Updated comment"
-
-# 删除评论
-ag pr comment delete owner/repo 123 456
-ag pr comment delete owner/repo 123 456 --yes
-
-# 回复评论（PR 特有）
-ag pr comment reply owner/repo 123 456 --body "Thanks for the feedback!"
-```
-
-### Issue
-
-```bash
-# 列出 Issue
-ag issue list owner/repo
-ag issue list owner/repo --state all
-
-# 查看 Issue
-ag issue view owner/repo 42
-
-# 创建 Issue
-ag issue create owner/repo --title "Bug report" --body "Description"
-```
-
-#### Issue 评论
-
-```bash
-# 创建评论
-ag issue comment create owner/repo 42 --body "I can reproduce this issue"
-ag issue comment create owner/repo 42 --body-file details.md
-
-# 查看所有评论
-ag issue comment view owner/repo 42
-
-# 编辑评论（交互式编辑）
-ag issue comment edit owner/repo 42 789
-ag issue comment edit owner/repo 42 789 --body "Updated information"
-
-# 删除评论
-ag issue comment delete owner/repo 42 789
-ag issue comment delete owner/repo 42 789 --yes
-```
-
-### License
-
-```bash
-# 检查 license 合规性
-ag license check MIT
-ag license check Apache-2.0
-ag license check GPL-3.0
-```
-
-### SSH Key
-
-```bash
-# 添加 SSH key
-ag ssh-key add ~/.ssh/id_rsa.pub --title "My Laptop"
-cat ~/.ssh/id_rsa.pub | ag ssh-key add --title "My Laptop"
-```
-
-### 版本
-
-```bash
-# 查看版本信息
-ag version
-
-# 机器可读的 JSON 输出
-ag version --json
-```
-
-通过 `make build` 或 `make install` 从源码构建且未注入发布元数据时，版本默认值为 `dev`。如果 Go 构建信息包含模块版本、源码提交或提交时间，`ag version` 会使用这些信息替代或补充默认值；工作区存在未提交改动时，版本还会带有 dirty 标记。
-
-## 发布打包
-
-发布版使用 [GoReleaser](https://goreleaser.com/install/) 打包，tag 统一使用 `vX.Y.Z` 三段式 SemVer。正式发布前应先提交所有改动，并在当前 HEAD 创建版本 tag：
-
-```bash
-git tag v0.5.0
-make release VERSION=v0.5.0
-```
-
-`make release` 会检查工作区干净、tag 存在且指向当前 HEAD，然后在 `dist/v0.5.0/` 生成以下文件：
-
-- Linux 和 macOS 的 amd64/arm64 `.tar.gz` 归档。
-- Windows 的 amd64/arm64 `.zip` 归档。
-- 已绑定当前 tag 的 `install.sh` 和 `install.ps1`。
-- 覆盖上述六个归档和两个安装脚本的 `checksums.txt`。
-
-上传 Release 附件前可校验所有制品：
-
-```bash
-# Linux
-(cd dist/v0.5.0 && sha256sum -c checksums.txt)
-
-# macOS
-(cd dist/v0.5.0 && shasum -a 256 -c checksums.txt)
-```
-
-未创建 tag 时，可使用 `make release-snapshot VERSION=v0.5.0` 进行本地试打包。Snapshot 允许脏工作区，其制品仅用于验证，不应上传到正式 Release。
-
-底层 `scripts/build-release.sh` 也接受 `TAG`、`AG_RELEASE_SNAPSHOT=1` 和 `SOURCE_DATE_EPOCH` 环境变量。`SOURCE_DATE_EPOCH` 会同时固定二进制中的构建日期以及归档内文件的时间戳，用于生成可复现的发布制品；历史两段式 tag 仅保留给 snapshot 兼容。
-
-### 维护 Nix package
-
-更新 Nix package 的版本和 `vendorHash` 时，推荐先进入 flake 提供的开发环境，以使用项目声明的工具版本：
-
-```bash
-nix develop
-./scripts/update-nix-package.sh v0.6.0
-```
-
-也可以直接运行更新脚本：
-
-```bash
-./scripts/update-nix-package.sh v0.6.0
-```
-
-直接运行需要预先安装 Nix 和 Git，并要求 `tar` 支持以 NUL 分隔的文件列表；Linux 上的 GNU tar 和 macOS 默认的 bsdtar 均受支持。脚本会更新 `flake.nix` 中的版本和 `vendorHash`，随后执行 `nix build .#ag` 和 `ag version --json` 验证。验证失败时会自动恢复原始 `flake.nix`，且脚本不会提交、打标签或推送。
-
-## 项目结构
-
-```
-atomgit-cli/
-├── .goreleaser.yaml            # GoReleaser 跨平台打包配置
-├── Makefile                    # 构建、测试、安装和发布入口
-├── install.sh                  # Linux/macOS 安装脚本
-├── install.ps1                 # Windows 安装脚本
-├── cmd/ag/main.go              # 入口
-├── internal/
-│   ├── agcmd/cmd.go            # 核心命令处理
-│   ├── config/config.go        # 配置管理
-│   ├── version/version.go      # 版本元数据
-│   └── api/
-│       ├── client.go           # API 客户端
-│       └── types.go            # 数据类型
-├── pkg/
-│   ├── cmdutil/factory.go      # 命令工厂
-│   └── cmd/
-│       ├── root/root.go        # 根命令
-│       ├── auth/auth.go        # 认证命令
-│       ├── repo/               # 仓库命令
-│       │   ├── repo.go
-│       │   ├── create.go
-│       │   ├── clone.go
-│       │   ├── delete.go
-│       │   └── fork.go
-│       ├── pr/                 # PR 命令
-│       │   ├── pr.go
-│       │   └── comment/        # PR 评论命令
-│       ├── issue/              # Issue 命令
-│       │   ├── issue.go
-│       │   └── comment/        # Issue 评论命令
-│       ├── license/            # License 命令
-│       │   ├── license.go
-│       │   └── check.go
-│       ├── ssh-key/ssh_key.go  # SSH key 命令
-│       └── version/version.go  # 版本命令
-├── scripts/build-release.sh    # GoReleaser 打包包装脚本
-└── go.mod
-```
+- [命令参考](docs/command-reference.md)（由 Cobra 命令树生成）
+- [发布指南](docs/releasing.md)
+- [项目结构](docs/project-structure.md)
 
 ## API
 
-使用 AtomGit API v5: `https://api.atomgit.com/api/v5`
+常规仓库功能使用 AtomGit API v5：`https://api.atomgit.com/api/v5`。
 
-## 参考
+Actions 运行检查使用独立的 AtomGit API v8：`https://api.atomgit.com/api/v8`。
+
+### 参考
 
 - [AtomGit API 文档](https://docs.atomgit.com/docs/apis/)
 - [GitHub CLI](https://cli.github.com/)
@@ -330,4 +135,5 @@ atomgit-cli/
 
 [木兰宽松许可证第2版](LICENSE) (Mulan Permissive Software License, Version 2)
 
-Copyright (c) 2026 AtomGit CLI Contributors
+Copyright (c) 2026 HUST OpenAtom Club, AtomGit, and the AtomGit CLI contributors
+
