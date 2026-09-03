@@ -10,7 +10,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 
@@ -39,10 +38,23 @@ type HTTPError struct {
 	StatusCode int
 	Status     string
 	Body       string
+	RetryAfter string
+	ReadError  error
 }
 
 func (e *HTTPError) Error() string {
-	return fmt.Sprintf("API error: %s - %s", e.Status, e.Body)
+	message := fmt.Sprintf("API error: %s - %s", e.Status, e.Body)
+	if e.ReadError != nil {
+		message += " (failed to read error response: " + SanitizeErrorText(e.ReadError.Error()) + ")"
+	}
+	if e.RetryAfter != "" {
+		message += " (retry after " + e.RetryAfter + ")"
+	}
+	return message
+}
+
+func (e *HTTPError) Unwrap() error {
+	return e.ReadError
 }
 
 // IsHTTPStatus reports whether err is (or wraps) an API error carrying the
@@ -270,7 +282,7 @@ func (c *Client) Get(path string, result interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return newAPIError(resp)
+		return NewHTTPError(resp)
 	}
 
 	return decodeJSONResponse(http.MethodGet, path, resp.Body, result)
@@ -293,7 +305,7 @@ func (c *Client) Post(path string, body, result interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		return newAPIError(resp)
+		return NewHTTPError(resp)
 	}
 
 	if result == nil || resp.StatusCode == http.StatusNoContent {
@@ -312,7 +324,7 @@ func (c *Client) PostForm(path string, fields url.Values, result interface{}) er
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		return newAPIError(resp)
+		return NewHTTPError(resp)
 	}
 
 	if result == nil || resp.StatusCode == http.StatusNoContent {
@@ -333,7 +345,7 @@ func (c *Client) PutForm(path string, fields url.Values, result interface{}) err
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return newAPIError(resp)
+		return NewHTTPError(resp)
 	}
 
 	if result == nil {
@@ -359,7 +371,7 @@ func (c *Client) Put(path string, body, result interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return newAPIError(resp)
+		return NewHTTPError(resp)
 	}
 
 	if result != nil {
@@ -385,7 +397,7 @@ func (c *Client) Patch(path string, body, result interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		return newAPIError(resp)
+		return NewHTTPError(resp)
 	}
 
 	if result != nil {
@@ -416,7 +428,7 @@ func (c *Client) PatchForm(path string, fields map[string]string, result interfa
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return newAPIError(resp)
+		return NewHTTPError(resp)
 	}
 
 	if result != nil {
@@ -433,7 +445,7 @@ func (c *Client) Delete(path string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
-		return newAPIError(resp)
+		return NewHTTPError(resp)
 	}
 
 	return nil
@@ -456,7 +468,7 @@ func (c *Client) DeleteWithBody(path string, body interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
-		return newAPIError(resp)
+		return NewHTTPError(resp)
 	}
 
 	return nil
@@ -509,86 +521,18 @@ func decodeJSONResponse(method, path string, body io.Reader, result interface{})
 	return nil
 }
 
-// maxErrorBodyBytes caps how much of a non-success response body is included
-// in the error message. Larger bodies are truncated so a hostile or buggy
-// server cannot flood the terminal or logs.
-const maxErrorBodyBytes = 4096
-
-var (
-	// bearerTokenPattern matches Authorization header values embedded in error
-	// bodies so they are never surfaced to the user.
-	bearerTokenPattern = regexp.MustCompile(`(?i)(Bearer\s+)[A-Za-z0-9\-._~+/]+=*`)
-
-	// quotedCredentialPattern matches complete JSON string values for common
-	// credential fields, including escaped characters inside the value.
-	quotedCredentialPattern = regexp.MustCompile(`(?i)("(?:access_token|refresh_token|client_secret|authorization|password|token)"\s*:\s*")(?:\\.|[^"\\])*(")`)
-
-	// unterminatedQuotedCredentialPattern catches a credential value cut off
-	// by the bounded error excerpt before its closing quote.
-	unterminatedQuotedCredentialPattern = regexp.MustCompile(`(?i)("(?:access_token|refresh_token|client_secret|authorization|password|token)"\s*:\s*")(?:\\.|[^"\\])*$`)
-
-	// credentialKeyValuePattern covers non-JSON excerpts such as
-	// "access_token=..." and "refresh_token: ...".
-	credentialKeyValuePattern = regexp.MustCompile(`(?i)(\b(?:access_token|refresh_token|client_secret|authorization|password|token)\b\s*[:=]\s*)[^,;&}\]\r\n]+`)
-)
-
-// sanitizeAPIString neutralizes terminal control characters in an API error
-// excerpt so a hostile server cannot inject escape sequences (CWE-150).
-func sanitizeAPIString(s string) string {
-	var b strings.Builder
-	b.Grow(len(s))
-	for _, r := range s {
-		switch {
-		case r == '\n' || r == '\t':
-			b.WriteRune(r)
-		case r < 0x20:
-			fmt.Fprintf(&b, "\\x%02x", r)
-		case r == 0x7f:
-			b.WriteString("\\x7f")
-		case r >= 0x80 && r <= 0x9f:
-			fmt.Fprintf(&b, "\\u%04x", r)
-		case isUnicodeDirectionControl(r):
-			fmt.Fprintf(&b, "\\u%04x", r)
-		default:
-			b.WriteRune(r)
-		}
-	}
-	return b.String()
-}
-
-func isUnicodeDirectionControl(r rune) bool {
-	return (r >= 0x202a && r <= 0x202e) ||
-		(r >= 0x2066 && r <= 0x2069) ||
-		r == 0x2028 || r == 0x2029 ||
-		r == 0x061c ||
-		r == 0x200e || r == 0x200f
-}
-
-// redactCredentials replaces common structured and bearer credential values
-// in an error excerpt so authentication data is never surfaced to the user.
-func redactCredentials(s string) string {
-	s = quotedCredentialPattern.ReplaceAllString(s, "${1}<redacted>${2}")
-	s = unterminatedQuotedCredentialPattern.ReplaceAllString(s, "${1}<redacted>")
-	s = bearerTokenPattern.ReplaceAllString(s, "${1}<redacted>")
-	return credentialKeyValuePattern.ReplaceAllString(s, "${1}<redacted>")
-}
-
-// newAPIError reads a bounded excerpt of the response body and returns a
+// NewHTTPError reads a bounded excerpt of the response body and returns a
 // terminal-safe, credential-redacted error preserving the established
 // "API error: <status> - <context>" prefix. The returned error is an
 // *HTTPError so callers can detect specific status codes with IsHTTPStatus.
-func newAPIError(resp *http.Response) error {
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes+1))
-	if len(body) > maxErrorBodyBytes {
-		body = append(body[:maxErrorBodyBytes], []byte("...")...)
-	}
-	excerpt := sanitizeAPIString(string(body))
-	excerpt = redactCredentials(excerpt)
-	status := redactCredentials(sanitizeAPIString(resp.Status))
+func NewHTTPError(resp *http.Response) error {
+	details := ReadErrorResponse(resp)
 	return &HTTPError{
 		StatusCode: resp.StatusCode,
-		Status:     status,
-		Body:       excerpt,
+		Status:     details.Status,
+		Body:       details.Body,
+		RetryAfter: details.RetryAfter,
+		ReadError:  details.ReadError,
 	}
 }
 
@@ -633,7 +577,7 @@ func (c *Client) doJSONRequestContext(ctx context.Context, httpClient *http.Clie
 	defer resp.Body.Close()
 
 	if !statusAllowed(resp.StatusCode, policy.AllowedStatuses) {
-		return newAPIError(resp)
+		return NewHTTPError(resp)
 	}
 
 	if result == nil {

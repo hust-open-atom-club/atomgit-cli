@@ -683,8 +683,7 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 			defer resp.Body.Close()
 
 			if resp.StatusCode != http.StatusOK {
-				body, _ := io.ReadAll(resp.Body)
-				return fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+				return api.NewHTTPError(resp)
 			}
 
 			_, err = io.Copy(cmd.OutOrStdout(), resp.Body)

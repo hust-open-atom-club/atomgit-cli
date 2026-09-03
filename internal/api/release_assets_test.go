@@ -475,6 +475,29 @@ func TestUploadReleaseAssetDoesNotRetryHTTPError(t *testing.T) {
 	}
 }
 
+func TestUploadReleaseAssetSanitizesHTTPError(t *testing.T) {
+	const secret = "upload-secret-123"
+	body := "message=failed; password=" + secret + "; control=\x1b\n" + strings.Repeat("A", MaxErrorExcerptBytes)
+	transport := funcRoundTrip(func(req *http.Request) (*http.Response, error) {
+		_, _ = io.Copy(io.Discard, req.Body)
+		_ = req.Body.Close()
+		return &http.Response{
+			StatusCode: http.StatusForbidden,
+			Status:     "403 Forbidden authorization=status-secret-123",
+			Header:     make(http.Header),
+			Body:       io.NopCloser(strings.NewReader(body)),
+		}, nil
+	})
+
+	err := UploadReleaseAsset(
+		context.Background(),
+		newUploadClient(t, transport),
+		ReleaseUploadURL{URL: "https://store.example.com/upload"},
+		bytes.NewReader([]byte("payload")),
+	)
+	assertSanitizedReleaseError(t, err, secret, "status-secret-123")
+}
+
 func TestDeleteReleaseAttachment(t *testing.T) {
 	var gotMethod, gotPath string
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -493,6 +516,17 @@ func TestDeleteReleaseAttachment(t *testing.T) {
 	if gotPath != wantPath {
 		t.Fatalf("path = %q, want %q", gotPath, wantPath)
 	}
+}
+
+func TestDeleteReleaseAttachmentSanitizesHTTPError(t *testing.T) {
+	const secret = "delete-secret-123"
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = w.Write([]byte("message=failed; password=" + secret + "; control=\x1b\n" + strings.Repeat("A", MaxErrorExcerptBytes)))
+	})
+
+	err := DeleteReleaseAttachment(client, "owner", "repo", "v1.0", 42)
+	assertSanitizedReleaseError(t, err, secret)
 }
 
 func TestDeleteReleaseAttachmentDoesNotRetryTransportError(t *testing.T) {
@@ -622,6 +656,44 @@ func TestDownloadReleaseAttachmentRejectsNonOKAndClosesBody(t *testing.T) {
 				t.Fatalf("body closes = %d, want 1", got)
 			}
 		})
+	}
+}
+
+func TestDownloadReleaseAttachmentSanitizesHTTPError(t *testing.T) {
+	const secret = "download-secret-123"
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = w.Write([]byte("message=failed; password=" + secret + "; control=\x1b\n" + strings.Repeat("A", MaxErrorExcerptBytes)))
+	})
+
+	body, err := DownloadReleaseAttachment(context.Background(), client, "owner", "repo", "v1.0", "asset.bin")
+	if body != nil {
+		body.Close()
+		t.Fatalf("body = %v, want nil", body)
+	}
+	assertSanitizedReleaseError(t, err, secret)
+}
+
+func assertSanitizedReleaseError(t *testing.T, err error, secrets ...string) {
+	t.Helper()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	for _, secret := range secrets {
+		if strings.Contains(err.Error(), secret) {
+			t.Fatalf("error leaked secret %q: %q", secret, err)
+		}
+	}
+	if strings.Contains(err.Error(), "\x1b") {
+		t.Fatalf("error contained raw terminal escape: %q", err)
+	}
+	for _, want := range []string{"<redacted>", `\x1b`, "..."} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error = %q, missing %q", err, want)
+		}
+	}
+	if len(err.Error()) > MaxErrorExcerptBytes+300 {
+		t.Fatalf("error message too long: %d bytes", len(err.Error()))
 	}
 }
 

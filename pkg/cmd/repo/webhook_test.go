@@ -174,12 +174,14 @@ func TestRepoWebhookCreateErrorOmitsResponseBody(t *testing.T) {
 	const secret = "server-echoed-secret"
 	t.Setenv("WEBHOOK_SECRET", secret)
 	factory := webhookFactory(func(*http.Request) (*http.Response, error) {
-		return webhookResponse(http.StatusBadRequest, `{"message":"invalid server-echoed-secret"}`), nil
+		resp := webhookResponse(http.StatusBadRequest, `{"message":"invalid server-echoed-secret"}`)
+		resp.Status = "400 Bad Request authorization=status-secret-123; control=\x1b"
+		return resp, nil
 	})
 	cmd := newCmdRepoWebhookCreate(factory)
 	setWebhookFlags(t, cmd, map[string]string{"url": "https://example.com/hook", "events": "push", "secret-env": "WEBHOOK_SECRET"})
 	err := cmd.RunE(cmd, []string{"alice/demo"})
-	if err == nil || !strings.Contains(err.Error(), "400 Bad Request") || strings.Contains(err.Error(), secret) {
+	if err == nil || !strings.Contains(err.Error(), "400 Bad Request") || strings.Contains(err.Error(), secret) || strings.Contains(err.Error(), "status-secret-123") || strings.Contains(err.Error(), "\x1b") || !strings.Contains(err.Error(), `\x1b`) {
 		t.Fatalf("error = %v", err)
 	}
 }

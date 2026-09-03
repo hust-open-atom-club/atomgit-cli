@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	internalapi "atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/browser"
 )
 
@@ -236,12 +237,12 @@ func exchangeCode(ctx context.Context, id, secret, redir, code string) (*tokenRe
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, tokenEndpointError(resp)
+	}
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("token endpoint %s (response body omitted; it may contain sensitive token material)", resp.Status)
 	}
 	var tr tokenResponse
 	if err := json.Unmarshal(b, &tr); err != nil {
@@ -283,12 +284,12 @@ func RefreshAccessToken(ctx context.Context, refreshToken string) (*RefreshedTok
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, tokenEndpointError(resp)
+	}
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("token endpoint %s (response body omitted; it may contain sensitive token material)", resp.Status)
 	}
 	var tr tokenResponse
 	if err := json.Unmarshal(b, &tr); err != nil {
@@ -329,12 +330,12 @@ func FetchUserWithURL(ctx context.Context, url, accessToken string) (*UserInfo, 
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("user endpoint: %w", internalapi.NewHTTPError(resp))
+	}
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("user endpoint %s: %s", resp.Status, strings.TrimSpace(string(b)))
 	}
 	var u UserInfo
 	if err := json.Unmarshal(b, &u); err != nil {
@@ -342,6 +343,30 @@ func FetchUserWithURL(ctx context.Context, url, accessToken string) (*UserInfo, 
 	}
 	return &u, nil
 }
+
+func tokenEndpointError(resp *http.Response) error {
+	details := internalapi.ReadErrorResponse(resp)
+	err := fmt.Errorf("token endpoint %s (response body omitted; it may contain sensitive token material)", details.Status)
+	if details.RetryAfter != "" {
+		err = fmt.Errorf("%w (retry after %s)", err, details.RetryAfter)
+	}
+	if details.ReadError != nil {
+		readErr := &sanitizedOAuthError{
+			message: internalapi.SanitizeErrorText(details.ReadError.Error()),
+			cause:   details.ReadError,
+		}
+		err = fmt.Errorf("%w: failed to read error response: %w", err, readErr)
+	}
+	return err
+}
+
+type sanitizedOAuthError struct {
+	message string
+	cause   error
+}
+
+func (e *sanitizedOAuthError) Error() string { return e.message }
+func (e *sanitizedOAuthError) Unwrap() error { return e.cause }
 
 const successHTML = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>AtomGit Login</title>
 <style>body{font-family:system-ui;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#1a1a2e;color:#eee}

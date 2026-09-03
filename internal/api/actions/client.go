@@ -16,8 +16,7 @@ import (
 )
 
 const (
-	APIVersion   = "/api/v8"
-	maxErrorBody = 64 << 10
+	APIVersion = "/api/v8"
 )
 
 type Client struct {
@@ -81,7 +80,7 @@ func (e *HTTPError) Error() string {
 		message += ": " + e.Message
 	}
 	if e.ReadError != nil {
-		readMessage := "failed to read error response: " + e.ReadError.Error()
+		readMessage := "failed to read error response: " + baseapi.SanitizeErrorText(e.ReadError.Error())
 		if e.Message == "" {
 			message += ": " + readMessage
 		} else {
@@ -347,33 +346,15 @@ func (c *Client) download(operation, path string) (*http.Response, error) {
 }
 
 func responseError(operation string, resp *http.Response) error {
-	body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
-	message := strings.TrimSpace(string(body))
-	if len(body) > 0 {
-		var details struct {
-			ErrorMessage string `json:"error_message"`
-			Message      string `json:"message"`
-			Error        string `json:"error"`
-		}
-		if json.Unmarshal(body, &details) == nil {
-			switch {
-			case details.ErrorMessage != "":
-				message = details.ErrorMessage
-			case details.Message != "":
-				message = details.Message
-			case details.Error != "":
-				message = details.Error
-			}
-		}
-	}
+	details := baseapi.ReadErrorResponse(resp)
 
 	return &HTTPError{
-		Operation:  operation,
+		Operation:  baseapi.SanitizeErrorText(operation),
 		StatusCode: resp.StatusCode,
-		Status:     resp.Status,
-		Message:    message,
-		RetryAfter: resp.Header.Get("Retry-After"),
-		ReadError:  readErr,
+		Status:     details.Status,
+		Message:    details.Message,
+		RetryAfter: details.RetryAfter,
+		ReadError:  details.ReadError,
 	}
 }
 

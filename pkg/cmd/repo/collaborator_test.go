@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
@@ -400,10 +401,11 @@ func TestRepoCollaboratorRemoveTriesPendingInvitationWhenNotAccepted(t *testing.
 }
 
 func TestRepoCollaboratorValidationAndAPIErrors(t *testing.T) {
+	const secret = "collaborator-secret-123"
 	requests := 0
 	factory := collaboratorFactory(func(*http.Request) (*http.Response, error) {
 		requests++
-		return collaboratorResponse(http.StatusForbidden, `{"message":"denied"}`), nil
+		return collaboratorResponse(http.StatusForbidden, "message=denied; password="+secret+"; control=\x1b\n"+strings.Repeat("A", api.MaxErrorExcerptBytes)), nil
 	})
 	add := newCmdRepoCollaboratorAdd(factory)
 	_ = add.Flags().Set("permission", "maintain")
@@ -417,6 +419,17 @@ func TestRepoCollaboratorValidationAndAPIErrors(t *testing.T) {
 	view = newCmdRepoCollaboratorView(factory)
 	if err := view.RunE(view, []string{"alice/demo", "bob"}); err == nil || !strings.Contains(err.Error(), "failed to view collaborator") || !strings.Contains(err.Error(), "Forbidden") {
 		t.Fatalf("API error = %v", err)
+	} else {
+		for _, leaked := range []string{secret, "\x1b"} {
+			if strings.Contains(err.Error(), leaked) {
+				t.Fatalf("API error leaked unsafe value %q: %q", leaked, err)
+			}
+		}
+		for _, want := range []string{"<redacted>", `\x1b`, "..."} {
+			if !strings.Contains(err.Error(), want) {
+				t.Fatalf("API error = %q, missing %q", err, want)
+			}
+		}
 	}
 	if requests != 1 {
 		t.Fatalf("requests = %d, want 1", requests)

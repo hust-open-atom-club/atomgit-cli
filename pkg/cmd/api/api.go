@@ -17,8 +17,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const maxErrorBody = 64 << 10
-
 type options struct {
 	method   string
 	fields   []string
@@ -313,34 +311,22 @@ func effectivePort(value *url.URL) string {
 }
 
 func responseError(operation string, resp *http.Response, token string) error {
-	body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
-	message := strings.TrimSpace(string(body))
-	var details struct {
-		ErrorMessage string `json:"error_message"`
-		Message      string `json:"message"`
-		Error        string `json:"error"`
+	details := internalapi.ReadErrorResponse(resp)
+	result := fmt.Errorf("%s: API request failed (%s)", internalapi.SanitizeErrorText(operation), details.Status)
+	if details.Message != "" {
+		result = fmt.Errorf("%w: %s", result, details.Message)
 	}
-	if json.Unmarshal(body, &details) == nil {
-		switch {
-		case details.ErrorMessage != "":
-			message = details.ErrorMessage
-		case details.Message != "":
-			message = details.Message
-		case details.Error != "":
-			message = details.Error
+	if details.RetryAfter != "" {
+		result = fmt.Errorf("%w (retry after %s)", result, details.RetryAfter)
+	}
+	if details.ReadError != nil {
+		safeReadError := &redactedError{
+			message: internalapi.SanitizeErrorText(details.ReadError.Error()),
+			cause:   details.ReadError,
 		}
+		result = fmt.Errorf("%w: read error response: %w", result, safeReadError)
 	}
-	if token != "" {
-		message = strings.ReplaceAll(message, token, "[REDACTED]")
-	}
-	result := fmt.Errorf("%s: API request failed (%s)", operation, resp.Status)
-	if message != "" {
-		result = fmt.Errorf("%w: %s", result, message)
-	}
-	if readErr != nil {
-		result = fmt.Errorf("%w: read error response: %w", result, readErr)
-	}
-	return result
+	return redact(result, token)
 }
 
 // redact replaces an access token in an error message with a placeholder.

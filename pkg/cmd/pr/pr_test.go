@@ -479,6 +479,7 @@ func TestPRDiff(t *testing.T) {
 		body       string
 		wantOutput string
 		wantError  string
+		secret     string
 	}{
 		{
 			name:       "outputs raw patch",
@@ -493,6 +494,14 @@ func TestPRDiff(t *testing.T) {
 			status:     "404 Not Found",
 			body:       `{"message":"pull request not found"}`,
 			wantError:  `API error: 404 Not Found - {"message":"pull request not found"}`,
+		},
+		{
+			name:       "sanitizes API error",
+			statusCode: http.StatusForbidden,
+			status:     "403 Forbidden authorization=status-secret-123",
+			body:       "message=failed; password=pr-diff-secret-123; control=\x1b\n" + strings.Repeat("A", api.MaxErrorExcerptBytes),
+			wantError:  "API error: 403 Forbidden",
+			secret:     "pr-diff-secret-123",
 		},
 	}
 
@@ -529,6 +538,18 @@ func TestPRDiff(t *testing.T) {
 			if tt.wantError != "" {
 				if err == nil || !strings.Contains(err.Error(), tt.wantError) {
 					t.Fatalf("error = %v, want containing %q", err, tt.wantError)
+				}
+				if tt.secret != "" {
+					for _, leaked := range []string{tt.secret, "status-secret-123", "\x1b"} {
+						if strings.Contains(err.Error(), leaked) {
+							t.Fatalf("error leaked unsafe value %q: %q", leaked, err)
+						}
+					}
+					for _, want := range []string{"<redacted>", `\x1b`, "..."} {
+						if !strings.Contains(err.Error(), want) {
+							t.Fatalf("error = %q, missing %q", err, want)
+						}
+					}
 				}
 			} else if err != nil {
 				t.Fatalf("RunE() error = %v", err)

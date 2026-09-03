@@ -145,7 +145,12 @@ func TestBrowseNumberAPICallsReturnError(t *testing.T) {
 		HttpClient: func() (*http.Client, error) {
 			return &http.Client{Transport: browseRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.URL.Path == "/api/v5/repos/alice/demo/issues/42" {
-					return &http.Response{StatusCode: http.StatusBadGateway, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
+					return &http.Response{
+						StatusCode: http.StatusBadGateway,
+						Status:     "502 Bad Gateway authorization=status-secret-123; control=\x1b",
+						Body:       io.NopCloser(strings.NewReader("")),
+						Header:     make(http.Header),
+					}, nil
 				}
 				return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
 			})}, nil
@@ -154,7 +159,7 @@ func TestBrowseNumberAPICallsReturnError(t *testing.T) {
 	cmd := NewCmdBrowse(f)
 	cmd.SetArgs([]string{"-R", "alice/demo", "42"})
 	err := cmd.Execute()
-	if err == nil || !strings.Contains(err.Error(), "unexpected status checking issue #42") {
+	if err == nil || !strings.Contains(err.Error(), "unexpected status checking issue #42") || strings.Contains(err.Error(), "status-secret-123") || strings.Contains(err.Error(), "\x1b") || !strings.Contains(err.Error(), `\x1b`) {
 		t.Fatalf("error = %v, want unexpected status error", err)
 	}
 }
