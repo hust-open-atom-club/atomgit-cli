@@ -126,6 +126,7 @@ async function createArtifactSet(t, options = {}) {
       },
       {
         LICENSE: "license",
+        "README.en.md": "english readme",
         "README.md": "readme",
         "bin/ag.js": "launcher",
       },
