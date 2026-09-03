@@ -119,10 +119,11 @@ Permission values are semicolon-separated role names or usernames. Supported
 roles are develop, admin, and maintainer. An explicitly empty value denies the
 operation to everyone. Existing rules preserve any permission whose flag is
 omitted; new rules require both --push and --merge. Updating an existing rule
-requires confirmation unless --yes is supplied.`,
+requires confirmation unless --yes is supplied. AtomGit requires every role or
+user allowed to push to also be explicitly allowed to merge.`,
 		Example: `  ag branch protection set owner/repo main --push admin --merge admin
-  ag branch protection set owner/repo main --push maintainer --merge admin
-  ag branch protection set owner/repo "release/*" --push "develop;alice" --merge admin
+  ag branch protection set owner/repo main --push maintainer --merge maintainer
+  ag branch protection set owner/repo "release/*" --push "develop;alice" --merge "develop;alice"
   ag branch protection set owner/repo main --push "" --yes`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -372,13 +373,16 @@ func protectionPermissionValue(rule api.ProtectedBranchRule, push bool) (string,
 	}
 
 	values := make([]string, 0, len(users)+1)
+	// AtomGit can report role permissions cumulatively. A maintainer rule sets
+	// both maintainer_can_* and master_can_*. Select the broadest reported role
+	// so a set followed by a view preserves the permission the user requested.
 	switch {
 	case developers:
 		values = append(values, "develop")
-	case master:
-		values = append(values, "admin")
 	case maintainer:
 		values = append(values, "maintainer")
+	case master:
+		values = append(values, "admin")
 	case committer:
 		return "", fmt.Errorf("the API response contains unsupported committer-only access; specify this permission explicitly")
 	}

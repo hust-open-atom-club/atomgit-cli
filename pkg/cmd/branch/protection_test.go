@@ -50,7 +50,7 @@ func TestProtectionListAndViewDistinguishExactAndWildcard(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, text := range []string{
-		"main type:exact push:admin merge:maintainer",
+		"main type:exact push:maintainer merge:maintainer",
 		"release/* type:wildcard push:develop;alice merge:admin;bob",
 	} {
 		if !strings.Contains(listOut.String(), text) {
@@ -105,6 +105,24 @@ func TestProtectionPermissionValueDoesNotWidenOtherAccessWithOwnerFlag(t *testin
 	}
 }
 
+func TestProtectionPermissionValuePrefersMaintainerOverCumulativeAdmin(t *testing.T) {
+	rule := api.ProtectedBranchRule{
+		MasterCanPush:      api.FlexibleBool(true),
+		MasterCanMerge:     api.FlexibleBool(true),
+		MaintainerCanPush:  api.FlexibleBool(true),
+		MaintainerCanMerge: api.FlexibleBool(true),
+	}
+
+	push, err := protectionPermissionValue(rule, true)
+	if err != nil || push != "maintainer" {
+		t.Fatalf("push = %q, err = %v; want maintainer", push, err)
+	}
+	merge, err := protectionPermissionValue(rule, false)
+	if err != nil || merge != "maintainer" {
+		t.Fatalf("merge = %q, err = %v; want maintainer", merge, err)
+	}
+}
+
 func TestProtectionCommandsInferRepositoryContext(t *testing.T) {
 	factory := branchFactory(branchCommandConfig{token: "token"}, func(req *http.Request) (*http.Response, error) {
 		if req.URL.Path != "/api/v5/repos/alice/demo/protect_branches" {
@@ -138,7 +156,7 @@ func TestProtectionSetCreatesRule(t *testing.T) {
 			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 				t.Fatal(err)
 			}
-			if body["wildcard"] != "release/*" || body["pusher"] != "maintainer" || body["merger"] != "admin" {
+			if body["wildcard"] != "release/*" || body["pusher"] != "maintainer" || body["merger"] != "maintainer" {
 				t.Fatalf("body = %#v", body)
 			}
 			return branchResponse(http.StatusOK, `{}`), nil
@@ -149,7 +167,7 @@ func TestProtectionSetCreatesRule(t *testing.T) {
 	})
 	cmd := newCmdProtectionSet(branchFactory(branchCommandConfig{token: "token"}, transport))
 	_ = cmd.Flags().Set("push", "maintainer")
-	_ = cmd.Flags().Set("merge", "admin")
+	_ = cmd.Flags().Set("merge", "maintainer")
 	var out bytes.Buffer
 	cmd.SetOut(&out)
 

@@ -416,8 +416,8 @@ ag branch protection view main
 
 # 创建保护规则；新规则必须同时指定 push 与 merge 权限
 ag branch protection set owner/repo main --push admin --merge admin
-ag branch protection set owner/repo main --push maintainer --merge admin
-ag branch protection set owner/repo "release/*" --push "develop;alice" --merge admin
+ag branch protection set owner/repo main --push maintainer --merge maintainer
+ag branch protection set owner/repo "release/*" --push "develop;alice" --merge "develop;alice"
 
 # 仅修改已有规则的推送权限；未指定的合并权限保持不变
 ag branch protection set owner/repo main --push "" --yes
@@ -427,7 +427,7 @@ ag branch protection delete owner/repo "release/*"
 ag branch protection delete owner/repo "release/*" --yes
 ```
 
-保护规则的 `--push` 与 `--merge` 接受由英文分号分隔的 `develop`、`admin`、`maintainer` 或用户名；显式传入空字符串表示不允许任何人执行该操作。AtomGit 对精确分支规则的优先级高于匹配的 wildcard 规则。CLI 只管理官方 API 暴露的推送与合并白名单，不修改评审、流水线等其他保护设置。更新接口要求同时提交两类权限，因此 CLI 会先读取现有规则并保留未显式修改的一侧；若服务端返回无法无损表示的旧权限，命令会停止并要求显式提供该权限。branch 命令省略 `owner/repo` 时使用当前 Git 仓库推断结果，显式参数始终优先。
+保护规则的 `--push` 与 `--merge` 接受由英文分号分隔的 `develop`、`admin`、`maintainer` 或用户名；显式传入空字符串表示不允许任何人执行该操作。AtomGit 要求拥有推送权限的角色或用户也在 `--merge` 中显式允许。AtomGit 对精确分支规则的优先级高于匹配的 wildcard 规则。CLI 只管理官方 API 暴露的推送与合并白名单，不修改评审、流水线等其他保护设置。更新接口要求同时提交两类权限，因此 CLI 会先读取现有规则并保留未显式修改的一侧；若服务端返回无法无损表示的旧权限，命令会停止并要求显式提供该权限。branch 命令省略 `owner/repo` 时使用当前 Git 仓库推断结果，显式参数始终优先。
 
 ## Commit
 
