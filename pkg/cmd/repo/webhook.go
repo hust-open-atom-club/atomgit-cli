@@ -435,7 +435,8 @@ func getWebhook(client *api.Client, repository cmdutil.Repository, id int64) (ap
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return api.Webhook{}, fmt.Errorf("failed to get webhook #%d: API request failed: %s (response body omitted to protect webhook secrets)", id, resp.Status)
+		details := api.ReadErrorResponse(resp)
+		return api.Webhook{}, fmt.Errorf("failed to get webhook #%d: API request failed: %s (response body omitted to protect webhook secrets)", id, details.Status)
 	}
 	var item api.Webhook
 	if err := json.NewDecoder(resp.Body).Decode(&item); err != nil {
@@ -454,8 +455,9 @@ func listWebhooks(client *api.Client, repository cmdutil.Repository, limit int) 
 			return nil, err
 		}
 		if resp.StatusCode != http.StatusOK {
+			details := api.ReadErrorResponse(resp)
 			resp.Body.Close()
-			return nil, fmt.Errorf("API request failed: %s (response body omitted to protect webhook secrets)", resp.Status)
+			return nil, fmt.Errorf("API request failed: %s (response body omitted to protect webhook secrets)", details.Status)
 		}
 		var pageItems []api.Webhook
 		decodeErr := json.NewDecoder(resp.Body).Decode(&pageItems)
@@ -485,7 +487,8 @@ func mutateWebhook(client *api.Client, method, path string, body map[string]inte
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("API request failed: %s (response body omitted to protect webhook secrets)", resp.Status)
+		details := api.ReadErrorResponse(resp)
+		return fmt.Errorf("API request failed: %s (response body omitted to protect webhook secrets)", details.Status)
 	}
 	if result == nil {
 		return nil

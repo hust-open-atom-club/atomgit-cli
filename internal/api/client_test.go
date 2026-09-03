@@ -23,6 +23,14 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
 }
 
+type apiErrorReader struct {
+	err error
+}
+
+func (r apiErrorReader) Read([]byte) (int, error) {
+	return 0, r.err
+}
+
 type contextBlockingBody struct {
 	ctx     context.Context
 	started chan struct{}
@@ -890,7 +898,7 @@ func TestDoJSONRequestRetryPolicy(t *testing.T) {
 }
 
 func TestAPIErrorBoundedBody(t *testing.T) {
-	largeBody := strings.Repeat("A", maxErrorBodyBytes+1000)
+	largeBody := strings.Repeat("A", MaxErrorExcerptBytes+1000)
 	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, largeBody, http.StatusForbidden)
 	})
@@ -899,7 +907,7 @@ func TestAPIErrorBoundedBody(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if len(err.Error()) > maxErrorBodyBytes+200 {
+	if len(err.Error()) > MaxErrorExcerptBytes+200 {
 		t.Fatalf("error message too long: %d bytes", len(err.Error()))
 	}
 	if !strings.HasSuffix(err.Error(), "...") {
@@ -949,6 +957,21 @@ func TestAPIErrorRedactsCredentials(t *testing.T) {
 			secret: "generic-secret-123",
 		},
 		{
+			name:   "JSON token-like field",
+			body:   `{"sessionToken":"session-secret-123","message":"failed"}`,
+			secret: "session-secret-123",
+		},
+		{
+			name:   "escaped JSON access token key",
+			body:   `{"access\u005ftoken":"escaped-access-secret-123"}`,
+			secret: "escaped-access-secret-123",
+		},
+		{
+			name:   "nested escaped JSON password key",
+			body:   `{"details":{"pass\u0077ord":"escaped-password-secret-123"}}`,
+			secret: "escaped-password-secret-123",
+		},
+		{
 			name:   "equals key value",
 			body:   "access_token=equals-secret-123",
 			secret: "equals-secret-123",
@@ -957,6 +980,11 @@ func TestAPIErrorRedactsCredentials(t *testing.T) {
 			name:   "colon key value",
 			body:   "refresh_token: colon-secret-123",
 			secret: "colon-secret-123",
+		},
+		{
+			name:   "plain token-like field",
+			body:   "apiToken=plain-secret-123",
+			secret: "plain-secret-123",
 		},
 	}
 
@@ -980,11 +1008,102 @@ func TestAPIErrorRedactsCredentials(t *testing.T) {
 	}
 }
 
+func TestAPIErrorRedactsEscapedCredentialKeyInMalformedJSON(t *testing.T) {
+	const secret = "malformed-escaped-secret-123"
+	resp := &http.Response{
+		StatusCode: http.StatusForbidden,
+		Status:     "403 Forbidden",
+		Header:     make(http.Header),
+		Body:       io.NopCloser(strings.NewReader(`{"access\u005ftoken":"` + secret)),
+	}
+
+	err := NewHTTPError(resp)
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("error leaked escaped credential from malformed JSON: %s", err)
+	}
+	if !strings.Contains(err.Error(), "<redacted>") {
+		t.Fatalf("error did not redact escaped credential from malformed JSON: %s", err)
+	}
+}
+
+func TestAPIErrorRedactsCredentialInEmbeddedJSONMessage(t *testing.T) {
+	const secret = "nested-json-secret-123"
+	resp := &http.Response{
+		StatusCode: http.StatusBadGateway,
+		Status:     "502 Bad Gateway",
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(
+			`{"message":"downstream returned {\"access_token\":\"` + secret + `\"}"}`,
+		)),
+	}
+
+	err := NewHTTPError(resp)
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("error leaked credential from embedded JSON: %s", err)
+	}
+	if !strings.Contains(err.Error(), "<redacted>") {
+		t.Fatalf("error did not redact credential from embedded JSON: %s", err)
+	}
+}
+
+func TestAPIErrorRedactsCredentialInMultiplyEmbeddedJSONMessages(t *testing.T) {
+	const secret = "double-nested-json-secret-123"
+	inner := `downstream returned {"access_token":"` + secret + `"}`
+	middle, err := json.Marshal(map[string]string{"message": inner})
+	if err != nil {
+		t.Fatal(err)
+	}
+	outer, err := json.Marshal(map[string]string{"message": "proxy returned " + string(middle)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp := &http.Response{
+		StatusCode: http.StatusBadGateway,
+		Status:     "502 Bad Gateway",
+		Header:     make(http.Header),
+		Body:       io.NopCloser(bytes.NewReader(outer)),
+	}
+
+	err = NewHTTPError(resp)
+	texts := []struct {
+		name string
+		text string
+	}{
+		{name: "HTTP error body", text: err.Error()},
+		{name: "decoded message", text: SanitizeErrorText("proxy returned " + string(middle))},
+	}
+	for _, text := range texts {
+		if strings.Contains(text.text, secret) {
+			t.Fatalf("%s leaked credential from multiply embedded JSON: %s", text.name, text.text)
+		}
+		if !strings.Contains(text.text, "<redacted>") {
+			t.Fatalf("%s did not redact credential from multiply embedded JSON: %s", text.name, text.text)
+		}
+	}
+}
+
+func TestSanitizeErrorTextRedactsCredentialAtEmbeddedJSONDepthLimit(t *testing.T) {
+	const secret = "depth-limit-json-secret-123"
+	nested := `{"access_token":"` + secret + `"}`
+	for i := 0; i < maxEmbeddedJSONDepth; i++ {
+		encoded, err := json.Marshal(map[string]string{"message": "wrapped " + nested})
+		if err != nil {
+			t.Fatal(err)
+		}
+		nested = string(encoded)
+	}
+
+	got := SanitizeErrorText(nested)
+	if strings.Contains(got, secret) || !strings.Contains(got, "<redacted>") {
+		t.Fatalf("sanitized text did not redact credential at depth limit: %s", got)
+	}
+}
+
 func TestAPIErrorRedactsCredentialTruncatedMidValue(t *testing.T) {
 	const visibleSecret = "truncated"
 	const credentialPrefix = `","access_token":"`
 	const bodyPrefix = `{"padding":"`
-	paddingLength := maxErrorBodyBytes - len(bodyPrefix) - len(credentialPrefix) - len(visibleSecret)
+	paddingLength := MaxErrorExcerptBytes - len(bodyPrefix) - len(credentialPrefix) - len(visibleSecret)
 	body := bodyPrefix + strings.Repeat("A", paddingLength) +
 		credentialPrefix + visibleSecret + "-secret-value\"}"
 
@@ -992,12 +1111,15 @@ func TestAPIErrorRedactsCredentialTruncatedMidValue(t *testing.T) {
 		Status: http.StatusText(http.StatusForbidden),
 		Body:   io.NopCloser(strings.NewReader(body)),
 	}
-	err := newAPIError(resp)
+	err := NewHTTPError(resp)
 	if strings.Contains(err.Error(), visibleSecret) {
 		t.Fatalf("error leaked truncated credential prefix: %s", err.Error())
 	}
 	if !strings.Contains(err.Error(), "<redacted>") {
 		t.Fatalf("error did not redact truncated credential: %s", err.Error())
+	}
+	if !strings.HasSuffix(err.Error(), "...") {
+		t.Fatalf("error did not expose truncation: %s", err.Error())
 	}
 }
 
@@ -1020,11 +1142,14 @@ func TestAPIErrorSanitizesControlChars(t *testing.T) {
 
 func TestAPIErrorSanitizesStatus(t *testing.T) {
 	resp := &http.Response{
-		Status: "403 Forbidden \x1b[31mspoofed\x1b[0m \u202ereversed",
-		Body:   io.NopCloser(strings.NewReader(`{"message":"denied"}`)),
+		Status: "403 Forbidden \x1b[31mspoofed\x1b[0m \u202ereversed authorization=status-secret-123",
+		Header: http.Header{
+			"Retry-After": {"60\x1b authorization=retry-secret-123"},
+		},
+		Body: io.NopCloser(strings.NewReader(`{"message":"denied"}`)),
 	}
 
-	err := newAPIError(resp)
+	err := NewHTTPError(resp)
 	for _, control := range []string{"\x1b", "\u202e"} {
 		if strings.Contains(err.Error(), control) {
 			t.Fatalf("error contained raw status control %q: %q", control, err.Error())
@@ -1034,6 +1159,9 @@ func TestAPIErrorSanitizesStatus(t *testing.T) {
 		if !strings.Contains(err.Error(), escaped) {
 			t.Fatalf("error did not sanitize status control %q: %q", escaped, err.Error())
 		}
+	}
+	if strings.Contains(err.Error(), "status-secret-123") || strings.Contains(err.Error(), "retry-secret-123") || !strings.Contains(err.Error(), "retry after 60") {
+		t.Fatalf("error did not safely preserve Retry-After: %q", err.Error())
 	}
 }
 
@@ -1055,6 +1183,36 @@ func TestAPIErrorSanitizesUnicodeDirectionControls(t *testing.T) {
 		if !strings.Contains(err.Error(), escaped) {
 			t.Fatalf("error did not expose sanitized control %q: %q", escaped, err.Error())
 		}
+	}
+}
+
+func TestAPIErrorPreservesBodyReadFailure(t *testing.T) {
+	readErr := errors.New("connection \x1b[31mreset; password=read-secret-123")
+	resp := &http.Response{
+		StatusCode: http.StatusInternalServerError,
+		Status:     "500 Internal Server Error",
+		Header:     make(http.Header),
+		Body: io.NopCloser(io.MultiReader(
+			strings.NewReader(`{"message":"server failed"}`),
+			apiErrorReader{err: readErr},
+		)),
+	}
+
+	err := NewHTTPError(resp)
+	var httpErr *HTTPError
+	if !errors.As(err, &httpErr) || httpErr.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("error type = %T (%v)", err, err)
+	}
+	if !errors.Is(err, readErr) {
+		t.Fatalf("error does not wrap read failure: %v", err)
+	}
+	for _, value := range []string{"server failed", "failed to read error response", "connection", "reset", "<redacted>", `\x1b`} {
+		if !strings.Contains(err.Error(), value) {
+			t.Fatalf("error = %q, missing %q", err, value)
+		}
+	}
+	if strings.Contains(err.Error(), "read-secret-123") || strings.Contains(err.Error(), "\x1b") {
+		t.Fatalf("error leaked unsafe read failure context: %q", err.Error())
 	}
 }
 

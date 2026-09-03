@@ -351,8 +351,7 @@ func getCollaborator(client *api.Client, repository cmdutil.Repository, username
 		return api.Collaborator{}, false, nil
 	}
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-		return api.Collaborator{}, false, fmt.Errorf("API error: %s - %s", resp.Status, strings.TrimSpace(string(body)))
+		return api.Collaborator{}, false, api.NewHTTPError(resp)
 	}
 	var item api.Collaborator
 	if err := json.NewDecoder(resp.Body).Decode(&item); err != nil {

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -26,6 +27,30 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
+}
+
+func TestDownloadUpdateAssetSanitizesHTTPError(t *testing.T) {
+	const secret = "update-download-secret-123"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = w.Write([]byte("message=failed; password=" + secret + "; control=\x1b\n" + strings.Repeat("A", api.MaxErrorExcerptBytes)))
+	}))
+	t.Cleanup(server.Close)
+
+	_, err := downloadUpdateAsset(context.Background(), server.URL, maxChecksumBytes)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	for _, leaked := range []string{secret, "\x1b"} {
+		if strings.Contains(err.Error(), leaked) {
+			t.Fatalf("error leaked unsafe value %q: %q", leaked, err)
+		}
+	}
+	for _, want := range []string{"<redacted>", `\x1b`, "..."} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error = %q, missing %q", err, want)
+		}
+	}
 }
 
 func TestSelectLatestStableRelease(t *testing.T) {

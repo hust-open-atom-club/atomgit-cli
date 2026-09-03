@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,6 +10,8 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	internalapi "atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -32,6 +35,26 @@ func response(status int, body string) *http.Response {
 		Body:       io.NopCloser(strings.NewReader(body)),
 	}
 }
+
+type countingReadCloser struct {
+	reader    io.Reader
+	bytesRead int
+}
+
+func (r *countingReadCloser) Read(p []byte) (int, error) {
+	n, err := r.reader.Read(p)
+	r.bytesRead += n
+	return n, err
+}
+
+func (r *countingReadCloser) Close() error { return nil }
+
+type oauthErrorReadCloser struct {
+	err error
+}
+
+func (r oauthErrorReadCloser) Read([]byte) (int, error) { return 0, r.err }
+func (oauthErrorReadCloser) Close() error               { return nil }
 
 func TestOAuthEnvironmentDefaultsAndOverrides(t *testing.T) {
 	t.Setenv("AG_OAUTH_CLIENT_ID", "")
@@ -151,6 +174,92 @@ func TestExchangeCodeErrors(t *testing.T) {
 	}
 }
 
+func TestTokenEndpointErrorIsBoundedAndOmitsBody(t *testing.T) {
+	const secret = "oauth-token-secret-123"
+	body := &countingReadCloser{reader: strings.NewReader("password=" + secret + "\x1b" + strings.Repeat("A", internalapi.MaxErrorExcerptBytes))}
+	withDefaultHTTPClient(t, func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusUnauthorized,
+			Status:     "401 Unauthorized authorization=status-secret-123; control=\x1b",
+			Header: http.Header{
+				"Retry-After": {"60 authorization=retry-secret-123"},
+			},
+			Body: body,
+		}, nil
+	})
+
+	_, err := exchangeCode(context.Background(), "id", "client-secret", "redirect", "code")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if body.bytesRead > internalapi.MaxErrorExcerptBytes+1 {
+		t.Fatalf("error body read = %d bytes", body.bytesRead)
+	}
+	for _, leaked := range []string{secret, "status-secret-123", "retry-secret-123", "\x1b"} {
+		if strings.Contains(err.Error(), leaked) {
+			t.Fatalf("error leaked unsafe value %q: %q", leaked, err)
+		}
+	}
+	for _, want := range []string{"401 Unauthorized", "response body omitted", `\x1b`, "retry after 60"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error = %q, missing %q", err, want)
+		}
+	}
+}
+
+func TestTokenEndpointErrorsPreserveSanitizedBodyReadCause(t *testing.T) {
+	tests := []struct {
+		name string
+		call func(context.Context) error
+	}{
+		{
+			name: "authorization code exchange",
+			call: func(ctx context.Context) error {
+				_, err := exchangeCode(ctx, "id", "client-secret", "redirect", "code")
+				return err
+			},
+		},
+		{
+			name: "refresh token exchange",
+			call: func(ctx context.Context) error {
+				_, err := RefreshAccessToken(ctx, "refresh-token")
+				return err
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("AG_OAUTH_CLIENT_ID", "id")
+			t.Setenv("AG_OAUTH_CLIENT_SECRET", "client-secret")
+			cause := errors.New("read failed password=oauth-read-secret-123; control=\x1b")
+			withDefaultHTTPClient(t, func(*http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusBadGateway,
+					Status:     "502 Bad Gateway",
+					Header:     make(http.Header),
+					Body:       oauthErrorReadCloser{err: cause},
+				}, nil
+			})
+
+			err := tt.call(context.Background())
+			if err == nil || !errors.Is(err, cause) {
+				t.Fatalf("error = %v, want wrapped body read cause", err)
+			}
+			for _, leaked := range []string{"oauth-read-secret-123", "\x1b"} {
+				if strings.Contains(err.Error(), leaked) {
+					t.Fatalf("error leaked unsafe value %q: %q", leaked, err)
+				}
+			}
+			for _, want := range []string{"failed to read error response", "<redacted>", `\x1b`} {
+				if !strings.Contains(err.Error(), want) {
+					t.Fatalf("error = %q, missing %q", err, want)
+				}
+			}
+		})
+	}
+}
+
 func TestRefreshAccessToken(t *testing.T) {
 	t.Setenv("AG_OAUTH_CLIENT_ID", "id")
 	t.Setenv("AG_OAUTH_CLIENT_SECRET", "secret")
@@ -219,6 +328,35 @@ func TestFetchUserErrors(t *testing.T) {
 				t.Fatalf("error = %v", err)
 			}
 		})
+	}
+}
+
+func TestFetchUserErrorUsesSharedSanitizer(t *testing.T) {
+	const secret = "oauth-user-secret-123"
+	withDefaultHTTPClient(t, func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusForbidden,
+			Status:     "403 Forbidden authorization=status-secret-123",
+			Header: http.Header{
+				"Retry-After": {"60 authorization=retry-secret-123"},
+			},
+			Body: io.NopCloser(strings.NewReader("message=denied; password=" + secret + "; control=\x1b\n" + strings.Repeat("A", internalapi.MaxErrorExcerptBytes))),
+		}, nil
+	})
+
+	_, err := FetchUser(context.Background(), "access")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	for _, leaked := range []string{secret, "status-secret-123", "retry-secret-123", "\x1b"} {
+		if strings.Contains(err.Error(), leaked) {
+			t.Fatalf("error leaked unsafe value %q: %q", leaked, err)
+		}
+	}
+	for _, want := range []string{"<redacted>", `\x1b`, "...", "retry after 60"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error = %q, missing %q", err, want)
+		}
 	}
 }
 

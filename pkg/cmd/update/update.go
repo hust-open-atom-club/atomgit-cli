@@ -912,7 +912,7 @@ func downloadUpdateAsset(ctx context.Context, rawURL string, limit int64) ([]byt
 	}
 	defer response.Body.Close()
 	if response.StatusCode/100 != 2 {
-		return nil, fmt.Errorf("unexpected HTTP status %s", response.Status)
+		return nil, fmt.Errorf("download update asset: %w", api.NewHTTPError(response))
 	}
 	contents, err := io.ReadAll(io.LimitReader(response.Body, limit+1))
 	if err != nil {

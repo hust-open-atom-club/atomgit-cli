@@ -202,7 +202,7 @@ func resolveNumber(client *api.Client, owner, repo string, num int) (string, err
 	// Drain body for connection reuse before issuing the PR check
 	io.Copy(io.Discard, issueResp.Body)
 	if issueResp.StatusCode != http.StatusNotFound {
-		return "", fmt.Errorf("unexpected status checking issue #%d: %s", num, issueResp.Status)
+		return "", fmt.Errorf("unexpected status checking issue #%d: %s", num, api.SanitizeErrorText(issueResp.Status))
 	}
 
 	prPath := fmt.Sprintf("/repos/%s/%s/pulls/%d", owner, repo, num)
@@ -216,7 +216,7 @@ func resolveNumber(client *api.Client, owner, repo string, num int) (string, err
 	}
 	io.Copy(io.Discard, prResp.Body)
 	if prResp.StatusCode != http.StatusNotFound {
-		return "", fmt.Errorf("unexpected status checking PR #%d: %s", num, prResp.Status)
+		return "", fmt.Errorf("unexpected status checking PR #%d: %s", num, api.SanitizeErrorText(prResp.Status))
 	}
 
 	return "", fmt.Errorf("no issue or pull request with number %d found in %s/%s", num, owner, repo)

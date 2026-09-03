@@ -12,6 +12,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	baseapi "atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -509,8 +511,112 @@ func TestActionsErrorsAreDeterministic(t *testing.T) {
 	}
 }
 
+func TestActionsErrorsSanitizeResponseContext(t *testing.T) {
+	tests := []struct {
+		name   string
+		body   string
+		secret string
+		useful string
+	}{
+		{
+			name:   "structured bearer token",
+			body:   `{"error_message":"request denied for Bearer action-bearer-123"}`,
+			secret: "action-bearer-123",
+			useful: "request denied",
+		},
+		{
+			name:   "structured token-like field",
+			body:   `{"message":"request failed: apiToken=action-token-123"}`,
+			secret: "action-token-123",
+			useful: "request failed",
+		},
+		{
+			name:   "JSON credential field fallback",
+			body:   `{"client_secret":"action-client-secret-123","reason":"denied"}`,
+			secret: "action-client-secret-123",
+			useful: "reason",
+		},
+		{
+			name:   "plain text credential",
+			body:   "password=action-password-123; request denied",
+			secret: "action-password-123",
+			useful: "request denied",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := &http.Response{
+				StatusCode: http.StatusForbidden,
+				Status:     "403 Forbidden",
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader(tt.body)),
+			}
+			err := responseError("get workflow run", resp)
+			if strings.Contains(err.Error(), tt.secret) {
+				t.Fatalf("error leaked credential: %q", err.Error())
+			}
+			for _, value := range []string{"<redacted>", tt.useful} {
+				if !strings.Contains(err.Error(), value) {
+					t.Fatalf("error = %q, missing %q", err.Error(), value)
+				}
+			}
+		})
+	}
+}
+
+func TestActionsErrorTruncatesAndRedactsBoundaryCredential(t *testing.T) {
+	const visibleSecret = "action-truncated"
+	const credentialPrefix = "\naccess_token="
+	paddingLength := baseapi.MaxErrorExcerptBytes - len(credentialPrefix) - len(visibleSecret)
+	body := strings.Repeat("A", paddingLength) + credentialPrefix + visibleSecret + "-secret-value"
+	resp := &http.Response{
+		StatusCode: http.StatusForbidden,
+		Status:     "403 Forbidden",
+		Header:     make(http.Header),
+		Body:       io.NopCloser(strings.NewReader(body)),
+	}
+
+	err := responseError("get workflow run", resp)
+	if strings.Contains(err.Error(), visibleSecret) {
+		t.Fatalf("error leaked truncated credential: %q", err.Error())
+	}
+	if !strings.Contains(err.Error(), "<redacted>") || !strings.HasSuffix(err.Error(), "...") {
+		t.Fatalf("error did not redact and expose truncation: %q", err.Error())
+	}
+	if len(err.Error()) > baseapi.MaxErrorExcerptBytes+200 {
+		t.Fatalf("error message too long: %d bytes", len(err.Error()))
+	}
+}
+
+func TestActionsErrorSanitizesControlsStatusAndRetryAfter(t *testing.T) {
+	resp := &http.Response{
+		StatusCode: http.StatusTooManyRequests,
+		Status:     "429 Too Many Requests \x1b[31m \u202ereversed authorization=status-secret-123",
+		Header: http.Header{
+			"Retry-After": {"60\x1b authorization=retry-secret-123"},
+		},
+		Body: io.NopCloser(strings.NewReader(`{"message":"slow \u001bdown ` + "\u2066" + `now"}`)),
+	}
+
+	err := responseError("get workflow run", resp)
+	for _, control := range []string{"\x1b", "\u202e", "\u2066"} {
+		if strings.Contains(err.Error(), control) {
+			t.Fatalf("error contained raw control %q: %q", control, err.Error())
+		}
+	}
+	for _, escaped := range []string{`\x1b`, `\u202e`, `\u2066`} {
+		if !strings.Contains(err.Error(), escaped) {
+			t.Fatalf("error did not expose sanitized control %q: %q", escaped, err.Error())
+		}
+	}
+	if strings.Contains(err.Error(), "status-secret-123") || strings.Contains(err.Error(), "retry-secret-123") || !strings.Contains(err.Error(), "retry after 60") || !strings.Contains(err.Error(), "slow") {
+		t.Fatalf("error did not safely preserve response context: %q", err.Error())
+	}
+}
+
 func TestResponseErrorPreservesBodyReadFailure(t *testing.T) {
-	readErr := errors.New("connection reset")
+	readErr := errors.New("connection \x1b[31mreset; password=read-secret-123")
 	resp := &http.Response{
 		StatusCode: http.StatusInternalServerError,
 		Status:     "500 Internal Server Error",
@@ -532,10 +638,13 @@ func TestResponseErrorPreservesBodyReadFailure(t *testing.T) {
 	if !errors.Is(err, readErr) {
 		t.Fatalf("error does not wrap read failure: %v", err)
 	}
-	for _, value := range []string{"server failed", "failed to read error response", "connection reset"} {
+	for _, value := range []string{"server failed", "failed to read error response", "connection", "reset", "<redacted>", `\x1b`} {
 		if !strings.Contains(err.Error(), value) {
 			t.Fatalf("error = %q, missing %q", err, value)
 		}
+	}
+	if strings.Contains(err.Error(), "read-secret-123") || strings.Contains(err.Error(), "\x1b") {
+		t.Fatalf("error leaked unsafe read failure context: %q", err.Error())
 	}
 }
 

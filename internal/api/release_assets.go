@@ -132,13 +132,13 @@ func UploadReleaseAsset(ctx context.Context, client *Client, upload ReleaseUploa
 			return nil
 		}
 
-		// HTTP failure: read the body for the message, do not retry.
-		responseBody, _ := io.ReadAll(resp.Body)
+		// HTTP failure: retain only the shared sanitized excerpt, do not retry.
+		responseErr := NewHTTPError(resp)
 		resp.Body.Close()
 		if closeErr := requestBody.waitForClose(requestBodyCloseTimeout); closeErr != nil {
-			return fmt.Errorf("upload failed: %s; wait for request body to close: %w", resp.Status, closeErr)
+			return fmt.Errorf("upload failed: %v; wait for request body to close: %w", responseErr, closeErr)
 		}
-		return fmt.Errorf("upload failed: %s - %s", resp.Status, strings.TrimSpace(string(responseBody)))
+		return fmt.Errorf("upload failed: %w", responseErr)
 	}
 
 	return fmt.Errorf("upload failed after safe retry: %w", lastErr)
@@ -228,8 +228,7 @@ func DeleteReleaseAttachment(client *Client, owner, repo, tag string, attachment
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("delete attachment failed: %s - %s", resp.Status, strings.TrimSpace(string(body)))
+		return fmt.Errorf("delete attachment failed: %w", NewHTTPError(resp))
 	}
 	return nil
 }
@@ -262,9 +261,9 @@ func DownloadReleaseAttachment(ctx context.Context, client *Client, owner, repo,
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		responseErr := NewHTTPError(resp)
 		resp.Body.Close()
-		return nil, fmt.Errorf("download failed: %s - %s", resp.Status, strings.TrimSpace(string(body)))
+		return nil, fmt.Errorf("download failed: %w", responseErr)
 	}
 	return resp.Body, nil
 }
