@@ -198,6 +198,7 @@ function validateMainPackage(packageInfo, version) {
   }
   assertExactFiles(manifest.name, entries, [
     "package/LICENSE",
+    "package/README.en.md",
     "package/README.md",
     "package/bin/ag.js",
     "package/package.json",

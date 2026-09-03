@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { mkdir, mkdtemp, readFile, rm, writeFile } = require("node:fs/promises");
+const { createHash } = require("node:crypto");
+const { mkdir, mkdtemp, readFile, readdir, rm, writeFile } = require("node:fs/promises");
 const path = require("node:path");
 const AdmZip = require("adm-zip");
 const tar = require("tar");
@@ -13,6 +14,7 @@ const {
   platformPackageManifest,
 } = require("../scripts/build-npm-packages");
 const { assertPackageVersions } = require("../scripts/check-npm-version");
+const { inspectArtifacts } = require("../scripts/publish-npm-packages");
 const { setNpmVersion } = require("../scripts/set-npm-version");
 
 function versionMetadata(version) {
@@ -34,6 +36,18 @@ function versionMetadata(version) {
     packageJson: { version, optionalDependencies: { ...optionalDependencies } },
     packageLock: { version, packages },
   };
+}
+
+async function writePackageChecksums(npmDir) {
+  const tarballs = (await readdir(npmDir))
+    .filter((name) => name.endsWith(".tgz"))
+    .sort();
+  const lines = [];
+  for (const name of tarballs) {
+    const contents = await readFile(path.join(npmDir, name));
+    lines.push(`${createHash("sha256").update(contents).digest("hex")}  ./${name}`);
+  }
+  await writeFile(path.join(npmDir, "checksums.txt"), `${lines.join("\n")}\n`);
 }
 
 test("resolves every supported platform package", () => {
@@ -137,7 +151,7 @@ test("extracts binaries from release tar.gz and zip archives", async (t) => {
   assert.equal(await readFile(windowsDestination, "utf8"), "windows binary");
 });
 
-test("builds all seven platform package directories from release archives", async (t) => {
+test("builds and validates npm packages from release archives", async (t) => {
   const root = await mkdtemp(path.join(process.cwd(), ".ag-npm-test-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const releaseDir = path.join(root, "release");
@@ -180,6 +194,26 @@ test("builds all seven platform package directories from release archives", asyn
       `${target.platform}/${target.arch}`,
     );
   }
+
+  const npmDir = await buildNpmPackages({
+    root: path.join(__dirname, ".."),
+    releaseDir,
+    version: require("../package.json").version,
+  });
+  await writePackageChecksums(npmDir);
+  const plan = await inspectArtifacts({
+    npmDir,
+    version: require("../package.json").version,
+  });
+
+  assert.equal(plan.platformPackages.length, TARGETS.length);
+  assert.deepEqual([...plan.mainPackage.entries.keys()].sort(), [
+    "package/LICENSE",
+    "package/README.en.md",
+    "package/README.md",
+    "package/bin/ag.js",
+    "package/package.json",
+  ]);
 });
 
 test("all npm targets use ordinary release archives", () => {
