@@ -458,6 +458,24 @@ func TestPullRequestViewJSONReusesBaseMapping(t *testing.T) {
 		t.Fatalf("view base fields = %#v, want %#v", got, want)
 	}
 }
+
+func TestPullRequestJSONNormalizesMissingMergedField(t *testing.T) {
+	var pullRequest api.PullRequest
+	if err := json.Unmarshal([]byte(`{"number":"10","state":"merged","merged_at":"2026-09-04T10:00:00Z"}`), &pullRequest); err != nil {
+		t.Fatal(err)
+	}
+
+	list := newPullRequestJSON(pullRequest, nil)
+	if !list.Merged {
+		t.Fatal("pr list JSON reports merged=false for a merged PR without an API merged field")
+	}
+
+	view := newPullRequestViewJSON(pullRequest, nil)
+	if !view.Merged {
+		t.Fatal("pr view JSON reports merged=false for a merged PR without an API merged field")
+	}
+}
+
 func TestPRListRejectsInvalidLimit(t *testing.T) {
 	for _, limit := range []string{"0", "-1"} {
 		t.Run(limit, func(t *testing.T) {
@@ -973,6 +991,12 @@ func TestPRMergeErrors(t *testing.T) {
 			name:      "PR already merged",
 			getStatus: http.StatusOK,
 			getBody:   `{"id":1,"number":"42","state":"open","merged":true}`,
+			wantError: "PR #42 is already merged",
+		},
+		{
+			name:      "PR already merged without boolean",
+			getStatus: http.StatusOK,
+			getBody:   `{"id":1,"number":"42","state":"merged","merged_at":"2026-09-04T10:00:00Z"}`,
 			wantError: "PR #42 is already merged",
 		},
 		{
