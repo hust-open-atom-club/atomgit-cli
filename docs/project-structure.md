@@ -91,7 +91,7 @@ atomgit-cli/
 ├── install.ps1                 # Windows Release 安装脚本
 ├── Makefile                    # 构建、测试、安装和发布入口
 ├── package.json                # npm 主包元数据
-└── go.mod                      # Go 模块与 Go 版本声明
+└── go.mod                      # Go 模块、最低版本与建议工具链声明
 ```
 
 `dist/` 和 `node_modules/` 是本地生成目录，不属于源代码，也不应提交。

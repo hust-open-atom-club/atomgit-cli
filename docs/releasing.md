@@ -26,14 +26,16 @@ git tag "v${VERSION}"
 make release VERSION="v${VERSION}"
 ```
 
-`go.mod` 的 `go` 行同时规定源码构建所需的最低版本和正式发布使用的精确版本，当前为
-Go 1.26.8。`scripts/build-release.sh` 会设置并回读该版本，再让 GoReleaser 继承
-相同的 `GOTOOLCHAIN`；如果无法下载、验证或执行该工具链，发布会在生成制品前停止。
+`go.mod` 的 `go` 行规定源码构建最低支持 Go 1.26.6，`toolchain` 行规定开发和正式
+发布建议使用 Go 1.26.8。`scripts/build-release.sh` 会读取、设置并回读 `toolchain`
+中的精确版本，再让 GoReleaser 继承相同的 `GOTOOLCHAIN`；如果无法下载、验证或
+执行该工具链，发布会在生成制品前停止。
 
 `make vulncheck` 会使用同一版本构建 `CGO_ENABLED=0` 的实际 `ag` 二进制，并用固定
 版本的 `govulncheck` 以 binary 模式查询 `https://vuln.go.dev`。可达漏洞、工具下载
 失败、数据库不可用或扫描器错误都会使门禁失败；规范数据库中已经撤回的报告不计为
-漏洞。更新 Go 版本时，应修改 `go.mod` 的 `go` 行，并重新运行 `make go-version`、
+漏洞。更新最低支持版本时修改 `go.mod` 的 `go` 行，并运行
+`make go-min-version test-min-go`；更新正式发布版本时修改 `toolchain` 行，并重新运行 `make go-version`、
 `make vulncheck` 和下文的发布验证。
 
 `make release` 会检查工作区干净、tag 存在且指向当前 HEAD，然后在 `dist/vX.Y.Z/` 生成以下文件：
@@ -177,6 +179,8 @@ Homebrew tap 位于 [hust-open-atom-club/homebrew-tap](https://github.com/hust-o
 - `latest` 直接从当前 flake revision 的源码构建，因此始终对应检出仓库的最新 commit；工作流只维护其 `vendorHash`。
 
 两个 package 都由 Nix 管理；共享构建参数暂时保留 `Source=nix` 注入，以便仍基于旧版源码的 `stable` 正确报告由 Nix 管理。源码移除发行来源字段后，该兼容参数不会改变版本输出。`default` 和兼容名称 `ag` 都指向 `stable`。
+
+Nix package 使用 `go` 行声明的最低版本约束，并由锁定的 nixpkgs input 提供实际编译器；它不要求与官方 Release 使用的建议工具链补丁版本完全一致。更新 flake inputs 时仍需确认所有支持平台提供的 Go 版本不低于 1.26.6。
 
 `.gitcode/workflows/update-nix.yml` 每天在默认分支上运行，也支持手动触发。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；构建验证后在内容变化时直接提交到默认分支。工作流需要 `repository: write`，并在单次 `git push` 中使用自动生成的 `ATOMGIT_TOKEN`，不需要额外长期 token。
 

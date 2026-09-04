@@ -2,10 +2,10 @@
   "nodes": {
     "nixpkgs": {
       "locked": {
-        "lastModified": 1786106723,
-        "narHash": "sha256-zDSUbpoeo/9ZmD2+wXnzxoo1+uhL8vxc0b8yuYMKYq0=",
+        "lastModified": 1788316716,
+        "narHash": "sha256-bc7rSpXIdn9QWGNqfWcPZWOhEVF8NoeAZkWq0XWnf/k=",
         "ref": "nixos-unstable",
-        "rev": "f13ff45afd1bb73e640eaa08a7066dbed07e3238",
+        "rev": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
         "shallow": true,
         "type": "git",
         "url": "https://mirror.nju.edu.cn/git/nixpkgs.git"
@@ -19,10 +19,10 @@
     },
     "nixpkgs-darwin": {
       "locked": {
-        "lastModified": 1786152057,
-        "narHash": "sha256-bzEqlLh3EpIhdSDEb4zWy6w39QbZz/OHR8xEBeY6ZwA=",
+        "lastModified": 1788334797,
+        "narHash": "sha256-nskSa8kDimM7F0VFSP8IdoSNo4G0vKzOtxwvOFpoGDI=",
         "ref": "nixpkgs-26.05-darwin",
-        "rev": "6241c49fffa016352c8e757decbdb20541aa9cb2",
+        "rev": "c19db427a1fdfc7591c0b0baeb4665dcef2c61da",
         "shallow": true,
         "type": "git",
         "url": "https://mirror.nju.edu.cn/git/nixpkgs.git"
