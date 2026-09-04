@@ -6,7 +6,7 @@
 
 - 本项目是 AtomGit 命令行工具 `ag`，使用 Go 和 Cobra 开发。
 - Go 模块：`atomgit.com/hust-open-atom-club/atomgit-cli`。
-- 当前 `go.mod` 指定 Go 1.26.8；不要无故降低或升级 Go 版本及依赖。
+- 当前 `go.mod` 要求最低 Go 1.26.6，并建议使用 Go 1.26.8；普通 Make 目标和正式发布固定使用建议版本。不要无故降低或升级 Go 版本及依赖。
 - CLI 入口为 `cmd/ag/main.go`，执行流程为 `main` -> `internal/agcmd.Main` -> `pkg/cmd/root.NewCmdRoot`。
 - AtomGit API 基址和通用 HTTP 请求逻辑位于 `internal/api/client.go`，API 数据结构位于 `internal/api/types.go`。
 - 正式发布支持 Linux 的 amd64/arm64/loong64，以及 macOS 和 Windows 的 amd64/arm64；其他 Go 目标平台可能能够编译，但不保证完整兼容。

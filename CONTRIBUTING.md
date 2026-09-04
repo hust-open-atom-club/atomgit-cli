@@ -42,7 +42,7 @@
 
 3. **开发规范**
 
-   - 使用 Go 1.26.8
+   - 最低支持 Go 1.26.6，开发和正式发布建议使用 Go 1.26.8
    - 使用 `gofmt` 格式化修改的 Go 文件
    - 为新增或修复的行为添加测试
    - 保持与现有代码风格一致
@@ -54,8 +54,11 @@
    # 格式化修改的 Go 文件
    gofmt -w path/to/changed.go
 
-   # 下载并确认项目指定的 Go 版本
+   # 下载并确认正式发布使用的 Go 版本
    make go-version
+
+   # 使用最低支持的 Go 版本运行兼容性测试
+   make go-min-version test-min-go
 
    # 运行测试和静态检查
    go test ./...
@@ -99,9 +102,10 @@
    环境时，发布前仍需在 macOS 和 Windows 上原生运行 `go test ./...`。参见
    [AtomGit 托管 Runner 文档](https://docs.gitcode.com/docs/help/home/org_project/pipeline/runner-management/using-hosted-runners/)。
 
-   `go.mod` 的 `go` 行同时规定源码构建所需的最低版本，以及普通 Make 目标和正式
-   发布使用的精确版本。AtomGit 的 `setup-go` 当前只提供到 Go 1.26.1，因此 CI
-   先将其作为引导命令，再由 `make go-version` 下载并确认 Go 1.26.8。工具链下载
+   `go.mod` 的 `go` 行规定源码构建所需的最低版本 Go 1.26.6，`toolchain` 行规定
+   开发和正式发布建议使用的精确版本 Go 1.26.8。普通 Make 目标固定使用建议版本，
+   `make test-min-go` 则专门验证最低版本兼容性。AtomGit 的 `setup-go` 当前只提供到
+   Go 1.26.1，因此 CI 先将其作为引导命令，再下载并验证这两个版本。工具链下载
    遵循 `GOPROXY`，并通过 `GOSUMDB` 配置的校验和数据库验证。参见
    [AtomGit setup 工具支持列表](https://docs.gitcode.com/docs/help/home/org_project/pipeline/syntax-reference/setup-supported-tools/)
    和 [Go 工具链文档](https://go.dev/doc/toolchain)。

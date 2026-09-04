@@ -2,8 +2,9 @@ GO ?= go
 GORELEASER ?= goreleaser
 GOVULNCHECK_VERSION := v1.7.0
 GOVULNDB := https://vuln.go.dev
-GO_VERSION := $(shell sed -n 's/^go[[:space:]][[:space:]]*//p' go.mod)
-GO_TOOLCHAIN := go$(GO_VERSION)
+GO_MIN_VERSION := $(shell sed -n 's/^go[[:space:]][[:space:]]*//p' go.mod)
+GO_MIN_TOOLCHAIN := go$(GO_MIN_VERSION)
+GO_TOOLCHAIN := $(shell sed -n 's/^toolchain[[:space:]][[:space:]]*//p' go.mod)
 BINARY := ag
 COMMAND := ./cmd/ag
 BIN_DIR := bin
@@ -13,8 +14,11 @@ RELEASE_TARGETS ?= linux/amd64 linux/arm64 linux/loong64 darwin/amd64 darwin/arm
 PLATFORM_TEST_TARGETS ?= darwin/amd64 windows/amd64
 
 EXE :=
-ifeq ($(strip $(GO_VERSION)),)
-$(error go.mod must declare the project Go version)
+ifeq ($(strip $(GO_MIN_VERSION)),)
+$(error go.mod must declare the minimum supported Go version)
+endif
+ifeq ($(strip $(GO_TOOLCHAIN)),)
+$(error go.mod must declare the preferred release toolchain)
 endif
 
 export GOTOOLCHAIN := $(GO_TOOLCHAIN)
@@ -36,17 +40,25 @@ PRERELEASE ?=
 
 .DEFAULT_GOAL := build
 
-.PHONY: all go-version build cross-build install uninstall test test-race test-platform-compile vet lint vulncheck fmt fmt-check coverage release release-snapshot publish clean help
+.PHONY: all go-min-version go-version build cross-build install uninstall test test-min-go test-race test-platform-compile vet lint vulncheck fmt fmt-check coverage release release-snapshot publish clean help
 
 all: lint test build
+
+go-min-version:
+	@actual="$$(GOTOOLCHAIN=$(GO_MIN_TOOLCHAIN) $(GO) env GOVERSION)"; \
+	if [ "$$actual" != "$(GO_MIN_TOOLCHAIN)" ]; then \
+		echo "Expected minimum Go toolchain $(GO_MIN_TOOLCHAIN), got $$actual" >&2; \
+		exit 1; \
+	fi; \
+	echo "Minimum Go toolchain: $$actual"
 
 go-version:
 	@actual="$$($(GO) env GOVERSION)"; \
 	if [ "$$actual" != "$(GO_TOOLCHAIN)" ]; then \
-		echo "Expected Go toolchain $(GO_TOOLCHAIN), got $$actual" >&2; \
+		echo "Expected release Go toolchain $(GO_TOOLCHAIN), got $$actual" >&2; \
 		exit 1; \
 	fi; \
-	echo "Go toolchain: $$actual"
+	echo "Release Go toolchain: $$actual"
 
 build:
 	@mkdir -p $(BIN_DIR)
@@ -108,6 +120,9 @@ uninstall:
 
 test:
 	$(GO) test ./...
+
+test-min-go:
+	GOTOOLCHAIN=$(GO_MIN_TOOLCHAIN) $(GO) test ./...
 
 test-race:
 	GORACE="$(RACE_OPTIONS)" $(GO) test -race -count=1 $(RACE_PACKAGES)
@@ -207,13 +222,15 @@ help:
 	@echo "  make uninstall              Remove the binary from GOBIN or GOPATH/bin"
 	@echo ""
 	@echo "Checks:"
-	@echo "  make go-version             Download and verify Go $(GO_VERSION)"
+	@echo "  make go-min-version         Download and verify minimum Go $(GO_MIN_VERSION)"
+	@echo "  make go-version             Download and verify release $(GO_TOOLCHAIN)"
 	@echo "  make test                   Run the standard test suite"
+	@echo "  make test-min-go            Run tests with minimum Go $(GO_MIN_VERSION)"
 	@echo "  make test-race              Run race detection for $(RACE_PACKAGES)"
 	@echo "  make test-platform-compile  Compile tests for macOS and Windows targets"
 	@echo "  make lint                   Check formatting and run go vet (no file changes)"
 	@echo "  make cross-build            Compile all seven supported release targets"
-	@echo "  make vulncheck              Build and scan the Go $(GO_VERSION) release binary"
+	@echo "  make vulncheck              Build and scan the $(GO_TOOLCHAIN) release binary"
 	@echo "  make coverage               Run tests and generate $(COVERAGE_FILE)"
 	@echo ""
 	@echo "Maintenance:"

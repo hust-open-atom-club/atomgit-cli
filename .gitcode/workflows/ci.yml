@@ -30,14 +30,17 @@ jobs:
         uses: checkout
 
       # AtomGit setup-go currently provides Go 1.26.1. The Go command then
-      # downloads and verifies the exact version declared in go.mod.
+      # downloads the minimum and preferred versions declared in go.mod.
       - name: Set up bootstrap Go
         uses: setup-go
         with:
           version: "1.26.1"
           cache: true
 
-      - name: Select project Go toolchain
+      - name: Test minimum supported Go toolchain
+        run: make go-min-version test-min-go
+
+      - name: Select release Go toolchain
         run: make go-version
 
       - name: Check formatting and vet
@@ -69,7 +72,7 @@ jobs:
           version: "1.26.1"
           cache: true
 
-      - name: Select project Go toolchain
+      - name: Select release Go toolchain
         run: make go-version
 
       - name: Run race detector
@@ -110,7 +113,7 @@ jobs:
           version: "1.26.1"
           cache: true
 
-      - name: Select project Go toolchain
+      - name: Select release Go toolchain
         run: make go-version
 
       - name: Cross-compile release target
@@ -145,7 +148,7 @@ jobs:
           version: "1.26.1"
           cache: true
 
-      - name: Select project Go toolchain
+      - name: Select release Go toolchain
         run: make go-version
 
       - name: Compile platform-specific tests
@@ -174,7 +177,7 @@ jobs:
           version: "1.26.1"
           cache: true
 
-      - name: Select project Go toolchain
+      - name: Select release Go toolchain
         run: make go-version
 
       - name: Build and scan release binary

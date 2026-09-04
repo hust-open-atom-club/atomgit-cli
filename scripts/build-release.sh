@@ -23,12 +23,16 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 GORELEASER="${GORELEASER:-goreleaser}"
 
-PROJECT_GO_VERSION=$(sed -n 's/^go[[:space:]][[:space:]]*//p' go.mod)
-if [ -z "$PROJECT_GO_VERSION" ]; then
-  echo "错误: go.mod 未声明发布使用的 Go 版本。" >&2
+PROJECT_GO_MIN_VERSION=$(sed -n 's/^go[[:space:]][[:space:]]*//p' go.mod)
+if [ -z "$PROJECT_GO_MIN_VERSION" ]; then
+  echo "错误: go.mod 未声明最低支持的 Go 版本。" >&2
   exit 1
 fi
-PROJECT_GO_TOOLCHAIN="go${PROJECT_GO_VERSION}"
+PROJECT_GO_TOOLCHAIN=$(sed -n 's/^toolchain[[:space:]][[:space:]]*//p' go.mod)
+if [ -z "$PROJECT_GO_TOOLCHAIN" ]; then
+  echo "错误: go.mod 未声明正式发布使用的 Go toolchain。" >&2
+  exit 1
+fi
 GOTOOLCHAIN="$PROJECT_GO_TOOLCHAIN"
 export GOTOOLCHAIN
 

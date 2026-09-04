@@ -347,7 +347,7 @@ yay -S atomgit-cli-git
 
 ## Go 安装
 
-Go 安装将自动下载源码包并进行编译，需要 Go 1.26.8 或更高版本：
+Go 安装将自动下载源码包并进行编译，需要 Go 1.26.6 或更高版本：
 
 ```bash
 go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
@@ -456,13 +456,15 @@ macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应
 源码构建支持 macOS、Linux 和 Windows，需要安装：
 
 - [Git](https://git-scm.com/downloads)
-- [Go](https://go.dev/dl/) 1.26.8 或更高版本
+- [Go](https://go.dev/dl/) 1.26.6 或更高版本
 - `make`（仅 macOS 和 Linux 使用 Makefile 时需要）
 
-`go.mod` 的 `go` 行规定项目构建和正式发布使用 Go 1.26.8。所有 Make 目标都会选择
-该精确版本；如果本机尚未缓存且 `go` 命令启用了默认的工具链自动切换，首次构建会
-按照 `GOPROXY` 下载工具链，并通过 `GOSUMDB` 配置的校验和数据库验证，因此需要
-访问相应服务。开始较长的构建前，可先运行 `make go-version` 完成下载并确认版本。
+`go.mod` 的 `go` 行规定源码构建最低支持 Go 1.26.6，`toolchain` 行建议开发和正式
+发布使用 Go 1.26.8。直接运行 Go 命令时可使用任意不低于最低版本的兼容工具链；普通
+Make 目标会选择建议的精确版本。如果本机尚未缓存对应工具链，首次构建会按照
+`GOPROXY` 下载，并通过 `GOSUMDB` 配置的校验和数据库验证，因此需要访问相应服务。
+开始较长的构建前，可运行 `make go-version` 下载并确认正式发布工具链；维护者还应
+运行 `make go-min-version test-min-go` 验证最低版本兼容性。
 
 克隆仓库：
 

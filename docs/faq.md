@@ -31,7 +31,7 @@
 - Scoop：`scoop bucket add hust-open-atom-club https://github.com/hust-open-atom-club/ScoopBucket && scoop install atomgit-cli`（仅 Windows）
 - Nix / NixOS：`nix profile install nixpkgs#atomgit-cli`（`nixos-unstable` 已收录）
 - AUR / Arch Linux：`yay -S atomgit-cli`、`yay -S atomgit-cli-bin` 或 `yay -S atomgit-cli-git`（三个包由项目维护者 `moyigeek` 在 AUR 维护并随 Release 更新；AUR 是用户仓库，并非 Arch 官方仓库，安装与使用按 AUR 规则自行承担风险）
-- Go：`go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest`（需 Go 1.26.8 或更高版本）
+- Go：`go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest`（需 Go 1.26.6 或更高版本）
 - AtomGit Release：使用 `install.sh` / `install.ps1` 自动安装，或从 [Release 页面](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)手动下载对应平台的归档
 
 > [!NOTE]
