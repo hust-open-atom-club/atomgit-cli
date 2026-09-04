@@ -16,7 +16,7 @@ jobs:
     name: Build and test
     runs-on: [ubuntu-latest, x64, small]
     env:
-      GOPROXY: https://mirrors.cernet.edu.cn/go,https://goproxy.cn,direct
+      GOPROXY: https://mirrors.cernet.edu.cn/go|https://goproxy.cn|direct
     steps:
       - name: Check out PR code
         if: ${{ atomgit.head_ref != '' }}
