@@ -1,6 +1,6 @@
 module atomgit.com/hust-open-atom-club/atomgit-cli
 
-go 1.24.2
+go 1.26.8
 
 require (
 	github.com/spf13/cobra v1.10.2

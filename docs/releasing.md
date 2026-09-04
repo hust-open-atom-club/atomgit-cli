@@ -26,6 +26,16 @@ git tag "v${VERSION}"
 make release VERSION="v${VERSION}"
 ```
 
+`go.mod` 的 `go` 行同时规定源码构建所需的最低版本和正式发布使用的精确版本，当前为
+Go 1.26.8。`scripts/build-release.sh` 会设置并回读该版本，再让 GoReleaser 继承
+相同的 `GOTOOLCHAIN`；如果无法下载、验证或执行该工具链，发布会在生成制品前停止。
+
+`make vulncheck` 会使用同一版本构建 `CGO_ENABLED=0` 的实际 `ag` 二进制，并用固定
+版本的 `govulncheck` 以 binary 模式查询 `https://vuln.go.dev`。可达漏洞、工具下载
+失败、数据库不可用或扫描器错误都会使门禁失败；规范数据库中已经撤回的报告不计为
+漏洞。更新 Go 版本时，应修改 `go.mod` 的 `go` 行，并重新运行 `make go-version`、
+`make vulncheck` 和下文的发布验证。
+
 `make release` 会检查工作区干净、tag 存在且指向当前 HEAD，然后在 `dist/vX.Y.Z/` 生成以下文件：
 
 - 七个名称不变的归档；其中 Linux 支持 amd64、arm64 和 loong64，macOS 与 Windows 支持 amd64 和 arm64。

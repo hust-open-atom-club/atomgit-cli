@@ -23,6 +23,15 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 GORELEASER="${GORELEASER:-goreleaser}"
 
+PROJECT_GO_VERSION=$(sed -n 's/^go[[:space:]][[:space:]]*//p' go.mod)
+if [ -z "$PROJECT_GO_VERSION" ]; then
+  echo "错误: go.mod 未声明发布使用的 Go 版本。" >&2
+  exit 1
+fi
+PROJECT_GO_TOOLCHAIN="go${PROJECT_GO_VERSION}"
+GOTOOLCHAIN="$PROJECT_GO_TOOLCHAIN"
+export GOTOOLCHAIN
+
 # ---------------------------------------------------------------------------
 # 标签解析与校验
 # ---------------------------------------------------------------------------
@@ -73,6 +82,13 @@ if validate_release_tag "$TAG"; then
   echo "==> 校验 npm 包版本: ${TAG#v}"
   node scripts/check-npm-version.js "${TAG#v}"
 fi
+
+ACTUAL_GO_TOOLCHAIN=$(go env GOVERSION)
+if [ "$ACTUAL_GO_TOOLCHAIN" != "$PROJECT_GO_TOOLCHAIN" ]; then
+  echo "错误: 预期使用 Go 工具链 ${PROJECT_GO_TOOLCHAIN}，实际为 ${ACTUAL_GO_TOOLCHAIN}。" >&2
+  exit 1
+fi
+echo "==> 发布 Go 工具链: ${ACTUAL_GO_TOOLCHAIN}"
 
 # ---------------------------------------------------------------------------
 # 构建元数据
