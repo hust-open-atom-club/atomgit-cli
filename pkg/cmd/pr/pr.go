@@ -276,7 +276,7 @@ func newPullRequestJSON(pullRequest api.PullRequest, labels []api.Label) pullReq
 			labelNames = append(labelNames, name)
 		}
 	}
-	return pullRequestJSON{ID: pullRequest.ID, Number: pullRequest.GetNumber(), Title: pullRequest.Title, Body: pullRequest.Body, State: pullRequest.State, URL: pullRequest.HTMLURL, Author: pullRequest.User.Login, Head: pullRequest.Head.Ref, Base: pullRequest.Base.Ref, Labels: labelNames, CreatedAt: pullRequest.CreatedAt, UpdatedAt: pullRequest.UpdatedAt, Merged: pullRequest.Merged, Mergeable: pullRequest.Mergeable}
+	return pullRequestJSON{ID: pullRequest.ID, Number: pullRequest.GetNumber(), Title: pullRequest.Title, Body: pullRequest.Body, State: pullRequest.State, URL: pullRequest.HTMLURL, Author: pullRequest.User.Login, Head: pullRequest.Head.Ref, Base: pullRequest.Base.Ref, Labels: labelNames, CreatedAt: pullRequest.CreatedAt, UpdatedAt: pullRequest.UpdatedAt, Merged: pullRequest.IsMerged(), Mergeable: pullRequest.Mergeable}
 }
 
 func newPullRequestViewJSON(pullRequest api.PullRequest, labels []api.Label) pullRequestViewJSON {
@@ -739,7 +739,7 @@ By default, ag creates a merge commit. Use --rebase to rebase the commits onto t
 				return fmt.Errorf("failed to get PR %s/%s #%s: %w", owner, repo, number, err)
 			}
 
-			if pr.Merged {
+			if pr.IsMerged() {
 				return fmt.Errorf("PR #%s is already merged", pr.GetNumber())
 			}
 			if pr.State != "open" {

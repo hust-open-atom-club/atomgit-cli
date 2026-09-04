@@ -94,6 +94,7 @@ type PullRequest struct {
 	CreatedAt         string      `json:"created_at"`
 	UpdatedAt         string      `json:"updated_at"`
 	Merged            bool        `json:"merged"`
+	MergedAt          string      `json:"merged_at"`
 	Mergeable         bool        `json:"mergeable"`
 }
 
@@ -133,6 +134,18 @@ type PullRequestReviewRequest struct {
 // GetNumber returns the PR number as a string
 func (pr *PullRequest) GetNumber() string {
 	return formatIdentifier(pr.Number)
+}
+
+// IsMerged normalizes the response variants returned by AtomGit. Some pull
+// request endpoints omit merged while still returning state=merged or a
+// merged_at timestamp.
+func (pr *PullRequest) IsMerged() bool {
+	if pr == nil {
+		return false
+	}
+	return pr.Merged ||
+		strings.EqualFold(strings.TrimSpace(pr.State), "merged") ||
+		strings.TrimSpace(pr.MergedAt) != ""
 }
 
 // Issue represents an AtomGit issue

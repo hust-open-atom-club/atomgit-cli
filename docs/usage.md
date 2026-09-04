@@ -602,7 +602,7 @@ ag pr reactions owner/repo 42 --json
 
 `pr commits`、`pr files` 和 `pr reactions` 都是只读命令，只发送 GET 请求。`pr commits` 支持 `--limit`（默认 30，必须为正整数）控制返回数量。文本模式每行输出一个条目摘要；JSON 模式输出稳定的 lowerCamelCase 数组，无结果时输出 `[]`。
 
-`pr view --json` 在现有字段基础上新增 `assignees`、`approvalReviewers`、`testers`（均为字符串数组，空时为 `[]`）和 `milestone`（对象或 `null`）字段。`pr list --json` 的 schema 保持不变。
+`pr view --json` 在现有字段基础上新增 `assignees`、`approvalReviewers`、`testers`（均为字符串数组，空时为 `[]`）和 `milestone`（对象或 `null`）字段。`pr list --json` 的 schema 保持不变。两个命令的 `merged` 字段会综合 AtomGit 响应中的 `merged`、`state` 和 `merged_at` 判断，避免 API 省略 `merged` 时把已合并 PR 错报为 `false`。
 
 跨仓库创建 PR 时 `--head` 的写法请参阅[跨仓库 PR 示例](cross_repo_pr_demo.md)。
 

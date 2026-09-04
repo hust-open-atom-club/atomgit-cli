@@ -61,6 +61,37 @@ func TestNumberFormatting(t *testing.T) {
 	}
 }
 
+func TestPullRequestIsMerged(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want bool
+	}{
+		{name: "explicit merged", raw: `{"state":"closed","merged":true}`, want: true},
+		{name: "merged state without boolean", raw: `{"state":"merged","merged_at":"2026-09-04T10:00:00Z"}`, want: true},
+		{name: "merged timestamp without boolean", raw: `{"state":"closed","merged_at":"2026-09-04T10:00:00Z"}`, want: true},
+		{name: "open", raw: `{"state":"open"}`, want: false},
+		{name: "closed without merge evidence", raw: `{"state":"closed","merged":false}`, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var pr PullRequest
+			if err := json.Unmarshal([]byte(tt.raw), &pr); err != nil {
+				t.Fatal(err)
+			}
+			if got := pr.IsMerged(); got != tt.want {
+				t.Fatalf("PullRequest.IsMerged() = %t, want %t", got, tt.want)
+			}
+		})
+	}
+
+	var nilPR *PullRequest
+	if nilPR.IsMerged() {
+		t.Fatal("nil PullRequest should not be merged")
+	}
+}
+
 func TestWriteResponseFixtures(t *testing.T) {
 	t.Run("pull request create", func(t *testing.T) {
 		data, err := os.ReadFile("testdata/pull_request_create_response.json")
