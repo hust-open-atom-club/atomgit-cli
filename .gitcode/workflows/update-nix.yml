@@ -31,22 +31,22 @@ jobs:
           set -eu
           curl --proto '=https' --tlsv1.2 -fsSL \
             -o /tmp/install-nix.sh \
-            https://mirrors.tuna.tsinghua.edu.cn/nix/latest/install
+            https://mirrors.cernet.edu.cn/nix/latest/install
           sh /tmp/install-nix.sh --no-daemon --no-channel-add
           export PATH="$HOME/.nix-profile/bin:$PATH"
 
           mkdir -p "$HOME/.config/nix"
           printf '%s\n' \
             "experimental-features = nix-command flakes" \
-            "substituters = https://mirrors.tuna.tsinghua.edu.cn/nix-channels/store?priority=10 https://mirror.sjtu.edu.cn/nix-channels/store?priority=20 https://mirrors.ustc.edu.cn/nix-channels/store?priority=30 https://mirrors.cernet.edu.cn/nix-channels/store?priority=40 https://cache.nixos.org/?priority=50" \
+            "substituters = https://mirrors.cernet.edu.cn/nix-channels/store?priority=10 https://mirrors.tuna.tsinghua.edu.cn/nix-channels/store?priority=20 https://mirror.sjtu.edu.cn/nix-channels/store?priority=30 https://mirrors.ustc.edu.cn/nix-channels/store?priority=40 https://cache.nixos.org/?priority=50" \
             > "$HOME/.config/nix/nix.conf"
           nix --version
 
-      - name: Install nix-update from TUNA
+      - name: Install nix-update from CERNET
         run: |
           set -eu
           export PATH="$HOME/.nix-profile/bin:$PATH"
-          nix-channel --add https://mirrors.tuna.tsinghua.edu.cn/nix-channels/nixpkgs-unstable nixpkgs
+          nix-channel --add https://mirrors.cernet.edu.cn/nix-channels/nixpkgs-unstable nixpkgs
           nix-channel --list
           nix-channel --update
           nix-env -iA nixpkgs.nix-update
@@ -62,7 +62,7 @@ jobs:
         run: |
           set -eu
           export PATH="$HOME/.nix-profile/bin:$PATH"
-          export GOPROXY="https://goproxy.cn|https://mirrors.aliyun.com/goproxy/|direct"
+          export GOPROXY="https://mirrors.cernet.edu.cn/go|https://goproxy.cn|https://mirrors.aliyun.com/goproxy/|direct"
 
           release_json=$(curl --fail --silent --show-error \
             https://api.atomgit.com/api/v5/repos/hust-open-atom-club/atomgit-cli/releases/latest)

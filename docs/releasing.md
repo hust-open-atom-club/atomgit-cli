@@ -180,9 +180,9 @@ Homebrew tap 位于 [hust-open-atom-club/homebrew-tap](https://github.com/hust-o
 
 `.gitcode/workflows/update-nix.yml` 每天在默认分支上运行，也支持手动触发。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；构建验证后在内容变化时直接提交到默认分支。工作流需要 `repository: write`，并在单次 `git push` 中使用自动生成的 `ATOMGIT_TOKEN`，不需要额外长期 token。
 
-工作流 runner 通过清华 TUNA 镜像执行 Nix 单用户安装，并禁用安装器默认添加的官方 channel，再从 TUNA 的 `nixpkgs-unstable` channel 安装 `nix-update`；Nix binary cache 使用显式优先级，依次尝试 TUNA、SJTU、USTC、CERNET，最后回退到官方 cache。项目 flake 的 nixpkgs inputs 通过 CERNET 的 NJU Git 镜像进行浅克隆，避免动态镜像调度因 runner 线路而选择不可用节点；两个 inputs 分别跟踪 `nixos-unstable` 和 `nixpkgs-26.05-darwin`。
+工作流 runner 优先通过校园网联合镜像站（CERNET）执行 Nix 单用户安装，并禁用安装器默认添加的官方 channel，再从 CERNET 的 `nixpkgs-unstable` channel 安装 `nix-update`；Nix binary cache 按优先级依次尝试 CERNET、清华 TUNA、SJTU、USTC，最后回退到官方 cache。项目 flake 的 nixpkgs inputs 是例外，仍固定使用 NJU Git 镜像；两个 inputs 分别跟踪 `nixos-unstable` 和 `nixpkgs-26.05-darwin`。
 
-`nix-update --build` 的 Go 模块下载显式使用 `goproxy.cn`、阿里云和 direct 的故障转移链；代理之间使用 `|` 分隔，使连接超时等网络错误也会切换到下一个来源。
+`nix-update --build` 的 Go 模块下载优先使用 CERNET 的 Go module proxy，失败后依次回退到 `goproxy.cn`、阿里云和 `direct`。
 
 可在本地复现相同更新；开发环境已包含 `nix-update`：
 
