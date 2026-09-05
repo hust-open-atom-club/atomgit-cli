@@ -270,15 +270,18 @@ func TestRunCloneWithCommandAttachesAuthToGit(t *testing.T) {
 			env[kv[:i]] = kv[i+1:]
 		}
 	}
-	if env["GIT_CONFIG_COUNT"] != "1" {
-		t.Fatalf("GIT_CONFIG_COUNT = %q, want stale value replaced by 1", env["GIT_CONFIG_COUNT"])
+	if env["GIT_CONFIG_COUNT"] != "100" {
+		t.Fatalf("GIT_CONFIG_COUNT = %q, want inherited count 99 plus the auth entry", env["GIT_CONFIG_COUNT"])
 	}
-	if env["GIT_CONFIG_KEY_0"] != "http.https://atomgit.com/.extraheader" {
-		t.Fatalf("GIT_CONFIG_KEY_0 = %q", env["GIT_CONFIG_KEY_0"])
+	if env["GIT_CONFIG_KEY_0"] != "user.overridden" || env["GIT_CONFIG_VALUE_0"] != "stale" {
+		t.Fatalf("inherited GIT_CONFIG_0 = %q/%q, want preserved", env["GIT_CONFIG_KEY_0"], env["GIT_CONFIG_VALUE_0"])
+	}
+	if env["GIT_CONFIG_KEY_99"] != "http.https://atomgit.com/.extraheader" {
+		t.Fatalf("GIT_CONFIG_KEY_99 = %q", env["GIT_CONFIG_KEY_99"])
 	}
 	wantValue := "AUTHORIZATION: basic " + base64.StdEncoding.EncodeToString([]byte("alice:secret-token"))
-	if env["GIT_CONFIG_VALUE_0"] != wantValue {
-		t.Fatalf("GIT_CONFIG_VALUE_0 = %q, want %q", env["GIT_CONFIG_VALUE_0"], wantValue)
+	if env["GIT_CONFIG_VALUE_99"] != wantValue {
+		t.Fatalf("GIT_CONFIG_VALUE_99 = %q, want %q", env["GIT_CONFIG_VALUE_99"], wantValue)
 	}
 	if env["GIT_TERMINAL_PROMPT"] != "0" {
 		t.Fatalf("GIT_TERMINAL_PROMPT = %q, want 0", env["GIT_TERMINAL_PROMPT"])
@@ -291,6 +294,99 @@ func TestRunCloneWithCommandAttachesAuthToGit(t *testing.T) {
 		if strings.Contains(kv, "secret-token") {
 			t.Fatalf("token leaked into the git environment: %q", kv)
 		}
+	}
+}
+
+func TestWithCloneAuthEnvPreservesInheritedGitConfig(t *testing.T) {
+	authKey := "http.https://atomgit.com/.extraheader"
+	wantValue := "AUTHORIZATION: basic " + base64.StdEncoding.EncodeToString([]byte("alice:token"))
+
+	tests := []struct {
+		name    string
+		env     []string
+		wantEnv map[string]string
+	}{
+		{
+			name: "appends auth after unrelated inherited config",
+			env: []string{
+				"PATH=/usr/bin",
+				"GIT_CONFIG_COUNT=2",
+				"GIT_CONFIG_KEY_0=http.proxy",
+				"GIT_CONFIG_VALUE_0=http://127.0.0.1:8080",
+				"GIT_CONFIG_KEY_1=http.sslCAInfo",
+				"GIT_CONFIG_VALUE_1=/etc/ssl/certs/ca.pem",
+			},
+			wantEnv: map[string]string{
+				"PATH":                "/usr/bin",
+				"GIT_CONFIG_COUNT":    "3",
+				"GIT_CONFIG_KEY_0":    "http.proxy",
+				"GIT_CONFIG_VALUE_0":  "http://127.0.0.1:8080",
+				"GIT_CONFIG_KEY_1":    "http.sslCAInfo",
+				"GIT_CONFIG_VALUE_1":  "/etc/ssl/certs/ca.pem",
+				"GIT_CONFIG_KEY_2":    authKey,
+				"GIT_CONFIG_VALUE_2":  wantValue,
+				"GIT_TERMINAL_PROMPT": "0",
+			},
+		},
+		{
+			name: "replaces an extraheader for the same URL",
+			env: []string{
+				"GIT_CONFIG_COUNT=1",
+				"GIT_CONFIG_KEY_0=" + authKey,
+				"GIT_CONFIG_VALUE_0=AUTHORIZATION: basic c3RhbGU=",
+			},
+			wantEnv: map[string]string{
+				"GIT_CONFIG_COUNT":    "1",
+				"GIT_CONFIG_KEY_0":    authKey,
+				"GIT_CONFIG_VALUE_0":  wantValue,
+				"GIT_TERMINAL_PROMPT": "0",
+			},
+		},
+		{
+			name: "starts at index zero without inherited config",
+			env:  []string{"HOME=/home/alice"},
+			wantEnv: map[string]string{
+				"HOME":                "/home/alice",
+				"GIT_CONFIG_COUNT":    "1",
+				"GIT_CONFIG_KEY_0":    authKey,
+				"GIT_CONFIG_VALUE_0":  wantValue,
+				"GIT_TERMINAL_PROMPT": "0",
+			},
+		},
+		{
+			name: "drops inert keys without GIT_CONFIG_COUNT",
+			env: []string{
+				"GIT_CONFIG_KEY_0=http.proxy",
+				"GIT_CONFIG_VALUE_0=http://127.0.0.1:8080",
+			},
+			wantEnv: map[string]string{
+				"GIT_CONFIG_COUNT":    "1",
+				"GIT_CONFIG_KEY_0":    authKey,
+				"GIT_CONFIG_VALUE_0":  wantValue,
+				"GIT_TERMINAL_PROMPT": "0",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			creds := &cloneCredentials{host: "atomgit.com", username: "alice", token: "token"}
+			got := withCloneAuthEnv(tt.env, creds)
+			envMap := map[string]string{}
+			for _, kv := range got {
+				if i := strings.IndexByte(kv, '='); i >= 0 {
+					envMap[kv[:i]] = kv[i+1:]
+				}
+			}
+			for key, want := range tt.wantEnv {
+				if envMap[key] != want {
+					t.Fatalf("%s = %q, want %q (full env: %q)", key, envMap[key], want, got)
+				}
+			}
+			if len(envMap) != len(tt.wantEnv) {
+				t.Fatalf("unexpected extra environment entries: %q (full env: %q)", envMap, got)
+			}
+		})
 	}
 }
 
