@@ -186,7 +186,7 @@ Nix package 使用 `go` 行声明的最低版本约束，并由锁定的 nixpkgs
 
 工作流 runner 优先通过校园网联合镜像站（CERNET）执行 Nix 单用户安装，并禁用安装器默认添加的官方 channel，再从 CERNET 的 `nixpkgs-unstable` channel 安装 `nix-update`；Nix binary cache 按优先级依次尝试 CERNET、清华 TUNA、SJTU、USTC，最后回退到官方 cache。项目 flake 的 nixpkgs inputs 是例外，仍固定使用 NJU Git 镜像；两个 inputs 分别跟踪 `nixos-unstable` 和 `nixpkgs-26.05-darwin`。
 
-`nix-update --build` 的 Go 模块下载优先使用 CERNET 的 Go module proxy，失败后依次回退到 `goproxy.cn`、阿里云和 `direct`。
+`nix-update --build` 的 Go 模块下载仅使用 `goproxy.cn` Go module proxy。
 
 可在本地复现相同更新；开发环境已包含 `nix-update`：
 
