@@ -194,6 +194,7 @@ func TestResolveCloneAuth(t *testing.T) {
 		userErr   error
 		cloneURL  string
 		wantCreds bool
+		wantHost  string
 	}{
 		{
 			name:      "HTTPS AtomGit clone authenticates",
@@ -201,6 +202,7 @@ func TestResolveCloneAuth(t *testing.T) {
 			user:      "alice",
 			cloneURL:  "https://atomgit.com/owner/repo.git",
 			wantCreds: true,
+			wantHost:  "atomgit.com",
 		},
 		{
 			name:      "full HTTPS URL authenticates",
@@ -208,6 +210,23 @@ func TestResolveCloneAuth(t *testing.T) {
 			user:      "alice",
 			cloneURL:  "https://atomgit.com/owner/repo",
 			wantCreds: true,
+			wantHost:  "atomgit.com",
+		},
+		{
+			name:      "HTTPS GitCode mirror clone authenticates",
+			token:     "token",
+			user:      "alice",
+			cloneURL:  "https://gitcode.com/owner/repo.git",
+			wantCreds: true,
+			wantHost:  "gitcode.com",
+		},
+		{
+			name:      "full HTTPS GitCode mirror URL authenticates",
+			token:     "token",
+			user:      "alice",
+			cloneURL:  "https://gitcode.com/owner/repo",
+			wantCreds: true,
+			wantHost:  "gitcode.com",
 		},
 		{name: "SSH clone stays anonymous", token: "token", user: "alice", cloneURL: "git@atomgit.com:owner/repo.git"},
 		{name: "foreign host stays anonymous", token: "token", user: "alice", cloneURL: "https://github.com/owner/repo.git"},
@@ -237,7 +256,7 @@ func TestResolveCloneAuth(t *testing.T) {
 			if creds == nil {
 				t.Fatal("resolveCloneAuth() = nil, want credentials")
 			}
-			if creds.host != "atomgit.com" || creds.username != tt.user || creds.token != tt.token {
+			if creds.host != tt.wantHost || creds.username != tt.user || creds.token != tt.token {
 				t.Fatalf("resolveCloneAuth() = %#v", creds)
 			}
 		})

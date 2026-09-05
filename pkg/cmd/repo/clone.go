@@ -61,8 +61,9 @@ The repository argument can be:
 			opts.Directory = targetDir
 
 			// Attach the stored account credential only when the HTTPS clone
-			// targets the configured AtomGit host; anonymous, SSH, foreign-host
-			// and insecure clones keep their previous behavior.
+			// targets a first-party AtomGit host (atomgit.com or its
+			// gitcode.com mirror); anonymous, SSH, foreign-host and insecure
+			// clones keep their previous behavior.
 			creds := resolveCloneAuth(f.Config, cloneURL)
 
 			return runClone(cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr(), cloneURL, opts, creds)
@@ -140,14 +141,15 @@ type cloneCredentials struct {
 	token    string
 }
 
-// resolveCloneAuth returns credentials for an HTTPS clone that targets the
-// configured AtomGit host when the current account is authenticated. It
-// returns nil for SSH, foreign-host, insecure (plain HTTP) and anonymous
-// clones so those keep working exactly as before. The token is deliberately
-// not embedded in the clone URL: the remote URL git persists stays clean.
+// resolveCloneAuth returns credentials for an HTTPS clone that targets a
+// first-party AtomGit host (atomgit.com or its gitcode.com mirror) when the
+// current account is authenticated. It returns nil for SSH, foreign-host,
+// insecure (plain HTTP) and anonymous clones so those keep working exactly as
+// before. The token is deliberately not embedded in the clone URL: the remote
+// URL git persists stays clean.
 func resolveCloneAuth(cfg config.Config, cloneURL string) *cloneCredentials {
 	u, err := url.Parse(cloneURL)
-	if err != nil || u.Scheme != "https" || u.Host != cfg.GetHost() {
+	if err != nil || u.Scheme != "https" || !cmdutil.IsAtomGitHost(u.Host) {
 		return nil
 	}
 	token, err := cfg.GetToken()
