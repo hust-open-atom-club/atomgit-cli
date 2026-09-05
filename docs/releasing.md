@@ -167,9 +167,9 @@ npm run publish:npm -- vX.Y.Z dist/vX.Y.Z/npm --publish
 
 ## 维护 Homebrew tap
 
-Homebrew tap 位于 [hust-open-atom-club/homebrew-tap](https://github.com/hust-open-atom-club/homebrew-tap)，使用 GitHub Actions 自动维护。更新工作流每 4 个小时检测一次 AtomGit 最新稳定版本；发现新版本后，会下载 macOS 和 Linux 的 amd64/arm64 Release 归档，确认归档包含 `ag`，重新计算 SHA-256，并更新 [Formula/atomgit-cli.rb](https://github.com/hust-open-atom-club/homebrew-tap/blob/main/Formula/atomgit-cli.rb)。工作流只允许更新 Formula 文件，并在 macOS 和 Linux 测试通过后自动 squash 合并更新 PR。
+项目 Homebrew Tap 位于 [hust-open-atom-club/homebrew-tap](https://github.com/hust-open-atom-club/homebrew-tap)，提供跟踪 AtomGit `main` 最新 commit 的开发快照；正式稳定版由 Homebrew Core 提供。Tap 的 GitHub Actions 每小时检查一次 `main`，发现新 commit 后更新 [Formula/atomgit-cli.rb](https://github.com/hust-open-atom-club/homebrew-tap/blob/main/Formula/atomgit-cli.rb) 中固定的 40 位 revision 和开发版本号，并从该不可变 commit 的源码构建。工作流只允许更新 Formula 文件；Formula 在 macOS 和 Linux 上测试通过后，更新 PR 才会自动 squash 合并。
 
-如果距离版本发布超过 4 个小时仍未正确更新，请先[手动运行更新工作流](https://github.com/hust-open-atom-club/homebrew-tap/actions/workflows/update-formula.yml)。如果工作流仍然失败，请[发起一个 Issue](https://github.com/hust-open-atom-club/homebrew-tap/issues)，或者手动更新 Formula 中的版本号、四个平台归档 URL 和 SHA-256 后发起 PR。
+如果 `main` 更新超过一个工作流周期后 Tap 仍未跟进，请先[手动运行更新工作流](https://github.com/hust-open-atom-club/homebrew-tap/actions/workflows/update-formula.yml)。如果工作流仍然失败，请[发起一个 Issue](https://github.com/hust-open-atom-club/homebrew-tap/issues)，或者手动更新 Formula 的 revision 和开发版本号并发起 PR；不要改为复用正式 Release 归档。安装、升级和在 Homebrew Core 与项目 Tap 之间切换的方式见[安装指南](installation.md#homebrew-安装)。
 
 ## 维护 Nix package
 
