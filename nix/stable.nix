@@ -15,7 +15,7 @@ pkgs.buildGoModule (
   }
   // {
     inherit version;
-    vendorHash = "sha256-nMsHH+EkUgZCudyn8UmOZAR3rMULCKnRHnydvqL8y5o=";
+    vendorHash = "sha256-lvnlTenDlg5pTJghBZRRy8J5vig1IW9iEISN93cnRfs=";
     src = pkgs.fetchzip {
       url = "https://raw.atomgit.com/hust-open-atom-club/atomgit-cli/archive/refs/heads/v${version}.tar.gz";
       hash = "sha256-E1T093LkccgLPPNs5OokxY5tw4HEMmRy+ulaROnuSCE=";
