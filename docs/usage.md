@@ -67,9 +67,6 @@ ag auth refresh
 # 查看认证状态
 ag auth status
 
-# 让 Git HTTPS 操作安全复用 ag 当前活动账号的令牌
-ag auth setup-git
-
 # 显示当前 token
 ag auth token
 
@@ -80,8 +77,6 @@ ag auth logout --all
 ```
 
 `auth status`、`auth token` 和 `auth refresh` 始终使用活动账号。首次登录的账号会自动成为活动账号；后续 `auth login --force` 只新增或更新账号，不会隐式切换，需使用 `auth switch` 显式选择。
-
-`auth setup-git` 会为 `https://atomgit.com` 写入全局、主机限定的 Git credential helper。之后，Git HTTPS 操作会调用 `ag auth git-credential`，从 `ag auth switch` 选中的活动账号读取用户名和访问令牌；令牌本身不会写入 Git 配置。该设置不影响 SSH remote，也不会为其他主机提供凭据。
 
 `auth switch` 默认同时切换活动凭据并写入当前仓库的 `git config --local user.name/user.email`；只有 `--global` 才修改全局配置，`--no-git` 可明确禁用同步。API 邮箱缺失时 CLI 不会猜测邮箱，必须通过登录时的 `--git-email`、切换时的 `--git-email` 或 `--no-git` 明确处理。Git identity 写入失败不会切换活动凭据；凭据切换失败时会尝试恢复原 Git identity。该流程使用补偿式回滚降低半完成风险，但不承诺跨凭据文件和 Git 配置的完整原子性。
 
