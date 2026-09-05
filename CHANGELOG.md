@@ -1,3 +1,26 @@
+atomgit-cli (v0.7.3) unstable; urgency=medium
+
+  * Add user profile, email, namespace, activity, starred repository, and
+    watched repository queries, plus read-only organization Kanban commands.
+  * Add repository content browsing, fork listing, remote mirror inspection,
+    push-rule management, and guarded repository transfer workflows.
+  * Expand Actions diagnostics with repository inference, workflow validation,
+    paginated jobs, step logs, artifact inspection, and artifact deletion.
+  * Add protected-tag management and improve tag creation, pagination, deletion
+    confirmation, branch repository context, and branch protection round trips.
+  * Add installation-aware self-update support and simplify version metadata
+    while preserving exact release commit and build information.
+  * Harden API, OAuth, authentication, comment validation, cancellation, and
+    confirmation handling, including consistent credential redaction.
+  * Add staged npm publishing with integrity checks and 2FA approval gates,
+    repair README packaging, and update tar to 7.5.22.
+  * Require Go 1.26.6 or newer, pin release builds to Go 1.26.8, and add race,
+    cross-platform, release-snapshot, and reachable-vulnerability CI gates.
+  * Improve Nix mirror and package automation, and document Homebrew Core,
+    the project development Tap, AUR packages, and the English quick start.
+
+ -- Dongliang Mu <dzm91@hust.edu.cn>  Sat, 05 Sep 2026 11:38:00 +0800
+
 atomgit-cli (v0.7.2) unstable; urgency=medium
 
   * Add command aliases, Actions workflow listing and dispatch, and token-based
