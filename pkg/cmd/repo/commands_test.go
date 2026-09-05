@@ -564,13 +564,16 @@ func TestRunCreateClonesPublicAndPrivateRepositories(t *testing.T) {
 			factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
 
 			cloneCalls := 0
-			clone := func(_ io.Reader, _, _ io.Writer, cloneURL string, opts *CloneOptions) error {
+			clone := func(_ io.Reader, _, _ io.Writer, cloneURL string, opts *CloneOptions, creds *cloneCredentials) error {
 				cloneCalls++
 				if cloneURL != tt.wantClone {
 					t.Fatalf("clone URL = %q, want %q", cloneURL, tt.wantClone)
 				}
 				if opts.Directory != "demo" {
 					t.Fatalf("clone directory = %q, want demo", opts.Directory)
+				}
+				if creds == nil || creds.host != "atomgit.com" || creds.username != "alice" || creds.token != "token" {
+					t.Fatalf("clone credentials = %#v, want authenticated account", creds)
 				}
 				return nil
 			}
@@ -600,7 +603,7 @@ func TestRunCreateReportsCloneFailure(t *testing.T) {
 		return forkResponse(http.StatusCreated, `{}`), nil
 	})
 	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
-	clone := func(io.Reader, io.Writer, io.Writer, string, *CloneOptions) error {
+	clone := func(io.Reader, io.Writer, io.Writer, string, *CloneOptions, *cloneCredentials) error {
 		return errors.New("git failed")
 	}
 

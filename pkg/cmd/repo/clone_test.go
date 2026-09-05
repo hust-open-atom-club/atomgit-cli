@@ -2,6 +2,7 @@ package repo
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -110,7 +111,7 @@ func TestRunCloneWithCommand(t *testing.T) {
 	}
 
 	opts := &CloneOptions{Branch: "dev", Directory: "target"}
-	if err := runCloneWithCommand(strings.NewReader(""), io.Discard, io.Discard, "https://atomgit.com/owner/repo.git", opts, command); err != nil {
+	if err := runCloneWithCommand(strings.NewReader(""), io.Discard, io.Discard, "https://atomgit.com/owner/repo.git", opts, nil, command); err != nil {
 		t.Fatal(err)
 	}
 	if gotName != "git" {
@@ -132,7 +133,7 @@ func TestRunCloneWithCommandRejectsGitOptionInjection(t *testing.T) {
 	}
 
 	opts := &CloneOptions{Directory: "--config=core.sshCommand=attacker-command"}
-	if err := runCloneWithCommand(strings.NewReader(""), io.Discard, io.Discard, "git@example.invalid:owner/repo.git", opts, command); err != nil {
+	if err := runCloneWithCommand(strings.NewReader(""), io.Discard, io.Discard, "git@example.invalid:owner/repo.git", opts, nil, command); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{"clone", "--", "git@example.invalid:owner/repo.git", opts.Directory}
@@ -148,7 +149,7 @@ func TestRunCloneWithCommandReportsFailure(t *testing.T) {
 		return cmd
 	}
 
-	err := runCloneWithCommand(strings.NewReader(""), io.Discard, io.Discard, "https://atomgit.com/owner/repo.git", &CloneOptions{}, command)
+	err := runCloneWithCommand(strings.NewReader(""), io.Discard, io.Discard, "https://atomgit.com/owner/repo.git", &CloneOptions{}, nil, command)
 	if err == nil || !strings.Contains(err.Error(), "failed to clone repository") {
 		t.Fatalf("error = %v", err)
 	}
@@ -164,7 +165,7 @@ func TestRunCloneWithCommandSanitizesGitOutput(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	safeOut := cmdutil.NewSanitizingWriter(&stdout)
 	safeErr := cmdutil.NewSanitizingWriter(&stderr)
-	err := runCloneWithCommand(strings.NewReader(""), safeOut, safeErr, "https://example.invalid/repo.git", &CloneOptions{Directory: "repo"}, command)
+	err := runCloneWithCommand(strings.NewReader(""), safeOut, safeErr, "https://example.invalid/repo.git", &CloneOptions{Directory: "repo"}, nil, command)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,6 +182,134 @@ func TestRunCloneWithCommandSanitizesGitOutput(t *testing.T) {
 		if !strings.Contains(got, `\x1b]52;c;attack\x07`) {
 			t.Fatalf("%s did not contain visible sanitized output: %q", name, got)
 		}
+	}
+}
+
+func TestResolveCloneAuth(t *testing.T) {
+	tests := []struct {
+		name      string
+		token     string
+		tokenErr  error
+		user      string
+		userErr   error
+		cloneURL  string
+		wantCreds bool
+	}{
+		{
+			name:      "HTTPS AtomGit clone authenticates",
+			token:     "token",
+			user:      "alice",
+			cloneURL:  "https://atomgit.com/owner/repo.git",
+			wantCreds: true,
+		},
+		{
+			name:      "full HTTPS URL authenticates",
+			token:     "token",
+			user:      "alice",
+			cloneURL:  "https://atomgit.com/owner/repo",
+			wantCreds: true,
+		},
+		{name: "SSH clone stays anonymous", token: "token", user: "alice", cloneURL: "git@atomgit.com:owner/repo.git"},
+		{name: "foreign host stays anonymous", token: "token", user: "alice", cloneURL: "https://github.com/owner/repo.git"},
+		{name: "insecure HTTP stays anonymous", token: "token", user: "alice", cloneURL: "http://atomgit.com/owner/repo.git"},
+		{name: "unauthenticated clone stays anonymous", cloneURL: "https://atomgit.com/owner/repo.git"},
+		{
+			name:     "missing token stays anonymous",
+			tokenErr: errors.New("not authenticated: run `ag auth login`"),
+			user:     "alice",
+			cloneURL: "https://atomgit.com/owner/repo.git",
+		},
+		{name: "missing user stays anonymous", token: "token", userErr: errors.New("missing user"), cloneURL: "https://atomgit.com/owner/repo.git"},
+		{name: "empty token stays anonymous", user: "alice", cloneURL: "https://atomgit.com/owner/repo.git"},
+		{name: "empty user stays anonymous", token: "token", cloneURL: "https://atomgit.com/owner/repo.git"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := repoCommandConfig{token: tt.token, tokenErr: tt.tokenErr, user: tt.user, userErr: tt.userErr}
+			creds := resolveCloneAuth(cfg, tt.cloneURL)
+			if !tt.wantCreds {
+				if creds != nil {
+					t.Fatalf("resolveCloneAuth() = %#v, want nil", creds)
+				}
+				return
+			}
+			if creds == nil {
+				t.Fatal("resolveCloneAuth() = nil, want credentials")
+			}
+			if creds.host != "atomgit.com" || creds.username != tt.user || creds.token != tt.token {
+				t.Fatalf("resolveCloneAuth() = %#v", creds)
+			}
+		})
+	}
+}
+
+func TestRunCloneWithCommandAttachesAuthToGit(t *testing.T) {
+	var captured *exec.Cmd
+	command := func(_ string, args ...string) *exec.Cmd {
+		cmd := exec.Command(os.Args[0], "-test.run=TestCloneCommandHelper")
+		cmd.Env = append(os.Environ(),
+			"AG_CLONE_HELPER=success",
+			"GIT_CONFIG_COUNT=99",
+			"GIT_CONFIG_KEY_0=user.overridden",
+			"GIT_CONFIG_VALUE_0=stale",
+		)
+		captured = cmd
+		return cmd
+	}
+
+	creds := &cloneCredentials{host: "atomgit.com", username: "alice", token: "secret-token"}
+	opts := &CloneOptions{Directory: "repo"}
+	if err := runCloneWithCommand(strings.NewReader(""), io.Discard, io.Discard, "https://atomgit.com/owner/repo.git", opts, creds, command); err != nil {
+		t.Fatal(err)
+	}
+
+	env := map[string]string{}
+	for _, kv := range captured.Env {
+		if i := strings.IndexByte(kv, '='); i >= 0 {
+			env[kv[:i]] = kv[i+1:]
+		}
+	}
+	if env["GIT_CONFIG_COUNT"] != "1" {
+		t.Fatalf("GIT_CONFIG_COUNT = %q, want stale value replaced by 1", env["GIT_CONFIG_COUNT"])
+	}
+	if env["GIT_CONFIG_KEY_0"] != "http.https://atomgit.com/.extraheader" {
+		t.Fatalf("GIT_CONFIG_KEY_0 = %q", env["GIT_CONFIG_KEY_0"])
+	}
+	wantValue := "AUTHORIZATION: basic " + base64.StdEncoding.EncodeToString([]byte("alice:secret-token"))
+	if env["GIT_CONFIG_VALUE_0"] != wantValue {
+		t.Fatalf("GIT_CONFIG_VALUE_0 = %q, want %q", env["GIT_CONFIG_VALUE_0"], wantValue)
+	}
+	if env["GIT_TERMINAL_PROMPT"] != "0" {
+		t.Fatalf("GIT_TERMINAL_PROMPT = %q, want 0", env["GIT_TERMINAL_PROMPT"])
+	}
+	if env["AG_CLONE_HELPER"] != "success" {
+		t.Fatalf("AG_CLONE_HELPER = %q, want preserved", env["AG_CLONE_HELPER"])
+	}
+	// The token must not appear in cleartext anywhere in the child environment.
+	for _, kv := range captured.Env {
+		if strings.Contains(kv, "secret-token") {
+			t.Fatalf("token leaked into the git environment: %q", kv)
+		}
+	}
+}
+
+func TestRunCloneWithoutAuthKeepsGitEnvironment(t *testing.T) {
+	var captured *exec.Cmd
+	var baseEnv []string
+	command := func(_ string, _ ...string) *exec.Cmd {
+		cmd := exec.Command(os.Args[0], "-test.run=TestCloneCommandHelper")
+		cmd.Env = append(os.Environ(), "AG_CLONE_HELPER=success")
+		captured = cmd
+		baseEnv = append([]string(nil), cmd.Env...)
+		return cmd
+	}
+
+	if err := runCloneWithCommand(strings.NewReader(""), io.Discard, io.Discard, "https://atomgit.com/owner/repo.git", &CloneOptions{}, nil, command); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(captured.Env, baseEnv) {
+		t.Fatalf("anonymous clone modified the git environment:\n got: %q\nwant: %q", captured.Env, baseEnv)
 	}
 }
 
