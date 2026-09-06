@@ -35,10 +35,8 @@ func newCmdAuthWithDeps(f *cmdutil.Factory, deps loginDeps) *cobra.Command {
 	cmd.AddCommand(newCmdAuthRefresh())
 	cmd.AddCommand(newCmdAuthList())
 	cmd.AddCommand(newCmdAuthSwitch(f))
-	cmd.AddCommand(newCmdAuthSetupGit(f))
 	cmd.AddCommand(newCmdAuthStatus(f))
 	cmd.AddCommand(newCmdAuthToken(f))
-	cmd.AddCommand(newCmdAuthGitCredential(f))
 	for _, child := range cmd.Commands() {
 		if child.Name() == "login" {
 			// login migrates legacy credentials itself, only after the new

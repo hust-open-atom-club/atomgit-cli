@@ -71,14 +71,6 @@
 
 执行任意 `ag auth` 子命令前，CLI 都会检查令牌文件格式。旧单账号文件会通过安全的原子写入自动升级为当前多账号格式，已有 `refresh_token` 等 OAuth 字段会保留；当前格式不会重复写入，未知版本会拒绝迁移。手动使用 PAT 时不要自行编造 `refresh_token`、`expires_in` 或 `created_at`。令牌文件使用 `0600` 权限，写入通过同目录临时文件原子替换；不要将它提交到版本控制。
 
-如需让 `git clone`、`git pull` 和 `git push` 等 HTTPS 操作复用当前活动账号，可在登录后运行：
-
-```bash
-ag auth setup-git
-```
-
-该命令仅在全局 Git 配置中为 `https://atomgit.com` 注册 `ag` credential helper，不会把访问令牌写入 Git 配置或 remote URL。Git 每次需要凭据时会从 `ag` 的凭据文件读取当前活动账号；使用 `ag auth switch` 切换账号后无需重新运行。SSH remote 不受此设置影响。
-
 ## 输出安全
 
 `ag` 默认会将终端控制字符转换为可见转义文本，包括输出经管道转发时，以防止仓库、Issue、PR 或 Git 服务端返回的内容注入终端控制序列。确实需要为机器处理保留原始字节时，可显式使用全局参数 `--raw-output`，例如 `ag --raw-output pr diff owner/repo 123`；请勿将未经检查的原始输出直接转发到终端。
