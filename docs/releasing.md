@@ -11,6 +11,7 @@
 - [维护 Nix package](#维护-nix-package)
 - [维护 WinGet](#维护-winget)
 - [维护 Scoop](#维护-scoop)
+- [维护 OpenKylin package](#维护-openkylin-package)
 - [维护 AUR package](#维护-aur-package)
 
 ## 发布打包
@@ -231,6 +232,68 @@ Komac 将自动根据传入的 URL 下载包，计算 SHA-256 并更新清单。
 Scoop bucket 位于 [hust-open-atom-club/ScoopBucket](https://github.com/hust-open-atom-club/ScoopBucket)，使用 Excavator GitHub Actions 工作流自动维护。Excavator 每 4 个小时检测一次新版本。如果检测到新版本，将自动更新清单中的版本号、下载链接和 SHA-256 并提交合并请求。
 
 如果距离版本发布超过 4 个小时仍没能正确更新，请[发起一个 Issue](https://github.com/hust-open-atom-club/ScoopBucket/issues)，或者手动更新 [bucket/atomgit-cli.json](https://github.com/hust-open-atom-club/ScoopBucket/blob/main/bucket/atomgit-cli.json) 清单中的相应字段后发起合并请求。
+
+## 维护 OpenKylin package
+
+以下介绍从上游发布新版本到下游 OpenKylin 仓库的完整维护流程。
+
+### 仓库结构
+
+OpenKylin 使用 Git 仓库管理打包文件，遵循特定的分支规范：
+
+- **`upstream/` 标签**：指向上游发布的原始源码（如 `upstream/0.7.0`），用于生成 `.orig.tar.gz`。
+- **`packaging/openkylin/<series>` 分支**：存放 `debian/` 打包目录，采用 quilt 格式，所有对上游的修改以 patch 形式保存， `<series>` 对应 OpenKylin 的版本代号：
+  - `nile-sp2` —— OpenKylin 2.0 SP2
+  - `huanghe` —— OpenKylin 3.0
+- **`openkylin/<series>` 分支**：开发分支，包含 `debian/` 目录，源码包格式为 native。
+
+### 打包步骤
+
+1. **拉取上游新版本**：
+   ```bash
+   git fetch upstream --tags
+   git tag upstream/vX.Y.Z <上游 tag>
+   ```
+
+2. **更新打包分支**：
+   ```bash
+   # 切换到打包分支（以 OpenKylin 3.0 Huanghe 为例）
+   git checkout packaging/openkylin/huanghe
+   # 重置到新的上游标签
+   git reset --hard upstream/vX.Y.Z
+   # 复制或更新 debian/ 目录（从上一版本迁移）
+   git checkout packaging/openkylin/huanghe-backup -- debian
+   # 此处 packaging/openkylin/huanghe-backup 是上一版本的成功打包分支
+   ```
+   3. **更新 `debian/changelog`**：
+   ```bash
+   dch -v X.Y.Z-okN --distribution huanghe "New upstream release X.Y.Z"
+   ```
+   其中 `okN` 为 OpenKylin 的打包修订号，`distribution` 为目标发行版系列（如 `huanghe`、`nile-sp2`）。
+
+4. **测试构建**：
+   ```bash
+   # 确保构建依赖已安装
+   sudo apt build-dep .
+   # 在本地进行测试构建
+   debuild -us -uc -b
+   ```
+   确保二进制包能正常生成。注意：测试构建生成的文件绝对不应该被提交到 Git 仓库，提交并推送前需确保工作区干净。
+
+5. **提交并推送**：
+   ```bash
+   git add debian
+   git commit -m "Packaging vX.Y.Z for huanghe"
+   git push origin packaging/openkylin/huanghe
+   ```
+
+### CI 与发布流程
+
+推送后，OpenKylin 的 CI 系统（Jenkins + gbp-bot）会自动触发：
+
+1. **源码包构建**：CI 从打包分支生成 `.dsc` 和 `.orig.tar.gz`，并上传至 OKBS（OpenKylin 编译平台）。
+2. **进入 `proposed` 仓库**：构建成功的源码包会进入对应发行版的 `proposed` 仓库，供测试验证。
+3. **发布到 `release` 仓库**：经测试验证后，由社区维护者手动或自动将其从 `proposed` 迁移至 `release` 仓库，正式面向所有用户。
 
 ## 维护 AUR package
 
