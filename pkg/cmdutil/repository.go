@@ -14,8 +14,8 @@ import (
 
 var atomgitHosts = []string{"atomgit.com", "gitcode.com"}
 
-// isAtomGitHost reports whether host matches a known AtomGit/GitCode host.
-func isAtomGitHost(host string) bool {
+// IsAtomGitHost reports whether host matches a known AtomGit/GitCode host.
+func IsAtomGitHost(host string) bool {
 	for _, h := range atomgitHosts {
 		if strings.EqualFold(host, h) {
 			return true
@@ -247,7 +247,7 @@ func parseAtomGitRemoteURL(value string) (Repository, error) {
 		colon := strings.Index(value, ":")
 		if colon > at {
 			host := value[at+1 : colon]
-			if !isAtomGitHost(host) {
+			if !IsAtomGitHost(host) {
 				return Repository{}, errNotAtomGitRemote
 			}
 			return parseRemotePath(value[colon+1:])
@@ -262,7 +262,7 @@ func parseAtomGitRemoteURL(value string) (Repository, error) {
 	if err != nil {
 		return Repository{}, errors.New("invalid remote URL")
 	}
-	if !isAtomGitHost(parsed.Hostname()) {
+	if !IsAtomGitHost(parsed.Hostname()) {
 		return Repository{}, errNotAtomGitRemote
 	}
 	if parsed.Scheme != "https" && parsed.Scheme != "ssh" {

@@ -18,7 +18,7 @@ type CreateOptions struct {
 	Clone       bool
 }
 
-type cloneRepositoryFunc func(io.Reader, io.Writer, io.Writer, string, *CloneOptions) error
+type cloneRepositoryFunc func(io.Reader, io.Writer, io.Writer, string, *CloneOptions, *cloneCredentials) error
 
 func newCmdRepoCreate(f *cmdutil.Factory) *cobra.Command {
 	opts := &CreateOptions{}
@@ -137,7 +137,7 @@ func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory,
 	if opts.Clone {
 		cloneURL := strings.TrimSuffix(repoURL, ".git") + ".git"
 		cloneOpts := &CloneOptions{Directory: repoName}
-		if err := clone(in, out, errOut, cloneURL, cloneOpts); err != nil {
+		if err := clone(in, out, errOut, cloneURL, cloneOpts, resolveCloneAuth(f.Config, cloneURL)); err != nil {
 			return fmt.Errorf("failed to clone newly created repository: %w", err)
 		}
 	}
