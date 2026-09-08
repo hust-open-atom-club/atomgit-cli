@@ -145,6 +145,39 @@ func TestPRListUserScopedScopeRequests(t *testing.T) {
 	}
 }
 
+// Cross-repository @me listings must disambiguate entries: numbers are only
+// unique within their own repository, so each line carries the owner/repo
+// prefix derived from the PR URL (review feedback on PR #264).
+func TestPRListUserScopedOutputIncludesRepoIdentity(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
+				body := `[
+					{"number":"1","title":"Update dependencies","state":"open","html_url":"https://atomgit.com/alice/one/pull/1"},
+					{"number":"1","title":"Update dependencies","state":"open","html_url":"https://atomgit.com/bob/two/pulls/1"},
+					{"number":"2","title":"No URL fallback","state":"closed"}
+				]`
+				return prResponse(http.StatusOK, body), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRList(factory)
+	if err := cmd.Flags().Set("author", "@me"); err != nil {
+		t.Fatalf("set author: %v", err)
+	}
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "alice/one #1 Update dependencies [open]\nbob/two #1 Update dependencies [open]\n#2 No URL fallback [closed]\n"
+	if got := out.String(); got != want {
+		t.Fatalf("output = %q, want %q", got, want)
+	}
+}
+
 // Without --author/--assignee/--review-requested the repository endpoint must
 // be used unchanged.
 func TestPRListWithoutUserScopeFlagsKeepsRepoEndpoint(t *testing.T) {

@@ -254,6 +254,15 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 
 			out := cmd.OutOrStdout()
 			for _, issue := range issues {
+				if filter != "" {
+					// Cross-repository listings must disambiguate entries:
+					// numbers are only unique within their own repository.
+					owner, repo := cmdutil.OwnerRepoFromWebURL(issue.HTMLURL)
+					if owner != "" && repo != "" {
+						fmt.Fprintf(out, "%s/%s #%s %s [%s]\n", owner, repo, issue.GetNumber(), issue.Title, issue.State)
+						continue
+					}
+				}
 				fmt.Fprintf(out, "#%s %s [%s]\n", issue.GetNumber(), issue.Title, issue.State)
 			}
 

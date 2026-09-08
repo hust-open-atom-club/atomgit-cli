@@ -42,6 +42,33 @@ func TestPrintResultWithOptionalURL(t *testing.T) {
 	}
 }
 
+func TestOwnerRepoFromWebURL(t *testing.T) {
+	tests := []struct {
+		name  string
+		raw   string
+		owner string
+		repo  string
+	}{
+		{name: "pull URL", raw: "https://atomgit.com/owner/repo/pull/7", owner: "owner", repo: "repo"},
+		{name: "issue URL with fragment", raw: "https://atomgit.com/owner/repo/issues/1#comment-42", owner: "owner", repo: "repo"},
+		{name: "whitespace trimmed", raw: "  https://git.example.test/alice/demo  ", owner: "alice", repo: "demo"},
+		{name: "escaped segment decodes", raw: "https://atomgit.com/owner%20name/repo/pull/7", owner: "owner name", repo: "repo"},
+		{name: "repo root only", raw: "https://atomgit.com/owner/repo", owner: "owner", repo: "repo"},
+		{name: "too few segments", raw: "https://atomgit.com/owner", owner: "", repo: ""},
+		{name: "empty input", raw: "  ", owner: "", repo: ""},
+		{name: "not a URL", raw: "://bad", owner: "", repo: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			owner, repo := OwnerRepoFromWebURL(tt.raw)
+			if owner != tt.owner || repo != tt.repo {
+				t.Fatalf("OwnerRepoFromWebURL(%q) = (%q, %q), want (%q, %q)", tt.raw, owner, repo, tt.owner, tt.repo)
+			}
+		})
+	}
+}
+
 func TestResolveWebURL(t *testing.T) {
 	tests := []struct {
 		name string

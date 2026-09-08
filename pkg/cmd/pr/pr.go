@@ -177,6 +177,15 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 
 			out := cmd.OutOrStdout()
 			for _, pr := range prs {
+				if scope != "" {
+					// Cross-repository listings must disambiguate entries:
+					// numbers are only unique within their own repository.
+					owner, repo := cmdutil.OwnerRepoFromWebURL(pr.HTMLURL)
+					if owner != "" && repo != "" {
+						fmt.Fprintf(out, "%s/%s #%s %s [%s]\n", owner, repo, pr.GetNumber(), pr.Title, pr.State)
+						continue
+					}
+				}
 				fmt.Fprintf(out, "#%s %s [%s]\n", pr.GetNumber(), pr.Title, pr.State)
 			}
 
