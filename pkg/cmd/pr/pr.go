@@ -70,11 +70,60 @@ func parsePRNumber(numberArg string) (string, error) {
 	return strconv.Itoa(number), nil
 }
 
+// resolvePRListScope maps the --author/--assignee/--review-requested/
+// --review-needed flags to the scope value of the /user/pulls endpoint:
+// created_by_me for PRs authored by @me, assigned_to_me for PRs assigned to
+// @me, need_my_approve for PRs that require @me's approval, and
+// need_my_review for PRs that need @me's review.
+func resolvePRListScope(author, assignee, reviewRequested, reviewNeeded string) (string, error) {
+	hasAuthor, err := cmdutil.UserScopeFlag("--author", author)
+	if err != nil {
+		return "", err
+	}
+	hasAssignee, err := cmdutil.UserScopeFlag("--assignee", assignee)
+	if err != nil {
+		return "", err
+	}
+	hasReviewer, err := cmdutil.UserScopeFlag("--review-requested", reviewRequested)
+	if err != nil {
+		return "", err
+	}
+	hasReviewNeeded, err := cmdutil.UserScopeFlag("--review-needed", reviewNeeded)
+	if err != nil {
+		return "", err
+	}
+	count := 0
+	for _, set := range []bool{hasAuthor, hasAssignee, hasReviewer, hasReviewNeeded} {
+		if set {
+			count++
+		}
+	}
+	if count > 1 {
+		return "", fmt.Errorf("--author, --assignee, --review-requested and --review-needed cannot be used together")
+	}
+	switch {
+	case hasAuthor:
+		return "created_by_me", nil
+	case hasAssignee:
+		return "assigned_to_me", nil
+	case hasReviewer:
+		return "need_my_approve", nil
+	case hasReviewNeeded:
+		return "need_my_review", nil
+	default:
+		return "", nil
+	}
+}
+
 func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
-		State string
-		Limit int
-		JSON  bool
+		State           string
+		Limit           int
+		JSON            bool
+		Author          string
+		Assignee        string
+		ReviewRequested string
+		ReviewNeeded    string
 	}
 
 	cmd := &cobra.Command{
@@ -86,11 +135,13 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
 
-			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			scope, err := resolvePRListScope(opts.Author, opts.Assignee, opts.ReviewRequested, opts.ReviewNeeded)
 			if err != nil {
 				return err
 			}
-			owner, repo := repository.Owner, repository.Name
+			if scope != "" && len(args) > 0 {
+				return fmt.Errorf("--author/--assignee/--review-requested/--review-needed @me lists pull requests across all your repositories and cannot be combined with an explicit <owner>/<repo>")
+			}
 
 			token, err := f.Config.GetToken()
 			if err != nil {
@@ -101,9 +152,22 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			prs, err := api.GetPaginated[api.PullRequest](client, opts.Limit, func(page, perPage int) string {
-				return fmt.Sprintf("/repos/%s/%s/pulls?state=%s&page=%d&per_page=%d", owner, repo, opts.State, page, perPage)
-			})
+
+			var prs []api.PullRequest
+			if scope != "" {
+				prs, err = api.GetPaginated[api.PullRequest](client, opts.Limit, func(page, perPage int) string {
+					return fmt.Sprintf("/user/pulls?scope=%s&state=%s&page=%d&per_page=%d", scope, opts.State, page, perPage)
+				})
+			} else {
+				repository, _, repoErr := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+				if repoErr != nil {
+					return repoErr
+				}
+				owner, repo := repository.Owner, repository.Name
+				prs, err = api.GetPaginated[api.PullRequest](client, opts.Limit, func(page, perPage int) string {
+					return fmt.Sprintf("/repos/%s/%s/pulls?state=%s&page=%d&per_page=%d", owner, repo, opts.State, page, perPage)
+				})
+			}
 			if err != nil {
 				return err
 			}
@@ -123,6 +187,10 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.State, "state", "s", "open", "Filter by state: open, closed, all")
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of PRs to list")
 	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output pull requests as JSON")
+	cmd.Flags().StringVar(&opts.Author, "author", "", "Filter by author: @me for PRs you created across all your repositories")
+	cmd.Flags().StringVar(&opts.Assignee, "assignee", "", "Filter by assignee: @me for PRs assigned to you across all your repositories")
+	cmd.Flags().StringVar(&opts.ReviewRequested, "review-requested", "", "Filter by requested approver: @me for PRs that need your approval across all your repositories")
+	cmd.Flags().StringVar(&opts.ReviewNeeded, "review-needed", "", "Filter by requested reviewer: @me for PRs that need your review across all your repositories")
 
 	return cmd
 }

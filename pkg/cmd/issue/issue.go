@@ -156,11 +156,51 @@ func newCmdIssueReopen(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
+// resolveIssueListFilter maps the --author/--assignee/--involved flags to the
+// filter value of the /user/issues endpoint: created for @me-authored issues,
+// assigned for issues assigned to @me, and all for issues that are either.
+func resolveIssueListFilter(author, assignee, involved string) (string, error) {
+	hasAuthor, err := cmdutil.UserScopeFlag("--author", author)
+	if err != nil {
+		return "", err
+	}
+	hasAssignee, err := cmdutil.UserScopeFlag("--assignee", assignee)
+	if err != nil {
+		return "", err
+	}
+	hasInvolved, err := cmdutil.UserScopeFlag("--involved", involved)
+	if err != nil {
+		return "", err
+	}
+	count := 0
+	for _, set := range []bool{hasAuthor, hasAssignee, hasInvolved} {
+		if set {
+			count++
+		}
+	}
+	if count > 1 {
+		return "", fmt.Errorf("--author, --assignee and --involved cannot be used together")
+	}
+	switch {
+	case hasAuthor:
+		return "created", nil
+	case hasAssignee:
+		return "assigned", nil
+	case hasInvolved:
+		return "all", nil
+	default:
+		return "", nil
+	}
+}
+
 func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
-		State string
-		Limit int
-		JSON  bool
+		State    string
+		Limit    int
+		JSON     bool
+		Author   string
+		Assignee string
+		Involved string
 	}
 
 	cmd := &cobra.Command{
@@ -172,11 +212,13 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
 
-			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			filter, err := resolveIssueListFilter(opts.Author, opts.Assignee, opts.Involved)
 			if err != nil {
 				return err
 			}
-			owner, repo := repository.Owner, repository.Name
+			if filter != "" && len(args) > 0 {
+				return fmt.Errorf("--author/--assignee/--involved @me lists issues across all your repositories and cannot be combined with an explicit <owner>/<repo>")
+			}
 
 			token, err := f.Config.GetToken()
 			if err != nil {
@@ -187,9 +229,22 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			issues, err := api.GetPaginated[api.Issue](client, opts.Limit, func(page, perPage int) string {
-				return fmt.Sprintf("/repos/%s/%s/issues?state=%s&page=%d&per_page=%d", owner, repo, opts.State, page, perPage)
-			})
+
+			var issues []api.Issue
+			if filter != "" {
+				issues, err = api.GetPaginated[api.Issue](client, opts.Limit, func(page, perPage int) string {
+					return fmt.Sprintf("/user/issues?filter=%s&state=%s&page=%d&per_page=%d", filter, opts.State, page, perPage)
+				})
+			} else {
+				repository, _, repoErr := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+				if repoErr != nil {
+					return repoErr
+				}
+				owner, repo := repository.Owner, repository.Name
+				issues, err = api.GetPaginated[api.Issue](client, opts.Limit, func(page, perPage int) string {
+					return fmt.Sprintf("/repos/%s/%s/issues?state=%s&page=%d&per_page=%d", owner, repo, opts.State, page, perPage)
+				})
+			}
 			if err != nil {
 				return err
 			}
@@ -209,6 +264,9 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.State, "state", "s", "open", "Filter by state: open, closed, all")
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of issues to list")
 	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output issues as JSON")
+	cmd.Flags().StringVar(&opts.Author, "author", "", "Filter by author: @me for issues you created across all your repositories")
+	cmd.Flags().StringVar(&opts.Assignee, "assignee", "", "Filter by assignee: @me for issues assigned to you across all your repositories")
+	cmd.Flags().StringVar(&opts.Involved, "involved", "", "Filter by involvement: @me for issues you created or are assigned to across all your repositories")
 
 	return cmd
 }

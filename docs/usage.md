@@ -531,6 +531,12 @@ ag pr list owner/repo
 ag pr list owner/repo --state closed
 ag pr list owner/repo --json
 
+# 列出我创建的 / 分配给我的 / 需要我批准的 / 需要我评审的 PR（跨所有仓库，不能与 owner/repo 同用）
+ag pr list --author "@me"
+ag pr list --assignee "@me"
+ag pr list --review-requested "@me"
+ag pr list --review-needed "@me"
+
 # 查看 PR
 ag pr view 123
 ag pr view owner/repo 123
@@ -602,6 +608,8 @@ ag pr reactions owner/repo 42 --json
 
 `pr commits`、`pr files` 和 `pr reactions` 都是只读命令，只发送 GET 请求。`pr commits` 支持 `--limit`（默认 30，必须为正整数）控制返回数量。文本模式每行输出一个条目摘要；JSON 模式输出稳定的 lowerCamelCase 数组，无结果时输出 `[]`。
 
+`pr list` 的 `--author`、`--assignee`、`--review-requested` 和 `--review-needed` 目前只支持 `@me`：通过授权用户接口（`/api/v5/user/pulls`）按登录账号跨所有仓库过滤，分别对应服务端 `scope` 的 `created_by_me`（我创建的）、`assigned_to_me`（分配给我的）、`need_my_approve`（需要我批准的）和 `need_my_review`（需要我评审的）。这四个参数彼此互斥，也不能与显式 `owner/repo` 参数同用；不带这些参数时按仓库列出，行为不变。`--state`、`--limit` 和 `--json` 在两种模式下均可使用。
+
 `pr view --json` 在现有字段基础上新增 `assignees`、`approvalReviewers`、`testers`（均为字符串数组，空时为 `[]`）和 `milestone`（对象或 `null`）字段。`pr list --json` 的 schema 保持不变。两个命令的 `merged` 字段会综合 AtomGit 响应中的 `merged`、`state` 和 `merged_at` 判断，避免 API 省略 `merged` 时把已合并 PR 错报为 `false`。
 
 跨仓库创建 PR 时 `--head` 的写法请参阅[跨仓库 PR 示例](cross_repo_pr_demo.md)。
@@ -668,6 +676,11 @@ ag issue list owner/repo
 ag issue list owner/repo --state all
 ag issue list owner/repo --json
 
+# 列出我创建的 / 分配给我的 / 与我相关的 Issue（跨所有仓库，不能与 owner/repo 同用）
+ag issue list --author "@me"
+ag issue list --assignee "@me"
+ag issue list --involved "@me"
+
 # 查看 Issue
 ag issue view 42
 ag issue view owner/repo 42
@@ -709,6 +722,8 @@ ag issue reopen owner/repo 42
 ```
 
 `--assignee` 接受一个非空用户登录名。`--assignee` 和 `--remove-assignee` 互斥。创建 Issue 时设置负责人是纯新增操作，不需要确认；修改已有 Issue 的负责人（设置或清除）默认需要确认，确认提示输出到 stderr 以免混入正常命令输出，`--yes` 可跳过确认。
+
+`issue list` 的 `--author`、`--assignee` 和 `--involved` 目前只支持 `@me`：通过授权用户接口（`/api/v5/user/issues`）按登录账号跨所有仓库过滤，分别对应服务端 `filter` 的 `created`（我创建的）、`assigned`（分配给我的）和 `all`（创建或分配给我的）。这三个参数彼此互斥，也不能与显式 `owner/repo` 参数同用；不带这些参数时按仓库列出，行为不变。`--state`、`--limit` 和 `--json` 在两种模式下均可使用。
 
 ### Issue 关联 PR 与分支
 
