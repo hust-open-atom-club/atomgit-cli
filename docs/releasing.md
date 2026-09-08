@@ -249,42 +249,56 @@ OpenKylin 使用 Git 仓库管理打包文件，遵循特定的分支规范：
 
 ### 打包步骤
 
-1. **拉取上游新版本**：
+1. **拉取上游新版本并创建 `upstream/` 标签**：
+
+   下游仓库使用 `upstream/X.Y.Z` 命名（无 `v` 前缀）指向上游 `vX.Y.Z` 标签，供 CI 生成 `.orig.tar.gz`：
+
    ```bash
    git fetch upstream --tags
-   git tag upstream/vX.Y.Z <上游 tag>
+   git tag upstream/X.Y.Z vX.Y.Z
    ```
 
-2. **更新打包分支**：
+2. **合并上游新版本到打包分支**：
+
+   打包分支应通过**合并**而非重置来引入上游新版本，以保留已有的打包提交历史。OpenKylin 官方指南同样要求新上游版本合并进 Debian 分支：
+
    ```bash
    # 切换到打包分支（以 OpenKylin 3.0 Huanghe 为例）
    git checkout packaging/openkylin/huanghe
-   # 重置到新的上游标签
-   git reset --hard upstream/vX.Y.Z
-   # 复制或更新 debian/ 目录（从上一版本迁移）
-   git checkout packaging/openkylin/huanghe-backup -- debian
-   # 此处 packaging/openkylin/huanghe-backup 是上一版本的成功打包分支
+   # 合并新的上游标签，保留打包分支中已有的 debian/ 目录
+   git merge upstream/X.Y.Z
    ```
-   3. **更新 `debian/changelog`**：
+
+   若合并产生冲突，仅需解决源码冲突；`debian/` 目录应保留打包分支当前版本。合并完成后工作区即包含新上游源码与现有 `debian/` 目录。
+
+3. **更新 `debian/changelog`**：
+
    ```bash
    dch -v X.Y.Z-okN --distribution huanghe "New upstream release X.Y.Z"
    ```
+
    其中 `okN` 为 OpenKylin 的打包修订号，`distribution` 为目标发行版系列（如 `huanghe`、`nile-sp2`）。
 
 4. **测试构建**：
+
    ```bash
    # 确保构建依赖已安装
    sudo apt build-dep .
    # 在本地进行测试构建
    debuild -us -uc -b
    ```
+
    确保二进制包能正常生成。注意：测试构建生成的文件绝对不应该被提交到 Git 仓库，提交并推送前需确保工作区干净。
 
-5. **提交并推送**：
+5. **提交并推送分支与 `upstream/` 标签**：
+
    ```bash
    git add debian
    git commit -m "Packaging vX.Y.Z for huanghe"
+   # 推送打包分支
    git push origin packaging/openkylin/huanghe
+   # 推送新的 upstream 标签，供远端 CI 生成 .orig.tar.gz
+   git push origin upstream/X.Y.Z
    ```
 
 ### CI 与发布流程
