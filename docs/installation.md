@@ -10,6 +10,7 @@ AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、WinGet
 - [Scoop 安装](#scoop-安装)
 - [Nix / NixOS 安装](#nix--nixos-安装)
 - [AUR / Arch Linux 安装](#aur--arch-linux-安装)
+- [OpenKylin 安装](#openkylin-安装)
 - [Go 安装](#go-安装)
 - [AtomGit Release 安装](#atomgit-release-安装)
 - [源码安装](#源码安装)
@@ -364,6 +365,64 @@ go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 **注意：** Go 模块代理提供的源码包不包含 `.git` 目录，因此这种安装方式构建的二进制只能可靠获得模块版本。执行 `ag version` 时，文本输出会省略无法获得的 commit 和构建时间；`ag version --json` 中对应字段为 `unknown`。这是预期行为，不影响 CLI 功能。如需同时包含版本、commit 和构建时间，请改用其他安装方法（如 npm、Homebrew），或通过 AtomGit Release 安装预编译版本。
 
 Go 本身不记录通过 `go install` 安装的软件包。卸载时，删除 `GOBIN` 中的 `ag` 或 `ag.exe`；未设置 `GOBIN` 时，对应文件位于 `$(go env GOPATH)/bin`。
+
+## OpenKylin 安装
+
+AtomGit CLI 已正式进入 OpenKylin 软件仓库，支持 OpenKylin 2.0 SP2（nile-sp2）及 OpenKylin 3.0（huanghe）。最新版本首先进入 `proposed` 仓库，经测试验证后推送至 `release` 仓库。
+
+### 从 release 仓库安装（稳定版）
+
+```bash
+sudo apt update
+sudo apt install atomgit-cli
+```
+
+### 从 proposed 仓库安装（最新版）
+
+如需安装 `proposed` 仓库中的最新版本，需先添加 proposed 源。OpenKylin 2.0 SP2（nile）使用 `nile.bedrock-proposed`，OpenKylin 3.0（huanghe）使用 `huanghe-proposed`。将对应源写入 `/etc/apt/sources.list.d/` 下的一个文件：
+
+```bash
+# OpenKylin 2.0 SP2 (nile)
+echo "deb http://archive.build.openkylin.top/openkylin nile.bedrock-proposed main cross pty" | sudo tee /etc/apt/sources.list.d/openkylin-proposed.list
+
+# OpenKylin 3.0 (huanghe)
+echo "deb http://archive.build.openkylin.top/openkylin huanghe-proposed main cross pty" | sudo tee /etc/apt/sources.list.d/openkylin-proposed.list
+```
+
+然后更新并安装：
+
+```bash
+sudo apt update
+sudo apt install atomgit-cli
+```
+
+安装完成后，如不再需要 proposed 源，可删除该文件以避免后续收到不稳定更新：
+
+```bash
+sudo rm /etc/apt/sources.list.d/openkylin-proposed.list
+sudo apt update
+```
+
+也可以直接编辑 `/etc/apt/sources.list.d/openkylin-proposed.list`，注释对应行后执行 `sudo apt update`。
+
+### 升级
+
+```bash
+sudo apt update
+sudo apt upgrade atomgit-cli
+```
+
+### 卸载
+
+```bash
+sudo apt remove atomgit-cli
+```
+
+如需同时删除配置文件：
+
+```bash
+sudo apt purge atomgit-cli
+```
 
 ## AtomGit Release 安装
 

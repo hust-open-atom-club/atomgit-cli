@@ -159,9 +159,8 @@ func containsCredentialLineBreak(value string) bool {
 }
 
 func shellQuote(value string) string {
-	if !strings.ContainsAny(value, " \t\r\n'\"$\\!`") {
-		return value
-	}
+	// Git executes helpers prefixed with ! through a shell. Always quote the
+	// executable path so every shell metacharacter is treated as path data.
 	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'"
 }
 

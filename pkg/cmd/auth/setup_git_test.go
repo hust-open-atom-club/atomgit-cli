@@ -191,9 +191,13 @@ func TestGitCredentialHelperDoesNotExposeMalformedURLCredentials(t *testing.T) {
 
 func TestShellQuote(t *testing.T) {
 	tests := map[string]string{
-		"/usr/local/bin/ag":         "/usr/local/bin/ag",
+		"/usr/local/bin/ag":         "'/usr/local/bin/ag'",
 		"/opt/AtomGit CLI/ag":       "'/opt/AtomGit CLI/ag'",
 		"/tmp/AtomGit's CLI/ag":     "'/tmp/AtomGit'\\''s CLI/ag'",
+		"/tmp/ag;touch/tmp/pwned":   "'/tmp/ag;touch/tmp/pwned'",
+		"/tmp/ag&touch/tmp/pwned":   "'/tmp/ag&touch/tmp/pwned'",
+		"/tmp/ag|touch/tmp/pwned":   "'/tmp/ag|touch/tmp/pwned'",
+		"/tmp/ag>(touch/tmp/pwned)": "'/tmp/ag>(touch/tmp/pwned)'",
 		`C:\\Program Files\\ag.exe`: `'C:\\Program Files\\ag.exe'`,
 	}
 	for input, want := range tests {

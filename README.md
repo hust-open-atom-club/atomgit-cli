@@ -96,6 +96,18 @@ yay -S atomgit-cli-bin
 yay -S atomgit-cli-git
 ```
 
+### OpenKylin
+
+目前已正式进入 `OpenKylin` 软件仓库，支持 `OpenKylin 2.0 SP2` 及 `OpenKylin 3.0`，最新版本进入 proposed 仓库，待测试验证后推送至 release 仓库。
+
+```bash
+sudo apt update
+sudo apt install atomgit-cli
+```
+
+如果需要安装 `proposed` 仓库中的最新版本，请参考 [安装指南](链接到 installation.md) 中的相关说明。
+
+
 ### Go
 
 ```bash

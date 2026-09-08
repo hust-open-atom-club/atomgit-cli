@@ -96,6 +96,18 @@ yay -S atomgit-cli-bin
 yay -S atomgit-cli-git
 ```
 
+### OpenKylin
+
+It has now been officially added to the `OpenKylin` software repository, supporting OpenKylin 2.0 SP2 and OpenKylin 3.0. The latest version is in the proposed repository and will be pushed to the release repository after testing and verification.
+
+```bash
+sudo apt update
+sudo apt install atomgit-cli
+```
+
+If you need to install the latest version from the `proposed` repository, please refer to the relevant instructions in the [Installation Guide](link to installation.md).
+
+
 ### Go
 
 ```bash
