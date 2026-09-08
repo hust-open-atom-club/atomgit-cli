@@ -71,6 +71,15 @@
 
 执行任意 `ag auth` 子命令前，CLI 都会检查令牌文件格式。旧单账号文件会通过安全的原子写入自动升级为当前多账号格式，已有 `refresh_token` 等 OAuth 字段会保留；当前格式不会重复写入，未知版本会拒绝迁移。手动使用 PAT 时不要自行编造 `refresh_token`、`expires_in` 或 `created_at`。令牌文件使用 `0600` 权限，写入通过同目录临时文件原子替换；不要将它提交到版本控制。
 
+### 认证 HTTPS 克隆的凭据使用
+
+`ag repo clone` 在克隆 URL 使用 `https://` 且主机为一级 AtomGit 域名（`atomgit.com` 或其 `gitcode.com` 镜像）时，会自动把当前激活账号存储的访问令牌交给 git 完成认证，无需手动输入用户名或令牌：
+
+- 认证方式为 HTTP Basic：登录用户名 + 访问令牌。令牌仅用于**本次 `git clone` 进程**，通过临时注入的环境变量式 Git 配置（`http.https://<主机>/.extraheader`）传递，因此**不会写入**克隆出的仓库的 remote URL（`.git/config` 中的地址保持干净），也不会出现在命令行参数中；
+- 只有**已登录**（令牌文件中存在有效账号）时才会注入凭据；未登录的克隆保持匿名，公开仓库无需登录即可克隆；
+- SSH 克隆（如 `git@atomgit.com:owner/repo.git`）、明文 `http://` 地址以及非 AtomGit/GitCode 主机（如 `github.com`）的克隆**不受影响**，保持原有匿名或用户自行配置的 Git 凭据行为；
+- 访问令牌无效或无权访问目标仓库时，克隆会直接失败并提示认证错误，而**不会弹出交互式 Git 用户名/密码提示**（克隆进程设置了 `GIT_TERMINAL_PROMPT=0`）。令牌过期或失效时，可运行 `ag auth refresh`（OAuth 登录）或重新执行 `ag auth login --with-token`（PAT 登录）后重试。
+
 ## 输出安全
 
 `ag` 默认会将终端控制字符转换为可见转义文本，包括输出经管道转发时，以防止仓库、Issue、PR 或 Git 服务端返回的内容注入终端控制序列。确实需要为机器处理保留原始字节时，可显式使用全局参数 `--raw-output`，例如 `ag --raw-output pr diff owner/repo 123`；请勿将未经检查的原始输出直接转发到终端。
