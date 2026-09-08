@@ -268,6 +268,18 @@ type Organization struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	HTMLURL     string `json:"html_url"`
+	Public      bool   `json:"public"`
+}
+
+// OrganizationMember represents a member returned by an organization members
+// endpoint. AtomGit reports the organization role separately from repository
+// collaborator roles.
+type OrganizationMember struct {
+	ID         string `json:"id"`
+	Login      string `json:"login"`
+	Name       string `json:"name"`
+	HTMLURL    string `json:"html_url"`
+	MemberRole string `json:"member_role"`
 }
 
 // SSHKey represents a public SSH key registered with an AtomGit account.
