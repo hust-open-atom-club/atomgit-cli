@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"net"
 	"net/url"
 	"os"
 	"os/exec"
@@ -91,7 +92,7 @@ func runGitCredentialHelper(f *cmdutil.Factory, operation string, in io.Reader, 
 	if err != nil {
 		return fmt.Errorf("read Git credential request: %w", err)
 	}
-	if wants["protocol"] != "https" || !strings.EqualFold(wants["host"], atomGitCredentialHost) {
+	if wants["protocol"] != "https" || !isAtomGitCredentialHost(wants["host"]) {
 		return nil
 	}
 	if f == nil || f.Config == nil {
@@ -113,7 +114,7 @@ func runGitCredentialHelper(f *cmdutil.Factory, operation string, in io.Reader, 
 	}
 
 	fmt.Fprintln(out, "protocol=https")
-	fmt.Fprintf(out, "host=%s\n", atomGitCredentialHost)
+	fmt.Fprintf(out, "host=%s\n", wants["host"])
 	fmt.Fprintf(out, "username=%s\n", user)
 	fmt.Fprintf(out, "password=%s\n", token)
 	return nil
@@ -156,6 +157,14 @@ func readGitCredentialRequest(in io.Reader) (map[string]string, error) {
 
 func containsCredentialLineBreak(value string) bool {
 	return strings.ContainsAny(value, "\r\n\x00")
+}
+
+func isAtomGitCredentialHost(host string) bool {
+	if strings.EqualFold(host, atomGitCredentialHost) {
+		return true
+	}
+	hostname, port, err := net.SplitHostPort(host)
+	return err == nil && port == "443" && strings.EqualFold(hostname, atomGitCredentialHost)
 }
 
 func shellQuote(value string) string {
