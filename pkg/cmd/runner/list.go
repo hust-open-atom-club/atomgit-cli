@@ -169,34 +169,55 @@ func writeRunnerTable(cmd *cobra.Command, source string, runners []actions.Runne
 	fmt.Fprintln(w, "SOURCE\tSCOPE\tID\tNAME\tSTATUS\tBUSY\tONLINE\tPLATFORM\tOS\tLABELS")
 	for _, runner := range runners {
 		scope := strings.TrimSpace(runner.Scope)
-		if scope == "" { scope = "-" }
+		if scope == "" {
+			scope = "-"
+		}
 		id := string(runner.ID)
-		if id == "" { id = "-" }
+		if id == "" {
+			id = "-"
+		}
 		name := strings.TrimSpace(runner.Name)
-		if name == "" { name = "-" }
+		if name == "" {
+			name = "-"
+		}
 		status := strings.TrimSpace(runner.Status)
-		if status == "" { status = "-" }
+		if status == "" {
+			status = "-"
+		}
 		platform := strings.TrimSpace(runner.Platform)
-		if platform == "" { platform = "-" }
+		if platform == "" {
+			platform = "-"
+		}
 		osName := strings.TrimSpace(runner.OS)
-		if osName == "" { osName = "-" }
+		if osName == "" {
+			osName = "-"
+		}
 		labels := runnerLabels(runner.Labels)
-		if labels == "" { labels = "-" }
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", source, scope, id, name, status, optionalBool(runner.Busy), optionalBool(runner.Online), platform, osName, labels)
+		if labels == "" {
+			labels = "-"
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+			source, scope, id, name, status, optionalBool(runner.Busy), optionalBool(runner.Online), platform, osName, labels)
 	}
 	return w.Flush()
 }
 
 func optionalBool(value *bool) string {
-	if value == nil { return "-" }
-	if *value { return "true" }
+	if value == nil {
+		return "-"
+	}
+	if *value {
+		return "true"
+	}
 	return "false"
 }
 
 func runnerLabels(labels []actions.RunnerLabel) string {
 	names := make([]string, 0, len(labels))
 	for _, label := range labels {
-		if name := strings.TrimSpace(label.Name); name != "" { names = append(names, name) }
+		if name := strings.TrimSpace(label.Name); name != "" {
+			names = append(names, name)
+		}
 	}
 	return strings.Join(names, ",")
 }
