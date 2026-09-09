@@ -83,6 +83,7 @@ func listAllRunners(client *actions.Client, owner, repo string, shared bool, lim
 	runners := make([]actions.Runner, 0, maxRunnersPerPage)
 	seenIDs := make(map[string]struct{})
 	seenPages := make(map[string]struct{})
+	expectedTotal := 0
 	for page := 1; ; page++ {
 		var (
 			response actions.RunnerListResponse
@@ -97,10 +98,19 @@ func listAllRunners(client *actions.Client, owner, repo string, shared bool, lim
 		if err != nil {
 			return nil, err
 		}
+		if response.TotalCount > 0 {
+			if expectedTotal == 0 {
+				expectedTotal = response.TotalCount
+			} else if response.TotalCount != expectedTotal {
+				return nil, fmt.Errorf("inconsistent pagination: API reported total_count %d after %d", response.TotalCount, expectedTotal)
+			}
+		} else if expectedTotal > 0 {
+			return nil, fmt.Errorf("inconsistent pagination: API reported total_count 0 after %d", expectedTotal)
+		}
 
 		if len(response.Runners) == 0 {
-			if response.TotalCount > len(runners) {
-				return nil, fmt.Errorf("incomplete pagination: API reports %d runners but only %d were returned", response.TotalCount, len(runners))
+			if expectedTotal > len(runners) {
+				return nil, fmt.Errorf("incomplete pagination: API reports %d runners but only %d were returned", expectedTotal, len(runners))
 			}
 			break
 		}
@@ -129,12 +139,12 @@ func listAllRunners(client *actions.Client, owner, repo string, shared bool, lim
 		if newItems == 0 {
 			return nil, fmt.Errorf("pagination made no progress at page %d", page)
 		}
-		if response.TotalCount > 0 && len(runners) >= response.TotalCount {
+		if expectedTotal > 0 && len(runners) >= expectedTotal {
 			break
 		}
 		if len(response.Runners) < maxRunnersPerPage {
-			if response.TotalCount > len(runners) {
-				return nil, fmt.Errorf("incomplete pagination: API reports %d runners but only %d were returned", response.TotalCount, len(runners))
+			if expectedTotal > len(runners) {
+				return nil, fmt.Errorf("incomplete pagination: API reports %d runners but only %d were returned", expectedTotal, len(runners))
 			}
 			break
 		}
