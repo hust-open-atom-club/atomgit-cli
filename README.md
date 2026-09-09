@@ -122,12 +122,13 @@ go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 
 ## 使用
 
-运行 `ag --help` 查看命令概览，或运行 `ag <command> --help` 查看具体命令的参数。完整示例和说明参阅[使用指南](docs/usage.md)。
+运行 `ag --help` 查看命令概览，或运行 `ag <command> --help` 查看具体命令的参数。完整示例和说明参阅[使用指南](docs/usage.md)，命令索引参阅[命令参考](docs/command-reference.md)。
 
 安装、认证、使用和故障排查中的常见问题请参阅[常见问题（FAQ）](docs/faq.md)。
 
 ## 更多文档
 
+- [命令参考](docs/command-reference.md)（由 Cobra 命令树生成）
 - [发布指南](docs/releasing.md)
 - [项目结构](docs/project-structure.md)
 

@@ -40,7 +40,7 @@ PRERELEASE ?=
 
 .DEFAULT_GOAL := build
 
-.PHONY: all go-min-version go-version build cross-build install uninstall test test-min-go test-race test-platform-compile vet lint vulncheck fmt fmt-check coverage release release-snapshot publish clean help
+.PHONY: all go-min-version go-version build cross-build install uninstall test test-min-go test-race test-platform-compile vet lint vulncheck fmt fmt-check docs-reference docs-reference-check coverage release release-snapshot publish clean help
 
 all: lint test build
 
@@ -238,8 +238,8 @@ help:
 	@echo "  make cross-build            Compile all seven supported release targets"
 	@echo "  make vulncheck              Build and scan the $(GO_TOOLCHAIN) release binary"
 	@echo "  make coverage               Run tests and generate $(COVERAGE_FILE)"
-	@echo "  make docs-reference        Regenerate docs/command-reference.md"
-	@echo "  make docs-reference-check  Check command reference is up to date"
+	@echo "  make docs-reference         Regenerate docs/command-reference.md"
+	@echo "  make docs-reference-check   Check command reference is up to date"
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make fmt                    Format Go source files in place"
@@ -249,4 +249,3 @@ help:
 	@echo "  make publish VERSION=vX.Y.Z NOTES_FILE=notes.md"
 	@echo "                              Validate, build, upload, and verify an AtomGit Release"
 	@echo "  make clean                  Remove local build, release, and coverage files"
-
