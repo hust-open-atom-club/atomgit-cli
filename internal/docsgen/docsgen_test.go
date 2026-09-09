@@ -35,6 +35,9 @@ func TestGenerateIsDeterministicAndIncludesCommandMetadata(t *testing.T) {
 		t.Fatal("generation is not deterministic")
 	}
 	output := first.String()
+	if strings.HasSuffix(output, "\n\n") {
+		t.Fatal("generated output ends with a blank line")
+	}
 	for _, want := range []string{
 		"# AtomGit CLI command reference",
 		"- [ag repo](#ag-repo) — Manage repositories",

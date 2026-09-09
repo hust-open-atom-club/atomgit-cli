@@ -15,11 +15,13 @@ import (
 //
 // The output is derived only from Cobra metadata. It intentionally excludes
 // runtime state such as command execution results, timestamps, and versions.
-func Generate(w io.Writer, root *cobra.Command) error {
+func Generate(dst io.Writer, root *cobra.Command) error {
 	if root == nil {
 		return fmt.Errorf("root command is nil")
 	}
 
+	var output strings.Builder
+	w := &output
 	commands := collectCommands(root)
 	if _, err := io.WriteString(w, "# AtomGit CLI command reference\n\n"); err != nil {
 		return err
@@ -90,7 +92,8 @@ func Generate(w io.Writer, root *cobra.Command) error {
 			}
 		}
 	}
-	return nil
+	_, err := io.WriteString(dst, strings.TrimRight(output.String(), "\n")+"\n")
+	return err
 }
 
 type commandInfo struct {
