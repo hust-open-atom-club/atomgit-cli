@@ -49,10 +49,12 @@ go.work
 .clinerules/
 .codebuddy/
 .codex/
+.copilot/
 .continue/
 .cospec/
 .crush/
 .cursor/
+.dsh/
 .factory/
 .forge/
 .gemini/
@@ -72,8 +74,24 @@ go.work
 .trae/
 .vibe/
 .windsurf/
+.zcode/
 
-.github/
+# GitHub Copilot workspace files
+.mcp.json
+.github/copilot-instructions.md
+.github/instructions/
+.github/prompts/
+.github/agents/
+.github/skills/
+.github/hooks/
+.github/copilot/
+.github/mcp.json
+.github/lsp.json
+.github/github-app.yml
+.github/copilot-desktop.yml
+.github/workflows/copilot-setup-steps.yml
+.github/workflows/copilot-code-review.yml
+
 .specify/
 
 specs/
