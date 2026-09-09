@@ -83,6 +83,7 @@ func listAllRunners(client *actions.Client, owner, repo string, shared bool, lim
 	runners := make([]actions.Runner, 0, maxRunnersPerPage)
 	seenIDs := make(map[string]struct{})
 	seenPages := make(map[string]struct{})
+	expectedTotal := 0
 	for page := 1; ; page++ {
 		var (
 			response actions.RunnerListResponse
@@ -97,10 +98,19 @@ func listAllRunners(client *actions.Client, owner, repo string, shared bool, lim
 		if err != nil {
 			return nil, err
 		}
+		if response.TotalCount > 0 {
+			if expectedTotal == 0 {
+				expectedTotal = response.TotalCount
+			} else if response.TotalCount != expectedTotal {
+				return nil, fmt.Errorf("inconsistent pagination: API reported total_count %d after %d", response.TotalCount, expectedTotal)
+			}
+		} else if expectedTotal > 0 {
+			return nil, fmt.Errorf("inconsistent pagination: API reported total_count 0 after %d", expectedTotal)
+		}
 
 		if len(response.Runners) == 0 {
-			if response.TotalCount > len(runners) {
-				return nil, fmt.Errorf("incomplete pagination: API reports %d runners but only %d were returned", response.TotalCount, len(runners))
+			if expectedTotal > len(runners) {
+				return nil, fmt.Errorf("incomplete pagination: API reports %d runners but only %d were returned", expectedTotal, len(runners))
 			}
 			break
 		}
@@ -129,12 +139,12 @@ func listAllRunners(client *actions.Client, owner, repo string, shared bool, lim
 		if newItems == 0 {
 			return nil, fmt.Errorf("pagination made no progress at page %d", page)
 		}
-		if response.TotalCount > 0 && len(runners) >= response.TotalCount {
+		if expectedTotal > 0 && len(runners) >= expectedTotal {
 			break
 		}
 		if len(response.Runners) < maxRunnersPerPage {
-			if response.TotalCount > len(runners) {
-				return nil, fmt.Errorf("incomplete pagination: API reports %d runners but only %d were returned", response.TotalCount, len(runners))
+			if expectedTotal > len(runners) {
+				return nil, fmt.Errorf("incomplete pagination: API reports %d runners but only %d were returned", expectedTotal, len(runners))
 			}
 			break
 		}
@@ -159,55 +169,34 @@ func writeRunnerTable(cmd *cobra.Command, source string, runners []actions.Runne
 	fmt.Fprintln(w, "SOURCE\tSCOPE\tID\tNAME\tSTATUS\tBUSY\tONLINE\tPLATFORM\tOS\tLABELS")
 	for _, runner := range runners {
 		scope := strings.TrimSpace(runner.Scope)
-		if scope == "" {
-			scope = "-"
-		}
+		if scope == "" { scope = "-" }
 		id := string(runner.ID)
-		if id == "" {
-			id = "-"
-		}
+		if id == "" { id = "-" }
 		name := strings.TrimSpace(runner.Name)
-		if name == "" {
-			name = "-"
-		}
+		if name == "" { name = "-" }
 		status := strings.TrimSpace(runner.Status)
-		if status == "" {
-			status = "-"
-		}
+		if status == "" { status = "-" }
 		platform := strings.TrimSpace(runner.Platform)
-		if platform == "" {
-			platform = "-"
-		}
+		if platform == "" { platform = "-" }
 		osName := strings.TrimSpace(runner.OS)
-		if osName == "" {
-			osName = "-"
-		}
+		if osName == "" { osName = "-" }
 		labels := runnerLabels(runner.Labels)
-		if labels == "" {
-			labels = "-"
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
-			source, scope, id, name, status, optionalBool(runner.Busy), optionalBool(runner.Online), platform, osName, labels)
+		if labels == "" { labels = "-" }
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", source, scope, id, name, status, optionalBool(runner.Busy), optionalBool(runner.Online), platform, osName, labels)
 	}
 	return w.Flush()
 }
 
 func optionalBool(value *bool) string {
-	if value == nil {
-		return "-"
-	}
-	if *value {
-		return "true"
-	}
+	if value == nil { return "-" }
+	if *value { return "true" }
 	return "false"
 }
 
 func runnerLabels(labels []actions.RunnerLabel) string {
 	names := make([]string, 0, len(labels))
 	for _, label := range labels {
-		if name := strings.TrimSpace(label.Name); name != "" {
-			names = append(names, name)
-		}
+		if name := strings.TrimSpace(label.Name); name != "" { names = append(names, name) }
 	}
 	return strings.Join(names, ",")
 }
