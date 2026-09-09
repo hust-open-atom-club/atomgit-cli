@@ -280,7 +280,21 @@ ag org list --limit 100
 
 # 输出固定字段的 JSON 数组
 ag org list --json
+
+# 查看组织详情
+ag org view hust-open-atom-club
+ag org view hust-open-atom-club --json
+
+# 列出组织成员和角色
+ag org members hust-open-atom-club
+ag org members hust-open-atom-club --limit 100 --json
+
+# 列出组织仓库及其可见性、默认分支和活跃度信息
+ag org repos hust-open-atom-club
+ag org repos hust-open-atom-club --limit 100 --json
 ```
+
+`view` 输出组织路径、名称、可见性、描述和公开 URL。`members` 与 `repos` 支持分页，并在认证和网络请求前校验 `--limit`；空结果的 JSON 输出为 `[]`。仓库输出还包含描述、默认分支、主要语言、Star、Fork 和更新时间。
 
 ## 组织看板 (kanban)
 
