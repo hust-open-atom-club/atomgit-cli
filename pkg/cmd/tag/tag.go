@@ -2,6 +2,8 @@ package tag
 
 import (
 	"fmt"
+	"io"
+	"net/url"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -13,60 +15,91 @@ func NewCmdTag(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tag",
 		Short: "Manage tags",
-		Long:  `List, create, and delete tags.`,
+		Long:  `List, create, and delete tags, and manage protected tag rules.`,
 	}
 
 	cmd.AddCommand(newCmdTagList(f))
 	cmd.AddCommand(newCmdTagCreate(f))
 	cmd.AddCommand(newCmdTagDelete(f))
+	cmd.AddCommand(newCmdTagProtection(f))
+	cmdutil.AddRepositoryContextHelp(cmd)
 
 	return cmd
 }
 
 func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
+	var jsonOutput bool
+	var limit int
 	cmd := &cobra.Command{
-		Use:   "list [<owner>/]<repo>",
-		Short: "List tags",
-		Args:  cobra.MaximumNArgs(1),
+		Use:     "list [<owner>/<repo>]",
+		Short:   "List tags",
+		Example: `  ag tag list owner/repo --limit 50`,
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", limit)
+			}
+
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
-			client := api.NewClient(token)
-
-			var owner, repo string
-			if len(args) == 0 {
-				return fmt.Errorf("repository required")
-			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			var tags []api.Tag
-			path := fmt.Sprintf("/repos/%s/%s/tags", owner, repo)
-			if err := client.Get(path, &tags); err != nil {
+			client, err := f.NewAPIClient(token)
+			if err != nil {
 				return err
 			}
 
+			tags, err := api.GetPaginated[api.Tag](client, limit, func(page, perPage int) string {
+				return fmt.Sprintf("/repos/%s/%s/tags?page=%d&per_page=%d", owner, repo, page, perPage)
+			})
+			if err != nil {
+				return fmt.Errorf("failed to list tags for %s/%s: %w", owner, repo, err)
+			}
+			if jsonOutput {
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), tagsJSON(tags))
+			}
+
+			out := cmd.OutOrStdout()
 			if len(tags) == 0 {
-				fmt.Println("No tags found")
+				fmt.Fprintln(out, "No tags found")
 				return nil
 			}
 
 			for _, tag := range tags {
-				fmt.Printf("%s\n", tag.Name)
+				fmt.Fprintln(out, tag.Name)
 			}
 
 			return nil
 		},
 	}
+	cmd.Flags().IntVarP(&limit, "limit", "L", 30, "Maximum number of tags to list")
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output tags as JSON")
 
 	return cmd
+}
+
+type tagJSON struct {
+	Name      string `json:"name"`
+	Message   string `json:"message"`
+	CommitSHA string `json:"commitSha"`
+	CommitURL string `json:"commitUrl"`
+	Tagger    string `json:"tagger"`
+	TaggedAt  string `json:"taggedAt"`
+}
+
+func tagsJSON(tags []api.Tag) []tagJSON {
+	result := make([]tagJSON, len(tags))
+	for index, tag := range tags {
+		result[index] = tagJSON{Name: tag.Name, Message: tag.Message, CommitSHA: tag.Commit.SHA, CommitURL: tag.Commit.URL, Tagger: tag.Tagger.Name, TaggedAt: tag.Tagger.Date}
+	}
+	return result
 }
 
 func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
@@ -76,27 +109,34 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "create [<owner>/]<repo> <tag_name>",
+		Use:   "create [<owner>/<repo>] <tag_name>",
 		Short: "Create a tag",
-		Args:  cobra.RangeArgs(2, 3),
+		Args:  cobra.RangeArgs(1, 2),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return validateTagCreateRef(opts.Ref)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			tagName := strings.TrimSpace(remaining[0])
+			if tagName == "" {
+				return fmt.Errorf("tag name is required")
+			}
+			if err := validateTagCreateRef(opts.Ref); err != nil {
+				return err
 			}
 
-			client := api.NewClient(token)
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
 
-			var owner, repo, tagName string
-			if len(args) == 2 {
-				parts := strings.Split(args[0], "/")
-				if len(parts) != 2 {
-					return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-				}
-				owner, repo = parts[0], parts[1]
-				tagName = args[1]
-			} else {
-				return fmt.Errorf("repository and tag name required")
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
 			}
 
 			body := api.TagRequest{
@@ -111,53 +151,89 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Created tag %s\n", tag.Name)
+			fmt.Fprintf(cmd.OutOrStdout(), "Created tag %s\n", tag.Name)
 
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.Message, "message", "m", "", "Tag message")
-	cmd.Flags().StringVar(&opts.Ref, "ref", "", "The SHA value or branch name to create the tag from")
+	cmd.Flags().StringVar(&opts.Ref, "ref", "", "Branch, tag, or commit SHA to create the tag from (required)")
+	_ = cmd.MarkFlagRequired("ref")
 
 	return cmd
 }
 
+func validateTagCreateRef(ref string) error {
+	if strings.TrimSpace(ref) == "" {
+		return fmt.Errorf("source ref is required; pass --ref with a branch, tag, or commit SHA")
+	}
+	return nil
+}
+
 func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
+	var yes bool
+
 	cmd := &cobra.Command{
-		Use:   "delete [<owner>/]<repo> <tag_name>",
+		Use:   "delete [<owner>/<repo>] <tag_name>",
 		Short: "Delete a tag",
-		Args:  cobra.RangeArgs(2, 3),
+		Long: `Delete a tag from AtomGit.
+
+By default, you will be prompted to confirm the deletion. Use --yes to skip
+the confirmation prompt.`,
+		Example: `  ag tag delete owner/repo v1.0.0
+  ag tag delete owner/repo v1.0.0 --yes`,
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			tagName := strings.TrimSpace(remaining[0])
+			if tagName == "" {
+				return fmt.Errorf("tag name is required")
+			}
+
+			out := cmd.OutOrStdout()
+			if !yes {
+				confirmed, err := confirmTagDelete(cmd.InOrStdin(), cmd.ErrOrStderr(), repository, tagName)
+				if err != nil {
+					return err
+				}
+				if !confirmed {
+					fmt.Fprintln(out, "Deletion cancelled.")
+					return nil
+				}
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
-			client := api.NewClient(token)
-
-			var owner, repo, tagName string
-			if len(args) == 2 {
-				parts := strings.Split(args[0], "/")
-				if len(parts) != 2 {
-					return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-				}
-				owner, repo = parts[0], parts[1]
-				tagName = args[1]
-			} else {
-				return fmt.Errorf("repository and tag name required")
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
 			}
 
-			path := fmt.Sprintf("/repos/%s/%s/tags/%s", owner, repo, tagName)
+			// Tag names may contain slashes (e.g. v1.0/rc1), so escape the name
+			// before splicing it into the request path.
+			path := fmt.Sprintf("/repos/%s/%s/tags/%s", owner, repo, url.PathEscape(tagName))
 			if err := client.Delete(path); err != nil {
 				return err
 			}
 
-			fmt.Printf("Deleted tag %s\n", tagName)
+			fmt.Fprintf(out, "Deleted tag %s\n", tagName)
 
 			return nil
 		},
 	}
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip confirmation prompt")
 
 	return cmd
+}
+
+func confirmTagDelete(in io.Reader, out io.Writer, repository cmdutil.Repository, tagName string) (bool, error) {
+	return cmdutil.Confirm(in, out, fmt.Sprintf("Delete tag %s from %s? [y/N] ", tagName, repository.String()))
 }

@@ -14,34 +14,30 @@ import (
 
 func newCmdView(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:   "view [<owner>/]<repo> <number>",
+		Use:   "view [<owner>/<repo>] <number>",
 		Short: "View all comments on an issue",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+
+			number, err := strconv.Atoi(remaining[0])
+			if err != nil || number <= 0 {
+				return fmt.Errorf("invalid issue number: %s", remaining[0])
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
-			var owner, repo string
-			var number int
-
-			if len(args) == 1 {
-				return fmt.Errorf("repository and issue number required")
-			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number, err = strconv.Atoi(args[1])
+			client, err := f.NewAPIClient(token)
 			if err != nil {
-				return fmt.Errorf("invalid issue number: %s", args[1])
+				return err
 			}
-
-			client := api.NewClient(token)
 
 			var comments []api.Comment
 			path := fmt.Sprintf("/repos/%s/%s/issues/%d/comments", owner, repo, number)
@@ -49,12 +45,13 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
+			out := cmd.OutOrStdout()
 			if len(comments) == 0 {
-				fmt.Println("No comments found.")
+				fmt.Fprintln(out, "No comments found.")
 				return nil
 			}
 
-			fmt.Printf("Issue #%d 的评论 (共 %d 条):\n\n", number, len(comments))
+			fmt.Fprintf(out, "Issue #%d 的评论 (共 %d 条):\n\n", number, len(comments))
 
 			// Sort comments by creation time
 			sort.Slice(comments, func(i, j int) bool {
@@ -76,14 +73,14 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 					userMarker = " (你)"
 				}
 
-				fmt.Printf("[%d] @%s %s%s\n", comment.ID, comment.User.Login, timeStr, userMarker)
+				fmt.Fprintf(out, "[%d] @%s %s%s\n", comment.ID, comment.User.Login, timeStr, userMarker)
 
 				// Print body
 				bodyLines := strings.Split(comment.Body, "\n")
 				for _, line := range bodyLines {
-					fmt.Printf("    %s\n", line)
+					fmt.Fprintf(out, "    %s\n", line)
 				}
-				fmt.Println()
+				fmt.Fprintln(out)
 			}
 
 			return nil

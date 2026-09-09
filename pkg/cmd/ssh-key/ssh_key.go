@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 
-	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -23,6 +22,8 @@ func NewCmdSSHKey(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.AddCommand(newCmdSSHKeyAdd(f))
+	cmd.AddCommand(newCmdSSHKeyList(f))
+	cmd.AddCommand(newCmdSSHKeyDelete(f))
 
 	return cmd
 }
@@ -42,7 +43,7 @@ func newCmdSSHKeyAdd(f *cmdutil.Factory) *cobra.Command {
 				opts.KeyFile = args[0]
 			}
 
-			return runAdd(f, opts)
+			return runAdd(cmd.OutOrStdout(), f, opts)
 		},
 	}
 
@@ -51,10 +52,10 @@ func newCmdSSHKeyAdd(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
-func runAdd(f *cmdutil.Factory, opts *AddOptions) error {
+func runAdd(out io.Writer, f *cmdutil.Factory, opts *AddOptions) error {
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return fmt.Errorf("not authenticated: %w", err)
+		return cmdutil.AuthenticationError(err)
 	}
 
 	var keyReader io.Reader
@@ -75,7 +76,10 @@ func runAdd(f *cmdutil.Factory, opts *AddOptions) error {
 		return fmt.Errorf("failed to read key: %w", err)
 	}
 
-	client := api.NewClient(token)
+	client, err := f.NewAPIClient(token)
+	if err != nil {
+		return err
+	}
 
 	// AtomGit API endpoint for adding SSH keys
 	// POST /api/v5/user/keys
@@ -89,6 +93,6 @@ func runAdd(f *cmdutil.Factory, opts *AddOptions) error {
 		return fmt.Errorf("failed to add SSH key: %w", err)
 	}
 
-	fmt.Println("✓ SSH key added to your account")
+	fmt.Fprintln(out, "✓ SSH key added to your account")
 	return nil
 }

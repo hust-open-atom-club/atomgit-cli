@@ -2,6 +2,7 @@ package repo
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -16,6 +17,8 @@ type CreateOptions struct {
 	Public      bool
 	Clone       bool
 }
+
+type cloneRepositoryFunc func(io.Reader, io.Writer, io.Writer, string, *CloneOptions, *cloneCredentials) error
 
 func newCmdRepoCreate(f *cmdutil.Factory) *cobra.Command {
 	opts := &CreateOptions{}
@@ -43,7 +46,7 @@ Pass --clone to clone the repository locally after creation.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.Name = args[0]
 
-			return runCreate(f, opts)
+			return runCreate(cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr(), f, opts)
 		},
 	}
 
@@ -55,30 +58,46 @@ Pass --clone to clone the repository locally after creation.`,
 	return cmd
 }
 
-func createdRepositoryURL(result api.Repository, owner, repo string) string {
-	if url := strings.TrimSpace(result.HTMLURL); url != "" {
-		return url
-	}
-	return fmt.Sprintf("https://atomgit.com/%s/%s", owner, repo)
+func createdRepositoryURL(host, owner, repo string) string {
+	return cmdutil.ResolveWebURL("", host, owner, repo)
 }
 
-func runCreate(f *cmdutil.Factory, opts *CreateOptions) error {
-	currentUser, err := f.Config.GetUser()
-	if err != nil {
-		return fmt.Errorf("failed to get current user: %w", err)
+func runCreate(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory, opts *CreateOptions) error {
+	return runCreateWithClone(in, out, errOut, f, opts, runClone)
+}
+
+func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory, opts *CreateOptions, clone cloneRepositoryFunc) error {
+	// Validate conflicting visibility flags before any config/auth/client work so
+	// the error is reported even when unauthenticated (e.g. missing token would
+	// otherwise surface first as "not authenticated").
+	if opts.Public && opts.Private {
+		return fmt.Errorf("--public and --private are mutually exclusive")
 	}
 
-	owner, repoName, err := parseRepositoryName(opts.Name, currentUser)
+	var owner, repoName string
+	var err error
+	if strings.Contains(opts.Name, "/") {
+		owner, repoName, err = parseRepositoryName(opts.Name, "")
+	} else {
+		_, repoName, err = parseRepositoryName(opts.Name, "current-user")
+	}
 	if err != nil {
 		return err
+	}
+	currentUser, err := f.Config.GetUser()
+	if err != nil {
+		return cmdutil.AuthenticationError(err)
+	}
+	if owner == "" {
+		owner = currentUser
 	}
 
 	token, err := f.Config.GetToken()
 	if err != nil {
-		return fmt.Errorf("not authenticated: %w", err)
+		return cmdutil.AuthenticationError(err)
 	}
 
-	client, err := newAPIClient(f, token)
+	client, err := f.NewAPIClient(token)
 	if err != nil {
 		return err
 	}
@@ -110,15 +129,17 @@ func runCreate(f *cmdutil.Factory, opts *CreateOptions) error {
 		return fmt.Errorf("failed to create repository: %w", err)
 	}
 
-	repoURL := createdRepositoryURL(result, owner, repoName)
-	fmt.Printf("✓ Created repository %s/%s\n", owner, repoName)
-	fmt.Printf("  URL: %s\n", repoURL)
+	repoURL := createdRepositoryURL(f.Config.GetHost(), owner, repoName)
+	fmt.Fprintf(out, "✓ Created repository %s/%s\n", owner, repoName)
+	fmt.Fprintf(out, "  URL: %s\n", repoURL)
 
 	// Clone if requested
 	if opts.Clone {
 		cloneURL := strings.TrimSuffix(repoURL, ".git") + ".git"
-		fmt.Printf("\nTo clone this repository, run:\n")
-		fmt.Printf("  git clone %s\n", cloneURL)
+		cloneOpts := &CloneOptions{Directory: repoName}
+		if err := clone(in, out, errOut, cloneURL, cloneOpts, resolveCloneAuth(f.Config, cloneURL)); err != nil {
+			return fmt.Errorf("failed to clone newly created repository: %w", err)
+		}
 	}
 
 	return nil

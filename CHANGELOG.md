@@ -1,3 +1,99 @@
+atomgit-cli (v0.7.3) unstable; urgency=medium
+
+  * Add user profile, email, namespace, activity, starred repository, and
+    watched repository queries, plus read-only organization Kanban commands.
+  * Add repository content browsing, fork listing, remote mirror inspection,
+    push-rule management, and guarded repository transfer workflows.
+  * Expand Actions diagnostics with repository inference, workflow validation,
+    paginated jobs, step logs, artifact inspection, and artifact deletion.
+  * Add protected-tag management and improve tag creation, pagination, deletion
+    confirmation, branch repository context, and branch protection round trips.
+  * Add installation-aware self-update support and simplify version metadata
+    while preserving exact release commit and build information.
+  * Harden API, OAuth, authentication, comment validation, cancellation, and
+    confirmation handling, including consistent credential redaction.
+  * Add staged npm publishing with integrity checks and 2FA approval gates,
+    repair README packaging, and update tar to 7.5.22.
+  * Require Go 1.26.6 or newer, pin release builds to Go 1.26.8, and add race,
+    cross-platform, release-snapshot, and reachable-vulnerability CI gates.
+  * Improve Nix mirror and package automation, and document Homebrew Core,
+    the project development Tap, AUR packages, and the English quick start.
+
+ -- Dongliang Mu <dzm91@hust.edu.cn>  Sat, 05 Sep 2026 11:38:00 +0800
+
+atomgit-cli (v0.7.2) unstable; urgency=medium
+
+  * Add command aliases, Actions workflow listing and dispatch, and token-based
+    login through ag auth login --with-token.
+  * Add commit listing, viewing, comparison, diff, and patch commands, plus
+    repository content reading and owner-scoped repository listing.
+  * Add issue collaboration details, pull request detail queries, discussion
+    listing and viewing, and repository notification management.
+  * Validate local arguments and repository context before authentication, keep
+    authentication failures canonical, and harden API error handling.
+  * Serialize alias configuration updates and make config writes atomic across
+    Unix and Windows.
+  * Add stable and latest Nix package definitions, expand release maintenance
+    guidance, and correct the WinGet package identifier.
+  * Improve Release creation status handling and command output safety for
+    commit and discussion data.
+
+ -- Dongliang Mu <dzm91@hust.edu.cn>  Wed, 19 Aug 2026 00:04:07 +0800
+
+atomgit-cli (v0.7.1) unstable; urgency=medium
+
+  * Add milestone management, repository fork synchronization, and direct
+    browser shortcuts for Actions, wiki, and repository settings.
+  * Add an explicit update-check command with installation-source-aware
+    guidance.
+  * Automate AtomGit Release publication while restoring the compact artifact
+    contract of seven platform archives, two installers, and one checksum file.
+  * Make installer templates version-neutral and document WinGet installation.
+  * Split credential permission handling by platform and remove unreachable
+    token-file repair logic.
+  * Harden repository and API path validation, redact tokens consistently, and
+    validate command arguments before authentication or configuration access.
+  * Make unauthenticated command failures and repository visibility validation
+    consistent across command families.
+
+ -- Dongliang Mu <dzm91@hust.edu.cn>  Sun, 09 Aug 2026 19:48:53 +0800
+
+atomgit-cli (v0.7.0) unstable; urgency=medium
+
+  * Add branch and protected-branch management, repository editing, webhooks,
+    collaborators, organization listing, labels, SSH keys, search, and generic
+    authenticated API commands.
+  * Add complete pull request workflows for checkout, merge, review, current
+    head checks, collaboration metadata, reopening, and body-file input.
+  * Add AtomGit Actions run inspection, browser and --web support, and
+    structured JSON resource output.
+  * Add Release metadata management and attachment upload/download, with
+    source-aware self-update policy and isolated package-manager artifacts.
+  * Infer repository context from Git remotes, recognize gitcode.com aliases,
+    and support explicit multi-account authentication workflows.
+  * Add Linux LoongArch64 Release and npm packages, split stable/latest Nix
+    packages, and document Homebrew and Scoop installation.
+  * Improve API client consistency, write-result identifiers and URLs, Actions
+    empty responses, repository creation, CI reliability, and Windows test
+    isolation.
+
+ -- Dongliang Mu <dzm91@hust.edu.cn>  Tue, 28 Jul 2026 00:09:08 +0800
+
+atomgit-cli (v0.6.0) unstable; urgency=medium
+
+  * Add npm distribution through a launcher package and six platform-specific
+    binary packages, with local checksum generation and release validation.
+  * Add issue editing, issue label management, repository label listing, and
+    richer issue display output.
+  * Retry transient failures for idempotent API requests and accept successful
+    empty PATCH responses.
+  * Harden credential file permission and race checks, and sanitize untrusted
+    terminal output at the CLI boundary.
+  * Add the root --version flag and improve reproducible Nix and installer
+    release workflows.
+
+ -- Dongliang Mu <dzm91@hust.edu.cn>  Sun, 19 Jul 2026 00:37:42 +0800
+
 atomgit-cli (v0.5.0) unstable; urgency=medium
 
   * Move the Go module, documentation, API endpoints, and installers to the

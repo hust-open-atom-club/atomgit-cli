@@ -3,10 +3,37 @@ package version
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 	"github.com/spf13/cobra"
 )
+
+func Text() string {
+	return formatText(version.Get())
+}
+
+func formatText(info version.Info) string {
+	details := make([]string, 0, 2)
+	if commit := knownMetadata(info.Commit); commit != "" {
+		details = append(details, "commit: "+commit)
+	}
+	if buildDate := knownMetadata(info.BuildDate); buildDate != "" {
+		details = append(details, "built: "+buildDate)
+	}
+	if len(details) == 0 {
+		return fmt.Sprintf("ag version %s\n", info.Version)
+	}
+	return fmt.Sprintf("ag version %s (%s)\n", info.Version, strings.Join(details, ", "))
+}
+
+func knownMetadata(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" || strings.EqualFold(value, "unknown") {
+		return ""
+	}
+	return value
+}
 
 func NewCmdVersion() *cobra.Command {
 	var opts struct {
@@ -18,18 +45,15 @@ func NewCmdVersion() *cobra.Command {
 		Short: "Show version information",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			info := version.Get()
-
 			if opts.JSON {
+				info := version.Get()
 				enc := json.NewEncoder(cmd.OutOrStdout())
 				enc.SetIndent("", "  ")
 				return enc.Encode(info)
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(),
-				"ag version %s (commit: %s, built: %s)\n",
-				info.Version, info.Commit, info.BuildDate)
-			return nil
+			_, err := fmt.Fprint(cmd.OutOrStdout(), Text())
+			return err
 		},
 	}
 

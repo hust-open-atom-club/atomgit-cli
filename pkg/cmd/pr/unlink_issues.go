@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -16,36 +15,21 @@ func newCmdUnlinkIssues(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "unlink-issues [<owner>/]<repo> <pr_number>",
+		Use:   "unlink-issues [<owner>/<repo>] <pr_number>",
 		Short: "Unlink issues from a pull request",
 		Long:  `Unlink one or more issues from a pull request.`,
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return err
 			}
-
-			var owner, repo string
-			var prNumber string
-
-			if len(args) == 1 {
-				return fmt.Errorf("repository and PR number required")
-			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			prNumber = args[1]
+			owner, repo := repository.Owner, repository.Name
+			prNumber := remaining[0]
 
 			if len(opts.Issues) == 0 {
 				return fmt.Errorf("at least one issue number is required (--issue)")
 			}
-
-			client := api.NewClient(token)
 
 			// Convert issue numbers to integers
 			issueNumbers := []int{}
@@ -57,6 +41,16 @@ func newCmdUnlinkIssues(f *cmdutil.Factory) *cobra.Command {
 				issueNumbers = append(issueNumbers, num)
 			}
 
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
+
 			// Unlink issues using array format
 			path := fmt.Sprintf("/repos/%s/%s/pulls/%s/issues?", owner, repo, prNumber)
 			if err := client.DeleteWithBody(path, issueNumbers); err != nil {
@@ -66,10 +60,11 @@ func newCmdUnlinkIssues(f *cmdutil.Factory) *cobra.Command {
 			unlinkedIssues := opts.Issues
 
 			// Output result
+			out := cmd.OutOrStdout()
 			if len(unlinkedIssues) == 1 {
-				fmt.Printf("Unlinked issue #%s from PR #%s\n", unlinkedIssues[0], prNumber)
+				fmt.Fprintf(out, "Unlinked issue #%s from PR #%s\n", unlinkedIssues[0], prNumber)
 			} else {
-				fmt.Printf("Unlinked issues #%s from PR #%s\n", strings.Join(unlinkedIssues, ", #"), prNumber)
+				fmt.Fprintf(out, "Unlinked issues #%s from PR #%s\n", strings.Join(unlinkedIssues, ", #"), prNumber)
 			}
 
 			return nil

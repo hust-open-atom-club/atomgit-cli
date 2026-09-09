@@ -1,0 +1,372 @@
+package branch
+
+import (
+	"fmt"
+	"io"
+	"strings"
+
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
+	"github.com/spf13/cobra"
+)
+
+type repositoryRef struct {
+	Owner string
+	Repo  string
+}
+
+func NewCmdBranch(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "branch",
+		Short: "Manage remote branches",
+		Long:  `List, view, create, delete, and protect AtomGit remote branches.`,
+		Example: `  ag branch list owner/repo
+  ag branch view owner/repo main
+  ag branch create owner/repo feature/foo --ref main
+  ag branch delete owner/repo feature/foo
+  ag branch protection list owner/repo`,
+	}
+
+	cmd.AddCommand(newCmdBranchList(f))
+	cmd.AddCommand(newCmdBranchView(f))
+	cmd.AddCommand(newCmdBranchCreate(f))
+	cmd.AddCommand(newCmdBranchDelete(f))
+	cmd.AddCommand(newCmdBranchProtection(f))
+	cmdutil.AddRepositoryContextHelp(cmd)
+
+	return cmd
+}
+
+func authenticatedClient(f *cmdutil.Factory) (*api.Client, error) {
+	token, err := f.Config.GetToken()
+	if err != nil {
+		return nil, cmdutil.AuthenticationError(err)
+	}
+	return f.NewAPIClient(token)
+}
+
+func resolveRepositoryArgs(f *cmdutil.Factory, args []string, trailingArgs int) (repositoryRef, []string, error) {
+	repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, trailingArgs)
+	if err != nil {
+		return repositoryRef{}, nil, err
+	}
+	return repositoryRef{Owner: repository.Owner, Repo: repository.Name}, remaining, nil
+}
+
+func branchPath(repository repositoryRef, branchName string) string {
+	return fmt.Sprintf("/repos/%s/%s/branches/%s", repository.Owner, repository.Repo, escapePathSegment(branchName))
+}
+
+func newCmdBranchList(f *cmdutil.Factory) *cobra.Command {
+	var limit int
+	var jsonOutput bool
+
+	cmd := &cobra.Command{
+		Use:     "list [<owner>/<repo>]",
+		Short:   "List remote branches",
+		Example: `  ag branch list owner/repo --limit 50`,
+		Args:    cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", limit)
+			}
+
+			repository, _, err := resolveRepositoryArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+
+			client, err := authenticatedClient(f)
+			if err != nil {
+				return err
+			}
+
+			branches, err := api.GetPaginated[api.Branch](client, limit, func(page, perPage int) string {
+				return fmt.Sprintf("/repos/%s/%s/branches?page=%d&per_page=%d", repository.Owner, repository.Repo, page, perPage)
+			})
+			if err != nil {
+				return fmt.Errorf("failed to list branches for %s/%s: %w", repository.Owner, repository.Repo, err)
+			}
+			if jsonOutput {
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), branchesJSON(branches))
+			}
+
+			for _, branch := range branches {
+				printBranchSummary(cmd.OutOrStdout(), branch)
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().IntVarP(&limit, "limit", "L", 30, "Maximum number of branches to list")
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output branches as JSON")
+	return cmd
+}
+
+func newCmdBranchView(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "view [<owner>/<repo>] <branch>",
+		Short:   "View a remote branch",
+		Example: `  ag branch view owner/repo main`,
+		Args:    cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := resolveRepositoryArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+
+			client, err := authenticatedClient(f)
+			if err != nil {
+				return err
+			}
+
+			branchName := remaining[0]
+			var branch api.Branch
+			if err := client.Get(branchPath(repository, branchName), &branch); err != nil {
+				return fmt.Errorf("failed to view branch %q in %s/%s: %w", branchName, repository.Owner, repository.Repo, err)
+			}
+
+			printBranchDetail(cmd.OutOrStdout(), branch)
+			return nil
+		},
+	}
+	return cmd
+}
+
+func newCmdBranchCreate(f *cmdutil.Factory) *cobra.Command {
+	var sourceRef string
+
+	cmd := &cobra.Command{
+		Use:     "create [<owner>/<repo>] <branch> --ref <ref>",
+		Short:   "Create a remote branch",
+		Example: `  ag branch create owner/repo feature/foo --ref main`,
+		Args:    cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := resolveRepositoryArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			branchName := remaining[0]
+			if strings.TrimSpace(branchName) == "" {
+				return fmt.Errorf("branch name is required")
+			}
+			if strings.TrimSpace(sourceRef) == "" {
+				return fmt.Errorf("source ref is required")
+			}
+
+			client, err := authenticatedClient(f)
+			if err != nil {
+				return err
+			}
+
+			request := api.BranchRequest{
+				BranchName: branchName,
+				Refs:       sourceRef,
+			}
+			var created api.Branch
+			if err := client.Post(fmt.Sprintf("/repos/%s/%s/branches", repository.Owner, repository.Repo), request, &created); err != nil {
+				return fmt.Errorf("failed to create branch %q in %s/%s from %q: %w", branchName, repository.Owner, repository.Repo, sourceRef, err)
+			}
+			if created.Name == "" {
+				created.Name = branchName
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Created branch %s\n", created.Name)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&sourceRef, "ref", "", "Source ref to create the branch from")
+	return cmd
+}
+
+func newCmdBranchDelete(f *cmdutil.Factory) *cobra.Command {
+	var yes bool
+
+	cmd := &cobra.Command{
+		Use:   "delete [<owner>/<repo>] <branch>",
+		Short: "Delete a remote branch",
+		Example: `  ag branch delete owner/repo feature/foo
+  ag branch delete owner/repo feature/foo --yes`,
+		Args: cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := resolveRepositoryArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			branchName := remaining[0]
+			if strings.TrimSpace(branchName) == "" {
+				return fmt.Errorf("branch name is required")
+			}
+
+			client, err := authenticatedClient(f)
+			if err != nil {
+				return err
+			}
+
+			var repo api.Repository
+			repoPath := fmt.Sprintf("/repos/%s/%s", repository.Owner, repository.Repo)
+			if err := client.Get(repoPath, &repo); err != nil {
+				return fmt.Errorf("failed to read repository %s/%s: %w", repository.Owner, repository.Repo, err)
+			}
+
+			var branch api.Branch
+			if err := client.Get(branchPath(repository, branchName), &branch); err != nil {
+				return fmt.Errorf("failed to view branch %q in %s/%s: %w", branchName, repository.Owner, repository.Repo, err)
+			}
+
+			if repo.DefaultBranch == branchName || branch.Default.Bool() {
+				return fmt.Errorf("cannot delete default branch %q", branchName)
+			}
+			if branch.Protected.Bool() {
+				return fmt.Errorf("cannot delete protected branch %q", branchName)
+			}
+
+			if !yes {
+				confirmed, err := confirmDelete(cmd.InOrStdin(), cmd.ErrOrStderr(), repository, branchName)
+				if err != nil {
+					return err
+				}
+				if !confirmed {
+					fmt.Fprintln(cmd.OutOrStdout(), "Branch deletion cancelled")
+					return nil
+				}
+			}
+
+			if err := client.Delete(branchPath(repository, branchName)); err != nil {
+				return fmt.Errorf("failed to delete branch %q in %s/%s: %w", branchName, repository.Owner, repository.Repo, err)
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Deleted branch %s\n", branchName)
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Confirm branch deletion without prompting")
+	return cmd
+}
+
+func confirmDelete(in io.Reader, out io.Writer, repository repositoryRef, branchName string) (bool, error) {
+	return cmdutil.Confirm(in, out, fmt.Sprintf("Delete branch %s from %s/%s? [y/N] ", branchName, repository.Owner, repository.Repo))
+}
+
+func printBranchSummary(out io.Writer, branch api.Branch) {
+	fmt.Fprintf(out, "%s", displayBranchName(branch))
+	if commit := displayCommit(branch.Commit); commit != "" {
+		fmt.Fprintf(out, " %s", commit)
+	}
+	fmt.Fprintf(out, " protected:%t", branch.Protected.Bool())
+	if branch.CreatedAt != "" {
+		fmt.Fprintf(out, " created:%s", branch.CreatedAt)
+	}
+	if branch.Creator.Login != "" {
+		fmt.Fprintf(out, " creator:%s", branch.Creator.Login)
+	}
+	fmt.Fprintln(out)
+}
+
+func printBranchDetail(out io.Writer, branch api.Branch) {
+	fmt.Fprintf(out, "Name: %s\n", displayBranchName(branch))
+	if commit := displayCommit(branch.Commit); commit != "" {
+		fmt.Fprintf(out, "Commit: %s\n", commit)
+	}
+	fmt.Fprintf(out, "Protected: %t\n", branch.Protected.Bool())
+	if branch.Default.Bool() {
+		fmt.Fprintln(out, "Default: true")
+	}
+	if branch.Merged.Bool() {
+		fmt.Fprintln(out, "Merged: true")
+	}
+	if branch.CanPush.Bool() {
+		fmt.Fprintln(out, "Can Push: true")
+	}
+	if branch.DevelopersCanPush.Bool() {
+		fmt.Fprintln(out, "Developers Can Push: true")
+	}
+	if branch.DevelopersCanMerge.Bool() {
+		fmt.Fprintln(out, "Developers Can Merge: true")
+	}
+	if branch.CreatedAt != "" {
+		fmt.Fprintf(out, "Created: %s\n", branch.CreatedAt)
+	}
+	if branch.Creator.Login != "" {
+		fmt.Fprintf(out, "Creator: %s\n", branch.Creator.Login)
+	}
+}
+
+func displayBranchName(branch api.Branch) string {
+	if branch.Name != "" {
+		return branch.Name
+	}
+	return branch.Ref
+}
+
+func displayCommit(commit api.BranchCommit) string {
+	sha := commit.SHA
+	if sha == "" {
+		sha = commit.ID
+	}
+	if sha == "" {
+		sha = commit.ShortID
+	}
+	if sha == "" {
+		return ""
+	}
+	if len(sha) > 12 {
+		sha = sha[:12]
+	}
+
+	message := strings.TrimSpace(commit.Title)
+	if message == "" {
+		message = strings.TrimSpace(commit.Message)
+	}
+	if message == "" {
+		message = strings.TrimSpace(commit.Commit.Message)
+	}
+	if message == "" {
+		return sha
+	}
+	message = strings.ReplaceAll(message, "\n", " ")
+	return fmt.Sprintf("%s %s", sha, message)
+}
+
+type branchJSON struct {
+	Name               string `json:"name"`
+	Commit             string `json:"commit"`
+	Protected          bool   `json:"protected"`
+	Default            bool   `json:"default"`
+	Merged             bool   `json:"merged"`
+	CanPush            bool   `json:"canPush"`
+	DevelopersCanPush  bool   `json:"developersCanPush"`
+	DevelopersCanMerge bool   `json:"developersCanMerge"`
+	CreatedAt          string `json:"createdAt"`
+	Creator            string `json:"creator"`
+}
+
+func branchesJSON(branches []api.Branch) []branchJSON {
+	result := make([]branchJSON, len(branches))
+	for i, branch := range branches {
+		result[i] = newBranchJSON(branch)
+	}
+	return result
+}
+
+func newBranchJSON(branch api.Branch) branchJSON {
+	commit := branch.Commit.SHA
+	if commit == "" {
+		commit = branch.Commit.ID
+	}
+	if commit == "" {
+		commit = branch.Commit.ShortID
+	}
+	return branchJSON{
+		Name:               displayBranchName(branch),
+		Commit:             commit,
+		Protected:          branch.Protected.Bool(),
+		Default:            branch.Default.Bool() || branch.DefaultBranch.Bool(),
+		Merged:             branch.Merged.Bool(),
+		CanPush:            branch.CanPush.Bool(),
+		DevelopersCanPush:  branch.DevelopersCanPush.Bool(),
+		DevelopersCanMerge: branch.DevelopersCanMerge.Bool(),
+		CreatedAt:          branch.CreatedAt,
+		Creator:            branch.Creator.Login,
+	}
+}

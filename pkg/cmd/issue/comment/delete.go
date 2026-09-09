@@ -3,7 +3,6 @@ package comment
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -16,63 +15,61 @@ func newCmdDelete(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete [<owner>/]<repo> <number> <comment-id>",
+		Use:   "delete [<owner>/<repo>] <number> <comment-id>",
 		Short: "Delete a comment on an issue",
 		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 2)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+
+			number, err := strconv.Atoi(remaining[0])
+			if err != nil || number <= 0 {
+				return fmt.Errorf("invalid issue number: %s", remaining[0])
+			}
+
+			commentID, err := strconv.Atoi(remaining[1])
+			if err != nil || commentID <= 0 {
+				return fmt.Errorf("invalid comment ID: %s", remaining[1])
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
-			var owner, repo string
-			var number, commentID int
-
-			if len(args) < 3 {
-				return fmt.Errorf("repository, issue number, and comment ID required")
-			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number, err = strconv.Atoi(args[1])
+			client, err := f.NewAPIClient(token)
 			if err != nil {
-				return fmt.Errorf("invalid issue number: %s", args[1])
+				return err
 			}
-
-			commentID, err = strconv.Atoi(args[2])
+			currentUser, err := f.Config.GetUser()
 			if err != nil {
-				return fmt.Errorf("invalid comment ID: %s", args[2])
+				return fmt.Errorf("failed to get current user: %w", err)
 			}
 
-			client := api.NewClient(token)
-			currentUser, _ := f.Config.GetUser()
-
-			// Verify issue exists (number is validated but not used directly)
-			_ = number
-
-			// Get the comment first to check ownership
-			var comment api.Comment
+			comment, err := api.GetIssueCommentForParent(client, owner, repo, number, commentID)
+			if err != nil {
+				return fmt.Errorf("failed to verify comment parent: %w", err)
+			}
 			path := fmt.Sprintf("/repos/%s/%s/issues/comments/%d", owner, repo, commentID)
-			if err := client.Get(path, &comment); err != nil {
-				return fmt.Errorf("failed to get comment: %w", err)
-			}
 
 			// Check if current user owns this comment
 			if comment.User.Login != currentUser {
 				return fmt.Errorf("只能删除自己的评论")
 			}
 
+			out := cmd.OutOrStdout()
+
 			// Confirm deletion
 			if !opts.Yes {
-				fmt.Printf("确定要删除评论 #%d 吗? [y/N]: ", commentID)
-				var response string
-				fmt.Scanln(&response)
-				if strings.ToLower(response) != "y" && strings.ToLower(response) != "yes" {
-					fmt.Println("取消删除")
+				confirmed, err := cmdutil.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), fmt.Sprintf("确定要删除评论 #%d 吗? [y/N]: ", commentID))
+				if err != nil {
+					return err
+				}
+				if !confirmed {
+					fmt.Fprintln(out, "取消删除")
 					return nil
 				}
 			}
@@ -82,7 +79,7 @@ func newCmdDelete(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("failed to delete comment: %w", err)
 			}
 
-			fmt.Printf("Deleted comment #%d\n", commentID)
+			fmt.Fprintf(out, "Deleted comment #%d\n", commentID)
 			return nil
 		},
 	}

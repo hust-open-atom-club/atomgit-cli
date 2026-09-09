@@ -14,8 +14,20 @@ func isolateConfig(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	t.Setenv("XDG_CONFIG_HOME", "")
 	return home
+}
+
+func TestIsolateConfigUsesTemporaryHome(t *testing.T) {
+	home := isolateConfig(t)
+	got, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != home {
+		t.Fatalf("os.UserHomeDir() = %q, want %q", got, home)
+	}
 }
 
 func writeCredentialsFile(t *testing.T, path string, credentials StoredCredentials) {
@@ -149,6 +161,100 @@ func TestLoadStoredCredentials(t *testing.T) {
 			t.Fatalf("error = %v", err)
 		}
 	})
+
+	t.Run("fixes group/other readable permissions (0o644)", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("permission bits are not enforced on Windows")
+		}
+
+		home := isolateConfig(t)
+		path := filepath.Join(home, ".config", appName, tokenFile)
+		creds := StoredCredentials{AccessToken: "leaked", User: "alice"}
+		data, err := json.Marshal(creds)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		got, err := LoadStoredCredentials()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.AccessToken != "leaked" || got.User != "alice" {
+			t.Fatalf("credentials = %#v", got)
+		}
+
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if perm := info.Mode().Perm(); perm != 0o600 {
+			t.Fatalf("perm = %#o, want 0600", perm)
+		}
+	})
+
+	t.Run("preserves stricter owner-only permissions (0o400)", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("permission bits are not enforced on Windows")
+		}
+
+		home := isolateConfig(t)
+		path := filepath.Join(home, ".config", appName, tokenFile)
+		creds := StoredCredentials{AccessToken: "readonly", User: "alice"}
+		data, err := json.Marshal(creds)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, data, 0o400); err != nil {
+			t.Fatal(err)
+		}
+
+		got, err := LoadStoredCredentials()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.AccessToken != "readonly" || got.User != "alice" {
+			t.Fatalf("credentials = %#v", got)
+		}
+
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if perm := info.Mode().Perm(); perm != 0o400 {
+			t.Fatalf("perm = %#o, want 0400", perm)
+		}
+	})
+
+	t.Run("rejects symlink token file", func(t *testing.T) {
+		home := isolateConfig(t)
+		target := filepath.Join(home, "real-token.json")
+		writeCredentialsFile(t, target, StoredCredentials{AccessToken: "secret", User: "alice"})
+
+		linkPath := filepath.Join(home, ".config", appName, tokenFile)
+		if err := os.MkdirAll(filepath.Dir(linkPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(target, linkPath); err != nil {
+			if isSymlinkPrivilegeNotHeld(err) {
+				t.Skipf("symlink privilege is unavailable: %v", err)
+			}
+			t.Fatal(err)
+		}
+
+		_, err := LoadStoredCredentials()
+		if !errors.Is(err, ErrTokenFileSymlink) {
+			t.Fatalf("error = %v, want ErrTokenFileSymlink", err)
+		}
+	})
 }
 
 func TestSaveAndClearCredentials(t *testing.T) {
@@ -239,6 +345,46 @@ func TestSaveTokenPreservesOAuthFields(t *testing.T) {
 	if got.AccessToken != "new" || got.User != "new-user" || got.RefreshToken != "refresh" || got.ExpiresIn != 7200 {
 		t.Fatalf("credentials = %#v", got)
 	}
+	accounts, active, err := ListAccounts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(accounts) != 1 || active != "new-user" {
+		t.Fatalf("accounts = %#v, active = %q", accounts, active)
+	}
+	store, err := LoadCredentialStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.ResolveAccount("old-user"); err == nil {
+		t.Fatal("old account remained after SaveToken username change")
+	}
+}
+
+func TestSaveTokenRejectsRenameToExistingAccount(t *testing.T) {
+	isolateConfig(t)
+	if err := SaveAccount(&StoredCredentials{AccessToken: "alice-token", User: "alice"}, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveAccount(&StoredCredentials{AccessToken: "bob-token", User: "bob"}, false); err != nil {
+		t.Fatal(err)
+	}
+
+	err := SaveToken("replacement-token", "bob")
+	if err == nil || !strings.Contains(err.Error(), "account already exists") {
+		t.Fatalf("error = %v", err)
+	}
+	store, loadErr := LoadCredentialStore()
+	if loadErr != nil {
+		t.Fatal(loadErr)
+	}
+	if store.Active != "alice" || len(store.Accounts) != 2 {
+		t.Fatalf("store = %#v", store)
+	}
+	alice, resolveErr := store.ResolveAccount("alice")
+	if resolveErr != nil || alice.AccessToken != "alice-token" {
+		t.Fatalf("alice = %#v, error = %v", alice, resolveErr)
+	}
 }
 
 func TestNewConfigWithoutCredentials(t *testing.T) {
@@ -250,19 +396,10 @@ func TestNewConfigWithoutCredentials(t *testing.T) {
 	if cfg.GetHost() != defaultHost {
 		t.Fatalf("host = %q", cfg.GetHost())
 	}
-	if _, err := cfg.GetToken(); err == nil || !strings.Contains(err.Error(), "not authenticated") {
+	if _, err := cfg.GetToken(); !errors.Is(err, ErrNotAuthenticated) {
 		t.Fatalf("GetToken error = %v", err)
 	}
-	if _, err := cfg.GetUser(); err == nil || !strings.Contains(err.Error(), "not authenticated") {
+	if _, err := cfg.GetUser(); !errors.Is(err, ErrNotAuthenticated) {
 		t.Fatalf("GetUser error = %v", err)
-	}
-}
-
-func TestIsPermissionErr(t *testing.T) {
-	if !isPermissionErr(os.ErrPermission) {
-		t.Fatal("os.ErrPermission should be recognized")
-	}
-	if isPermissionErr(errors.New("other")) {
-		t.Fatal("unrelated error should not be recognized")
 	}
 }

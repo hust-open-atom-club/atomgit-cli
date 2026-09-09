@@ -18,44 +18,37 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "reply [<owner>/]<repo> <number> <discussion-id>",
+		Use:   "reply [<owner>/<repo>] <number> <discussion-id>",
 		Short: "Reply to a comment thread on a pull request",
 		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 2)
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return err
 			}
+			owner, repo := repository.Owner, repository.Name
 
-			var owner, repo string
-			var number int
-
-			if len(args) < 3 {
-				return fmt.Errorf("repository, PR number, and discussion ID required")
-			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number, err = strconv.Atoi(args[1])
-			if err != nil {
-				return fmt.Errorf("invalid PR number: %s", args[1])
+			number, err := strconv.Atoi(remaining[0])
+			if err != nil || number <= 0 {
+				return fmt.Errorf("invalid PR number: %s", remaining[0])
 			}
 
 			// discussion_id is the thread identifier (a hex string), shown by
 			// `ag pr comment view` on the [discussion_id] header line.
-			discussionID := strings.TrimSpace(args[2])
+			discussionID := strings.TrimSpace(remaining[1])
 			if discussionID == "" {
 				return fmt.Errorf("discussion ID cannot be empty")
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
 			}
 
 			// Get body
 			body := opts.Body
 			if body == "" {
-				fmt.Printf("Enter reply to discussion %s (press Ctrl+D when done):\n", discussionID)
+				fmt.Fprintf(cmd.OutOrStdout(), "Enter reply to discussion %s (press Ctrl+D when done):\n", discussionID)
 				reader := bufio.NewReader(os.Stdin)
 				var lines []string
 				for {
@@ -72,7 +65,10 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("reply body cannot be empty")
 			}
 
-			client := api.NewClient(token)
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
 
 			// Reply using discussions API. The response carries the discussion id
 			// as `id` and the new reply's comment id as `note_id`.
@@ -83,7 +79,7 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("failed to create reply: %w", err)
 			}
 
-			fmt.Printf("Created reply #%d in discussion %s\n", resp.NoteID, resp.DiscussionID)
+			fmt.Fprintf(cmd.OutOrStdout(), "Created reply #%d in discussion %s\n", resp.NoteID, resp.DiscussionID)
 			return nil
 		},
 	}

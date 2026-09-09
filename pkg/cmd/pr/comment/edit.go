@@ -18,64 +18,61 @@ func newCmdEdit(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "edit [<owner>/]<repo> <number> <comment-id>",
+		Use:   "edit [<owner>/<repo>] <number> <comment-id>",
 		Short: "Edit a comment on a pull request",
 		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 2)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+
+			number, err := strconv.Atoi(remaining[0])
+			if err != nil || number <= 0 {
+				return fmt.Errorf("invalid PR number: %s", remaining[0])
+			}
+
+			commentID, err := strconv.Atoi(remaining[1])
+			if err != nil || commentID <= 0 {
+				return fmt.Errorf("invalid comment ID: %s", remaining[1])
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
-			var owner, repo string
-			var number, commentID int
-
-			if len(args) < 3 {
-				return fmt.Errorf("repository, PR number, and comment ID required")
-			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number, err = strconv.Atoi(args[1])
+			client, err := f.NewAPIClient(token)
 			if err != nil {
-				return fmt.Errorf("invalid PR number: %s", args[1])
+				return err
 			}
-
-			commentID, err = strconv.Atoi(args[2])
+			currentUser, err := f.Config.GetUser()
 			if err != nil {
-				return fmt.Errorf("invalid comment ID: %s", args[2])
+				return fmt.Errorf("failed to get current user: %w", err)
 			}
 
-			client := api.NewClient(token)
-			currentUser, _ := f.Config.GetUser()
-
-			// Verify PR exists (number is validated but not used directly)
-			_ = number
-
-			// Get the comment first to check ownership
-			var comment api.Comment
+			comment, err := api.GetPullRequestCommentForParent(client, owner, repo, number, commentID)
+			if err != nil {
+				return fmt.Errorf("failed to verify comment parent: %w", err)
+			}
 			path := fmt.Sprintf("/repos/%s/%s/pulls/comments/%d", owner, repo, commentID)
-			if err := client.Get(path, &comment); err != nil {
-				return fmt.Errorf("failed to get comment: %w", err)
-			}
 
 			// Check if current user owns this comment
 			if comment.User.Login != currentUser {
 				return fmt.Errorf("只能编辑自己的评论")
 			}
 
+			out := cmd.OutOrStdout()
+
 			// Get new body
 			body := opts.Body
 			if body == "" {
 				// Interactive mode with existing content
-				fmt.Printf("Editing comment #%s (press Ctrl+D when done):\n", args[2])
-				fmt.Println("Current content:")
-				fmt.Println(comment.Body)
-				fmt.Println("\n--- Enter new content below ---")
+				fmt.Fprintf(out, "Editing comment #%s (press Ctrl+D when done):\n", remaining[1])
+				fmt.Fprintln(out, "Current content:")
+				fmt.Fprintln(out, comment.Body)
+				fmt.Fprintln(out, "\n--- Enter new content below ---")
 
 				reader := bufio.NewReader(os.Stdin)
 				var lines []string
@@ -99,7 +96,8 @@ func newCmdEdit(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("failed to update comment: %w", err)
 			}
 
-			fmt.Printf("Updated comment #%d: %s\n", comment.ID, comment.HTMLURL)
+			summary := fmt.Sprintf("Updated comment #%d", comment.ID)
+			cmdutil.PrintResultWithOptionalURL(out, summary, comment.HTMLURL)
 			return nil
 		},
 	}

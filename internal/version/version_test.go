@@ -5,14 +5,20 @@ import (
 	"testing"
 )
 
+type linkerMetadata struct {
+	version   string
+	commit    string
+	buildDate string
+}
+
 // restoreVars swaps package-level variables to the requested test values and
 // returns a cleanup function that restores the originals.
-func restoreVars(v, c, b string, fn func() (*debug.BuildInfo, bool)) func() {
+func restoreVars(metadata linkerMetadata, fn func() (*debug.BuildInfo, bool)) func() {
 	oldV, oldC, oldB := Version, Commit, BuildDate
 	oldFn := ReadBuildInfo
-	Version = v
-	Commit = c
-	BuildDate = b
+	Version = metadata.version
+	Commit = metadata.commit
+	BuildDate = metadata.buildDate
 	ReadBuildInfo = fn
 	return func() {
 		Version = oldV
@@ -23,7 +29,9 @@ func restoreVars(v, c, b string, fn func() (*debug.BuildInfo, bool)) func() {
 }
 
 func TestGet_DevelopmentDefaults(t *testing.T) {
-	cleanup := restoreVars("dev", "unknown", "unknown", func() (*debug.BuildInfo, bool) {
+	cleanup := restoreVars(linkerMetadata{
+		version: "dev", commit: "unknown", buildDate: "unknown",
+	}, func() (*debug.BuildInfo, bool) {
 		return nil, false
 	})
 	defer cleanup()
@@ -41,7 +49,9 @@ func TestGet_DevelopmentDefaults(t *testing.T) {
 }
 
 func TestGet_BuildInfoFallback(t *testing.T) {
-	cleanup := restoreVars("dev", "unknown", "unknown", func() (*debug.BuildInfo, bool) {
+	cleanup := restoreVars(linkerMetadata{
+		version: "dev", commit: "unknown", buildDate: "unknown",
+	}, func() (*debug.BuildInfo, bool) {
 		return &debug.BuildInfo{
 			Main: debug.Module{
 				Path:    "atomgit.com/hust-open-atom-club/atomgit-cli",
@@ -68,7 +78,9 @@ func TestGet_BuildInfoFallback(t *testing.T) {
 }
 
 func TestGet_BuildInfoFallbackSkipsDevel(t *testing.T) {
-	cleanup := restoreVars("dev", "unknown", "unknown", func() (*debug.BuildInfo, bool) {
+	cleanup := restoreVars(linkerMetadata{
+		version: "dev", commit: "unknown", buildDate: "unknown",
+	}, func() (*debug.BuildInfo, bool) {
 		return &debug.BuildInfo{
 			Main: debug.Module{
 				Path:    "atomgit.com/hust-open-atom-club/atomgit-cli",
@@ -93,7 +105,9 @@ func TestGet_BuildInfoFallbackSkipsDevel(t *testing.T) {
 }
 
 func TestGet_DirtyState(t *testing.T) {
-	cleanup := restoreVars("dev", "unknown", "unknown", func() (*debug.BuildInfo, bool) {
+	cleanup := restoreVars(linkerMetadata{
+		version: "dev", commit: "unknown", buildDate: "unknown",
+	}, func() (*debug.BuildInfo, bool) {
 		return &debug.BuildInfo{
 			Main: debug.Module{
 				Path:    "atomgit.com/hust-open-atom-club/atomgit-cli",
@@ -117,7 +131,9 @@ func TestGet_DirtyState(t *testing.T) {
 func TestGet_LinkerPrecedence(t *testing.T) {
 	// Linker-injected release values: they must be used exclusively even when
 	// ReadBuildInfo is also available.
-	cleanup := restoreVars("v1.2.3", "feedbeef", "2026-06-15T12:00:00Z", func() (*debug.BuildInfo, bool) {
+	cleanup := restoreVars(linkerMetadata{
+		version: "v1.2.3", commit: "feedbeef", buildDate: "2026-06-15T12:00:00Z",
+	}, func() (*debug.BuildInfo, bool) {
 		return &debug.BuildInfo{
 			Main: debug.Module{
 				Path:    "atomgit.com/hust-open-atom-club/atomgit-cli",
@@ -146,7 +162,9 @@ func TestGet_LinkerPrecedence(t *testing.T) {
 
 func TestGet_BuildInfoNil(t *testing.T) {
 	// ReadBuildInfo returns (nil, true): it exists but has no data.
-	cleanup := restoreVars("dev", "unknown", "unknown", func() (*debug.BuildInfo, bool) {
+	cleanup := restoreVars(linkerMetadata{
+		version: "dev", commit: "unknown", buildDate: "unknown",
+	}, func() (*debug.BuildInfo, bool) {
 		return nil, true
 	})
 	defer cleanup()
@@ -159,7 +177,9 @@ func TestGet_BuildInfoNil(t *testing.T) {
 
 func TestGet_BuildInfoEmptyVersion(t *testing.T) {
 	// Main.Version is empty string; not "(devel)" but also empty.
-	cleanup := restoreVars("dev", "unknown", "unknown", func() (*debug.BuildInfo, bool) {
+	cleanup := restoreVars(linkerMetadata{
+		version: "dev", commit: "unknown", buildDate: "unknown",
+	}, func() (*debug.BuildInfo, bool) {
 		return &debug.BuildInfo{
 			Main: debug.Module{
 				Path:    "atomgit.com/hust-open-atom-club/atomgit-cli",
@@ -177,7 +197,9 @@ func TestGet_BuildInfoEmptyVersion(t *testing.T) {
 
 func TestGet_PartialVCS(t *testing.T) {
 	// Only vcs.revision is set; vcs.time is missing.
-	cleanup := restoreVars("dev", "unknown", "unknown", func() (*debug.BuildInfo, bool) {
+	cleanup := restoreVars(linkerMetadata{
+		version: "dev", commit: "unknown", buildDate: "unknown",
+	}, func() (*debug.BuildInfo, bool) {
 		return &debug.BuildInfo{
 			Main: debug.Module{
 				Path:    "atomgit.com/hust-open-atom-club/atomgit-cli",

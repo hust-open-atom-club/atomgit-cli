@@ -2,9 +2,11 @@ package issue
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/browser"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/issue/comment"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
@@ -20,39 +22,42 @@ func NewCmdIssue(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdIssueList(f))
 	cmd.AddCommand(newCmdIssueView(f))
 	cmd.AddCommand(newCmdIssueCreate(f))
+	cmd.AddCommand(newCmdIssueEdit(f))
 	cmd.AddCommand(newCmdIssueClose(f))
+	cmd.AddCommand(newCmdIssueLabel(f))
+	cmd.AddCommand(newCmdIssueReopen(f))
+	cmd.AddCommand(newCmdIssuePRS(f))
+	cmd.AddCommand(newCmdIssueBranches(f))
 	cmd.AddCommand(comment.NewCmdComment(f))
+	cmdutil.AddRepositoryContextHelp(cmd)
 
 	return cmd
 }
 
 func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "close [<owner>/]<repo> <number>",
+		Use:   "close [<owner>/<repo>] <number>",
 		Short: "Close an issue",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Resolve and validate arguments before any authentication or
+			// network initialization so invalid input never reaches GetToken.
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			number, err := parseIssueNumber(remaining[0])
+			if err != nil {
+				return err
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
-			var owner, repo string
-			var number string
-
-			if len(args) == 1 {
-				return fmt.Errorf("repository and issue number required")
-			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number = args[1]
-
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
@@ -90,38 +95,95 @@ func newCmdIssueClose(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
+func newCmdIssueReopen(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "reopen [<owner>/<repo>] <number>",
+		Short: "Reopen an issue",
+		Args:  cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Resolve and validate arguments before any authentication or
+			// network initialization so invalid input never reaches GetToken.
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			number, err := parseIssueNumber(remaining[0])
+			if err != nil {
+				return err
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
+
+			issuePath := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
+			var current api.Issue
+			if err := client.Get(issuePath, &current); err != nil {
+				return fmt.Errorf("failed to get issue: %w", err)
+			}
+
+			updatePath := fmt.Sprintf("/repos/%s/issues/%s", owner, number)
+			fields := map[string]string{
+				"repo":  repo,
+				"title": current.Title,
+				"state": "reopen",
+			}
+			if err := client.PatchForm(updatePath, fields, nil); err != nil {
+				return fmt.Errorf("failed to reopen issue: %w", err)
+			}
+
+			var verified api.Issue
+			if err := client.Get(issuePath, &verified); err != nil {
+				return fmt.Errorf("failed to verify issue state: %w", err)
+			}
+			if !strings.EqualFold(strings.TrimSpace(verified.State), "open") {
+				return fmt.Errorf("issue #%s is still not open after update (state: %q)", number, verified.State)
+			}
+
+			cmd.Printf("Reopened issue #%s\n", number)
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
 		State string
 		Limit int
+		JSON  bool
 	}
 
 	cmd := &cobra.Command{
-		Use:   "list [<owner>/]<repo>",
+		Use:   "list [<owner>/<repo>]",
 		Short: "List issues",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
 			if opts.Limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
 			}
 
-			var owner, repo string
-			if len(args) == 0 {
-				return fmt.Errorf("repository required")
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
 			}
 
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			client, err := newAPIClient(f, token)
+			client, err := f.NewAPIClient(token)
 			if err != nil {
 				return err
 			}
@@ -131,9 +193,13 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if opts.JSON {
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), issuesJSON(issues))
+			}
 
+			out := cmd.OutOrStdout()
 			for _, issue := range issues {
-				fmt.Printf("#%s %s [%s]\n", issue.GetNumber(), issue.Title, issue.State)
+				fmt.Fprintf(out, "#%s %s [%s]\n", issue.GetNumber(), issue.Title, issue.State)
 			}
 
 			return nil
@@ -142,105 +208,189 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.State, "state", "s", "open", "Filter by state: open, closed, all")
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of issues to list")
+	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output issues as JSON")
 
 	return cmd
 }
 
 func newCmdIssueView(f *cmdutil.Factory) *cobra.Command {
+	var opts struct {
+		web  bool
+		json bool
+	}
+
 	cmd := &cobra.Command{
-		Use:   "view [<owner>/]<repo> <number>",
+		Use:   "view [<owner>/<repo>] <number>",
 		Short: "View an issue",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			number, err := parseIssueNumber(remaining[0])
+			if err != nil {
+				return err
+			}
+
+			if opts.web {
+				num, err := strconv.Atoi(number)
+				if err != nil {
+					return fmt.Errorf("invalid issue number: %s", number)
+				}
+				u := browser.BuildIssueURL(owner, repo, num)
+				fmt.Fprintf(cmd.OutOrStdout(), "Opening %s in your browser.\n", u)
+				if f.BrowserOpener != nil {
+					if err := f.BrowserOpener(u); err != nil {
+						return fmt.Errorf("failed to open browser: %w", err)
+					}
+				}
+				return nil
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
+				return cmdutil.AuthenticationError(err)
 			}
 
-			client := api.NewClient(token)
-
-			var owner, repo string
-			var number string
-
-			if len(args) == 1 {
-				return fmt.Errorf("repository and issue number required")
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
 			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number = args[1]
 
 			var issue api.Issue
 			path := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
 			if err := client.Get(path, &issue); err != nil {
 				return err
 			}
+			if opts.json {
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), newIssueJSON(issue))
+			}
 
-			fmt.Printf("Title: %s\n", issue.Title)
-			fmt.Printf("State: %s\n", issue.State)
-			fmt.Printf("Author: %s\n", issue.User.Login)
-			fmt.Printf("URL: %s\n", issue.HTMLURL)
-			fmt.Printf("Created: %s\n", issue.CreatedAt)
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "Title: %s\n", issue.Title)
+			fmt.Fprintf(out, "State: %s\n", issue.State)
+			if labels := formatIssueLabels(issue.Labels); labels != "" {
+				fmt.Fprintf(out, "Labels: %s\n", labels)
+			}
+			fmt.Fprintf(out, "Author: %s\n", issue.User.Login)
+			fmt.Fprintf(out, "URL: %s\n", issue.HTMLURL)
+			fmt.Fprintf(out, "Created: %s\n", issue.CreatedAt)
 			if issue.Body != "" {
-				fmt.Printf("\n%s\n", issue.Body)
+				fmt.Fprintf(out, "\n%s\n", issue.Body)
 			}
 
 			return nil
 		},
 	}
 
+	cmd.Flags().BoolVarP(&opts.web, "web", "w", false, "Open an issue in the browser")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Output issue as JSON")
+	cmd.MarkFlagsMutuallyExclusive("web", "json")
+
 	return cmd
+}
+
+type issueJSON struct {
+	ID        int64    `json:"id"`
+	Number    string   `json:"number"`
+	Title     string   `json:"title"`
+	Body      string   `json:"body"`
+	State     string   `json:"state"`
+	URL       string   `json:"url"`
+	Author    string   `json:"author"`
+	Labels    []string `json:"labels"`
+	CreatedAt string   `json:"createdAt"`
+	UpdatedAt string   `json:"updatedAt"`
+}
+
+func issuesJSON(issues []api.Issue) []issueJSON {
+	result := make([]issueJSON, len(issues))
+	for index, issue := range issues {
+		result[index] = newIssueJSON(issue)
+	}
+	return result
+}
+
+func newIssueJSON(issue api.Issue) issueJSON {
+	labels := make([]string, 0, len(issue.Labels))
+	for _, label := range issue.Labels {
+		if name := strings.TrimSpace(label.Name); name != "" {
+			labels = append(labels, name)
+		}
+	}
+	return issueJSON{ID: issue.ID, Number: issue.GetNumber(), Title: issue.Title, Body: issue.Body, State: issue.State, URL: issue.HTMLURL, Author: issue.User.Login, Labels: labels, CreatedAt: issue.CreatedAt, UpdatedAt: issue.UpdatedAt}
+}
+
+func formatIssueLabels(labels []api.Label) string {
+	names := make([]string, 0, len(labels))
+	for _, label := range labels {
+		if name := strings.TrimSpace(label.Name); name != "" {
+			names = append(names, name)
+		}
+	}
+	return strings.Join(names, ", ")
 }
 
 func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
-		Title string
-		Body  string
+		Title    string
+		Body     string
+		BodyFile string
+		Assignee string
 	}
 
 	cmd := &cobra.Command{
-		Use:   "create [<owner>/]<repo>",
+		Use:   "create [<owner>/<repo>]",
 		Short: "Create an issue",
-		Args:  cobra.MaximumNArgs(1),
+		Example: `  ag issue create owner/repo --title "Bug report" --body "Description"
+  ag issue create owner/repo --title "Bug report" --assignee alice
+  ag issue create owner/repo --title "Bug report" --body-file description.md
+  ag issue create owner/repo --title "Bug report" --body-file -`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
-			client := api.NewClient(token)
-
-			var owner, repo string
-			if len(args) == 0 {
-				return fmt.Errorf("repository required")
-			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
 			if opts.Title == "" {
 				return fmt.Errorf("title is required")
 			}
-
-			body := map[string]interface{}{
-				"title": opts.Title,
-				"body":  opts.Body,
+			assignee := strings.TrimSpace(opts.Assignee)
+			if cmd.Flags().Changed("assignee") && assignee == "" {
+				return fmt.Errorf("assignee cannot be empty")
 			}
 
-			var issue api.Issue
-			path := fmt.Sprintf("/repos/%s/%s/issues", owner, repo)
-			if err := client.Post(path, body, &issue); err != nil {
+			bodyText, err := cmdutil.ReadBody(
+				opts.Body,
+				opts.BodyFile,
+				cmd.Flags().Changed("body"),
+				cmd.Flags().Changed("body-file"),
+				cmd.InOrStdin(),
+			)
+			if err != nil {
 				return err
 			}
 
-			fmt.Printf("Created issue #%s: %s\n", issue.GetNumber(), issue.HTMLURL)
+			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
+
+			issue, err := api.CreateIssueWithAssignee(client, owner, repo, opts.Title, bodyText, assignee)
+			if err != nil {
+				return err
+			}
+
+			fmt.Fprintf(cmd.OutOrStdout(), "Created issue #%s: %s\n", issue.GetNumber(), issue.HTMLURL)
 
 			return nil
 		},
@@ -248,6 +398,21 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "Issue title")
 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "Issue body")
+	cmd.Flags().StringVarP(&opts.BodyFile, "body-file", "F", "", "Read issue body from file (use - for stdin)")
+	cmd.Flags().StringVar(&opts.Assignee, "assignee", "", "Assign the issue to a user (login)")
+	cmd.MarkFlagsMutuallyExclusive("body", "body-file")
 
 	return cmd
+}
+
+// parseIssueNumber validates that number is a positive integer and returns its
+// canonical decimal form. Rejecting non-numeric values before they are
+// interpolated into an API request path prevents path traversal or query
+// injection via the issue number argument.
+func parseIssueNumber(value string) (string, error) {
+	number, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil || number <= 0 {
+		return "", fmt.Errorf("invalid issue number %q (expected a positive integer)", value)
+	}
+	return strconv.Itoa(number), nil
 }

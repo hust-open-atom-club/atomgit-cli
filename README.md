@@ -96,6 +96,18 @@ yay -S atomgit-cli-bin
 yay -S atomgit-cli-git
 ```
 
+### OpenKylin
+
+目前已正式进入 `OpenKylin` 软件仓库，支持 `OpenKylin 2.0 SP2` 及 `OpenKylin 3.0`，最新版本进入 proposed 仓库，待测试验证后推送至 release 仓库。
+
+```bash
+sudo apt update
+sudo apt install atomgit-cli
+```
+
+如果需要安装 `proposed` 仓库中的最新版本，请参考 [安装指南](链接到 installation.md) 中的相关说明。
+
+
 ### Go
 
 ```bash
@@ -110,13 +122,12 @@ go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 
 ## 使用
 
-运行 `ag --help` 查看命令概览，或运行 `ag <command> --help` 查看具体命令的参数。完整示例和说明参阅[使用指南](docs/usage.md)，命令索引参阅[命令参考](docs/command-reference.md)。
+运行 `ag --help` 查看命令概览，或运行 `ag <command> --help` 查看具体命令的参数。完整示例和说明参阅[使用指南](docs/usage.md)。
 
 安装、认证、使用和故障排查中的常见问题请参阅[常见问题（FAQ）](docs/faq.md)。
 
 ## 更多文档
 
-- [命令参考](docs/command-reference.md)（由 Cobra 命令树生成）
 - [发布指南](docs/releasing.md)
 - [项目结构](docs/project-structure.md)
 
@@ -136,4 +147,3 @@ Actions 运行检查使用独立的 AtomGit API v8：`https://api.atomgit.com/ap
 [木兰宽松许可证第2版](LICENSE) (Mulan Permissive Software License, Version 2)
 
 Copyright (c) 2026 HUST OpenAtom Club, AtomGit, and the AtomGit CLI contributors
-

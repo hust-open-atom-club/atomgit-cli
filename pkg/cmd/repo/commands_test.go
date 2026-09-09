@@ -1,16 +1,20 @@
 package repo
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
+	"github.com/spf13/cobra"
 )
 
 type repoCommandConfig struct {
@@ -37,12 +41,20 @@ func repoFactory(config repoCommandConfig, transport forkRoundTripFunc) *cmdutil
 func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	cmd := NewCmdRepo(&cmdutil.Factory{})
 	want := map[string][]string{
-		"clone":  {"branch"},
-		"create": {"clone", "description", "private", "public"},
-		"delete": {"yes"},
-		"fork":   {"clone", "description", "name", "private", "public"},
-		"list":   {"limit"},
-		"view":   {},
+		"clone":     {"branch"},
+		"content":   nil,
+		"create":    {"clone", "description", "private", "public"},
+		"delete":    {"yes"},
+		"edit":      {"default-branch", "description", "name", "private", "public", "visibility", "yes"},
+		"fork":      {"clone", "description", "name", "private", "public"},
+		"list":      {"limit"},
+		"mirror":    nil,
+		"push-rule": nil,
+		"read-dir":  {"json", "ref"},
+		"read-file": {"json", "ref"},
+		"sync":      {"branch", "force", "yes"},
+		"transfer":  {"password-stdin", "to", "yes"},
+		"view":      {"web"},
 	}
 	for name, flags := range want {
 		child, _, err := cmd.Find([]string{name})
@@ -55,6 +67,15 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 			}
 		}
 	}
+	forkList, _, err := cmd.Find([]string{"fork", "list"})
+	if err != nil || forkList.Name() != "list" {
+		t.Fatalf("fork list command: %v", err)
+	}
+	for _, flag := range []string{"limit", "json"} {
+		if forkList.Flags().Lookup(flag) == nil {
+			t.Errorf("fork list --%s flag was not registered", flag)
+		}
+	}
 
 	clone, _, _ := cmd.Find([]string{"clone"})
 	if err := clone.Args(clone, nil); err == nil {
@@ -63,13 +84,69 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	if err := clone.Args(clone, []string{"owner/repo", "target", "extra"}); err == nil {
 		t.Fatal("clone accepted too many arguments")
 	}
+
+	edit, _, _ := cmd.Find([]string{"edit"})
+	if err := edit.Args(edit, []string{"owner/repo", "extra"}); err == nil {
+		t.Fatal("edit accepted too many repositories")
+	}
+	pushRuleView, _, _ := cmd.Find([]string{"push-rule", "view"})
+	for _, flag := range []string{"json"} {
+		if pushRuleView.Flags().Lookup(flag) == nil {
+			t.Errorf("push-rule view --%s flag was not registered", flag)
+		}
+	}
+	mirrorList, _, err := cmd.Find([]string{"mirror", "list"})
+	if err != nil || mirrorList.Name() != "list" {
+		t.Fatalf("mirror list command: %v", err)
+	}
+	for _, flag := range []string{"limit", "json"} {
+		if mirrorList.Flags().Lookup(flag) == nil {
+			t.Errorf("mirror list --%s flag was not registered", flag)
+		}
+	}
+	mirrorView, _, err := cmd.Find([]string{"mirror", "view"})
+	if err != nil || mirrorView.Name() != "view" {
+		t.Fatalf("mirror view command: %v", err)
+	}
+	if mirrorView.Flags().Lookup("json") == nil {
+		t.Error("mirror view --json flag was not registered")
+	}
+	pushRuleEdit, _, _ := cmd.Find([]string{"push-rule", "edit"})
+	for _, flag := range []string{"reject-not-signed-by-gpg", "commit-message-regex", "max-file-size", "skip-rule-for-owner", "deny-force-push", "yes", "json"} {
+		if pushRuleEdit.Flags().Lookup(flag) == nil {
+			t.Errorf("push-rule edit --%s flag was not registered", flag)
+		}
+	}
+	for _, name := range []string{"list", "view"} {
+		contentCommand, _, err := cmd.Find([]string{"content", name})
+		if err != nil || contentCommand.Name() != name {
+			t.Fatalf("content %s subcommand: %v", name, err)
+		}
+		for _, flag := range []string{"json", "ref"} {
+			if contentCommand.Flags().Lookup(flag) == nil {
+				t.Errorf("content %s --%s flag was not registered", name, flag)
+			}
+		}
+	}
+	if err := pushRuleEdit.Args(pushRuleEdit, []string{"owner/repo", "extra"}); err == nil {
+		t.Fatal("push-rule edit accepted too many repositories")
+	}
+	for _, name := range []string{"view", "edit", "fork", "sync", "transfer", "delete"} {
+		child, _, _ := cmd.Find([]string{name})
+		if !strings.Contains(child.Long, cmdutil.RepositoryContextHelp) {
+			t.Errorf("%s help does not explain repository inference", name)
+		}
+		if err := child.Args(child, nil); err != nil {
+			t.Errorf("%s rejected repository inference: %v", name, err)
+		}
+	}
 }
 
 func TestNewAPIClient(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
-		client, err := newAPIClient(&cmdutil.Factory{}, "token")
+		client, err := (&cmdutil.Factory{}).NewAPIClient("token")
 		if err != nil || client == nil {
-			t.Fatalf("newAPIClient() = %v, %v", client, err)
+			t.Fatalf("NewAPIClient() = %v, %v", client, err)
 		}
 	})
 
@@ -77,9 +154,9 @@ func TestNewAPIClient(t *testing.T) {
 		factory := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
 			return nil, errors.New("factory failed")
 		}}
-		client, err := newAPIClient(factory, "token")
+		client, err := factory.NewAPIClient("token")
 		if client != nil || err == nil || !strings.Contains(err.Error(), "factory failed") {
-			t.Fatalf("newAPIClient() = %v, %v", client, err)
+			t.Fatalf("NewAPIClient() = %v, %v", client, err)
 		}
 	})
 }
@@ -114,7 +191,7 @@ func TestListReposPaginatesAndHonorsLimit(t *testing.T) {
 	})
 	client := api.NewClientWithHTTPClient("token", &http.Client{Transport: transport})
 
-	repositories, err := listRepos(client, 101)
+	repositories, err := listRepos(client, "", 101)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,6 +200,109 @@ func TestListReposPaginatesAndHonorsLimit(t *testing.T) {
 	}
 	if requests != 2 {
 		t.Fatalf("request count = %d", requests)
+	}
+}
+
+func TestListReposOwnerScope(t *testing.T) {
+	tests := []struct {
+		name     string
+		owner    string
+		endpoint string
+		fallback bool
+	}{
+		{name: "specified user", owner: "alice", endpoint: "/api/v5/users/alice/repos"},
+		{name: "organization", owner: "team", endpoint: "/api/v5/orgs/team/repos", fallback: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if tt.fallback && req.URL.Path == "/api/v5/users/team/repos" {
+					if query := req.URL.Query(); query.Get("type") != "personal" {
+						t.Fatalf("user query = %q, want type=personal", req.URL.RawQuery)
+					}
+					return forkResponse(http.StatusNotFound, `{}`), nil
+				}
+				if req.URL.Path != tt.endpoint {
+					t.Fatalf("endpoint = %q, want %q", req.URL.Path, tt.endpoint)
+				}
+				return forkResponse(http.StatusOK, `[]`), nil
+			})
+			client := api.NewClientWithHTTPClient("token", &http.Client{Transport: transport})
+
+			repositories, err := listRepos(client, tt.owner, 30)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(repositories) != 0 {
+				t.Fatalf("repositories = %d, want 0", len(repositories))
+			}
+		})
+	}
+}
+
+func TestListReposUserEndpointRequestsTypePersonal(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path != "/api/v5/users/alice/repos" {
+			t.Fatalf("path = %q", req.URL.Path)
+		}
+		if query := req.URL.Query(); query.Get("type") != "personal" {
+			t.Fatalf("query = %q, want type=personal", req.URL.RawQuery)
+		}
+		return forkResponse(http.StatusOK, `[]`), nil
+	})
+	client := api.NewClientWithHTTPClient("token", &http.Client{Transport: transport})
+
+	if _, err := listRepos(client, "alice", 30); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestListReposOwnerNotFound(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return forkResponse(http.StatusNotFound, `{}`), nil
+	})
+	client := api.NewClientWithHTTPClient("token", &http.Client{Transport: transport})
+
+	_, err := listRepos(client, "missing", 30)
+	if err == nil || !strings.Contains(err.Error(), "was not found as a user or organization") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestListReposPermissionErrorDoesNotFallBack(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path == "/api/v5/orgs/alice/repos" {
+			t.Fatalf("unexpected fallback to organization endpoint")
+		}
+		return forkResponse(http.StatusForbidden, `{"message":"denied"}`), nil
+	})
+	client := api.NewClientWithHTTPClient("token", &http.Client{Transport: transport})
+
+	_, err := listRepos(client, "alice", 30)
+	if err == nil || !strings.Contains(err.Error(), "403 Forbidden") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestListReposPaginatedOrgResponseNormalizesOwner(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path == "/api/v5/users/team/repos" {
+			return forkResponse(http.StatusNotFound, `{}`), nil
+		}
+		body := `[{"full_name":"华中科技大学开放原子开源俱乐部 / atomgit-skills","namespace":{"path":"hust-open-atom-club"},"path":"atomgit-skills","name":"atomgit-skills"},{"full_name":"hust-open-atom-club/atomgit-cli","namespace":{"path":"hust-open-atom-club"},"path":"atomgit-cli","name":"atomgit-cli"}]`
+		return forkResponse(http.StatusOK, body), nil
+	})
+	client := api.NewClientWithHTTPClient("token", &http.Client{Transport: transport})
+
+	repositories, err := listRepos(client, "team", 30)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := repositoryListName(repositories[0]); got != "hust-open-atom-club/atomgit-skills" {
+		t.Fatalf("list name = %q, want namespace-path based name", got)
+	}
+	if got := repositoryOwner(repositories[0]); got != "hust-open-atom-club" {
+		t.Fatalf("owner = %q, want namespace path", got)
 	}
 }
 
@@ -135,6 +315,53 @@ func TestRepoListCommandRejectsInvalidLimit(t *testing.T) {
 	err := cmd.RunE(cmd, nil)
 	if err == nil || !strings.Contains(err.Error(), "must be positive") {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestRepoListCommandRejectsInvalidOwner(t *testing.T) {
+	tests := []struct {
+		name  string
+		owner string
+	}{
+		{name: "whitespace", owner: "   "},
+		{name: "slash", owner: "alice/team"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				t.Fatalf("unexpected request %s %s", req.Method, req.URL.Path)
+				return nil, nil
+			})
+			cmd := newCmdRepoList(repoFactory(repoCommandConfig{token: "token"}, transport))
+			err := cmd.RunE(cmd, []string{tt.owner})
+			if err == nil || !strings.Contains(err.Error(), "invalid owner") {
+				t.Fatalf("error = %v", err)
+			}
+		})
+	}
+}
+
+func TestRepoListCommandOwnerScope(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "user", args: []string{"alice"}},
+		{name: "organization", args: []string{"team"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.URL.Path == "/api/v5/users/team/repos" {
+					return forkResponse(http.StatusNotFound, `{}`), nil
+				}
+				return forkResponse(http.StatusOK, `[]`), nil
+			})
+			cmd := newCmdRepoList(repoFactory(repoCommandConfig{token: "token"}, transport))
+			if err := cmd.RunE(cmd, tt.args); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 
@@ -157,6 +384,68 @@ func TestRepoListCommandUsesInjectedClient(t *testing.T) {
 	}
 }
 
+func TestRepoListJSON(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{name: "repositories", body: `[{"id":1,"name":"demo","full_name":"alice/demo","web_url":"https://atomgit.com/alice/demo","private":true,"owner":{"login":"alice"}}]`, want: `[{"id":1,"name":"demo","fullName":"alice/demo","description":"","url":"https://atomgit.com/alice/demo","visibility":"private","defaultBranch":"","language":"","license":"","fork":false,"parent":"","updatedAt":"","stars":0,"forks":0,"watchers":0,"openIssues":0,"owner":"alice"}]`},
+		{name: "empty", body: `[]`, want: `[]`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
+				return forkResponse(http.StatusOK, tt.body), nil
+			})
+			cmd := newCmdRepoList(repoFactory(repoCommandConfig{token: "token"}, transport))
+			if err := cmd.Flags().Set("json", "true"); err != nil {
+				t.Fatal(err)
+			}
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, nil); err != nil {
+				t.Fatal(err)
+			}
+			assertJSONEqual(t, output.Bytes(), []byte(tt.want))
+		})
+	}
+}
+
+func TestRepoViewJSON(t *testing.T) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		return forkResponse(http.StatusOK, `{"id":2,"name":"demo","full_name":"alice/demo","html_url":"https://atomgit.com/alice/demo","internal":true,"fork":true,"parentfull_name":"upstream/demo","owner":{"login":"alice"}}`), nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "token"}, transport)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+	}
+	cmd := newCmdRepoView(factory)
+	if err := cmd.Flags().Set("json", "true"); err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+	assertJSONEqual(t, output.Bytes(), []byte(`{"id":2,"name":"demo","fullName":"alice/demo","description":"","url":"https://atomgit.com/alice/demo","visibility":"internal","defaultBranch":"","language":"","license":"","fork":true,"parent":"upstream/demo","updatedAt":"","stars":0,"forks":0,"watchers":0,"openIssues":0,"owner":"alice"}`))
+}
+
+func assertJSONEqual(t *testing.T, got, want []byte) {
+	t.Helper()
+	var gotValue, wantValue any
+	if err := json.Unmarshal(got, &gotValue); err != nil {
+		t.Fatalf("invalid JSON output %q: %v", got, err)
+	}
+	if err := json.Unmarshal(want, &wantValue); err != nil {
+		t.Fatal(err)
+	}
+	if fmt.Sprintf("%#v", gotValue) != fmt.Sprintf("%#v", wantValue) {
+		t.Fatalf("JSON = %s, want %s", got, want)
+	}
+}
+
 func TestRepoViewCommandReadsRepository(t *testing.T) {
 	requests := 0
 	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -167,8 +456,11 @@ func TestRepoViewCommandReadsRepository(t *testing.T) {
 		return forkResponse(http.StatusOK, `{"full_name":"alice/demo","description":"demo repository","web_url":"https://atomgit.com/alice/demo","default_branch":"main","private":false}`), nil
 	})
 	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+	}
 	cmd := newCmdRepoView(factory)
-	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
+	if err := cmd.RunE(cmd, nil); err != nil {
 		t.Fatal(err)
 	}
 	if requests != 1 {
@@ -219,11 +511,105 @@ func TestRunCreateSelectsNamespaceAndBody(t *testing.T) {
 				return forkResponse(http.StatusCreated, `{"name":"demo","web_url":"https://atomgit.com/alice/demo"}`), nil
 			})
 			factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
-			err := runCreate(factory, &CreateOptions{Name: tt.repository, Description: "description", Public: tt.public})
+			err := runCreate(strings.NewReader(""), io.Discard, io.Discard, factory, &CreateOptions{Name: tt.repository, Description: "description", Public: tt.public})
 			if err != nil {
 				t.Fatal(err)
 			}
 		})
+	}
+}
+
+func TestRunCreateClonesPublicAndPrivateRepositories(t *testing.T) {
+	tests := []struct {
+		name        string
+		repository  string
+		public      bool
+		wantPath    string
+		wantPrivate bool
+		wantClone   string
+	}{
+		{
+			name:       "public user repository",
+			repository: "demo",
+			public:     true,
+			wantPath:   "/api/v5/user/repos",
+			wantClone:  "https://atomgit.com/alice/demo.git",
+		},
+		{
+			name:        "private organization repository",
+			repository:  "team/demo",
+			wantPath:    "/api/v5/orgs/team/repos",
+			wantPrivate: true,
+			wantClone:   "https://atomgit.com/team/demo.git",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method != http.MethodPost || req.URL.Path != tt.wantPath {
+					t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+				}
+				var body map[string]interface{}
+				if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+					t.Fatal(err)
+				}
+				if body["private"] != tt.wantPrivate {
+					t.Fatalf("private = %#v, want %v", body["private"], tt.wantPrivate)
+				}
+				// Deliberately return a malformed URL. Creation and cloning must use
+				// the owner and repository name already known from the request.
+				return forkResponse(http.StatusCreated, `{"name":"demo","web_url":"https://atomgit.com//demo"}`), nil
+			})
+			factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+
+			cloneCalls := 0
+			clone := func(_ io.Reader, _, _ io.Writer, cloneURL string, opts *CloneOptions, creds *cloneCredentials) error {
+				cloneCalls++
+				if cloneURL != tt.wantClone {
+					t.Fatalf("clone URL = %q, want %q", cloneURL, tt.wantClone)
+				}
+				if opts.Directory != "demo" {
+					t.Fatalf("clone directory = %q, want demo", opts.Directory)
+				}
+				if creds == nil || creds.host != "atomgit.com" || creds.username != "alice" || creds.token != "token" {
+					t.Fatalf("clone credentials = %#v, want authenticated account", creds)
+				}
+				return nil
+			}
+
+			var out bytes.Buffer
+			err := runCreateWithClone(strings.NewReader(""), &out, io.Discard, factory, &CreateOptions{
+				Name:   tt.repository,
+				Public: tt.public,
+				Clone:  true,
+			}, clone)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cloneCalls != 1 {
+				t.Fatalf("clone calls = %d, want 1", cloneCalls)
+			}
+			wantURL := strings.TrimSuffix(tt.wantClone, ".git")
+			if !strings.Contains(out.String(), "URL: "+wantURL) {
+				t.Fatalf("output = %q, want canonical URL %q", out.String(), wantURL)
+			}
+		})
+	}
+}
+
+func TestRunCreateReportsCloneFailure(t *testing.T) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		return forkResponse(http.StatusCreated, `{}`), nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+	clone := func(io.Reader, io.Writer, io.Writer, string, *CloneOptions, *cloneCredentials) error {
+		return errors.New("git failed")
+	}
+
+	err := runCreateWithClone(strings.NewReader(""), io.Discard, io.Discard, factory, &CreateOptions{Name: "demo", Clone: true}, clone)
+	if err == nil || !strings.Contains(err.Error(), "failed to clone newly created repository: git failed") {
+		t.Fatalf("error = %v", err)
 	}
 }
 
@@ -232,7 +618,7 @@ func TestRunCreateReportsAPIError(t *testing.T) {
 		return forkResponse(http.StatusForbidden, `{"message":"denied"}`), nil
 	})
 	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
-	err := runCreate(factory, &CreateOptions{Name: "demo"})
+	err := runCreate(strings.NewReader(""), io.Discard, io.Discard, factory, &CreateOptions{Name: "demo"})
 	if err == nil || !strings.Contains(err.Error(), "failed to create repository") || !strings.Contains(err.Error(), "403") {
 		t.Fatalf("error = %v", err)
 	}
@@ -260,6 +646,127 @@ func TestRepoDeleteCommand(t *testing.T) {
 	}
 }
 
+func TestRepoDeleteConfirmationCancels(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{name: "empty line", input: "\n"},
+		{name: "EOF without input", input: ""},
+		{name: "explicit no", input: "n\n"},
+		{name: "other input", input: "maybe\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requests := 0
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				requests++
+				t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+				return nil, nil
+			})
+			factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+			cmd := newCmdRepoDelete(factory)
+			cmd.SetIn(strings.NewReader(tt.input))
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, []string{"demo"}); err != nil {
+				t.Fatal(err)
+			}
+			if requests != 0 {
+				t.Fatalf("request count = %d, want 0 (deletion must not be called)", requests)
+			}
+			if !strings.Contains(output.String(), "Deletion cancelled.") {
+				t.Fatalf("output = %q, want 'Deletion cancelled.'", output.String())
+			}
+		})
+	}
+}
+
+func TestRepoDeleteConfirmationProceeds(t *testing.T) {
+	for _, input := range []string{"y\n", "Y\n", "yes\n", "YES\n"} {
+		t.Run(strings.TrimSpace(input), func(t *testing.T) {
+			requests := 0
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				requests++
+				if req.Method != http.MethodDelete || req.URL.Path != "/api/v5/repos/alice/demo" {
+					t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+				}
+				return forkResponse(http.StatusNoContent, ""), nil
+			})
+			factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+			cmd := newCmdRepoDelete(factory)
+			cmd.SetIn(strings.NewReader(input))
+			if err := cmd.RunE(cmd, []string{"demo"}); err != nil {
+				t.Fatal(err)
+			}
+			if requests != 1 {
+				t.Fatalf("request count = %d, want 1", requests)
+			}
+		})
+	}
+}
+
+type errorReader struct{}
+
+func (errorReader) Read([]byte) (int, error) { return 0, errors.New("simulated read failure") }
+
+func TestRepoDeleteConfirmationReadError(t *testing.T) {
+	requests := 0
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		requests++
+		t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+		return nil, nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+	cmd := newCmdRepoDelete(factory)
+	cmd.SetIn(errorReader{})
+	if err := cmd.RunE(cmd, []string{"demo"}); err == nil {
+		t.Fatal("expected confirmation read error")
+	} else if !strings.Contains(err.Error(), "read confirmation response") {
+		t.Fatalf("error = %v, want 'read confirmation response'", err)
+	}
+	if requests != 0 {
+		t.Fatalf("request count = %d, want 0 (deletion must not be called)", requests)
+	}
+}
+
+func TestRepoViewWebFlag(t *testing.T) {
+	var capturedURL string
+	f := &cmdutil.Factory{
+		Config: repoCommandConfig{token: "token", user: "alice"},
+		BrowserOpener: func(rawURL string) error {
+			capturedURL = rawURL
+			return nil
+		},
+	}
+	cmd := newCmdRepoView(f)
+	cmd.SetArgs([]string{"--web", "alice/demo"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if capturedURL != "https://atomgit.com/alice/demo" {
+		t.Fatalf("URL = %q", capturedURL)
+	}
+}
+
+func TestRepoDeleteCommandInfersRepository(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodDelete || req.URL.Path != "/api/v5/repos/team/inferred" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		return forkResponse(http.StatusNoContent, ""), nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, transport)
+	factory.RepositoryResolver = func() (cmdutil.Repository, error) {
+		return cmdutil.Repository{Owner: "team", Name: "inferred"}, nil
+	}
+	cmd := newCmdRepoDelete(factory)
+	_ = cmd.Flags().Set("yes", "true")
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRepoCommandsReportAuthenticationErrors(t *testing.T) {
 	config := repoCommandConfig{tokenErr: errors.New("missing token"), user: "alice"}
 	factory := repoFactory(config, nil)
@@ -269,8 +776,15 @@ func TestRepoCommandsReportAuthenticationErrors(t *testing.T) {
 	}{
 		{name: "list", call: func() error { cmd := newCmdRepoList(factory); return cmd.RunE(cmd, nil) }},
 		{name: "view", call: func() error { cmd := newCmdRepoView(factory); return cmd.RunE(cmd, []string{"alice/demo"}) }},
-		{name: "create", call: func() error { return runCreate(factory, &CreateOptions{Name: "demo"}) }},
-		{name: "fork", call: func() error { return runFork(factory, &ForkOptions{}, "alice/demo") }},
+		{name: "create", call: func() error {
+			return runCreate(strings.NewReader(""), io.Discard, io.Discard, factory, &CreateOptions{Name: "demo"})
+		}},
+		{name: "fork", call: func() error { return runFork(io.Discard, factory, &ForkOptions{}, "alice/demo") }},
+		{name: "edit", call: func() error {
+			cmd := newCmdRepoEdit(factory)
+			_ = cmd.Flags().Set("description", "updated")
+			return cmd.RunE(cmd, []string{"alice/demo"})
+		}},
 		{name: "delete", call: func() error {
 			cmd := newCmdRepoDelete(factory)
 			_ = cmd.Flags().Set("yes", "true")
@@ -283,5 +797,123 @@ func TestRepoCommandsReportAuthenticationErrors(t *testing.T) {
 				t.Fatalf("error = %v", err)
 			}
 		})
+	}
+}
+
+func TestRepoViewReturnsCanonicalAuthenticationError(t *testing.T) {
+	factory := repoFactory(repoCommandConfig{
+		tokenErr: errors.New("not authenticated: run `ag auth login`"),
+		user:     "alice",
+	}, nil)
+	cmd := newCmdRepoView(factory)
+	err := cmd.RunE(cmd, []string{"alice/demo"})
+	if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestRepoAuxiliaryCommandsReturnCanonicalAuthenticationError(t *testing.T) {
+	factory := repoFactory(repoCommandConfig{tokenErr: config.ErrNotAuthenticated}, nil)
+	tests := []struct {
+		name string
+		call func() error
+	}{
+		{name: "collaborator", call: func() error {
+			_, err := collaboratorAPIClient(factory)
+			return err
+		}},
+		{name: "webhook", call: func() error {
+			_, err := webhookAPIClient(factory)
+			return err
+		}},
+		{name: "read file", call: func() error {
+			cmd := newCmdRepoReadFile(factory)
+			return cmd.RunE(cmd, []string{"alice/demo", "README.md"})
+		}},
+		{name: "read directory", call: func() error {
+			cmd := newCmdRepoReadDir(factory)
+			return cmd.RunE(cmd, []string{"alice/demo", "."})
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.call(); err != config.ErrNotAuthenticated {
+				t.Fatalf("error = %v, want canonical authentication error", err)
+			}
+		})
+	}
+}
+
+func TestRepoInteractiveCommandsAuthenticateBeforePrompt(t *testing.T) {
+	factory := repoFactory(repoCommandConfig{tokenErr: config.ErrNotAuthenticated}, nil)
+	tests := []struct {
+		name      string
+		new       func(*cmdutil.Factory) *cobra.Command
+		configure func(*cobra.Command)
+		args      []string
+	}{
+		{
+			name: "edit",
+			new:  newCmdRepoEdit,
+			configure: func(cmd *cobra.Command) {
+				_ = cmd.Flags().Set("public", "true")
+			},
+			args: []string{"alice/demo"},
+		},
+		{name: "webhook delete", new: newCmdRepoWebhookDelete, args: []string{"alice/demo", "42"}},
+		{name: "webhook test", new: newCmdRepoWebhookTest, args: []string{"alice/demo", "42"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := tt.new(factory)
+			if tt.configure != nil {
+				tt.configure(cmd)
+			}
+			cmd.SetIn(strings.NewReader("yes\n"))
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+
+			err := cmd.RunE(cmd, tt.args)
+			if err == nil || !strings.Contains(err.Error(), config.ErrNotAuthenticated.Error()) {
+				t.Fatalf("error = %v, want canonical authentication error", err)
+			}
+			if output.Len() != 0 {
+				t.Fatalf("prompted before authentication: %q", output.String())
+			}
+		})
+	}
+}
+
+// TestRunCreateRejectsMutuallyExclusiveVisibility guards against regressing the
+// mutual exclusion check on --public/--private. It pins two invariants the reviewer
+// asked for in PR #151:
+//  1. The conflicting combination is rejected (returns a non-nil error whose
+//     message mentions both flags).
+//  2. Validation runs *before* any config/auth/client initialization: even with a
+//     factory whose GetUser() and GetToken() would error, those errors must NOT
+//     surface — proving the check short-circuits ahead of config/auth work.
+func TestRunCreateRejectsMutuallyExclusiveVisibility(t *testing.T) {
+	errs := errors.New("simulated config failure")
+	factory := repoFactory(repoCommandConfig{
+		token:    "",
+		tokenErr: errs,
+		user:     "",
+		userErr:  errs,
+	}, nil)
+
+	err := runCreate(strings.NewReader(""), io.Discard, io.Discard, factory,
+		&CreateOptions{Name: "demo", Public: true, Private: true})
+	if err == nil {
+		t.Fatal("runCreate() expected an error for --public --private")
+	}
+	if !strings.Contains(err.Error(), "--public") || !strings.Contains(err.Error(), "--private") {
+		t.Fatalf("error = %q, want message mentioning both --public and --private", err.Error())
+	}
+	// The mutual-exclusion check must fire before any config/auth work: a simulated
+	// config failure must not leak into the returned error.
+	if strings.Contains(err.Error(), "simulated config failure") {
+		t.Fatalf("error = %q, config/auth layer was reached before visibility validation", err.Error())
 	}
 }

@@ -1,64 +1,151 @@
 package api
 
-import "fmt"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 // Repository represents an AtomGit repository
 type Repository struct {
-	ID              int64  `json:"id"`
-	Name            string `json:"name"`
-	FullName        string `json:"full_name"`
-	Description     string `json:"description"`
-	HTMLURL         string `json:"web_url"`
-	Private         bool   `json:"private"`
-	Internal        bool   `json:"internal"`
-	DefaultBranch   string `json:"default_branch"`
-	Language        string `json:"language"`
-	License         string `json:"license"`
-	Fork            bool   `json:"fork"`
-	ParentFullName  string `json:"parentfull_name"`
-	UpdatedAt       string `json:"updated_at"`
-	StarsCount      int    `json:"stargazers_count"`
-	ForksCount      int    `json:"forks_count"`
-	WatchersCount   int    `json:"watchers_count"`
-	OpenIssuesCount int    `json:"open_issues_count"`
-	Owner           struct {
+	ID               int64  `json:"id"`
+	Name             string `json:"name"`
+	Path             string `json:"path"`
+	FullName         string `json:"full_name"`
+	Description      string `json:"description"`
+	HTMLURL          string `json:"web_url"`
+	AlternateHTMLURL string `json:"html_url"`
+	Private          bool   `json:"private"`
+	Internal         bool   `json:"internal"`
+	DefaultBranch    string `json:"default_branch"`
+	Language         string `json:"language"`
+	License          string `json:"license"`
+	Fork             bool   `json:"fork"`
+	ParentFullName   string `json:"parentfull_name"`
+	UpdatedAt        string `json:"updated_at"`
+	StarsCount       int    `json:"stargazers_count"`
+	ForksCount       int    `json:"forks_count"`
+	WatchersCount    int    `json:"watchers_count"`
+	OpenIssuesCount  int    `json:"open_issues_count"`
+	Owner            struct {
 		Login string `json:"login"`
 		Type  string `json:"type"`
 	} `json:"owner"`
+	// Namespace carries the owning group for organization-scoped responses
+	// (GET /orgs/:org/repos), where the response has no owner object and
+	// full_name is a localized display name. Path is the canonical namespace
+	// path, e.g. "hust-open-atom-club".
+	Namespace struct {
+		Path string `json:"path"`
+	} `json:"namespace"`
+}
+
+// RepositoryPushRule represents the documented repository push-rule fields
+// returned by GET /repos/{owner}/{repo}/push_config.
+type RepositoryPushRule struct {
+	RejectNotSignedByGPG FlexibleBool `json:"reject_not_signed_by_gpg"`
+	CommitMessageRegex   string       `json:"commit_message_regex"`
+	MaxFileSize          int          `json:"max_file_size"`
+	SkipRuleForOwner     FlexibleBool `json:"skip_rule_for_owner"`
+	DenyForcePush        FlexibleBool `json:"deny_force_push"`
+}
+
+// UpdateRepositoryPushRuleRequest is the body for
+// PUT /repos/{owner}/{repo}/push_config. Pointer fields distinguish omitted
+// settings from explicitly supplied false, empty-string, and zero values.
+type UpdateRepositoryPushRuleRequest struct {
+	RejectNotSignedByGPG *bool   `json:"reject_not_signed_by_gpg,omitempty"`
+	CommitMessageRegex   *string `json:"commit_message_regex,omitempty"`
+	MaxFileSize          *int    `json:"max_file_size,omitempty"`
+	SkipRuleForOwner     *bool   `json:"skip_rule_for_owner,omitempty"`
+	DenyForcePush        *bool   `json:"deny_force_push,omitempty"`
+}
+
+// RepositorySyncRequest selects the fork branch to synchronize. Force permits
+// the server to overwrite commits that cannot be fast-forwarded.
+type RepositorySyncRequest struct {
+	Branch string `json:"branch"`
+	Force  bool   `json:"force,omitempty"`
+}
+
+// RepositorySyncResponse is returned by the fork synchronization endpoint.
+type RepositorySyncResponse struct {
+	Result bool `json:"repo_sync_result"`
 }
 
 // PullRequest represents an AtomGit pull request
 type PullRequest struct {
-	ID        int64       `json:"id"`
-	Number    interface{} `json:"number"`
-	Title     string      `json:"title"`
-	Body      string      `json:"body"`
-	State     string      `json:"state"`
-	HTMLURL   string      `json:"html_url"`
-	User      User        `json:"user"`
-	Head      Branch      `json:"head"`
-	Base      Branch      `json:"base"`
-	Labels    []Label     `json:"labels"`
-	CreatedAt string      `json:"created_at"`
-	UpdatedAt string      `json:"updated_at"`
-	Merged    bool        `json:"merged"`
-	Mergeable bool        `json:"mergeable"`
+	ID                int64       `json:"id"`
+	Number            interface{} `json:"number"`
+	Title             string      `json:"title"`
+	Body              string      `json:"body"`
+	State             string      `json:"state"`
+	HTMLURL           string      `json:"html_url"`
+	User              User        `json:"user"`
+	Head              Branch      `json:"head"`
+	Base              Branch      `json:"base"`
+	Assignees         []User      `json:"assignees"`
+	ApprovalReviewers []User      `json:"approval_reviewers"`
+	Testers           []User      `json:"testers"`
+	Labels            []Label     `json:"labels"`
+	Milestone         *Milestone  `json:"milestone"`
+	CreatedAt         string      `json:"created_at"`
+	UpdatedAt         string      `json:"updated_at"`
+	Merged            bool        `json:"merged"`
+	MergedAt          string      `json:"merged_at"`
+	Mergeable         bool        `json:"mergeable"`
+}
+
+// PullRequestWriteResponse represents the compact response returned by pull
+// request write endpoints. AtomGit uses web_url in create responses while
+// other endpoints may use html_url or return an empty body.
+type PullRequestWriteResponse struct {
+	ID      interface{} `json:"id"`
+	Number  interface{} `json:"number"`
+	IID     interface{} `json:"iid"`
+	HTMLURL string      `json:"html_url"`
+	WebURL  string      `json:"web_url"`
+}
+
+// GetNumber returns the PR number from either supported response field.
+func (pr *PullRequestWriteResponse) GetNumber() string {
+	if number := formatIdentifier(pr.Number); number != "" {
+		return number
+	}
+	return formatIdentifier(pr.IID)
+}
+
+// GetURL returns the browser URL from either supported response field.
+func (pr *PullRequestWriteResponse) GetURL() string {
+	if url := strings.TrimSpace(pr.WebURL); url != "" {
+		return url
+	}
+	return strings.TrimSpace(pr.HTMLURL)
+}
+
+// PullRequestReviewRequest represents AtomGit's formal review request.
+// Force only takes effect for repository administrators.
+type PullRequestReviewRequest struct {
+	Force bool `json:"force"`
 }
 
 // GetNumber returns the PR number as a string
 func (pr *PullRequest) GetNumber() string {
-	switch v := pr.Number.(type) {
-	case string:
-		return v
-	case float64:
-		return fmt.Sprintf("%.0f", v)
-	case int:
-		return fmt.Sprintf("%d", v)
-	case int64:
-		return fmt.Sprintf("%d", v)
-	default:
-		return fmt.Sprintf("%v", v)
+	return formatIdentifier(pr.Number)
+}
+
+// IsMerged normalizes the response variants returned by AtomGit. Some pull
+// request endpoints omit merged while still returning state=merged or a
+// merged_at timestamp.
+func (pr *PullRequest) IsMerged() bool {
+	if pr == nil {
+		return false
 	}
+	return pr.Merged ||
+		strings.EqualFold(strings.TrimSpace(pr.State), "merged") ||
+		strings.TrimSpace(pr.MergedAt) != ""
 }
 
 // Issue represents an AtomGit issue
@@ -77,35 +164,258 @@ type Issue struct {
 
 // GetNumber returns the Issue number as a string
 func (i *Issue) GetNumber() string {
-	switch v := i.Number.(type) {
+	return formatIdentifier(i.Number)
+}
+
+func formatIdentifier(value interface{}) string {
+	switch v := value.(type) {
+	case nil:
+		return ""
 	case string:
-		return v
+		return strings.TrimSpace(v)
 	case float64:
 		return fmt.Sprintf("%.0f", v)
 	case int:
-		return fmt.Sprintf("%d", v)
+		return strconv.Itoa(v)
 	case int64:
-		return fmt.Sprintf("%d", v)
+		return strconv.FormatInt(v, 10)
+	case json.Number:
+		return v.String()
 	default:
-		return fmt.Sprintf("%v", v)
+		return strings.TrimSpace(fmt.Sprintf("%v", v))
 	}
 }
 
 // User represents an AtomGit user
 type User struct {
-	ID      string `json:"id"`
-	Login   string `json:"login"`
+	ID           string   `json:"id"`
+	Login        string   `json:"login"`
+	Name         string   `json:"name"`
+	Email        string   `json:"email"`
+	HTMLURL      string   `json:"html_url"`
+	Type         string   `json:"type"`
+	Bio          string   `json:"bio"`
+	Company      string   `json:"company"`
+	Website      string   `json:"website"`
+	Location     string   `json:"location"`
+	Followers    int      `json:"followers"`
+	Following    int      `json:"following"`
+	TopLanguages []string `json:"top_languages"`
+}
+
+// EmailAddress represents one email address visible to the authenticated user.
+type EmailAddress struct {
+	Email string `json:"email"`
+	State string `json:"state"`
+}
+
+// Namespace represents a user or group namespace visible to the authenticated user.
+type Namespace struct {
+	ID      int64  `json:"id"`
+	Path    string `json:"path"`
 	Name    string `json:"name"`
-	Email   string `json:"email"`
 	HTMLURL string `json:"html_url"`
 	Type    string `json:"type"`
 }
 
+// Collaborator represents a repository member and the provenance of their
+// effective permission.
+type Collaborator struct {
+	ID          string                  `json:"id"`
+	Name        string                  `json:"name"`
+	Username    string                  `json:"username"`
+	Login       string                  `json:"login"`
+	WebURL      string                  `json:"web_url"`
+	AccessLevel int                     `json:"access_level"`
+	Type        string                  `json:"type"`
+	JoinWay     string                  `json:"join_way"`
+	SourceName  string                  `json:"source_name"`
+	RoleName    string                  `json:"role_name"`
+	RoleNameCN  string                  `json:"role_name_cn"`
+	Permission  string                  `json:"permission"`
+	Permissions CollaboratorPermissions `json:"permissions"`
+}
+
+// CollaboratorPermissions contains AtomGit's built-in repository permissions.
+type CollaboratorPermissions struct {
+	Pull  FlexibleBool `json:"pull"`
+	Push  FlexibleBool `json:"push"`
+	Admin FlexibleBool `json:"admin"`
+}
+
+// Webhook represents a repository webhook. The API's password field is
+// intentionally omitted so commands cannot accidentally render stored secrets.
+type Webhook struct {
+	ID                  int64        `json:"id"`
+	URL                 string       `json:"url"`
+	Result              string       `json:"result"`
+	ProjectID           int64        `json:"project_id"`
+	ResultCode          int          `json:"result_code"`
+	PushEvents          FlexibleBool `json:"push_events"`
+	TagPushEvents       FlexibleBool `json:"tag_push_events"`
+	IssuesEvents        FlexibleBool `json:"issues_events"`
+	NoteEvents          FlexibleBool `json:"note_events"`
+	MergeRequestsEvents FlexibleBool `json:"merge_requests_events"`
+	CreatedAt           string       `json:"created_at"`
+	Active              FlexibleBool `json:"active"`
+}
+
+// Organization represents an AtomGit organization visible to the authenticated user.
+type Organization struct {
+	ID          int64  `json:"id"`
+	Login       string `json:"login"`
+	Path        string `json:"path"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	HTMLURL     string `json:"html_url"`
+}
+
+// SSHKey represents a public SSH key registered with an AtomGit account.
+type SSHKey struct {
+	ID          int64  `json:"id"`
+	Title       string `json:"title"`
+	Key         string `json:"key"`
+	Fingerprint string `json:"fingerprint"`
+	URL         string `json:"url"`
+	CreatedAt   string `json:"created_at"`
+}
+
+// FlexibleBool decodes AtomGit boolean metadata that may be returned as
+// JSON booleans, integers, or strings depending on the endpoint.
+type FlexibleBool bool
+
+func (b *FlexibleBool) UnmarshalJSON(data []byte) error {
+	data = bytes.TrimSpace(data)
+	if bytes.Equal(data, []byte("null")) || len(data) == 0 {
+		*b = false
+		return nil
+	}
+
+	var boolValue bool
+	if err := json.Unmarshal(data, &boolValue); err == nil {
+		*b = FlexibleBool(boolValue)
+		return nil
+	}
+
+	var numberValue int
+	if err := json.Unmarshal(data, &numberValue); err == nil {
+		*b = FlexibleBool(numberValue != 0)
+		return nil
+	}
+
+	var stringValue string
+	if err := json.Unmarshal(data, &stringValue); err == nil {
+		parsed, err := strconv.ParseBool(stringValue)
+		if err == nil {
+			*b = FlexibleBool(parsed)
+			return nil
+		}
+		if numeric, err := strconv.Atoi(stringValue); err == nil {
+			*b = FlexibleBool(numeric != 0)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("invalid boolean value %q", string(data))
+}
+
+func (b FlexibleBool) Bool() bool {
+	return bool(b)
+}
+
 // Branch represents a git branch
 type Branch struct {
-	Ref  string     `json:"ref"`
-	SHA  string     `json:"sha"`
-	Repo Repository `json:"repo"`
+	Ref                string       `json:"ref"`
+	SHA                string       `json:"sha"`
+	Repo               Repository   `json:"repo"`
+	User               User         `json:"user"`
+	Name               string       `json:"name"`
+	Commit             BranchCommit `json:"commit"`
+	Protected          FlexibleBool `json:"protected"`
+	Default            FlexibleBool `json:"default"`
+	DefaultBranch      FlexibleBool `json:"default_branch"`
+	Merged             FlexibleBool `json:"merged"`
+	DevelopersCanPush  FlexibleBool `json:"developers_can_push"`
+	DevelopersCanMerge FlexibleBool `json:"developers_can_merge"`
+	CanPush            FlexibleBool `json:"can_push"`
+	CreatedAt          string       `json:"created_at"`
+	Creator            User         `json:"creator"`
+}
+
+// BranchCommit represents the latest commit summary attached to a branch.
+type BranchCommit struct {
+	ID                 string   `json:"id"`
+	SHA                string   `json:"sha"`
+	ShortID            string   `json:"short_id"`
+	URL                string   `json:"url"`
+	Message            string   `json:"message"`
+	Title              string   `json:"title"`
+	ParentIDs          []string `json:"parent_ids"`
+	AuthoredDate       string   `json:"authored_date"`
+	CommittedDate      string   `json:"committed_date"`
+	CreatedAt          string   `json:"created_at"`
+	AuthorName         string   `json:"author_name"`
+	AuthorEmail        string   `json:"author_email"`
+	AuthorAvatarURL    string   `json:"author_avatar_url"`
+	CommitterName      string   `json:"committer_name"`
+	CommitterEmail     string   `json:"committer_email"`
+	CommitterAvatarURL string   `json:"committer_avatar_url"`
+	Commit             struct {
+		Author struct {
+			Name  string `json:"name"`
+			Date  string `json:"date"`
+			Email string `json:"email"`
+		} `json:"author"`
+		Committer struct {
+			Name  string `json:"name"`
+			Date  string `json:"date"`
+			Email string `json:"email"`
+		} `json:"committer"`
+		Message string `json:"message"`
+	} `json:"commit"`
+}
+
+// BranchRequest represents the request body for creating a branch.
+type BranchRequest struct {
+	BranchName string `json:"branch_name"`
+	Refs       string `json:"refs"`
+}
+
+// ProtectedBranchUser identifies a user explicitly allowed by a protected
+// branch rule. AtomGit responses use either username or login.
+type ProtectedBranchUser struct {
+	Username string `json:"username"`
+	Login    string `json:"login"`
+	Name     string `json:"name"`
+}
+
+// ProtectedBranchRule is the rule returned by the protect_branches endpoint.
+type ProtectedBranchRule struct {
+	Name               string                `json:"name"`
+	UpdatedAt          string                `json:"updated_at"`
+	PushUsers          []ProtectedBranchUser `json:"push_users"`
+	MergeUsers         []ProtectedBranchUser `json:"merge_users"`
+	Merged             FlexibleBool          `json:"merged"`
+	DevelopersCanPush  FlexibleBool          `json:"developers_can_push"`
+	DevelopersCanMerge FlexibleBool          `json:"developers_can_merge"`
+	CommitterCanPush   FlexibleBool          `json:"committer_can_push"`
+	CommitterCanMerge  FlexibleBool          `json:"committer_can_merge"`
+	MasterCanPush      FlexibleBool          `json:"master_can_push"`
+	MasterCanMerge     FlexibleBool          `json:"master_can_merge"`
+	MaintainerCanPush  FlexibleBool          `json:"maintainer_can_push"`
+	MaintainerCanMerge FlexibleBool          `json:"maintainer_can_merge"`
+	OwnerCanPush       FlexibleBool          `json:"owner_can_push"`
+	OwnerCanMerge      FlexibleBool          `json:"owner_can_merge"`
+	NoOneCanPush       FlexibleBool          `json:"no_one_can_push"`
+	NoOneCanMerge      FlexibleBool          `json:"no_one_can_merge"`
+}
+
+// ProtectedBranchRequest is accepted by both protected branch create and
+// update endpoints. The API requires both permission strings on every write.
+type ProtectedBranchRequest struct {
+	Wildcard string `json:"wildcard,omitempty"`
+	Pusher   string `json:"pusher"`
+	Merger   string `json:"merger"`
 }
 
 // Label represents an issue/PR label
@@ -114,6 +424,27 @@ type Label struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Color       string `json:"color"`
+}
+
+// Milestone represents an AtomGit repository milestone.
+type Milestone struct {
+	Number       interface{} `json:"number"`
+	Title        string      `json:"title"`
+	Description  string      `json:"description"`
+	State        string      `json:"state"`
+	DueOn        string      `json:"due_on"`
+	OpenIssues   int         `json:"open_issues"`
+	ClosedIssues int         `json:"closed_issues"`
+	RepositoryID int64       `json:"repository_id"`
+	URL          string      `json:"url"`
+	HTMLURL      string      `json:"html_url"`
+	CreatedAt    string      `json:"created_at"`
+	UpdatedAt    string      `json:"updated_at"`
+}
+
+// GetNumber returns the milestone number as a string.
+func (m *Milestone) GetNumber() string {
+	return formatIdentifier(m.Number)
 }
 
 // Comment represents a comment on an issue or pull request
@@ -161,12 +492,30 @@ type DiffPosition struct {
 
 // CreateCommentResponse represents the response from creating a comment
 type CreateCommentResponse struct {
-	ID        string `json:"id"`
-	Body      string `json:"body"`
-	User      User   `json:"user"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
-	HTMLURL   string `json:"html_url"`
+	ID        interface{} `json:"id"`
+	NoteID    interface{} `json:"note_id"`
+	Body      string      `json:"body"`
+	User      User        `json:"user"`
+	CreatedAt string      `json:"created_at"`
+	UpdatedAt string      `json:"updated_at"`
+	HTMLURL   string      `json:"html_url"`
+	WebURL    string      `json:"web_url"`
+}
+
+// GetID returns the created comment identifier from either response shape.
+func (c *CreateCommentResponse) GetID() string {
+	if id := formatIdentifier(c.ID); id != "" {
+		return id
+	}
+	return formatIdentifier(c.NoteID)
+}
+
+// GetURL returns the comment browser URL when AtomGit supplies one.
+func (c *CreateCommentResponse) GetURL() string {
+	if url := strings.TrimSpace(c.WebURL); url != "" {
+		return url
+	}
+	return strings.TrimSpace(c.HTMLURL)
 }
 
 // CommentRequest represents the request body for creating/updating a comment
@@ -203,4 +552,403 @@ type TagRequest struct {
 	TagName string `json:"tag_name"`
 	Message string `json:"message"`
 	Refs    string `json:"refs"`
+}
+
+// ProtectedTag is a protected-tag rule returned by
+// GET /repos/{owner}/{repo}/protected_tags and
+// GET /repos/{owner}/{repo}/protected_tags/{tag_name}.
+type ProtectedTag struct {
+	Name                  string `json:"name"`
+	CreateAccessLevel     int    `json:"create_access_level"`
+	CreateAccessLevelDesc string `json:"create_access_level_desc"`
+}
+
+// ProtectedTagCreateAccessNone, ProtectedTagCreateAccessDeveloper, and
+// ProtectedTagCreateAccessMaintainer are the documented create_access_level
+// values for protected tags: nobody; Developer/Maintainer/Admin; and
+// Maintainer/Admin.
+const (
+	ProtectedTagCreateAccessNone       = 0
+	ProtectedTagCreateAccessDeveloper  = 30
+	ProtectedTagCreateAccessMaintainer = 40
+)
+
+// ProtectedTagRequest is the body for POST and PUT
+// /repos/{owner}/{repo}/protected_tags. Name identifies the exact tag or
+// wildcard pattern. CreateAccessLevel is required on update. On create it may
+// be omitted so the server default (Maintainer/Admin) applies.
+type ProtectedTagRequest struct {
+	Name              string `json:"name"`
+	CreateAccessLevel *int   `json:"create_access_level,omitempty"`
+}
+
+// Commit represents a repository commit returned by the commits endpoints.
+type Commit struct {
+	URL         string         `json:"url"`
+	SHA         string         `json:"sha"`
+	HTMLURL     string         `json:"html_url"`
+	CommentsURL string         `json:"comments_url"`
+	Commit      CommitDetail   `json:"commit"`
+	Author      CommitAccount  `json:"author"`
+	Committer   CommitAccount  `json:"committer"`
+	Parents     []CommitParent `json:"parents"`
+}
+
+// CommitDetail is the nested commit metadata in a Commit response.
+type CommitDetail struct {
+	Message   string       `json:"message"`
+	Author    CommitPerson `json:"author"`
+	Committer CommitPerson `json:"committer"`
+}
+
+// CommitPerson identifies the author or committer of a commit.
+type CommitPerson struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Date  string `json:"date"`
+}
+
+// CommitAccount is the account attached to a commit.
+type CommitAccount struct {
+	Login     string `json:"login"`
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	AvatarURL string `json:"avatar_url"`
+	HTMLURL   string `json:"html_url"`
+}
+
+// CommitParent references a parent commit.
+type CommitParent struct {
+	SHA string `json:"sha"`
+	URL string `json:"url"`
+}
+
+// MergePRRequest represents the request body for merging a pull request
+type MergePRRequest struct {
+	MergeMethod         string `json:"merge_method"`
+	Title               string `json:"title,omitempty"`
+	Description         string `json:"description,omitempty"`
+	ForceMerge          bool   `json:"force_merge,omitempty"`
+	Squash              bool   `json:"squash,omitempty"`
+	SquashCommitMessage string `json:"squash_commit_message,omitempty"`
+}
+
+// MergePRResponse represents the response from merging a pull request
+type MergePRResponse struct {
+	SHA     string `json:"sha"`
+	Merged  bool   `json:"merged"`
+	Message string `json:"message"`
+}
+
+// ReleaseStatusPre and ReleaseStatusLatest are the two supported values of
+// the release_status field in the create/update release request body.
+const (
+	ReleaseStatusPre    = "pre"
+	ReleaseStatusLatest = "latest"
+)
+
+// ReleaseAuthor is the author embedded in a Release response.
+type ReleaseAuthor struct {
+	ID        string `json:"id"`
+	Login     string `json:"login"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
+	HTMLURL   string `json:"html_url"`
+	Type      string `json:"type"`
+	URL       string `json:"url"`
+}
+
+// ReleaseAsset is one entry of the assets array on a Release. The id and
+// type fields distinguish deletable uploaded attachments (type="attach",
+// id>0) from auto-generated source archives that cannot be removed.
+type ReleaseAsset struct {
+	ID                 int64  `json:"id"`
+	Name               string `json:"name"`
+	Type               string `json:"type"`
+	BrowserDownloadURL string `json:"browser_download_url"`
+}
+
+// Release is the response shape returned by the AtomGit release endpoints.
+// release_status is the server-side status field; it is reported on every
+// release response (e.g. "latest" or "pre").
+type Release struct {
+	TagName         string         `json:"tag_name"`
+	TargetCommitish string         `json:"target_commitish"`
+	Draft           bool           `json:"draft"`
+	Prerelease      bool           `json:"prerelease"`
+	Name            string         `json:"name"`
+	Body            string         `json:"body"`
+	ReleaseStatus   string         `json:"release_status"`
+	CreatedAt       string         `json:"created_at"`
+	Author          ReleaseAuthor  `json:"author"`
+	Assets          []ReleaseAsset `json:"assets"`
+}
+
+// CreateReleaseRequest is the body for POST /repos/{owner}/{repo}/releases.
+// tag_name, name and body are required; target_commitish and release_status
+// are optional. release_status, when sent, must be ReleaseStatusPre or
+// ReleaseStatusLatest; it is omitted from the wire format when empty so the
+// server keeps its default.
+type CreateReleaseRequest struct {
+	TagName         string `json:"tag_name"`
+	Name            string `json:"name"`
+	Body            string `json:"body"`
+	TargetCommitish string `json:"target_commitish,omitempty"`
+	ReleaseStatus   string `json:"release_status,omitempty"`
+}
+
+// UpdateReleaseRequest is the body for PATCH /repos/{owner}/{repo}/releases/{tag}.
+// name and body are required; release_status is optional and follows the same
+// rules as CreateReleaseRequest. The AtomGit release API does not support
+// changing target_commitish after creation.
+type UpdateReleaseRequest struct {
+	Name          string `json:"name"`
+	Body          string `json:"body"`
+	ReleaseStatus string `json:"release_status,omitempty"`
+}
+
+// ReleaseUploadURL is the exact response of
+// GET /repos/{owner}/{repo}/releases/{tag}/upload_url?file_name=...
+// The URL points at an external object-store; only the headers returned here
+// may be sent on the subsequent PUT. The AtomGit Bearer token must not be
+// forwarded to the external host.
+type ReleaseUploadURL struct {
+	URL     string            `json:"url"`
+	Headers map[string]string `json:"headers"`
+}
+
+// Discussion represents a repository discussion returned by AtomGit API v5.
+type Discussion struct {
+	ID           string             `json:"id"`
+	Number       int                `json:"number"`
+	Title        string             `json:"title"`
+	Author       DiscussionAuthor   `json:"author"`
+	Category     DiscussionCategory `json:"category"`
+	IsClosed     FlexibleBool       `json:"is_closed"`
+	IsAnswered   FlexibleBool       `json:"is_answered"`
+	IsLocked     FlexibleBool       `json:"is_lock"`
+	IsPinned     FlexibleBool       `json:"is_pin"`
+	CommentTotal int                `json:"comment_total"`
+	CreatedAt    string             `json:"created_at"`
+	UpdatedAt    string             `json:"updated_at"`
+}
+
+// DiscussionAuthor is author of discussion
+type DiscussionAuthor struct {
+	ID        string `json:"id"`
+	Login     string `json:"login"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
+}
+
+type DiscussionCategory struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Icon        string `json:"icon"`
+	Description string `json:"description"`
+	Type        int    `json:"type"`
+}
+
+// RepositoryContent represents one object returned by the repository contents
+// endpoint. A file carries base64-encoded content; a directory entry omits
+// encoding and content.
+type RepositoryContent struct {
+	Name            string `json:"name"`
+	Path            string `json:"path"`
+	SHA             string `json:"sha"`
+	Size            int64  `json:"size"`
+	Type            string `json:"type"`
+	Encoding        string `json:"encoding,omitempty"`
+	Content         string `json:"content,omitempty"`
+	ContentPresent  bool   `json:"-"`
+	URL             string `json:"url,omitempty"`
+	HTMLURL         string `json:"html_url,omitempty"`
+	DownloadURL     string `json:"download_url,omitempty"`
+	Target          string `json:"target,omitempty"`
+	SubmoduleGitURL string `json:"submodule_git_url,omitempty"`
+}
+
+func (c *RepositoryContent) UnmarshalJSON(data []byte) error {
+	type plainRepositoryContent RepositoryContent
+	var decoded struct {
+		plainRepositoryContent
+		Content *string `json:"content"`
+	}
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*c = RepositoryContent(decoded.plainRepositoryContent)
+	if decoded.Content != nil {
+		c.Content = *decoded.Content
+		c.ContentPresent = true
+	}
+	return nil
+}
+
+// IssueLinkedPullRequest represents a pull request linked to an issue.
+type IssueLinkedPullRequest struct {
+	ID        int64       `json:"id"`
+	Number    interface{} `json:"number"`
+	Title     string      `json:"title"`
+	Body      string      `json:"body"`
+	State     string      `json:"state"`
+	HTMLURL   string      `json:"html_url"`
+	URL       string      `json:"url"`
+	Head      *Branch     `json:"head"`
+	Base      *Branch     `json:"base"`
+	CreatedAt string      `json:"created_at"`
+	UpdatedAt string      `json:"updated_at"`
+}
+
+// GetNumber returns the linked pull request number as a string.
+func (pr *IssueLinkedPullRequest) GetNumber() string {
+	return formatIdentifier(pr.Number)
+}
+
+// RelatedBranchesRequest is the body for PUT /repos/.../issues/{number}/related_branches.
+// BranchNames is the complete desired association list.
+type RelatedBranchesRequest struct {
+	BranchNames []string `json:"branch_names"`
+}
+
+// PullRequestCommit represents a commit included in a pull request.
+type PullRequestCommit struct {
+	SHA     string `json:"sha"`
+	HTMLURL string `json:"html_url"`
+	Commit  struct {
+		Message string `json:"message"`
+		Author  struct {
+			Name  string `json:"name"`
+			Email string `json:"email"`
+			Date  string `json:"date"`
+			Login string `json:"login,omitempty"`
+		} `json:"author"`
+	} `json:"commit"`
+}
+
+// CompareCommit represents commit metadata returned by the comparison API.
+type CompareCommit struct {
+	SHA    string `json:"sha"`
+	Commit struct {
+		Message string `json:"message"`
+		Author  struct {
+			Name  string `json:"name"`
+			Email string `json:"email"`
+			Date  string `json:"date"`
+		} `json:"author"`
+	} `json:"commit"`
+	Author struct {
+		Name  string `json:"name"`
+		Email string `json:"email"`
+		Login string `json:"login"`
+	} `json:"author"`
+}
+
+// CompareFile represents a file returned by the comparison API.
+type CompareFile struct {
+	SHA       string       `json:"sha"`
+	Filename  string       `json:"filename"`
+	Status    string       `json:"status"`
+	Additions int          `json:"additions"`
+	Deletions int          `json:"deletions"`
+	Changes   int          `json:"changes"`
+	BlobURL   string       `json:"blob_url"`
+	RawURL    string       `json:"raw_url"`
+	Patch     string       `json:"patch"`
+	Truncated FlexibleBool `json:"truncated"`
+}
+
+// CommitComparison is returned by the commit comparison API.
+type CommitComparison struct {
+	BaseCommit      CompareCommit   `json:"base_commit"`
+	MergeBaseCommit CompareCommit   `json:"merge_base_commit"`
+	Commits         []CompareCommit `json:"commits"`
+	Files           []CompareFile   `json:"files"`
+	Truncated       FlexibleBool    `json:"truncated"`
+}
+
+// PullRequestFile represents a changed file in a pull request. Optional
+// fields fall back to nested patch metadata when the top-level value is absent.
+type PullRequestFile struct {
+	SHA       string `json:"sha"`
+	Filename  string `json:"filename"`
+	Status    string `json:"status"`
+	Additions int    `json:"additions"`
+	Deletions int    `json:"deletions"`
+	TooLarge  bool   `json:"too_large"`
+	BlobURL   string `json:"blob_url"`
+	RawURL    string `json:"raw_url"`
+	Patch     struct {
+		OldPath      string `json:"old_path"`
+		NewPath      string `json:"new_path"`
+		AddedLines   int    `json:"added_lines"`
+		RemovedLines int    `json:"removed_lines"`
+		TooLarge     bool   `json:"too_large"`
+		NewFile      bool   `json:"new_file"`
+		RenamedFile  bool   `json:"renamed_file"`
+		DeletedFile  bool   `json:"deleted_file"`
+	} `json:"patch"`
+}
+
+// GetChangeType normalizes the two response shapes returned by AtomGit's
+// pull-request files endpoint. Some responses provide a top-level status,
+// while others expose only boolean flags in the nested patch object.
+func (f *PullRequestFile) GetChangeType() string {
+	if f.Status != "" {
+		return f.Status
+	}
+	switch {
+	case f.Patch.DeletedFile:
+		return "deleted"
+	case f.Patch.RenamedFile:
+		return "renamed"
+	case f.Patch.NewFile:
+		return "added"
+	default:
+		return "modified"
+	}
+}
+
+// PullRequestReaction represents a read-only user reaction on a pull request.
+type PullRequestReaction struct {
+	ID        int64  `json:"id"`
+	User      User   `json:"user"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"created_at"`
+}
+
+// UserEventAuthor represents the author of a user activity event. Only fields
+// that are safe for stable, privacy-conscious CLI output are modeled.
+type UserEventAuthor struct {
+	Name     string `json:"name"`
+	Username string `json:"username"`
+	WebURL   string `json:"web_url"`
+}
+
+// UserEvent represents one personal activity event returned by
+// GET /api/v5/users/:username/events.
+type UserEvent struct {
+	Action           int             `json:"action"`
+	ActionName       string          `json:"action_name"`
+	Author           UserEventAuthor `json:"author"`
+	AuthorID         int64           `json:"author_id"`
+	AuthorUsername   string          `json:"author_username"`
+	CreatedAt        string          `json:"created_at"`
+	ProjectID        int64           `json:"project_id"`
+	ProjectName      string          `json:"project_name"`
+	TargetID         int64           `json:"target_id"`
+	TargetIID        int64           `json:"target_iid"`
+	TargetTitle      string          `json:"target_title"`
+	TargetType       string          `json:"target_type"`
+	TargetTypeFormat string          `json:"target_type_format"`
+}
+
+// UserEventsPage is the cursor-paginated response for personal activity
+// events. Events are keyed by date (YYYY-MM-DD); Next is the cursor for the
+// following page or an empty string when no more events remain.
+type UserEventsPage struct {
+	Events map[string][]UserEvent `json:"events"`
+	Next   string                 `json:"next"`
 }

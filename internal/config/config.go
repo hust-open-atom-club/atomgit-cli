@@ -1,18 +1,14 @@
 package config
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 )
-
-// ErrTokenNotFound is returned when no token file exists in any search path.
-var ErrTokenNotFound = errors.New("token file not found")
 
 const (
 	defaultHost     = "atomgit.com"
@@ -58,7 +54,7 @@ func (c *config) GetToken() (string, error) {
 	token, _, err := loadTokenFromFile()
 	if err != nil {
 		if errors.Is(err, ErrTokenNotFound) {
-			return "", fmt.Errorf("not authenticated: run `ag auth login`")
+			return "", ErrNotAuthenticated
 		}
 		return "", err
 	}
@@ -74,7 +70,7 @@ func (c *config) GetUser() (string, error) {
 	_, user, err := loadTokenFromFile()
 	if err != nil {
 		if errors.Is(err, ErrTokenNotFound) {
-			return "", fmt.Errorf("not authenticated: run `ag auth login`")
+			return "", ErrNotAuthenticated
 		}
 		return "", err
 	}
@@ -98,6 +94,10 @@ func loadTokenFromFile() (string, string, error) {
 type StoredCredentials struct {
 	AccessToken  string `json:"access_token"`
 	User         string `json:"user"`
+	Name         string `json:"name,omitempty"`
+	Email        string `json:"email,omitempty"`
+	GitName      string `json:"git_name,omitempty"`
+	GitEmail     string `json:"git_email,omitempty"`
 	RefreshToken string `json:"refresh_token,omitempty"`
 	ExpiresIn    int64  `json:"expires_in,omitempty"`
 	CreatedAt    int64  `json:"created_at,omitempty"`
@@ -106,6 +106,18 @@ type StoredCredentials struct {
 
 // LoadStoredCredentials reads the first available token file and parses extended fields.
 func LoadStoredCredentials() (*StoredCredentials, error) {
+	store, err := LoadCredentialStore()
+	if err != nil {
+		return nil, err
+	}
+	account, err := store.ActiveAccount()
+	if err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+func readCredentialData() ([]byte, error) {
 	paths := getTokenFilePaths()
 
 	if len(paths) == 0 {
@@ -114,24 +126,57 @@ func LoadStoredCredentials() (*StoredCredentials, error) {
 
 	var failedPaths []string
 	for _, path := range paths {
-		data, err := os.ReadFile(path)
+		li, err := os.Lstat(path)
 		if err != nil {
 			if os.IsNotExist(err) {
 				failedPaths = append(failedPaths, path)
 				continue
 			}
+			if isPermissionErr(err) {
+				return nil, &TokenPermissionError{Path: path, Err: err}
+			}
+			return nil, fmt.Errorf("lstat token file info %s: %w", path, err)
+		}
+		if li.Mode()&os.ModeSymlink != 0 {
+			return nil, fmt.Errorf("cannot read %s: %w\n"+
+				"remove the symlink and place the token file directly", path, ErrTokenFileSymlink)
+		}
+
+		f, err := os.Open(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				failedPaths = append(failedPaths, path)
+				continue
+			}
+			if isPermissionErr(err) {
+				return nil, &TokenPermissionError{Path: path, Err: err}
+			}
+			return nil, fmt.Errorf("open token file %s: %w", path, err)
+		}
+		defer f.Close()
+
+		info, err := f.Stat()
+		if err != nil {
+			if isPermissionErr(err) {
+				return nil, &TokenPermissionError{Path: path, Err: err}
+			}
+			return nil, fmt.Errorf("stat token file info %s: %w", path, err)
+		}
+
+		if !os.SameFile(li, info) {
+			return nil, fmt.Errorf("cannot read %s: %w", path, ErrTokenFileChanged)
+		}
+
+		if err := validateAndFixTokenFilePerm(f, path, info); err != nil {
+			return nil, err
+		}
+
+		data, err := io.ReadAll(f)
+		if err != nil {
 			return nil, fmt.Errorf("read token file %s: %w", path, err)
 		}
 
-		var c StoredCredentials
-		if err := json.Unmarshal(data, &c); err != nil {
-			return nil, fmt.Errorf("failed to parse token file at %s: %w", path, err)
-		}
-		if c.AccessToken == "" {
-			return nil, fmt.Errorf("token file at %s has empty access_token", path)
-		}
-
-		return &c, nil
+		return data, nil
 	}
 
 	return nil, fmt.Errorf("%w.\nSearched locations:\n  - %s", ErrTokenNotFound, strings.Join(failedPaths, "\n  - "))
@@ -191,7 +236,7 @@ func SaveToken(accessToken, user string) error {
 	if accessToken == "" {
 		return fmt.Errorf("access_token is empty")
 	}
-	existing, err := LoadStoredCredentials()
+	store, err := LoadCredentialStore()
 	if err != nil {
 		if errors.Is(err, ErrTokenNotFound) {
 			return SaveCredentials(&StoredCredentials{
@@ -202,52 +247,19 @@ func SaveToken(accessToken, user string) error {
 		}
 		return err
 	}
+	existing, err := store.ActiveAccount()
+	if err != nil {
+		return err
+	}
 	existing.AccessToken = accessToken
 	existing.User = user
 	existing.CreatedAt = time.Now().Unix()
-	return SaveCredentials(existing)
+	return replaceActiveAccount(store, existing)
 }
 
-// SaveCredentials writes the full credential record to PrimaryTokenPath().
+// SaveCredentials adds or updates an account and makes it active.
 func SaveCredentials(c *StoredCredentials) error {
-	if c == nil {
-		return fmt.Errorf("credentials are nil")
-	}
-	if c.AccessToken == "" {
-		return fmt.Errorf("access_token is empty")
-	}
-	if c.User == "" {
-		return fmt.Errorf("user is empty")
-	}
-	w := *c
-	if w.CreatedAt == 0 {
-		w.CreatedAt = time.Now().Unix()
-	}
-	path, err := PrimaryTokenPath()
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("create config directory: %w", err)
-	}
-	b, err := json.MarshalIndent(&w, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(path, b, 0o600); err != nil {
-		if isPermissionErr(err) {
-			dir := filepath.Dir(path)
-			return fmt.Errorf("cannot write %s: %w\n"+
-				"often caused by this directory or file having been created with sudo; fix ownership, e.g.:\n"+
-				"  sudo chown -R $(whoami) %q", path, err, dir)
-		}
-		return err
-	}
-	return nil
-}
-
-func isPermissionErr(err error) bool {
-	return errors.Is(err, os.ErrPermission) || errors.Is(err, syscall.EACCES) || errors.Is(err, syscall.EPERM)
+	return SaveAccount(c, true)
 }
 
 // ClearCredentials removes all known credential files (XDG token.json and legacy path).
@@ -259,6 +271,12 @@ func ClearCredentials() ([]string, error) {
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
+			}
+			if isPermissionErr(err) {
+				return removed, permissionError(
+					"cannot remove token file", p, err,
+					"check the file and parent directory ownership and permissions",
+				)
 			}
 			return removed, fmt.Errorf("remove %s: %w", p, err)
 		}

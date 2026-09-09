@@ -42,7 +42,7 @@
 
 3. **开发规范**
 
-   - 使用 Go 1.24.2 或更高版本
+   - 最低支持 Go 1.26.6，开发和正式发布建议使用 Go 1.26.8
    - 使用 `gofmt` 格式化修改的 Go 文件
    - 为新增或修复的行为添加测试
    - 保持与现有代码风格一致
@@ -54,6 +54,12 @@
    # 格式化修改的 Go 文件
    gofmt -w path/to/changed.go
 
+   # 下载并确认正式发布使用的 Go 版本
+   make go-version
+
+   # 使用最低支持的 Go 版本运行兼容性测试
+   make go-min-version test-min-go
+
    # 运行测试和静态检查
    go test ./...
    make lint
@@ -64,9 +70,56 @@
      trap 'rm -rf "$ag_build_dir"' EXIT
      go build -o "$ag_build_dir/ag" ./cmd/ag
    )
+
+   # 运行 CI 使用的 Linux 竞态检测
+   make test-race
+
+   # 按 macOS 和 Windows 的构建约束编译全部 Go 测试
+   make test-platform-compile
+
+   # 交叉编译 .goreleaser.yaml 中的全部发布目标
+   make cross-build
+
+   # 构建正式发布使用的二进制并执行固定版本的漏洞扫描
+   make vulncheck
+
+   # 使用假的 registry 和子进程注入运行 npm 测试
+   npm ci --no-fund --no-audit
+   npm test
    ```
 
-修改命令参数或输出时，请执行对应命令的 `--help` 冒烟检查；纯文档修改至少运行 `git diff --check`。命令树或命令元数据发生变化时，请运行 `go run ./scripts/generate-command-reference` 更新自动生成的 `docs/command-reference.md`，并运行 `go run ./scripts/generate-command-reference --check` 确认没有文档漂移。
+   `make test-race` 在 Linux CI 中运行 `go test -race -count=1 ./...`。可以通过
+   `RACE_PACKAGES` 覆盖包列表，但除非某个包存在已记录的竞态检测器兼容问题，CI
+   应保持默认的全模块覆盖。该目标设置了 Go 文档支持的
+   `GORACE=atexit_sleep_ms=0`：部分测试会将测试二进制重新作为假的 Git 进程执行，
+   关闭竞态运行时退出前的一秒等待可以加快这些辅助进程，同时不会抑制竞态报告。
+   参见 [Go 竞态检测器文档](https://go.dev/doc/articles/race_detector)。
+
+   AtomGit 托管 Runner 文档目前只列出基于 Linux 的 Ubuntu 和 Euler 环境，因此
+   CI 无法执行原生 macOS 或 Windows 测试。`make test-platform-compile` 对
+   `darwin/amd64` 和 `windows/amd64` 使用 `go test -exec=true`：所有目标平台专用的
+   生产代码和测试代码都必须成功编译、链接，但不会执行生成的测试二进制。在具备相应
+   环境时，发布前仍需在 macOS 和 Windows 上原生运行 `go test ./...`。参见
+   [AtomGit 托管 Runner 文档](https://docs.gitcode.com/docs/help/home/org_project/pipeline/runner-management/using-hosted-runners/)。
+
+   `go.mod` 的 `go` 行规定源码构建所需的最低版本 Go 1.26.6，`toolchain` 行规定
+   开发和正式发布建议使用的精确版本 Go 1.26.8。普通 Make 目标固定使用建议版本，
+   `make test-min-go` 则专门验证最低版本兼容性。AtomGit 的 `setup-go` 当前只提供到
+   Go 1.26.1，因此 CI 先将其作为引导命令，再下载并验证这两个版本。工具链下载
+   遵循 `GOPROXY`，并通过 `GOSUMDB` 配置的校验和数据库验证。参见
+   [AtomGit setup 工具支持列表](https://docs.gitcode.com/docs/help/home/org_project/pipeline/syntax-reference/setup-supported-tools/)
+   和 [Go 工具链文档](https://go.dev/doc/toolchain)。
+
+   `make vulncheck` 使用 Go 1.26.8 构建实际发布形态的 `ag` 二进制，再用固定版本的
+   `govulncheck` 以 binary 模式扫描，并显式查询规范数据库 `https://vuln.go.dev`。
+   发现可达漏洞、工具下载失败、数据库不可用或扫描器报错都会使检查失败；规范数据库
+   中已经撤回的报告不计为漏洞。参见 [govulncheck 命令文档](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck)
+   和 [Go 漏洞数据库规范](https://go.dev/doc/security/vuln/database)。
+
+   npm 测试使用假的 registry 和子进程注入，不得发布软件包、读取真实 npm token，
+   也不得访问真实 registry。
+
+   修改命令参数或输出时，请执行对应命令的 `--help` 冒烟检查；纯文档修改至少运行 `git diff --check`。
 
 5. **提交更改**
 

@@ -1,0 +1,217 @@
+package config
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestMigrateCredentialStorePreservesLegacyOAuthFields(t *testing.T) {
+	home := isolateConfig(t)
+	path := filepath.Join(home, ".config", appName, tokenFile)
+	legacy := StoredCredentials{
+		AccessToken: "alice-access", User: "alice", RefreshToken: "alice-refresh",
+		ExpiresIn: 3600, CreatedAt: 123, TokenType: "Bearer",
+	}
+	writeCredentialsFile(t, path, legacy)
+
+	store, err := LoadCredentialStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if store.Active != "alice" || len(store.Accounts) != 1 || store.Accounts[0].RefreshToken != "alice-refresh" {
+		t.Fatalf("store = %#v", store)
+	}
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(before), `"accounts"`) {
+		t.Fatal("read-only migration rewrote the legacy file")
+	}
+
+	migrated, err := MigrateCredentialStore()
+	if err != nil || !migrated {
+		t.Fatalf("migrated = %t, error = %v", migrated, err)
+	}
+	migratedData, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var migratedStore CredentialStore
+	if err := json.Unmarshal(migratedData, &migratedStore); err != nil {
+		t.Fatal(err)
+	}
+	if migratedStore.Version != credentialStoreVersion || migratedStore.Active != "alice" || len(migratedStore.Accounts) != 1 {
+		t.Fatalf("migrated store = %#v", migratedStore)
+	}
+	alice, err := migratedStore.ResolveAccount("alice")
+	if err != nil || alice.RefreshToken != "alice-refresh" || alice.ExpiresIn != 3600 || alice.CreatedAt != 123 {
+		t.Fatalf("alice = %#v, error = %v", alice, err)
+	}
+
+	migratedAgain, err := MigrateCredentialStore()
+	if err != nil || migratedAgain {
+		t.Fatalf("migrated again = %t, error = %v", migratedAgain, err)
+	}
+	afterSecondMigration, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(afterSecondMigration) != string(migratedData) {
+		t.Fatal("current credential store was rewritten")
+	}
+
+	if err := SaveAccount(&StoredCredentials{AccessToken: "bob-access", User: "bob", RefreshToken: "bob-refresh"}, true); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var persisted CredentialStore
+	if err := json.Unmarshal(data, &persisted); err != nil {
+		t.Fatal(err)
+	}
+	if persisted.Version != credentialStoreVersion || persisted.Active != "bob" || len(persisted.Accounts) != 2 {
+		t.Fatalf("persisted = %#v", persisted)
+	}
+	alice, err = persisted.ResolveAccount("alice")
+	if err != nil || alice.RefreshToken != "alice-refresh" || alice.ExpiresIn != 3600 {
+		t.Fatalf("alice = %#v, error = %v", alice, err)
+	}
+}
+
+func TestCredentialStoreRejectsFutureVersionWithoutRewriting(t *testing.T) {
+	home := isolateConfig(t)
+	path := filepath.Join(home, ".config", appName, tokenFile)
+	data := []byte(`{
+  "version": 3,
+  "active": "alice",
+  "future_store_field": "keep",
+  "accounts": [{
+    "access_token": "alice-token",
+    "user": "alice",
+    "future_account_field": "keep"
+  }]
+}`)
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := SwitchAccount("alice"); err == nil || !strings.Contains(err.Error(), "unsupported credential store version 3") {
+		t.Fatalf("error = %v", err)
+	}
+	if migrated, err := MigrateCredentialStore(); err == nil || migrated || !strings.Contains(err.Error(), "unsupported credential store version 3") {
+		t.Fatalf("migrated = %t, error = %v", migrated, err)
+	}
+	if err := SaveAccount(&StoredCredentials{AccessToken: "bob-token", User: "bob"}, true); err == nil || !strings.Contains(err.Error(), "unsupported credential store version 3") {
+		t.Fatalf("save error = %v", err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(data) {
+		t.Fatalf("future credential file was rewritten:\n%s", after)
+	}
+}
+
+func TestSaveAccountUpdatesOneAccountAndPreservesOthers(t *testing.T) {
+	isolateConfig(t)
+	if err := SaveAccount(&StoredCredentials{AccessToken: "alice-old", User: "alice", RefreshToken: "alice-refresh"}, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveAccount(&StoredCredentials{AccessToken: "bob", User: "bob", RefreshToken: "bob-refresh"}, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveAccount(&StoredCredentials{AccessToken: "alice-new", User: "alice", RefreshToken: "alice-new-refresh"}, true); err != nil {
+		t.Fatal(err)
+	}
+	store, err := LoadCredentialStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(store.Accounts) != 2 || store.Active != "alice" {
+		t.Fatalf("store = %#v", store)
+	}
+	bob, err := store.ResolveAccount("bob")
+	if err != nil || bob.AccessToken != "bob" || bob.RefreshToken != "bob-refresh" {
+		t.Fatalf("bob = %#v, error = %v", bob, err)
+	}
+}
+
+func TestCredentialStoreUsesCaseInsensitiveUsernameKey(t *testing.T) {
+	isolateConfig(t)
+	if err := SaveAccount(&StoredCredentials{AccessToken: "old", User: "Alice"}, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveAccount(&StoredCredentials{AccessToken: "new", User: "alice"}, false); err != nil {
+		t.Fatal(err)
+	}
+	store, err := LoadCredentialStore()
+	if err != nil || len(store.Accounts) != 1 {
+		t.Fatalf("store = %#v, error = %v", store, err)
+	}
+	if key, err := SwitchAccount(" ALICE "); err != nil || key != "alice" {
+		t.Fatalf("key = %q, error = %v", key, err)
+	}
+	active, err := LoadStoredCredentials()
+	if err != nil || active.AccessToken != "new" || active.User != "alice" {
+		t.Fatalf("active = %#v, error = %v", active, err)
+	}
+}
+
+func TestRemoveInactiveAccountKeepsActiveAccount(t *testing.T) {
+	isolateConfig(t)
+	for _, account := range []StoredCredentials{
+		{AccessToken: "alice", User: "alice"},
+		{AccessToken: "bob", User: "bob"},
+	} {
+		if err := SaveAccount(&account, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	removed, empty, err := RemoveAccount("alice")
+	if err != nil || empty || removed != "alice" {
+		t.Fatalf("removed = %q, empty = %t, error = %v", removed, empty, err)
+	}
+	store, err := LoadCredentialStore()
+	if err != nil || len(store.Accounts) != 1 || store.Active != "bob" {
+		t.Fatalf("store = %#v, error = %v", store, err)
+	}
+}
+
+func TestRemoveActiveAccountRequiresExplicitSwitch(t *testing.T) {
+	home := isolateConfig(t)
+	for _, account := range []StoredCredentials{
+		{AccessToken: "alice", User: "alice"},
+		{AccessToken: "bob", User: "bob"},
+	} {
+		if err := SaveAccount(&account, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	path := filepath.Join(home, ".config", appName, tokenFile)
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	removed, empty, err := RemoveAccount("bob")
+	if err == nil || !strings.Contains(err.Error(), "ag auth switch <account>") {
+		t.Fatalf("removed = %q, empty = %t, error = %v", removed, empty, err)
+	}
+	after, readErr := os.ReadFile(path)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if string(after) != string(before) {
+		t.Fatalf("credential store changed after rejected removal:\n%s", after)
+	}
+}

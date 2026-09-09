@@ -1,0 +1,203 @@
+package api
+
+import (
+	"bytes"
+	"errors"
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+
+	internalapi "atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+)
+
+type failingReader struct{ err error }
+
+func (r failingReader) Read([]byte) (int, error) { return 0, r.err }
+func (r failingReader) Close() error             { return nil }
+
+func TestAPIDefaultGETStreamsAllSuccessfulResponses(t *testing.T) {
+	tests := []struct {
+		name   string
+		status int
+		body   string
+	}{
+		{name: "OK", status: http.StatusOK, body: `{"ok":true}`},
+		{name: "created binary", status: http.StatusCreated, body: "\x00\xff"},
+		{name: "no content", status: http.StatusNoContent},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fixture := newAPITestFixture("secret", func(req *http.Request) (*http.Response, error) {
+				if req.Method != http.MethodGet || req.URL.Path != "/api/v5/user" {
+					t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+				}
+				return apiTestResponse(req, tt.status, tt.body), nil
+			})
+			cmd := NewCmdAPI(fixture.factory)
+			cmd.SetOut(fixture.stdout)
+			cmd.SetErr(fixture.stderr)
+			cmd.SetArgs([]string{"user"})
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if got := fixture.stdout.String(); got != tt.body {
+				t.Fatalf("stdout = %q", got)
+			}
+			assertNoTokenLeak(t, "secret", fixture.stdout.String(), fixture.stderr.String())
+		})
+	}
+}
+
+func TestAPIErrorsAreBoundedAndRedacted(t *testing.T) {
+	const password = "api-password-123"
+	fixture := newAPITestFixture("secret", func(req *http.Request) (*http.Response, error) {
+		resp := apiTestResponse(req, http.StatusForbidden, "message=denied secret; password="+password+"; control=\x1b\n"+strings.Repeat("x", internalapi.MaxErrorExcerptBytes))
+		resp.Status = "403 Forbidden authorization=status-secret-123"
+		resp.Header.Set("Retry-After", "60 authorization=retry-secret-123")
+		return resp, nil
+	})
+	cmd := NewCmdAPI(fixture.factory)
+	cmd.SetOut(fixture.stdout)
+	cmd.SetArgs([]string{"/user"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "403 Forbidden") || len(err.Error()) > internalapi.MaxErrorExcerptBytes+300 {
+		t.Fatalf("error = %v", err)
+	}
+	if fixture.stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", fixture.stdout.String())
+	}
+	assertNoTokenLeak(t, "secret", err.Error())
+	for _, leaked := range []string{password, "status-secret-123", "retry-secret-123", "\x1b"} {
+		if strings.Contains(err.Error(), leaked) {
+			t.Fatalf("error leaked unsafe value %q: %q", leaked, err)
+		}
+	}
+	for _, want := range []string{"<redacted>", `\x1b`, "...", "retry after 60"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error = %q, missing %q", err, want)
+		}
+	}
+}
+
+func TestAPIErrorRedactsEscapedJSONCredentialKey(t *testing.T) {
+	const credential = "escaped-api-credential-123"
+	fixture := newAPITestFixture("configured-token", func(req *http.Request) (*http.Response, error) {
+		return apiTestResponse(req, http.StatusForbidden, `{"access\u005ftoken":"`+credential+`"}`), nil
+	})
+	cmd := NewCmdAPI(fixture.factory)
+	cmd.SetArgs([]string{"/user"})
+
+	err := cmd.Execute()
+	if err == nil || strings.Contains(err.Error(), credential) || !strings.Contains(err.Error(), "<redacted>") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestAPIReportsAuthTransportAndReadErrors(t *testing.T) {
+	t.Run("auth", func(t *testing.T) {
+		fixture := newAPITestFixture("secret", nil)
+		cause := errors.New("credential secret unavailable")
+		fixture.config.tokenErr = cause
+		cmd := NewCmdAPI(fixture.factory)
+		cmd.SetArgs([]string{"/user"})
+		err := cmd.Execute()
+		if err == nil || !strings.Contains(err.Error(), "not authenticated") {
+			t.Fatalf("error = %v", err)
+		}
+		assertNoTokenLeak(t, "secret", err.Error())
+		if !errors.Is(err, cause) {
+			t.Fatalf("error does not preserve cause: %v", err)
+		}
+		if fixture.clientReads != 0 || fixture.requests != 0 {
+			t.Fatal("authentication failure acquired client or sent request")
+		}
+	})
+	t.Run("transport", func(t *testing.T) {
+		fixture := newAPITestFixture("secret", func(*http.Request) (*http.Response, error) {
+			return nil, errors.New("dial failed")
+		})
+		cmd := NewCmdAPI(fixture.factory)
+		cmd.SetArgs([]string{"/user"})
+		if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "request GET") {
+			t.Fatalf("error = %v", err)
+		}
+	})
+	t.Run("read", func(t *testing.T) {
+		fixture := newAPITestFixture("secret", func(req *http.Request) (*http.Response, error) {
+			resp := apiTestResponse(req, http.StatusOK, "")
+			resp.Body = failingReader{err: errors.New("read failed")}
+			return resp, nil
+		})
+		cmd := NewCmdAPI(fixture.factory)
+		cmd.SetArgs([]string{"/user"})
+		if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "read response") {
+			t.Fatalf("error = %v", err)
+		}
+	})
+}
+
+func TestAPINon2xxPreservesBodyReadError(t *testing.T) {
+	cause := errors.New("read error body password=read-secret-123; control=\x1b")
+	fixture := newAPITestFixture("secret", func(req *http.Request) (*http.Response, error) {
+		resp := apiTestResponse(req, http.StatusBadGateway, "")
+		resp.Body = failingReader{err: cause}
+		return resp, nil
+	})
+	cmd := NewCmdAPI(fixture.factory)
+	cmd.SetArgs([]string{"/user"})
+	err := cmd.Execute()
+	if err == nil || !errors.Is(err, cause) || !strings.Contains(err.Error(), "502 Bad Gateway") {
+		t.Fatalf("error = %v", err)
+	}
+	if strings.Contains(err.Error(), "read-secret-123") || strings.Contains(err.Error(), "\x1b") || !strings.Contains(err.Error(), "<redacted>") || !strings.Contains(err.Error(), `\x1b`) {
+		t.Fatalf("read error context was not sanitized: %q", err)
+	}
+}
+
+func TestAPIBodyIsNotAddedToGET(t *testing.T) {
+	request, err := prepare("/user", options{method: "get", accept: "application/json"}, bytes.NewBuffer(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if request.body != nil || request.method != http.MethodGet {
+		t.Fatalf("request = %#v", request)
+	}
+}
+
+var _ io.ReadCloser = failingReader{}
+
+func TestRedactShortTokensUnconditionally(t *testing.T) {
+	tests := []struct {
+		name  string
+		token string
+		msg   string
+	}{
+		{name: "single char", token: "b", msg: "transport echoed token b"},
+		{name: "two chars", token: "bo", msg: "transport echoed token bo"},
+		{name: "three chars", token: "bob", msg: "transport echoed token bob"},
+		{name: "four chars", token: "bob1", msg: "transport echoed token bob1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := errors.New(tt.msg)
+			redacted := redact(err, tt.token)
+			if redacted == err {
+				t.Fatalf("redact(%q, %q) returned original error; short tokens must be redacted", tt.msg, tt.token)
+			}
+			if strings.Contains(redacted.Error(), tt.token) {
+				t.Fatalf("redact(%q, %q) still contains token: %q", tt.msg, tt.token, redacted.Error())
+			}
+			if !strings.Contains(redacted.Error(), "[REDACTED]") {
+				t.Fatalf("redact(%q, %q) = %q, want [REDACTED] placeholder", tt.msg, tt.token, redacted.Error())
+			}
+		})
+	}
+}
+
+func TestRedactEmptyTokenReturnsOriginal(t *testing.T) {
+	err := errors.New("some error")
+	if got := redact(err, ""); got != err {
+		t.Fatalf("redact with empty token changed the error: %v", got)
+	}
+}

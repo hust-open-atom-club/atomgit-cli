@@ -1,0 +1,212 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  repository: read
+
+jobs:
+  quality-and-test:
+    name: Quality and unit tests
+    runs-on: [ubuntu-latest, x64, small]
+    env:
+      GOPROXY: https://mirrors.cernet.edu.cn/go|https://goproxy.cn|direct
+    steps:
+      - name: Check out PR code
+        if: ${{ atomgit.head_ref != '' }}
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check out pushed code
+        if: ${{ atomgit.head_ref == '' }}
+        uses: checkout
+
+      # AtomGit setup-go currently provides Go 1.26.1. The Go command then
+      # downloads the minimum and preferred versions declared in go.mod.
+      - name: Set up bootstrap Go
+        uses: setup-go
+        with:
+          version: "1.26.1"
+          cache: true
+
+      - name: Test minimum supported Go toolchain
+        run: make go-min-version test-min-go
+
+      - name: Select release Go toolchain
+        run: make go-version
+
+      - name: Check formatting and vet
+        run: make lint
+
+      - name: Run tests
+        run: make test
+
+  race-test:
+    name: Linux race test
+    runs-on: [ubuntu-latest, x64, small]
+    env:
+      GOPROXY: https://goproxy.cn,direct
+    steps:
+      - name: Check out PR code
+        if: ${{ atomgit.head_ref != '' }}
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check out pushed code
+        if: ${{ atomgit.head_ref == '' }}
+        uses: checkout
+
+      - name: Set up bootstrap Go
+        uses: setup-go
+        with:
+          version: "1.26.1"
+          cache: true
+
+      - name: Select release Go toolchain
+        run: make go-version
+
+      - name: Run race detector
+        run: make test-race
+
+  cross-build:
+    name: Cross-build release target
+    runs-on: [ubuntu-latest, x64, small]
+    env:
+      GOPROXY: https://goproxy.cn,direct
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        target:
+          - linux/amd64
+          - linux/arm64
+          - linux/loong64
+          - darwin/amd64
+          - darwin/arm64
+          - windows/amd64
+          - windows/arm64
+    steps:
+      - name: Check out PR code
+        if: ${{ atomgit.head_ref != '' }}
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check out pushed code
+        if: ${{ atomgit.head_ref == '' }}
+        uses: checkout
+
+      - name: Set up bootstrap Go
+        uses: setup-go
+        with:
+          version: "1.26.1"
+          cache: true
+
+      - name: Select release Go toolchain
+        run: make go-version
+
+      - name: Cross-compile release target
+        run: make cross-build RELEASE_TARGETS="${{ matrix.target }}"
+
+  platform-test-compile:
+    name: Compile platform tests
+    runs-on: [ubuntu-latest, x64, small]
+    env:
+      GOPROXY: https://goproxy.cn,direct
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - darwin/amd64
+          - windows/amd64
+    steps:
+      - name: Check out PR code
+        if: ${{ atomgit.head_ref != '' }}
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check out pushed code
+        if: ${{ atomgit.head_ref == '' }}
+        uses: checkout
+
+      - name: Set up bootstrap Go
+        uses: setup-go
+        with:
+          version: "1.26.1"
+          cache: true
+
+      - name: Select release Go toolchain
+        run: make go-version
+
+      - name: Compile platform-specific tests
+        run: make test-platform-compile PLATFORM_TEST_TARGETS="${{ matrix.target }}"
+
+  vulnerability-scan:
+    name: Go vulnerability scan
+    runs-on: [ubuntu-latest, x64, small]
+    env:
+      GOPROXY: https://goproxy.cn,direct
+    steps:
+      - name: Check out PR code
+        if: ${{ atomgit.head_ref != '' }}
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check out pushed code
+        if: ${{ atomgit.head_ref == '' }}
+        uses: checkout
+
+      - name: Set up bootstrap Go
+        uses: setup-go
+        with:
+          version: "1.26.1"
+          cache: true
+
+      - name: Select release Go toolchain
+        run: make go-version
+
+      - name: Build and scan release binary
+        run: make vulncheck
+
+  npm-test:
+    name: npm test
+    runs-on: [ubuntu-latest, x64, small]
+    steps:
+      - name: Check out PR code
+        if: ${{ atomgit.head_ref != '' }}
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check out pushed code
+        if: ${{ atomgit.head_ref == '' }}
+        uses: checkout
+
+      - name: Set up Node.js
+        uses: setup-node
+        with:
+          node-version: "20"
+
+      # Reproducible install from the lockfile; the tests run offline with
+      # fake npm/process injection and never touch a real registry.
+      - name: Install dependencies
+        run: npm ci --no-fund --no-audit
+
+      - name: Run npm tests
+        run: npm test

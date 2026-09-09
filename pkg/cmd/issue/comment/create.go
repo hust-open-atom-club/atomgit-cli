@@ -19,31 +19,24 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "create [<owner>/]<repo> <number>",
+		Use:   "create [<owner>/<repo>] <number>",
 		Short: "Create a comment on an issue",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+
+			number, err := strconv.Atoi(remaining[0])
+			if err != nil {
+				return fmt.Errorf("invalid issue number: %s", remaining[0])
+			}
+
 			token, err := f.Config.GetToken()
 			if err != nil {
-				return fmt.Errorf("not authenticated: %w", err)
-			}
-
-			var owner, repo string
-			var number int
-
-			if len(args) == 1 {
-				return fmt.Errorf("repository and issue number required")
-			}
-
-			parts := strings.Split(args[0], "/")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
-			}
-			owner, repo = parts[0], parts[1]
-
-			number, err = strconv.Atoi(args[1])
-			if err != nil {
-				return fmt.Errorf("invalid issue number: %s", args[1])
+				return cmdutil.AuthenticationError(err)
 			}
 
 			// Get body from file if specified
@@ -58,7 +51,7 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 
 			// Interactive mode if no body provided
 			if body == "" {
-				fmt.Println("Enter comment body (press Ctrl+D when done):")
+				fmt.Fprintln(cmd.OutOrStdout(), "Enter comment body (press Ctrl+D when done):")
 				reader := bufio.NewReader(os.Stdin)
 				var lines []string
 				for {
@@ -75,16 +68,25 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("comment body cannot be empty")
 			}
 
-			client := api.NewClient(token)
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
 			req := api.CommentRequest{Body: body}
 
-			var comment api.Comment
+			var comment api.CreateCommentResponse
 			path := fmt.Sprintf("/repos/%s/%s/issues/%d/comments", owner, repo, number)
 			if err := client.Post(path, req, &comment); err != nil {
 				return err
 			}
 
-			fmt.Printf("Created comment #%d: %s\n", comment.ID, comment.HTMLURL)
+			commentID := comment.GetID()
+			if commentID == "" {
+				return fmt.Errorf("created comment response did not include a comment ID")
+			}
+			commentURL := cmdutil.ResolveWebURL(comment.GetURL(), f.Config.GetHost(), owner, repo, "issues", strconv.Itoa(number))
+			summary := fmt.Sprintf("Created comment #%s", commentID)
+			cmdutil.PrintResultWithOptionalURL(cmd.OutOrStdout(), summary, commentURL)
 			return nil
 		},
 	}

@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
@@ -25,12 +27,18 @@ func newCmdCheck(f *cmdutil.Factory) *cobra.Command {
 			params.Add("license", license)
 			fullURL := baseURL + "?" + params.Encode()
 
-			// Make HTTP GET request
-			resp, err := http.Get(fullURL)
+			// Make HTTP GET request with timeout
+			client := &http.Client{Timeout: 30 * time.Second}
+			resp, err := client.Get(fullURL)
 			if err != nil {
 				return fmt.Errorf("failed to check license: %w", err)
 			}
 			defer resp.Body.Close()
+
+			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+				body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+				return fmt.Errorf("license check failed: %s - %s", resp.Status, strings.TrimSpace(string(body)))
+			}
 
 			// Read response body
 			body, err := io.ReadAll(resp.Body)
@@ -40,12 +48,12 @@ func newCmdCheck(f *cmdutil.Factory) *cobra.Command {
 
 			// Check if body is empty
 			if len(body) == 0 {
-				fmt.Println("未知")
+				fmt.Fprintln(cmd.OutOrStdout(), "未知")
 				return nil
 			}
 
 			// Print API response
-			fmt.Println(string(body))
+			fmt.Fprintln(cmd.OutOrStdout(), string(body))
 			return nil
 		},
 	}

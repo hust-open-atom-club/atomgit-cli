@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -58,7 +59,7 @@ func TestRunForkUpdatesAndVerifiesDescription(t *testing.T) {
 			if _, exists := body["description"]; exists {
 				t.Fatalf("fork request unexpectedly relied on description: %#v", body)
 			}
-			return forkResponse(http.StatusCreated, `{"name":"kernel-audit","web_url":"https://atomgit.com/alice/kernel-audit"}`), nil
+			return forkResponse(http.StatusCreated, `{"web_url":"https://atomgit.com/alice/kernel-audit"}`), nil
 
 		case 2:
 			if req.Method != http.MethodPatch || req.URL.Path != "/api/v5/repos/alice/kernel-audit" {
@@ -91,8 +92,12 @@ func TestRunForkUpdatesAndVerifiesDescription(t *testing.T) {
 		},
 	}
 	opts := &ForkOptions{Name: "kernel-audit", Description: description, Public: true}
-	if err := runFork(factory, opts, "openEuler/kernel"); err != nil {
+	var out bytes.Buffer
+	if err := runFork(&out, factory, opts, "openEuler/kernel"); err != nil {
 		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "alice/kernel-audit") {
+		t.Fatalf("output used the wrong fallback fork name: %q", out.String())
 	}
 
 	want := []string{
@@ -135,10 +140,33 @@ func TestRunForkWithoutDescriptionOnlyForks(t *testing.T) {
 		},
 	}
 
-	if err := runFork(factory, &ForkOptions{}, "openEuler/kernel"); err != nil {
+	if err := runFork(io.Discard, factory, &ForkOptions{}, "openEuler/kernel"); err != nil {
 		t.Fatal(err)
 	}
 	if requests != 1 {
 		t.Fatalf("request count = %d", requests)
+	}
+}
+
+func TestForkCommandInfersRepository(t *testing.T) {
+	httpClient := &http.Client{Transport: forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/team/inferred/forks" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		return forkResponse(http.StatusCreated, `{"name":"inferred"}`), nil
+	})}
+	factory := &cmdutil.Factory{
+		Config: forkTestConfig{},
+		RepositoryResolver: func() (cmdutil.Repository, error) {
+			return cmdutil.Repository{Owner: "team", Name: "inferred"}, nil
+		},
+		HttpClient: func() (*http.Client, error) {
+			return httpClient, nil
+		},
+	}
+
+	cmd := newCmdRepoFork(factory)
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
 	}
 }

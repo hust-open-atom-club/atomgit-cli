@@ -1,10 +1,59 @@
 package root
 
 import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
+	internalversion "atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
+	versioncmd "atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/version"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
+	"github.com/spf13/cobra"
 )
+
+type rootTestConfig struct{}
+
+func (rootTestConfig) GetToken() (string, error) { return "secret", nil }
+func (rootTestConfig) GetUser() (string, error)  { return "tester", nil }
+func (rootTestConfig) GetHost() string           { return "atomgit.com" }
+
+type unauthenticatedRootTestConfig struct{}
+
+func (unauthenticatedRootTestConfig) GetToken() (string, error) {
+	return "", config.ErrNotAuthenticated
+}
+func (unauthenticatedRootTestConfig) GetUser() (string, error) {
+	return "", config.ErrNotAuthenticated
+}
+func (unauthenticatedRootTestConfig) GetHost() string { return "atomgit.com" }
+
+type rootRoundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f rootRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
+
+func setVersionMetadata(t *testing.T) {
+	t.Helper()
+	oldV, oldC, oldB := internalversion.Version, internalversion.Commit, internalversion.BuildDate
+	internalversion.Version = "v1.2.3"
+	internalversion.Commit = "abc1234"
+	internalversion.BuildDate = "2026-07-15T00:00:00Z"
+	t.Cleanup(func() {
+		internalversion.Version = oldV
+		internalversion.Commit = oldC
+		internalversion.BuildDate = oldB
+	})
+}
 
 func TestNewCmdRootRegistersCommands(t *testing.T) {
 	cmd, err := NewCmdRoot(&cmdutil.Factory{})
@@ -13,8 +62,10 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 	}
 
 	want := map[string]bool{
-		"auth": false, "issue": false, "license": false, "pr": false,
-		"repo": false, "ssh-key": false, "tag": false, "version": false,
+		"api": false, "auth": false, "branch": false, "commit": false, "discussion": false, "issue": false, "kanban": false, "label": false, "license": false, "milestone": false,
+		"check-update": false, "update": false,
+		"notification": false,
+		"org":          false, "pr": false, "release": false, "repo": false, "run": false, "ssh-key": false, "tag": false, "version": false,
 	}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
@@ -26,10 +77,635 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 			t.Errorf("command %q was not registered", name)
 		}
 	}
+	legacy, _, err := cmd.Find([]string{"check-update"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if legacy.Deprecated == "" {
+		t.Fatal("legacy check-update command is not marked deprecated")
+	}
 	if cmd.Use != "ag <command> <subcommand> [flags]" {
 		t.Fatalf("Use = %q", cmd.Use)
 	}
 	if cmd.PersistentFlags().Lookup("help") == nil {
 		t.Fatal("persistent help flag was not registered")
+	}
+	versionFlag := cmd.Flags().Lookup("version")
+	if versionFlag == nil {
+		t.Fatal("version flag was not registered")
+	}
+	if versionFlag.Shorthand != "" {
+		t.Fatalf("version shorthand = %q, want none", versionFlag.Shorthand)
+	}
+}
+
+func TestRootReturnsErrorsWithoutPrintingThem(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "fail",
+		RunE: func(*cobra.Command, []string) error {
+			return errors.New("boom")
+		},
+	})
+	cmd.SetArgs([]string{"fail"})
+
+	err = cmd.Execute()
+	if err == nil || err.Error() != "boom" {
+		t.Fatalf("Execute() error = %v, want boom", err)
+	}
+	if err := cmdutil.FlushWriter(cmd.ErrOrStderr()); err != nil {
+		t.Fatal(err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want no Cobra error output", stderr.String())
+	}
+}
+
+func TestRootContextCancelsV5AndActionsRequests(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "v5 issue request", args: []string{"issue", "view", "alice/demo", "1"}},
+		{name: "v8 Actions request", args: []string{"run", "view", "alice/demo", "run-1"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requestStarted := make(chan struct{})
+			var once sync.Once
+			factory := &cmdutil.Factory{
+				Config: rootTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						once.Do(func() { close(requestStarted) })
+						<-req.Context().Done()
+						return nil, req.Context().Err()
+					})}, nil
+				},
+			}
+			cmd, err := newCmdRootWithWriters(factory, io.Discard, io.Discard)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cmd.SetArgs(tt.args)
+			ctx, cancel := context.WithCancel(context.Background())
+			result := make(chan error, 1)
+			go func() { result <- cmd.ExecuteContext(ctx) }()
+
+			<-requestStarted
+			cancel()
+			select {
+			case err := <-result:
+				if !errors.Is(err, context.Canceled) {
+					t.Fatalf("ExecuteContext() error = %v, want context canceled", err)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("root command did not stop promptly after cancellation")
+			}
+		})
+	}
+}
+
+func TestAPIHelpDocumentsSafetyContract(t *testing.T) {
+	cmd, err := NewCmdRoot(&cmdutil.Factory{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"api", "--help"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	help := out.String()
+	for _, want := range []string{"api <endpoint>", "GET is the default", "POST", "PATCH", "PUT", "DELETE", "relative AtomGit API v5", "does not infer or", "--paginate", "--raw-output"} {
+		if !strings.Contains(help, want) {
+			t.Errorf("help does not contain %q:\n%s", want, help)
+		}
+	}
+}
+
+func TestNewCmdRootVersionMatchesVersionCommand(t *testing.T) {
+	setVersionMetadata(t)
+
+	rootCmd, err := NewCmdRoot(&cmdutil.Factory{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rootOut bytes.Buffer
+	rootCmd.SetOut(&rootOut)
+	rootCmd.SetArgs([]string{"--version"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("root Execute() error = %v", err)
+	}
+
+	versionCmd := versioncmd.NewCmdVersion()
+	var versionOut bytes.Buffer
+	versionCmd.SetOut(&versionOut)
+	if err := versionCmd.Execute(); err != nil {
+		t.Fatalf("version Execute() error = %v", err)
+	}
+
+	if got, want := rootOut.String(), versionOut.String(); got != want {
+		t.Errorf("--version output = %q, version output = %q", got, want)
+	}
+}
+
+func TestNewCmdRootVersionHelp(t *testing.T) {
+	cmd, err := NewCmdRoot(&cmdutil.Factory{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--help"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if !strings.Contains(out.String(), "--version") {
+		t.Errorf("help output does not mention --version: %s", out.String())
+	}
+	if !strings.Contains(out.String(), "--raw-output") {
+		t.Errorf("help output does not mention --raw-output: %s", out.String())
+	}
+}
+
+func TestRootSanitizesPipedOutputByDefault(t *testing.T) {
+	payload := "unsafe \x1b]52;c;attack\x07\n"
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "emit",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprint(cmd.OutOrStdout(), payload)
+			return err
+		},
+	})
+	cmd.SetArgs([]string{"emit"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := stdout.String(), "unsafe \\x1b]52;c;attack\\x07\n"; got != want {
+		t.Fatalf("stdout = %q, want %q", got, want)
+	}
+}
+
+func TestRootRawOutputIsExplicitOptOut(t *testing.T) {
+	payload := "raw \x1b[31mtext\x1b[0m\n"
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "emit",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprint(cmd.OutOrStdout(), payload)
+			return err
+		},
+	})
+	cmd.SetArgs([]string{"--raw-output", "emit"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if got := stdout.String(); got != payload {
+		t.Fatalf("stdout = %q, want raw %q", got, payload)
+	}
+}
+
+func TestAPIOutputHonorsRootSanitization(t *testing.T) {
+	payload := "api \x1b[31moutput\x1b[0m\n"
+	factory := &cmdutil.Factory{
+		Config: rootTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: make(http.Header), Body: io.NopCloser(strings.NewReader(payload)), Request: req}, nil
+			})}, nil
+		},
+	}
+	for _, tt := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "safe", args: []string{"api", "/user"}, want: "api \\x1b[31moutput\\x1b[0m\n"},
+		{name: "raw", args: []string{"--raw-output", "api", "/user"}, want: payload},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			cmd, err := newCmdRootWithWriters(factory, &stdout, &stderr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cmd.SetArgs(tt.args)
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+				t.Fatal(err)
+			}
+			if stdout.String() != tt.want {
+				t.Fatalf("stdout = %q, want %q", stdout.String(), tt.want)
+			}
+		})
+	}
+}
+
+func TestCommitDiffHonorsRootSanitization(t *testing.T) {
+	payload := "diff --git a/a b/a\r\n-old\r\n+new\r\n"
+	factory := &cmdutil.Factory{
+		Config: rootTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.URL.EscapedPath() != "/api/v5/repos/alice/demo/commit/abc/diff" {
+					t.Fatalf("path = %q", req.URL.EscapedPath())
+				}
+				return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: make(http.Header), Body: io.NopCloser(strings.NewReader(payload)), Request: req}, nil
+			})}, nil
+		},
+	}
+	for _, tt := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "safe", args: []string{"commit", "diff", "alice/demo", "abc"}, want: strings.ReplaceAll(payload, "\r", `\x0d`)},
+		{name: "raw", args: []string{"--raw-output", "commit", "diff", "alice/demo", "abc"}, want: payload},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			cmd, err := newCmdRootWithWriters(factory, &stdout, &stderr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cmd.SetArgs(tt.args)
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+				t.Fatal(err)
+			}
+			if stdout.String() != tt.want {
+				t.Fatalf("stdout = %q, want %q", stdout.String(), tt.want)
+			}
+		})
+	}
+}
+
+func TestRootSanitizesDecodedFileContent(t *testing.T) {
+	payload := "Hello \x00 World\n"
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "read-file",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprint(cmd.OutOrStdout(), payload)
+			return err
+		},
+	})
+	cmd.SetArgs([]string{"read-file"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := stdout.String(), "Hello \\x00 World\n"; got != want {
+		t.Fatalf("stdout = %q, want %q", got, want)
+	}
+}
+
+func TestRootRawOutputPreservesDecodedFileContent(t *testing.T) {
+	payload := "Hello \x00 World\n"
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "read-file",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprint(cmd.OutOrStdout(), payload)
+			return err
+		},
+	})
+	cmd.SetArgs([]string{"--raw-output", "read-file"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+		t.Fatal(err)
+	}
+	if stdout.String() != payload {
+		t.Fatalf("stdout = %q, want raw %q", stdout.String(), payload)
+	}
+}
+
+func TestRootJSONOutputStillWorksWithSanitization(t *testing.T) {
+	payload := "{\n  \"name\": \"f.txt\",\n  \"content\": \"SGVsbG8=\"\n}\n"
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "read-file",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprint(cmd.OutOrStdout(), payload)
+			return err
+		},
+	})
+	cmd.SetArgs([]string{"read-file"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+		t.Fatal(err)
+	}
+	if got := stdout.String(); got != payload {
+		t.Fatalf("JSON output was corrupted: got %q, want %q", got, payload)
+	}
+}
+
+func TestRootFileContentWithNewlinesSanitized(t *testing.T) {
+	payload := "line1\ntab\there\x01\x02end\n"
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "read-file",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprint(cmd.OutOrStdout(), payload)
+			return err
+		},
+	})
+	cmd.SetArgs([]string{"read-file"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+		t.Fatal(err)
+	}
+	got := stdout.String()
+	if strings.Contains(got, "\x01") || strings.Contains(got, "\x02") {
+		t.Fatalf("control chars not sanitized: %q", got)
+	}
+	if !strings.Contains(got, "line1\n") {
+		t.Fatalf("printable chars corrupted: %q", got)
+	}
+	if !strings.Contains(got, "\t") {
+		t.Fatalf("tab removed: %q", got)
+	}
+	if !strings.Contains(got, "\\x01") {
+		t.Fatalf("C0 control not escaped: %q", got)
+	}
+	if !strings.Contains(got, "\\x02") {
+		t.Fatalf("C0 control not escaped: %q", got)
+	}
+}
+
+func TestRootFileContentRawPreservesAllBytes(t *testing.T) {
+	payload := "line1\ntab\there\x01\x02end\n"
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "read-file",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprint(cmd.OutOrStdout(), payload)
+			return err
+		},
+	})
+	cmd.SetArgs([]string{"--raw-output", "read-file"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+		t.Fatal(err)
+	}
+	if stdout.String() != payload {
+		t.Fatalf("raw stdou = %q, want %q", stdout.String(), payload)
+	}
+}
+
+func newTestRoot(t *testing.T) *cobra.Command {
+	t.Helper()
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, io.Discard, io.Discard)
+	if err != nil {
+		t.Fatalf("newCmdRootWithWriters() error = %v", err)
+	}
+	return cmd
+}
+
+func TestExpandAlias(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{name: "no arguments", args: nil, want: nil},
+		{name: "flag first", args: []string{"--version"}, want: []string{"--version"}},
+		{name: "unknown command", args: []string{"unknown"}, want: []string{"unknown"}},
+		{name: "no alias configured", args: []string{"nope"}, want: []string{"nope"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := newTestRoot(t)
+			got, err := ExpandAlias(cmd, tt.args)
+			if err != nil {
+				t.Fatalf("ExpandAlias() error = %v", err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ExpandAlias(%v) = %v, want %v", tt.args, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExpandAliasExpandsConfiguredAlias(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if err := config.SaveAlias("pl", "pr list"); err != nil {
+		t.Fatalf("SaveAlias() error = %v", err)
+	}
+
+	cmd := newTestRoot(t)
+	got, err := ExpandAlias(cmd, []string{"pl", "--state", "open"})
+	if err != nil {
+		t.Fatalf("ExpandAlias() error = %v", err)
+	}
+	want := []string{"pr", "list", "--state", "open"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ExpandAlias() = %v, want %v", got, want)
+	}
+}
+
+func TestExpandAliasBuiltinTakesPrecedence(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	// A user could try to shadow a built-in command; the built-in must win.
+	if err := config.SaveAlias("repo", "pr list"); err != nil {
+		t.Fatalf("SaveAlias() error = %v", err)
+	}
+
+	cmd := newTestRoot(t)
+	got, err := ExpandAlias(cmd, []string{"repo", "view"})
+	if err != nil {
+		t.Fatalf("ExpandAlias() error = %v", err)
+	}
+	want := []string{"repo", "view"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ExpandAlias() = %v, want %v (built-in command must win)", got, want)
+	}
+}
+
+func TestExpandAliasRejectsShellAlias(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if err := config.SaveAlias("hi", "!echo hi"); err != nil {
+		t.Fatalf("SaveAlias() error = %v", err)
+	}
+
+	cmd := newTestRoot(t)
+	if _, err := ExpandAlias(cmd, []string{"hi"}); err == nil {
+		t.Fatal("ExpandAlias() with shell-style alias succeeded, want error")
+	}
+}
+
+func TestExpandAliasAfterRootFlag(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if err := config.SaveAlias("pl", "pr list"); err != nil {
+		t.Fatalf("SaveAlias() error = %v", err)
+	}
+
+	cmd := newTestRoot(t)
+	got, err := ExpandAlias(cmd, []string{"--raw-output", "pl"})
+	if err != nil {
+		t.Fatalf("ExpandAlias() error = %v", err)
+	}
+	want := []string{"--raw-output", "pr", "list"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ExpandAlias() = %v, want %v", got, want)
+	}
+}
+
+func TestExpandAliasCorruptConfigFallsBack(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	path, err := config.AliasFilePath()
+	if err != nil {
+		t.Fatalf("AliasFilePath() error = %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(path, []byte("{not valid json"), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	cmd := newTestRoot(t)
+	got, err := ExpandAlias(cmd, []string{"pl"})
+	if err != nil {
+		t.Fatalf("ExpandAlias() error = %v, want nil (fallback to no aliases)", err)
+	}
+	want := []string{"pl"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ExpandAlias() = %v, want %v", got, want)
+	}
+}
+
+func TestExpandAliasCorruptConfigWarnsOnStderr(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	path, err := config.AliasFilePath()
+	if err != nil {
+		t.Fatalf("AliasFilePath() error = %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(path, []byte("{not valid json"), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	var stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, io.Discard, &stderr)
+	if err != nil {
+		t.Fatalf("newCmdRootWithWriters() error = %v", err)
+	}
+	if _, err := ExpandAlias(cmd, []string{"pl"}); err != nil {
+		t.Fatalf("ExpandAlias() error = %v, want nil (fallback to no aliases)", err)
+	}
+	if !strings.Contains(stderr.String(), "warning: failed to load aliases") {
+		t.Errorf("stderr = %q, want warning about failed alias load", stderr.String())
+	}
+}
+
+func TestExpandAliasWithEscapedSpaceInExpansion(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	// Windows path with a space survives as a single token via `\ `.
+	if err := config.SaveAlias("go", "browse C:\\Program\\ Files\\x"); err != nil {
+		t.Fatalf("SaveAlias() error = %v", err)
+	}
+
+	cmd := newTestRoot(t)
+	got, err := ExpandAlias(cmd, []string{"go"})
+	if err != nil {
+		t.Fatalf("ExpandAlias() error = %v", err)
+	}
+	want := []string{"browse", `C:\Program Files\x`}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ExpandAlias() = %v, want %v", got, want)
+	}
+}
+
+// TestRootSilencesUsageOnAuthenticationError is a regression test for issue
+// #49: before SilenceUsage was set on the root command, an unauthenticated
+// invocation would print the full Cobra usage/help block before the
+// "not authenticated: run `ag auth login`" message, making the error hard to
+// spot. The root command now silences usage so only the actionable error
+// reaches the user.
+func TestRootSilencesUsageOnAuthenticationError(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{
+		Config: unauthenticatedRootTestConfig{},
+	}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetArgs([]string{"repo", "list"})
+
+	err = cmd.Execute()
+	if !errors.Is(err, config.ErrNotAuthenticated) {
+		t.Fatalf("Execute() error = %v, want %v", err, config.ErrNotAuthenticated)
+	}
+	if err.Error() != config.ErrNotAuthenticated.Error() {
+		t.Fatalf("Execute() error = %q, want %q", err, config.ErrNotAuthenticated)
+	}
+	if err := cmdutil.FlushWriter(cmd.OutOrStdout()); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdutil.FlushWriter(cmd.ErrOrStderr()); err != nil {
+		t.Fatal(err)
+	}
+
+	output := stdout.String() + stderr.String()
+	if strings.Contains(output, "Usage:") {
+		t.Fatalf("command output contains Usage block:\n%s", output)
 	}
 }

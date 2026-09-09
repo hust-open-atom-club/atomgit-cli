@@ -9,70 +9,90 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 )
 
-func TestNewCmdVersion_Text(t *testing.T) {
+func setVersionMetadata(t *testing.T) {
+	t.Helper()
 	oldV, oldC, oldB := version.Version, version.Commit, version.BuildDate
-	version.Version = "v1.0.0"
+	version.Version = "v1.2.3"
 	version.Commit = "abc1234"
-	version.BuildDate = "2026-07-12"
-	defer func() {
+	version.BuildDate = "2026-07-24T00:00:00Z"
+	t.Cleanup(func() {
 		version.Version = oldV
 		version.Commit = oldC
 		version.BuildDate = oldB
-	}()
+	})
+}
 
+func TestNewCmdVersion_Text(t *testing.T) {
+	setVersionMetadata(t)
+
+	var buf bytes.Buffer
+	cmd := NewCmdVersion()
+	cmd.SetOut(&buf)
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	want := "ag version v1.2.3 (commit: abc1234, built: 2026-07-24T00:00:00Z)\n"
+	if got := buf.String(); got != want {
+		t.Errorf("output = %q, want %q", got, want)
+	}
+}
+
+func TestFormatTextOmitsUnknownMetadata(t *testing.T) {
 	tests := []struct {
 		name string
-		args []string
+		info version.Info
 		want string
 	}{
 		{
-			name: "release text output",
-			args: []string{},
-			want: "ag version v1.0.0 (commit: abc1234, built: 2026-07-12)\n",
+			name: "all metadata",
+			info: version.Info{
+				Version: "v1.0.0", Commit: "abc1234", BuildDate: "2026-07-15T00:00:00Z",
+			},
+			want: "ag version v1.0.0 (commit: abc1234, built: 2026-07-15T00:00:00Z)\n",
 		},
 		{
-			name: "dev text output",
-			args: []string{},
-			want: "ag version dev (commit: unknown, built: unknown)\n",
+			name: "commit only",
+			info: version.Info{
+				Version: "v1.0.0", Commit: "abc1234", BuildDate: "unknown",
+			},
+			want: "ag version v1.0.0 (commit: abc1234)\n",
+		},
+		{
+			name: "build date only",
+			info: version.Info{
+				Version: "v1.0.0", Commit: "unknown", BuildDate: "2026-07-15T00:00:00Z",
+			},
+			want: "ag version v1.0.0 (built: 2026-07-15T00:00:00Z)\n",
+		},
+		{
+			name: "no optional metadata",
+			info: version.Info{
+				Version: "v1.0.0", Commit: " UNKNOWN ", BuildDate: "",
+			},
+			want: "ag version v1.0.0\n",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.name == "dev text output" {
-				version.Version = "dev"
-				version.Commit = "unknown"
-				version.BuildDate = "unknown"
-			} else {
-				version.Version = "v1.0.0"
-				version.Commit = "abc1234"
-				version.BuildDate = "2026-07-12"
-			}
-
-			var buf bytes.Buffer
-			cmd := NewCmdVersion()
-			cmd.SetOut(&buf)
-			cmd.SetArgs(tt.args)
-			if err := cmd.Execute(); err != nil {
-				t.Fatalf("Execute() error = %v", err)
-			}
-			if got := buf.String(); got != tt.want {
-				t.Errorf("output = %q, want %q", got, tt.want)
+			if got := formatText(tt.info); got != tt.want {
+				t.Errorf("formatText() = %q, want %q", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestNewCmdVersion_JSON(t *testing.T) {
-	oldV, oldC, oldB := version.Version, version.Commit, version.BuildDate
-	version.Version = "v2.0.0"
-	version.Commit = "deadbeef"
-	version.BuildDate = "2026-01-01T00:00:00Z"
-	defer func() {
-		version.Version = oldV
-		version.Commit = oldC
-		version.BuildDate = oldB
-	}()
+func TestText_MatchesVersionCLIContract(t *testing.T) {
+	setVersionMetadata(t)
+
+	want := "ag version v1.2.3 (commit: abc1234, built: 2026-07-24T00:00:00Z)\n"
+	if got := Text(); got != want {
+		t.Errorf("Text() = %q, want %q", got, want)
+	}
+}
+
+func TestNewCmdVersion_JSONPreservesFixedFields(t *testing.T) {
+	setVersionMetadata(t)
 
 	var buf bytes.Buffer
 	cmd := NewCmdVersion()
@@ -82,18 +102,22 @@ func TestNewCmdVersion_JSON(t *testing.T) {
 		t.Fatalf("Execute() error = %v", err)
 	}
 
-	var info version.Info
-	if err := json.Unmarshal(buf.Bytes(), &info); err != nil {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(buf.Bytes(), &fields); err != nil {
 		t.Fatalf("invalid JSON: %v\noutput: %s", err, buf.String())
 	}
-	if info.Version != "v2.0.0" {
-		t.Errorf("Version = %q, want %q", info.Version, "v2.0.0")
+	wantFields := map[string]string{
+		"version":   `"v1.2.3"`,
+		"commit":    `"abc1234"`,
+		"buildDate": `"2026-07-24T00:00:00Z"`,
 	}
-	if info.Commit != "deadbeef" {
-		t.Errorf("Commit = %q, want %q", info.Commit, "deadbeef")
+	if len(fields) != len(wantFields) {
+		t.Fatalf("fields = %v, want only version, commit and buildDate", fields)
 	}
-	if info.BuildDate != "2026-01-01T00:00:00Z" {
-		t.Errorf("BuildDate = %q, want %q", info.BuildDate, "2026-01-01T00:00:00Z")
+	for name, want := range wantFields {
+		if got, ok := fields[name]; !ok || string(got) != want {
+			t.Errorf("field %q = %s, want %s", name, got, want)
+		}
 	}
 }
 
@@ -134,7 +158,15 @@ func TestNewCmdVersion_Help(t *testing.T) {
 		t.Fatalf("Execute() error = %v", err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "version") {
-		t.Errorf("help output does not mention version: %s", out)
+	for _, want := range []string{
+		"Show version information",
+		"Usage:",
+		"version [flags]",
+		"--json",
+		"Output version information as JSON",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("help output does not contain %q:\n%s", want, out)
+		}
 	}
 }
