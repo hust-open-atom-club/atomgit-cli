@@ -210,8 +210,8 @@ func TestReleaseUploadValidatesInputsBeforeAnyRequest(t *testing.T) {
 			wantError: "must not be empty",
 		},
 		{
-			name:      "default whitespace name",
-			args:      []string{"alice/demo", "v1.0.0", dirPath, "--name", "   "},
+			name:      "default whitespace basename",
+			args:      []string{"alice/demo", "v1.0.0", filepath.Join(dir, "   ")},
 			wantError: "must not be empty",
 		},
 		{
