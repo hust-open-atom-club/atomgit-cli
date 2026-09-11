@@ -1,0 +1,34 @@
+{
+  "name": "related-branches-update",
+  "source": "synthetic; modeled on existing client implementation and mock tests; not a live capture",
+  "version": "v5",
+  "method": "PUT",
+  "path": "/repos/{owner}/{repo}/issues/1/related_branches",
+  "statuses": [
+    200
+  ],
+  "body_policy": "optional",
+  "examples": [
+    {
+      "name": "empty",
+      "status": 200
+    },
+    {
+      "name": "json",
+      "status": 200,
+      "body": [
+        "main"
+      ]
+    }
+  ],
+  "shape": {
+    "types": [
+      "array"
+    ],
+    "items": {
+      "types": [
+        "string"
+      ]
+    }
+  }
+}

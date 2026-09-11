@@ -1,0 +1,75 @@
+{
+  "name": "repository",
+  "source": "synthetic; modeled on existing client implementation and mock tests; not a live capture",
+  "version": "v5",
+  "method": "GET",
+  "path": "/repos/{owner}/{repo}",
+  "statuses": [
+    200
+  ],
+  "body_policy": "required",
+  "examples": [
+    {
+      "name": "repository",
+      "status": 200,
+      "body": {
+        "id": 1,
+        "name": "fixture-repo",
+        "full_name": "fixture-owner/fixture-repo",
+        "default_branch": "main",
+        "owner": {
+          "login": "fixture-owner"
+        }
+      }
+    }
+  ],
+  "shape": {
+    "types": [
+      "object"
+    ],
+    "properties": {
+      "id": {
+        "types": [
+          "integer"
+        ]
+      },
+      "name": {
+        "types": [
+          "string"
+        ]
+      },
+      "full_name": {
+        "types": [
+          "string"
+        ]
+      },
+      "default_branch": {
+        "types": [
+          "string"
+        ]
+      },
+      "owner": {
+        "types": [
+          "object"
+        ],
+        "properties": {
+          "login": {
+            "types": [
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "login"
+        ]
+      }
+    },
+    "required": [
+      "id",
+      "name",
+      "full_name",
+      "default_branch",
+      "owner"
+    ]
+  }
+}
