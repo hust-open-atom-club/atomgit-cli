@@ -81,6 +81,9 @@
 - [ag notification mark-read](#ag-notification-mark-read) — Mark repository notifications as read
 - [ag org](#ag-org) — Manage organizations
 - [ag org list](#ag-org-list) — List organizations for the authenticated user
+- [ag org members](#ag-org-members) — List organization members
+- [ag org repos](#ag-org-repos) — List organization repositories
+- [ag org view](#ag-org-view) — View an organization
 - [ag pr](#ag-pr) — Manage pull requests
 - [ag pr checkout](#ag-pr-checkout) — Check out a pull request locally
 - [ag pr checks](#ag-pr-checks) — Show CI checks for a pull request's current head commit
@@ -1215,7 +1218,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--assignee` | Filter by assignee: @me for issues assigned to you across all your repositories | `` | local |
+| `--author` | Filter by author: @me for issues you created across all your repositories | `` | local |
 | `--help` | Show help for command | `false` | inherited |
+| `--involved` | Filter by involvement: @me for issues you created or are assigned to across all your repositories | `` | local |
 | `--json` | Output issues as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `-L, --limit` | Maximum number of issues to list | `30` | local |
@@ -1796,7 +1802,7 @@ Usage: `ag org`
 
 Manage organizations
 
-View organizations associated with your AtomGit account.
+List organizations associated with your AtomGit account and inspect organization details, members, and repositories.
 
 ### Flags
 
@@ -1827,6 +1833,76 @@ List organizations for the authenticated user
 ag org list
   ag org list --limit 100
   ag org list --json
+```
+
+
+## ag org members
+
+Usage: `ag org members <org> [flags]`
+
+List organization members
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output members as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of members to list | `30` | local |
+
+### Example
+
+```bash
+ag org members my-organization
+  ag org members my-organization --limit 100
+  ag org members my-organization --json
+```
+
+
+## ag org repos
+
+Usage: `ag org repos <org> [flags]`
+
+List organization repositories
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output repositories as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of repositories to list | `30` | local |
+
+### Example
+
+```bash
+ag org repos my-organization
+  ag org repos my-organization --limit 100
+  ag org repos my-organization --json
+```
+
+
+## ag org view
+
+Usage: `ag org view <org> [flags]`
+
+View an organization
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output organization as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+### Example
+
+```bash
+ag org view my-organization
+  ag org view my-organization --json
 ```
 
 
@@ -2238,9 +2314,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--assignee` | Filter by assignee: @me for PRs assigned to you across all your repositories | `` | local |
+| `--author` | Filter by author: @me for PRs you created across all your repositories | `` | local |
 | `--help` | Show help for command | `false` | inherited |
 | `--json` | Output pull requests as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--review-needed` | Filter by requested reviewer: @me for PRs that need your review across all your repositories | `` | local |
+| `--review-requested` | Filter by requested approver: @me for PRs that need your approval across all your repositories | `` | local |
 | `-L, --limit` | Maximum number of PRs to list | `30` | local |
 | `-s, --state` | Filter by state: open, closed, all | `open` | local |
 
