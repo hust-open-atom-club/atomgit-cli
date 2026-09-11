@@ -88,6 +88,16 @@
    npm test
    ```
 
+   通用 `CI` workflow 不在 Pull Request 或非 `main` 分支 push 时运行；它只在提交
+   进入 `main` 后执行完整测试矩阵，以验证实际合并提交。PR 作者必须在提交前运行与
+   改动相符的本地检查，并在 PR 描述中列出结果；评审者据此审查改动。PR 中没有
+   `CI` 检查是预期行为，不应等待该检查或将其配置为合并所需状态。合并后由维护者
+   跟踪 `main` 上的完整 CI，失败时应及时修复，必要时回退对应合并。
+
+   `Update Nix packages` 是独立的维护 workflow，仍可在 `main`、`test`、
+   `nix-update` 分支 push 或手动触发时运行。它会在自身流程中完成 Nix package
+   构建与版本元数据验证，因此非 `main` 的 Nix 更新不依赖通用 CI。
+
    `make test-race` 在 Linux CI 中运行 `go test -race -count=1 ./...`。可以通过
    `RACE_PACKAGES` 覆盖包列表，但除非某个包存在已记录的竞态检测器兼容问题，CI
    应保持默认的全模块覆盖。该目标设置了 Go 文档支持的
@@ -149,7 +159,7 @@
    - 描述更改的内容和原因
    - 关联相关的 issue（如果有）
    - 说明执行过的测试及结果
-   - 确保 CI 检查通过
+   - 确认没有未解释的评审阻塞项；通用 CI 将在合并到 `main` 后运行
 
 7. **请求 AI 代码评审**
 

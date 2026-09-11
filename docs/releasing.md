@@ -5,6 +5,7 @@
 ## 目录
 
 - [发布打包](#发布打包)
+- [CI 验证时机](#ci-验证时机)
 - [自动发布 AtomGit Release](#自动发布-atomgit-release)
 - [发布到 npm registry](#发布到-npm-registry)
 - [维护 Homebrew tap](#维护-homebrew-tap)
@@ -13,6 +14,19 @@
 - [维护 Scoop](#维护-scoop)
 - [维护 OpenKylin package](#维护-openkylin-package)
 - [维护 AUR package](#维护-aur-package)
+
+## CI 验证时机
+
+通用 `.gitcode/workflows/ci.yml` 只监听 `main` 分支的 push，不在 Pull Request 或
+其他分支 push 时运行。完整测试、竞态检测、发布目标交叉编译、平台测试编译、漏洞
+扫描和 npm 测试因此针对已经进入 `main` 的精确提交执行。PR 作者需在合并前完成与
+改动相符的本地验证并在 PR 描述中记录结果；PR 不应依赖一个不会启动的通用 CI
+必需检查。合并后应确认 `main` 的运行成功，失败时停止后续发布并优先修复或回退。
+
+Nix 更新使用独立的 `.gitcode/workflows/update-nix.yml`。该 workflow 保留
+`main`、`test`、`nix-update` 分支 push 和手动触发入口，并在自身流程中构建、验证
+Nix package；非 `main` 的维护分支不依赖通用 CI。Nix 更新提交进入 `main` 后，仍会
+由通用 CI 对该精确提交运行完整矩阵。
 
 ## 发布打包
 
@@ -183,7 +197,7 @@ npm run publish:npm -- vX.Y.Z dist/vX.Y.Z/npm --publish
 
 Nix package 使用 `go` 行声明的最低版本约束，并由锁定的 nixpkgs input 提供实际编译器；它不要求与官方 Release 使用的建议工具链补丁版本完全一致。更新 flake inputs 时仍需确认所有支持平台提供的 Go 版本不低于 1.26.6。
 
-`.gitcode/workflows/update-nix.yml` 每天在默认分支上运行，也支持手动触发。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；构建验证后在内容变化时直接提交到默认分支。工作流需要 `repository: write`，并在单次 `git push` 中使用自动生成的 `ATOMGIT_TOKEN`，不需要额外长期 token。
+`.gitcode/workflows/update-nix.yml` 在 `main`、`test`、`nix-update` 分支 push 时运行，也支持手动触发。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；它通过 `nix-update --build` 和 stable 二进制版本元数据回读完成自身验证，再在内容变化时使用配置的 `NIX_UPDATE_TOKEN` 通过 Contents API 写回当前目标分支。工作流需要 `repository: write`；token 的安全加固与工具链固定由 Issue #123 跟踪。
 
 工作流 runner 优先通过校园网联合镜像站（CERNET）执行 Nix 单用户安装，并禁用安装器默认添加的官方 channel，再从 CERNET 的 `nixpkgs-unstable` channel 安装 `nix-update`；Nix binary cache 按优先级依次尝试 CERNET、清华 TUNA、SJTU、USTC，最后回退到官方 cache。项目 flake 的 nixpkgs inputs 是例外，仍固定使用 NJU Git 镜像；两个 inputs 分别跟踪 `nixos-unstable` 和 `nixpkgs-26.05-darwin`。
 
