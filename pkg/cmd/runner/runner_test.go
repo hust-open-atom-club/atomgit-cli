@@ -209,6 +209,30 @@ func TestRunnerListRejectsChangingTotalCount(t *testing.T) {
 	}
 }
 
+func TestRunnerListRejectsTotalCountOverrun(t *testing.T) {
+	requests := 0
+	transport := runnerRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		requests++
+		page, _ := strconv.Atoi(req.URL.Query().Get("page"))
+		items := make([]string, 0, maxRunnersPerPage)
+		start := (page - 1) * maxRunnersPerPage
+		for i := start; i < start+maxRunnersPerPage; i++ {
+			items = append(items, fmt.Sprintf(`{"id":"r%d"}`, i))
+		}
+		return runnerResponse(req, http.StatusOK, fmt.Sprintf(`{"total_count":150,"runners":[%s]}`, strings.Join(items, ","))), nil
+	})
+
+	cmd := NewCmdRunner(newRunnerFactory(transport, "token"))
+	cmd.SetArgs([]string{"list", "owner/repo"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "inconsistent pagination") {
+		t.Fatalf("error = %v, want inconsistent pagination", err)
+	}
+	if requests != 2 {
+		t.Fatalf("requests = %d, want 2", requests)
+	}
+}
+
 func TestRunnerListValidationPrecedesAuthentication(t *testing.T) {
 	f := newRunnerFactory(nil, "")
 	f.Config = runnerTestConfig{tokenErr: config.ErrNotAuthenticated}

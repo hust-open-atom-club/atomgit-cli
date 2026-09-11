@@ -132,6 +132,9 @@ func listAllRunners(client *actions.Client, owner, repo string, shared bool, lim
 			seenIDs[key] = struct{}{}
 			newItems++
 			runners = append(runners, runner)
+			if expectedTotal > 0 && len(runners) > expectedTotal {
+				return nil, fmt.Errorf("inconsistent pagination: API reports %d runners but %d were returned", expectedTotal, len(runners))
+			}
 			if limit > 0 && len(runners) >= limit {
 				return runners[:limit], nil
 			}
@@ -139,7 +142,7 @@ func listAllRunners(client *actions.Client, owner, repo string, shared bool, lim
 		if newItems == 0 {
 			return nil, fmt.Errorf("pagination made no progress at page %d", page)
 		}
-		if expectedTotal > 0 && len(runners) >= expectedTotal {
+		if expectedTotal > 0 && len(runners) == expectedTotal {
 			break
 		}
 		if len(response.Runners) < maxRunnersPerPage {
