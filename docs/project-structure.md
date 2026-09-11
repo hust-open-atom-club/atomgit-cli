@@ -41,6 +41,7 @@ atomgit-cli/
 │   ├── api/                    # AtomGit API 客户端、类型和分页逻辑
 │   │   ├── actions/            # Actions API v8 客户端与类型
 │   │   └── testdata/           # API 测试响应样本
+│   ├── apicontract/            # 离线契约回放、响应结构检查与可选只读 smoke
 │   ├── browser/                # 打开系统浏览器
 │   ├── config/                 # XDG 配置与凭据读写
 │   ├── oauth/                  # OAuth 登录流程
@@ -70,6 +71,7 @@ atomgit-cli/
 ├── bin/
 │   └── ag.js                   # npm 主包的平台二进制启动器
 ├── docs/
+│   ├── api-contracts.md        # OpenAPI fixture 格式与验证流程
 │   ├── configuration.md        # 认证、凭据和运行配置
 │   ├── cross_repo_pr_demo.md   # 跨仓库 PR 示例
 │   ├── installation.md         # 完整安装指南
