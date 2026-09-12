@@ -206,6 +206,27 @@ ag repo delete owner/repo --yes
 
 `ag repo fork list` 通过 `GET /repos/{owner}/{repo}/forks` 只读列出已有 Fork，支持仓库推断、分页、`--limit` 和 `--json`；不会创建或修改任何仓库。
 
+### 仓库洞察
+
+```bash
+# 语言占比和贡献者统计
+ag repo insights languages owner/repo
+ag repo insights contributors owner/repo --limit 50
+
+# 仓库事件、关注者和收藏者；省略仓库时从当前 Git 仓库推断
+ag repo insights events --limit 100
+ag repo insights watchers --limit 100 --json
+ag repo insights stargazers owner/repo --json
+
+# 下载统计
+ag repo insights downloads owner/repo
+ag repo insights downloads owner/repo --json
+```
+
+`ag repo insights` 下的命令都只发送 GET 请求。它们分别读取 `/languages`、`/contributors/statistic`、`/events`、`/subscribers`、`/stargazers` 和 `/download_statistics`。`events`、`watchers`、`stargazers` 会跨页读取并在达到 `--limit` 后停止；贡献者统计接口不分页，因此 `contributors --limit` 会对完整响应按提交数降序排列后截取。四个列表命令的默认上限均为 30。
+
+文本输出中，语言按占比降序排列，贡献者按提交数降序排列，下载明细按日期降序排列；相同数值使用名称作为稳定的次级排序条件。空响应不会报错。每个子命令都支持 `--json`，并输出固定字段名：语言和列表结果为数组，下载结果包含 `periodDownloads`、`historyDownloads` 和 `details`。
+
 ### 仓库内容读取
 
 ```bash

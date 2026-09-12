@@ -47,6 +47,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 		"delete":    {"yes"},
 		"edit":      {"default-branch", "description", "name", "private", "public", "visibility", "yes"},
 		"fork":      {"clone", "description", "name", "private", "public"},
+		"insights":  nil,
 		"list":      {"limit"},
 		"mirror":    nil,
 		"push-rule": nil,
@@ -55,6 +56,18 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 		"sync":      {"branch", "force", "yes"},
 		"transfer":  {"password-stdin", "to", "yes"},
 		"view":      {"web"},
+	}
+	for _, name := range []string{"languages", "contributors", "events", "watchers", "stargazers", "downloads"} {
+		child, _, err := cmd.Find([]string{"insights", name})
+		if err != nil || child.Name() != name {
+			t.Fatalf("insights %s command: %v", name, err)
+		}
+		if child.Flags().Lookup("json") == nil {
+			t.Errorf("insights %s --json flag was not registered", name)
+		}
+		if name != "languages" && name != "downloads" && child.Flags().Lookup("limit") == nil {
+			t.Errorf("insights %s --limit flag was not registered", name)
+		}
 	}
 	for name, flags := range want {
 		child, _, err := cmd.Find([]string{name})
