@@ -1,0 +1,68 @@
+{
+  "name": "issue-create",
+  "source": "synthetic; CreateIssueWithAssignee and Issue #99 HTTP 200/201 regression; not a live capture",
+  "version": "v5",
+  "method": "POST",
+  "path": "/repos/{owner}/{repo}/issues",
+  "statuses": [
+    200,
+    201
+  ],
+  "body_policy": "required",
+  "examples": [
+    {
+      "name": "ok",
+      "status": 200,
+      "body": {
+        "id": 1,
+        "number": "1",
+        "title": "Synthetic contract issue",
+        "state": "open"
+      }
+    },
+    {
+      "name": "created",
+      "status": 201,
+      "body": {
+        "id": 1,
+        "number": 1,
+        "title": "Synthetic contract issue",
+        "state": "open"
+      }
+    }
+  ],
+  "shape": {
+    "types": [
+      "object"
+    ],
+    "properties": {
+      "id": {
+        "types": [
+          "integer"
+        ]
+      },
+      "number": {
+        "types": [
+          "string",
+          "integer"
+        ]
+      },
+      "title": {
+        "types": [
+          "string"
+        ]
+      },
+      "state": {
+        "types": [
+          "string"
+        ]
+      }
+    },
+    "required": [
+      "id",
+      "number",
+      "title",
+      "state"
+    ]
+  }
+}

@@ -205,6 +205,23 @@ atomgit-cli/
 - 请求和响应类型应使用明确的 `json` 标签，并与对应 API 的路径、HTTP 方法和成功状态码保持一致
 - 通过小型接口和 `cmdutil.Factory` 注入依赖；测试使用模拟 HTTP 服务，不依赖真实凭据或外部网络
 
+### OpenAPI 契约验证
+
+新增或修改 API 路径、成功状态码、空响应约定、分页结构或 DTO 时，同步维护
+`internal/api/testdata/contracts/` 的 fixture 和 `internal/api/contract_test.go`
+中的客户端回放。运行 `make test-contract`；这些离线检查也包含在默认 `go test ./...`
+和现有 CI 中，不需要真实凭据。
+
+fixture 必须注明合成或脱敏采集来源。使用专用测试仓库采集只读响应，在仓库外完成脱敏：
+把账号、仓库、ID、时间、正文和 URL 替换为合成值，移除所有凭据及私有信息，
+只保留契约需要的结构和白名单响应头。不要将原始响应放进 Git 再删除。
+写操作只使用合成样例或既有经人工审查的脱敏样例，不为更新 fixture 操作真实资源。
+评审时核对差异是否是服务契约变化，而不是放宽类型或删掉必需字段让测试通过。
+详细格式、采集与审查步骤见 [API 契约测试](docs/api-contracts.md)。
+
+在线检查仅通过 `make test-contract-live` 显式启用，必须提供单独的测试账号 token 和测试仓库。
+它只发送 GET，不读取 `ag auth` 配置，不打印或保存响应正文，也不自动覆盖 fixture。
+
 ### 代码风格
 
 - 使用 `gofmt` 格式化代码

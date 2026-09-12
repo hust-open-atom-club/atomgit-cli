@@ -1,0 +1,17 @@
+{
+  "name": "artifact-delete",
+  "source": "synthetic; modeled on existing client implementation and mock tests; not a live capture",
+  "version": "v8",
+  "method": "DELETE",
+  "path": "/repos/{owner}/{repo}/actions/artifacts/1",
+  "statuses": [
+    204
+  ],
+  "body_policy": "empty",
+  "examples": [
+    {
+      "name": "no-content",
+      "status": 204
+    }
+  ]
+}

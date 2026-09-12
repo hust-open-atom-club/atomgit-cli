@@ -164,6 +164,84 @@ type WorkflowListResponse struct {
 	Workflows  []Workflow `json:"workflows"`
 }
 
+// Runner represents a host runner exposed by AtomGit Actions. Busy and
+// Online are pointers because the API may omit either field for a runner
+// scope that does not expose that state; callers must not infer a value.
+type Runner struct {
+	ID           RunnerIdentifier `json:"id"`
+	Name         string           `json:"name"`
+	OS           string           `json:"os,omitempty"`
+	Platform     string           `json:"platform,omitempty"`
+	Architecture string           `json:"architecture,omitempty"`
+	Status       string           `json:"status,omitempty"`
+	Busy         *bool            `json:"busy,omitempty"`
+	Online       *bool            `json:"online,omitempty"`
+	Labels       []RunnerLabel    `json:"labels,omitempty"`
+	Scope        string           `json:"scope,omitempty"`
+	RunnerType   string           `json:"runner_type,omitempty"`
+	Version      string           `json:"version,omitempty"`
+}
+
+// RunnerIdentifier accepts both numeric and string IDs returned by different
+// Actions deployments while keeping JSON output stable as a string.
+type RunnerIdentifier string
+
+func (id *RunnerIdentifier) UnmarshalJSON(data []byte) error {
+	data = bytes.TrimSpace(data)
+	if len(data) == 0 || bytes.Equal(data, []byte("null")) {
+		*id = ""
+		return nil
+	}
+	if data[0] == '"' {
+		var value string
+		if err := json.Unmarshal(data, &value); err != nil {
+			return fmt.Errorf("decode runner id: %w", err)
+		}
+		*id = RunnerIdentifier(value)
+		return nil
+	}
+	var number json.Number
+	if err := json.Unmarshal(data, &number); err != nil {
+		return fmt.Errorf("decode runner id: %w", err)
+	}
+	*id = RunnerIdentifier(number.String())
+	return nil
+}
+
+// RunnerLabel normalizes the object and string label forms used by Actions
+// APIs. String labels are represented with only Name populated.
+type RunnerLabel struct {
+	ID   RunnerIdentifier `json:"id,omitempty"`
+	Name string           `json:"name"`
+	Type string           `json:"type,omitempty"`
+}
+
+func (label *RunnerLabel) UnmarshalJSON(data []byte) error {
+	data = bytes.TrimSpace(data)
+	if len(data) == 0 || bytes.Equal(data, []byte("null")) {
+		*label = RunnerLabel{}
+		return nil
+	}
+	if data[0] == '"' {
+		if err := json.Unmarshal(data, &label.Name); err != nil {
+			return fmt.Errorf("decode runner label: %w", err)
+		}
+		return nil
+	}
+	type alias RunnerLabel
+	var value alias
+	if err := json.Unmarshal(data, &value); err != nil {
+		return fmt.Errorf("decode runner label: %w", err)
+	}
+	*label = RunnerLabel(value)
+	return nil
+}
+
+type RunnerListResponse struct {
+	TotalCount int      `json:"total_count"`
+	Runners    []Runner `json:"runners"`
+}
+
 type WorkflowDispatchPayload struct {
 	Ref    string            `json:"ref"`
 	Inputs map[string]string `json:"inputs,omitempty"`

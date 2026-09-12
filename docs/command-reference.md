@@ -157,6 +157,9 @@
 - [ag run list](#ag-run-list) — List workflow runs
 - [ag run step-log](#ag-run-step-log) — Fetch step-level logs for a workflow job
 - [ag run view](#ag-run-view) — View a workflow run, jobs, logs, and artifacts
+- [ag runner](#ag-runner) — Inspect AtomGit Actions host runners
+- [ag runner list](#ag-runner-list) — List host runners configured for a repository
+- [ag runner shared](#ag-runner-shared) — List host runners shared with a repository
 - [ag search](#ag-search) — search atomgit
 - [ag search issues](#ag-search-issues) — search issues
 - [ag search repositories](#ag-search-repositories) — search repositories
@@ -3840,6 +3843,85 @@ ag run view owner/repo 12345
   ag run view owner/repo 12345 --job job-id --log-file job-logs.zip
   ag run view owner/repo 12345 --artifact artifact-id
   ag run view owner/repo 12345 --artifact artifact-id --artifact-file build.zip --overwrite
+```
+
+
+## ag runner
+
+Usage: `ag runner`
+
+Inspect AtomGit Actions host runners
+
+List repository-specific and shared AtomGit Actions host runners. These commands are read-only.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+### Example
+
+```bash
+ag runner list owner/repo
+  ag runner shared owner/repo --json
+```
+
+
+## ag runner list
+
+Usage: `ag runner list [<owner>/<repo>] [flags]`
+
+List host runners configured for a repository
+
+List host runners configured for a repository. This command is read-only and does not change runner configuration.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output runners as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of runners to list (0 means all) | `0` | local |
+
+### Example
+
+```bash
+ag runner list owner/repo
+  ag runner list owner/repo --limit 25 --json
+```
+
+
+## ag runner shared
+
+Usage: `ag runner shared [<owner>/<repo>] [flags]`
+
+List host runners shared with a repository
+
+List host runners shared with a repository. This command is read-only and does not change runner configuration.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output runners as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of runners to list (0 means all) | `0` | local |
+
+### Example
+
+```bash
+ag runner shared owner/repo
+  ag runner shared owner/repo --limit 25 --json
 ```
 
 

@@ -19,6 +19,7 @@
 - [Milestone](#milestone)
 - [Actions 运行记录 (run)](#actions-运行记录-run)
 - [Actions 工作流管理 (workflow)](#actions-工作流管理-workflow)
+- [Actions Runner 查询 (runner)](#actions-runner-查询-runner)
 - [通用 API 请求](#通用-api-请求)
 - [Release](#release)
 - [License](#license)
@@ -960,6 +961,25 @@ ag workflow run owner/repo ci.yml --ref feature-branch -f env=production -F debu
 ```
 
 `ag workflow validate` 把本地文件作为 `base64_content` 发给 Actions API v8。HTTP 200 且 `valid=false` 时命令仍以非零状态退出，方便 CI 拦截无效 YAML；`--json` 会把完整响应写到 stdout。`ag workflow run` 可以按工作流 ID、名称或相对路径（basename）选择目标；名称或 basename 同时匹配多个工作流时会报错并要求改用精确的 workflow ID 或完整路径。`--ref` 缺省时使用仓库的默认分支（而非假定为 `main`），无法确定默认分支时需显式传入 `--ref`。`-f/--raw-field` 与 `-F/--field` 均为 `key=value` 格式，参数值会作为 `workflow_dispatch` 的 inputs 传递。
+
+## Actions Runner 查询 (runner)
+
+`ag runner` 只读查询仓库专属和共享给仓库的主机 Runner，不会修改 Runner 配置。默认跟随 API 分页返回全部结果；使用 `--limit` 可限制返回数量，`--json` 输出稳定的机器可读结构。
+
+```bash
+# 查询仓库专属 Runner
+ag runner list owner/repo
+ag runner list owner/repo --limit 20 --json
+
+# 查询分享给仓库的 Runner
+ag runner shared owner/repo
+ag runner shared owner/repo --json
+
+# 在当前 Git 仓库中推断 owner/repo
+ag runner list
+```
+
+文本输出会区分 `repository` 与 `shared` 来源，并显示 ID、名称、状态、busy/online（服务端未返回时显示 `-`）、平台、操作系统和标签。命令检测到分页重复或 API 总数与实际返回不一致时会失败，避免把不完整列表当成完整结果。
 
 
 ## 通用 API 请求

@@ -1,0 +1,38 @@
+{
+  "name": "workflow-dispatch",
+  "source": "synthetic; modeled on existing client implementation and mock tests; not a live capture",
+  "version": "v8",
+  "method": "POST",
+  "path": "/repos/{owner}/{repo}/actions/workflows/workflow-fixture/dispatches",
+  "statuses": [
+    200,
+    201,
+    202,
+    204
+  ],
+  "body_policy": "optional",
+  "examples": [
+    {
+      "name": "ok",
+      "status": 200,
+      "body": {}
+    },
+    {
+      "name": "created",
+      "status": 201
+    },
+    {
+      "name": "accepted",
+      "status": 202
+    },
+    {
+      "name": "no-content",
+      "status": 204
+    }
+  ],
+  "shape": {
+    "types": [
+      "object"
+    ]
+  }
+}
