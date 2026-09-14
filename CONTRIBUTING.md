@@ -119,7 +119,7 @@
    npm 测试使用假的 registry 和子进程注入，不得发布软件包、读取真实 npm token，
    也不得访问真实 registry。
 
-   修改命令参数或输出时，请执行对应命令的 `--help` 冒烟检查；纯文档修改至少运行 `git diff --check`。
+   修改命令参数或输出时，请执行对应命令的 `--help` 冒烟检查；纯文档修改至少运行 `git diff --check`。命令树或命令元数据发生变化时，请运行 `make docs-reference` 更新自动生成的 `docs/command-reference.md`，并运行 `make docs-reference-check` 确认没有文档漂移。
 
 5. **提交更改**
 

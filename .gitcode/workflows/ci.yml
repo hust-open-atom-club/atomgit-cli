@@ -49,6 +49,9 @@ jobs:
       - name: Run tests
         run: make test
 
+      - name: Check generated command reference
+        run: make docs-reference-check
+
   race-test:
     name: Linux race test
     runs-on: [ubuntu-latest, x64, small]

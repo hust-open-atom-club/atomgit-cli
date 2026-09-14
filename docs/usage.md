@@ -1,6 +1,6 @@
 # 命令使用指南
 
-本文档介绍 AtomGit CLI 各命令的常用参数和示例。安装方法请参阅[安装指南](installation.md)，认证与其他配置请参阅[配置指南](configuration.md)。
+本文档介绍 AtomGit CLI 各命令的常用参数和示例。安装方法请参阅[安装指南](installation.md)，认证与其他配置请参阅[配置指南](configuration.md)。完整的命令树、参数和别名索引参阅[命令参考](command-reference.md)。
 
 ## 目录
 
