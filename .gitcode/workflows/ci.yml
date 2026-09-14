@@ -79,22 +79,10 @@ jobs:
         run: make test-race
 
   cross-build:
-    name: Cross-build release target
+    name: Cross-build all release targets
     runs-on: [ubuntu-latest, x64, small]
     env:
       GOPROXY: https://goproxy.cn,direct
-    strategy:
-      fail-fast: false
-      max-parallel: 3
-      matrix:
-        target:
-          - linux/amd64
-          - linux/arm64
-          - linux/loong64
-          - darwin/amd64
-          - darwin/arm64
-          - windows/amd64
-          - windows/arm64
     steps:
       - name: Check out PR code
         if: ${{ atomgit.head_ref != '' }}
@@ -116,20 +104,14 @@ jobs:
       - name: Select release Go toolchain
         run: make go-version
 
-      - name: Cross-compile release target
-        run: make cross-build RELEASE_TARGETS="${{ matrix.target }}"
+      - name: Cross-compile all release targets
+        run: make cross-build
 
   platform-test-compile:
-    name: Compile platform tests
+    name: Compile all platform tests
     runs-on: [ubuntu-latest, x64, small]
     env:
       GOPROXY: https://goproxy.cn,direct
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - darwin/amd64
-          - windows/amd64
     steps:
       - name: Check out PR code
         if: ${{ atomgit.head_ref != '' }}
@@ -151,8 +133,8 @@ jobs:
       - name: Select release Go toolchain
         run: make go-version
 
-      - name: Compile platform-specific tests
-        run: make test-platform-compile PLATFORM_TEST_TARGETS="${{ matrix.target }}"
+      - name: Compile all platform-specific tests
+        run: make test-platform-compile
 
   vulnerability-scan:
     name: Go vulnerability scan
