@@ -279,7 +279,7 @@ Windows path), escape it with a backslash: C:\Program\ Files.
 
 ```bash
 ag alias set pl "pr list"
-  ag alias set rv repo view
+ag alias set rv repo view
 ```
 
 
@@ -313,10 +313,10 @@ Response bytes use terminal-safe output unless --raw-output is specified.
 
 ```bash
 ag api /user
-  ag api /repos/owner/repo/issues --field state=open
-  ag api /repos/owner/repo/issues --method POST --field title='New issue'
-  ag api /repos/owner/repo/issues/42 --method PATCH --input update.json
-  ag api /repos/owner/repo/issues --paginate
+ag api /repos/owner/repo/issues --field state=open
+ag api /repos/owner/repo/issues --method POST --field title='New issue'
+ag api /repos/owner/repo/issues/42 --method PATCH --input update.json
+ag api /repos/owner/repo/issues --paginate
 ```
 
 
@@ -487,10 +487,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag branch list owner/repo
-  ag branch view owner/repo main
-  ag branch create owner/repo feature/foo --ref main
-  ag branch delete owner/repo feature/foo
-  ag branch protection list owner/repo
+ag branch view owner/repo main
+ag branch create owner/repo feature/foo --ref main
+ag branch delete owner/repo feature/foo
+ag branch protection list owner/repo
 ```
 
 
@@ -541,7 +541,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag branch delete owner/repo feature/foo
-  ag branch delete owner/repo feature/foo --yes
+ag branch delete owner/repo feature/foo --yes
 ```
 
 
@@ -668,9 +668,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag branch protection set owner/repo main --push admin --merge admin
-  ag branch protection set owner/repo main --push maintainer --merge maintainer
-  ag branch protection set owner/repo "release/*" --push "develop;alice" --merge "develop;alice"
-  ag branch protection set owner/repo main --push "" --yes
+ag branch protection set owner/repo main --push maintainer --merge maintainer
+ag branch protection set owner/repo "release/*" --push "develop;alice" --merge "develop;alice"
+ag branch protection set owner/repo main --push "" --yes
 ```
 
 
@@ -940,8 +940,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag discussion view owner/repo 1
-  ag discussion view owner/repo 1 --comments
-  ag discussion view owner/repo 1 --comments --json
+ag discussion view owner/repo 1 --comments
+ag discussion view owner/repo 1 --comments --json
 ```
 
 
@@ -994,9 +994,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag issue branches owner/repo 42
-  ag issue branches owner/repo 42 --json
-  ag issue branches owner/repo 42 --add feature/x
-  ag issue branches owner/repo 42 --remove main --yes
+ag issue branches owner/repo 42 --json
+ag issue branches owner/repo 42 --add feature/x
+ag issue branches owner/repo 42 --remove main --yes
 ```
 
 
@@ -1137,9 +1137,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag issue create owner/repo --title "Bug report" --body "Description"
-  ag issue create owner/repo --title "Bug report" --assignee alice
-  ag issue create owner/repo --title "Bug report" --body-file description.md
-  ag issue create owner/repo --title "Bug report" --body-file -
+ag issue create owner/repo --title "Bug report" --assignee alice
+ag issue create owner/repo --title "Bug report" --body-file description.md
+ag issue create owner/repo --title "Bug report" --body-file -
 ```
 
 
@@ -1170,9 +1170,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag issue edit owner/repo 42 --title "new title" --body "new body"
-  ag issue edit owner/repo 42 --assignee alice
-  ag issue edit owner/repo 42 --remove-assignee --yes
-  ag issue edit owner/repo 42 --body-file description.md
+ag issue edit owner/repo 42 --assignee alice
+ag issue edit owner/repo 42 --remove-assignee --yes
+ag issue edit owner/repo 42 --body-file description.md
 ```
 
 
@@ -1202,8 +1202,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag issue label owner/repo 42 "bug, help wanted"
-  ag issue label owner/repo 42 --add "bug, help wanted"
-  ag issue label owner/repo 42 --remove "priority/high"
+ag issue label owner/repo 42 --add "bug, help wanted"
+ag issue label owner/repo 42 --remove "priority/high"
 ```
 
 
@@ -1256,7 +1256,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag issue prs owner/repo 42
-  ag issue prs owner/repo 42 --json
+ag issue prs owner/repo 42 --json
 ```
 
 
@@ -1317,8 +1317,8 @@ List and inspect read-only organization Kanban boards and their Issue/Pull Reque
 
 ```bash
 ag kanban list hust-open-atom-club
-  ag kanban view hust-open-atom-club 1234567890
-  ag kanban items hust-open-atom-club 1234567890 --json
+ag kanban view hust-open-atom-club 1234567890
+ag kanban items hust-open-atom-club 1234567890 --json
 ```
 
 
@@ -1341,7 +1341,7 @@ List items on a Kanban board
 
 ```bash
 ag kanban items hust-open-atom-club 1234567890
-  ag kanban items hust-open-atom-club 1234567890 --limit 50 --json
+ag kanban items hust-open-atom-club 1234567890 --limit 50 --json
 ```
 
 
@@ -1364,7 +1364,7 @@ List organization Kanban boards
 
 ```bash
 ag kanban list hust-open-atom-club
-  ag kanban list hust-open-atom-club --limit 50 --json
+ag kanban list hust-open-atom-club --limit 50 --json
 ```
 
 
@@ -1458,7 +1458,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag label delete owner/repo obsolete
-  ag label delete owner/repo obsolete --yes
+ag label delete owner/repo obsolete --yes
 ```
 
 
@@ -1762,8 +1762,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag notification list owner/repo --limit 20
-  ag notification list --unread --json
-  ag notification list owner/repo --type issue_open --since 2026-08-01T00:00:00Z
+ag notification list --unread --json
+ag notification list owner/repo --type issue_open --since 2026-08-01T00:00:00Z
 ```
 
 
@@ -1795,7 +1795,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag notification mark-read owner/repo 292ecbec857e4f27b426d66f2157938c
-  ag notification mark-read --all --yes
+ag notification mark-read --all --yes
 ```
 
 
@@ -1834,8 +1834,8 @@ List organizations for the authenticated user
 
 ```bash
 ag org list
-  ag org list --limit 100
-  ag org list --json
+ag org list --limit 100
+ag org list --json
 ```
 
 
@@ -1858,8 +1858,8 @@ List organization members
 
 ```bash
 ag org members my-organization
-  ag org members my-organization --limit 100
-  ag org members my-organization --json
+ag org members my-organization --limit 100
+ag org members my-organization --json
 ```
 
 
@@ -1882,8 +1882,8 @@ List organization repositories
 
 ```bash
 ag org repos my-organization
-  ag org repos my-organization --limit 100
-  ag org repos my-organization --json
+ag org repos my-organization --limit 100
+ag org repos my-organization --json
 ```
 
 
@@ -1905,7 +1905,7 @@ View an organization
 
 ```bash
 ag org view my-organization
-  ag org view my-organization --json
+ag org view my-organization --json
 ```
 
 
@@ -1961,19 +1961,19 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 # Check out PR #42, inferring the repository from git remote
-  ag pr checkout 42
+ag pr checkout 42
 
-  # Check out PR #42 from a specific repository
-  ag pr checkout owner/repo 42
+# Check out PR #42 from a specific repository
+ag pr checkout owner/repo 42
 
-  # Check out to a custom branch name
-  ag pr checkout 42 --branch review-fix
+# Check out to a custom branch name
+ag pr checkout 42 --branch review-fix
 
-  # Force checkout, discarding safety checks
-  ag pr checkout 42 --force
+# Force checkout, discarding safety checks
+ag pr checkout 42 --force
 
-  # Check out in detached HEAD mode and update submodules
-  ag pr checkout 42 --detach --recurse-submodules
+# Check out in detached HEAD mode and update submodules
+ag pr checkout 42 --detach --recurse-submodules
 ```
 
 
@@ -2000,8 +2000,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag pr checks owner/repo 42
-  ag pr checks 42 --watch
-  ag pr checks owner/repo 42 --watch --interval 5s
+ag pr checks 42 --watch
+ag pr checks owner/repo 42 --watch --interval 5s
 ```
 
 
@@ -2191,8 +2191,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature
-  ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature
-  ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature
+ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature
+ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature
 ```
 
 
@@ -2419,7 +2419,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag pr review owner/repo 42 --approve
-  ag pr review owner/repo 42 --approve --force
+ag pr review owner/repo 42 --approve --force
 ```
 
 
@@ -2486,9 +2486,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag release list owner/repo
-  ag release view owner/repo v1.0.0
-  ag release create owner/repo v1.0.0 --name "Version 1.0.0" --body "Release notes"
-  ag release upload owner/repo v1.0.0 ./dist/app.tar.gz
+ag release view owner/repo v1.0.0
+ag release create owner/repo v1.0.0 --name "Version 1.0.0" --body "Release notes"
+ag release upload owner/repo v1.0.0 ./dist/app.tar.gz
 ```
 
 
@@ -2518,7 +2518,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag release create owner/repo v1.0.0 --name "First" --body "Initial release"
-  ag release create owner/repo v1.0.0-rc --prerelease --body-file notes.md
+ag release create owner/repo v1.0.0-rc --prerelease --body-file notes.md
 ```
 
 
@@ -2553,7 +2553,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag release download owner/repo v1.0.0 app.tar.gz -o ./dist/app.tar.gz
-  ag release download owner/repo v1.0.0 app.tar.gz --output ./existing.tar.gz --overwrite
+ag release download owner/repo v1.0.0 app.tar.gz --output ./existing.tar.gz --overwrite
 ```
 
 
@@ -2583,8 +2583,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag release edit owner/repo v1.0.0 --name "First Release"
-  ag release edit owner/repo v1.0.0 --latest --body-file notes.md
-  ag release edit owner/repo v1.0.0-rc --prerelease
+ag release edit owner/repo v1.0.0 --latest --body-file notes.md
+ag release edit owner/repo v1.0.0-rc --prerelease
 ```
 
 
@@ -2639,9 +2639,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag release upload owner/repo v1.0.0 ./dist/app.tar.gz
-  ag release upload owner/repo v1.0.0 ./build/app.zip --name app-v1.zip
-  ag release upload owner/repo v1.0.0 ./new.tar.gz --overwrite
-  ag release upload owner/repo v1.0.0 ./existing.tar.gz --skip-existing
+ag release upload owner/repo v1.0.0 ./build/app.zip --name app-v1.zip
+ag release upload owner/repo v1.0.0 ./new.tar.gz --overwrite
+ag release upload owner/repo v1.0.0 ./existing.tar.gz --skip-existing
 ```
 
 
@@ -2712,16 +2712,16 @@ The repository argument can be:
 
 ```bash
 # Clone using full URL
-  ag repo clone https://atomgit.com/shinwell_hu/my-project
+ag repo clone https://atomgit.com/shinwell_hu/my-project
 
-  # Clone using owner/repo format
-  ag repo clone shinwell_hu/my-project
+# Clone using owner/repo format
+ag repo clone shinwell_hu/my-project
 
-  # Clone to specific directory
-  ag repo clone shinwell_hu/my-project my-project-local
+# Clone to specific directory
+ag repo clone shinwell_hu/my-project my-project-local
 
-  # Clone specific branch
-  ag repo clone shinwell_hu/my-project --branch develop
+# Clone specific branch
+ag repo clone shinwell_hu/my-project --branch develop
 ```
 
 
@@ -2925,9 +2925,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag repo content list
-  ag repo content list docs
-  ag repo content list owner/repo .
-  ag repo content list owner/repo docs/guides --ref v1.0.0 --json
+ag repo content list docs
+ag repo content list owner/repo .
+ag repo content list owner/repo docs/guides --ref v1.0.0 --json
 ```
 
 
@@ -2954,8 +2954,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag repo content view README.md
-  ag repo content view owner/repo src/main.go --ref dev
-  ag repo content view owner/repo README.md --json
+ag repo content view owner/repo src/main.go --ref dev
+ag repo content view owner/repo README.md --json
 ```
 
 
@@ -2989,13 +2989,13 @@ Pass --clone to clone the repository locally after creation.
 
 ```bash
 # Create a new private repository under your account
-  ag repo create my-project
+ag repo create my-project
 
-  # Create a public repository and clone it
-  ag repo create my-project --public --clone
+# Create a public repository and clone it
+ag repo create my-project --public --clone
 
-  # Create a repository in an organization
-  ag repo create my-org/my-project --public
+# Create a repository in an organization
+ag repo create my-org/my-project --public
 ```
 
 
@@ -3026,13 +3026,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 # Delete a repository (with confirmation)
-  ag repo delete my-project
+ag repo delete my-project
 
-  # Delete a repository without confirmation
-  ag repo delete my-project --yes
+# Delete a repository without confirmation
+ag repo delete my-project --yes
 
-  # Delete a repository in an organization
-  ag repo delete my-org/my-project --yes
+# Delete a repository in an organization
+ag repo delete my-org/my-project --yes
 ```
 
 
@@ -3071,19 +3071,19 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 # Update the current Git repository
-  ag repo edit --description "New description"
+ag repo edit --description "New description"
 
-  # Update an explicitly selected repository
-  ag repo edit owner/repo --description "New description"
+# Update an explicitly selected repository
+ag repo edit owner/repo --description "New description"
 
-  # Clear a description without changing other settings
-  ag repo edit owner/repo --description ""
+# Clear a description without changing other settings
+ag repo edit owner/repo --description ""
 
-  # Update several settings
-  ag repo edit owner/repo --name "New name" --default-branch main --visibility private
+# Update several settings
+ag repo edit owner/repo --name "New name" --default-branch main --visibility private
 
-  # Skip confirmation for a visibility update
-  ag repo edit owner/repo --public --yes
+# Skip confirmation for a visibility update
+ag repo edit owner/repo --public --yes
 ```
 
 
@@ -3141,8 +3141,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag repo fork list owner/repo
-  ag repo fork list owner/repo --limit 100 --json
-  ag repo fork list
+ag repo fork list owner/repo --limit 100 --json
+ag repo fork list
 ```
 
 
@@ -3167,9 +3167,9 @@ List repositories for the authenticated user, a specified user, or an organizati
 
 ```bash
 ag repo list
-  ag repo list alice
-  ag repo list my-organization --limit 100
-  ag repo list alice --json
+ag repo list alice
+ag repo list my-organization --limit 100
+ag repo list alice --json
 ```
 
 
@@ -3214,8 +3214,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag repo mirror list owner/repo
-  ag repo mirror list owner/repo --limit 100 --json
-  ag repo mirror list
+ag repo mirror list owner/repo --limit 100 --json
+ag repo mirror list
 ```
 
 
@@ -3241,7 +3241,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag repo mirror view owner/repo
-  ag repo mirror view --json
+ag repo mirror view --json
 ```
 
 
@@ -3299,8 +3299,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag repo push-rule edit owner/repo --deny-force-push --yes
-  ag repo push-rule edit --commit-message-regex '^(feat|fix): '
-  ag repo push-rule edit owner/repo --reject-not-signed-by-gpg=false --max-file-size 0
+ag repo push-rule edit --commit-message-regex '^(feat|fix): '
+ag repo push-rule edit owner/repo --reject-not-signed-by-gpg=false --max-file-size 0
 ```
 
 
@@ -3326,7 +3326,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag repo push-rule view owner/repo
-  ag repo push-rule view --json
+ag repo push-rule view --json
 ```
 
 
@@ -3398,16 +3398,16 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 # Synchronize the current repository's default branch
-  ag repo sync
+ag repo sync
 
-  # Synchronize an explicit branch of a fork
-  ag repo sync owner/fork --branch develop
+# Synchronize an explicit branch of a fork
+ag repo sync owner/fork --branch develop
 
-  # Force synchronization after interactive confirmation
-  ag repo sync owner/fork --branch develop --force
+# Force synchronization after interactive confirmation
+ag repo sync owner/fork --branch develop --force
 
-  # Force synchronization non-interactively
-  ag repo sync owner/fork --branch develop --force --yes
+# Force synchronization non-interactively
+ag repo sync owner/fork --branch develop --force --yes
 ```
 
 
@@ -3446,8 +3446,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag repo transfer owner/repo --to target-organization
-  ag repo transfer owner/repo --to target-organization --yes
-  printf '%s\n' "$PASSWORD" | ag repo transfer source-organization/repo --to target-organization --yes --password-stdin
+ag repo transfer owner/repo --to target-organization --yes
+printf '%s\n' "$PASSWORD" | ag repo transfer source-organization/repo --to target-organization --yes --password-stdin
 ```
 
 
@@ -3711,7 +3711,7 @@ confirmation. Deletion cannot be undone. Use --yes to skip the prompt.
 
 ```bash
 ag run artifact delete owner/repo <artifact-id>
-  ag run artifact delete <artifact-id> --yes
+ag run artifact delete <artifact-id> --yes
 ```
 
 
@@ -3738,7 +3738,7 @@ download a zip from a specific workflow run.
 
 ```bash
 ag run artifact view owner/repo <artifact-id>
-  ag run artifact view <artifact-id> --json
+ag run artifact view <artifact-id> --json
 ```
 
 
@@ -3774,9 +3774,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag run list owner/repo
-  ag run list
-  ag run list owner/repo --branch main --status failed
-  ag run list owner/repo --event push --workflow-name CI --limit 50
+ag run list
+ag run list owner/repo --branch main --status failed
+ag run list owner/repo --event push --workflow-name CI --limit 50
 ```
 
 
@@ -3804,9 +3804,9 @@ atomically and refuses to replace an existing file unless --overwrite is set.
 
 ```bash
 ag run step-log owner/repo <run-id> <job-id> <step-id>
-  ag run step-log <run-id> <job-id> <step-id>
-  ag run step-log owner/repo <run-id> <job-id> <step-id> --output step.log
-  ag run step-log owner/repo <run-id> <job-id> <step-id> --output step.log --overwrite
+ag run step-log <run-id> <job-id> <step-id>
+ag run step-log owner/repo <run-id> <job-id> <step-id> --output step.log
+ag run step-log owner/repo <run-id> <job-id> <step-id> --output step.log --overwrite
 ```
 
 
@@ -3837,12 +3837,12 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag run view owner/repo 12345
-  ag run view 12345
-  ag run view owner/repo 12345 --job job-id
-  ag run view owner/repo 12345 --job job-id --log
-  ag run view owner/repo 12345 --job job-id --log-file job-logs.zip
-  ag run view owner/repo 12345 --artifact artifact-id
-  ag run view owner/repo 12345 --artifact artifact-id --artifact-file build.zip --overwrite
+ag run view 12345
+ag run view owner/repo 12345 --job job-id
+ag run view owner/repo 12345 --job job-id --log
+ag run view owner/repo 12345 --job job-id --log-file job-logs.zip
+ag run view owner/repo 12345 --artifact artifact-id
+ag run view owner/repo 12345 --artifact artifact-id --artifact-file build.zip --overwrite
 ```
 
 
@@ -3867,7 +3867,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag runner list owner/repo
-  ag runner shared owner/repo --json
+ag runner shared owner/repo --json
 ```
 
 
@@ -3894,7 +3894,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag runner list owner/repo
-  ag runner list owner/repo --limit 25 --json
+ag runner list owner/repo --limit 25 --json
 ```
 
 
@@ -3921,7 +3921,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag runner shared owner/repo
-  ag runner shared owner/repo --limit 25 --json
+ag runner shared owner/repo --limit 25 --json
 ```
 
 
@@ -4056,7 +4056,7 @@ to confirm the deletion. Use --yes to skip the confirmation prompt.
 
 ```bash
 ag ssh-key delete 123
-  ag ssh-key delete 123 --yes
+ag ssh-key delete 123 --yes
 ```
 
 
@@ -4078,7 +4078,7 @@ List SSH keys registered with your AtomGit account
 
 ```bash
 ag ssh-key list
-  ag ssh-key list --limit 200
+ag ssh-key list --limit 200
 ```
 
 
@@ -4145,7 +4145,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag tag delete owner/repo v1.0.0
-  ag tag delete owner/repo v1.0.0 --yes
+ag tag delete owner/repo v1.0.0 --yes
 ```
 
 
@@ -4222,7 +4222,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag tag protection delete owner/repo "v*"
-  ag tag protection delete owner/repo "v*" --yes
+ag tag protection delete owner/repo "v*" --yes
 ```
 
 
@@ -4282,9 +4282,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag tag protection set owner/repo v1.0.0 --create-access maintainer
-  ag tag protection set owner/repo "v*" --create-access developer
-  ag tag protection set owner/repo v1.0.0
-  ag tag protection set owner/repo v1.0.0 --create-access none --yes
+ag tag protection set owner/repo "v*" --create-access developer
+ag tag protection set owner/repo v1.0.0
+ag tag protection set owner/repo v1.0.0 --create-access none --yes
 ```
 
 
@@ -4356,7 +4356,7 @@ List email addresses for the authenticated user
 
 ```bash
 ag user emails
-  ag user emails --json
+ag user emails --json
 ```
 
 
@@ -4382,9 +4382,9 @@ List personal activity events for a user. Without an explicit username, the auth
 
 ```bash
 ag user events
-  ag user events alice
-  ag user events alice --year 2026 --limit 50
-  ag user events alice --json
+ag user events alice
+ag user events alice --year 2026 --limit 50
+ag user events alice --json
 ```
 
 
@@ -4410,8 +4410,8 @@ List user and group namespaces visible to the authenticated user. The default mo
 
 ```bash
 ag user namespaces
-  ag user namespaces --mode project --limit 100
-  ag user namespaces --mode all --json
+ag user namespaces --mode project --limit 100
+ag user namespaces --mode all --json
 ```
 
 
@@ -4436,8 +4436,8 @@ List starred repositories for a user. Without a username, the authenticated-user
 
 ```bash
 ag user starred
-  ag user starred alice --limit 100
-  ag user starred alice --json
+ag user starred alice --limit 100
+ag user starred alice --json
 ```
 
 
@@ -4460,9 +4460,9 @@ View the current user or a public user profile
 
 ```bash
 ag user view
-  ag user view alice
-  ag user view alice --json
-  ag user view alice --web
+ag user view alice
+ag user view alice --json
+ag user view alice --web
 ```
 
 
@@ -4487,8 +4487,8 @@ List watched repositories for a user. Without a username, the authenticated-user
 
 ```bash
 ag user watching
-  ag user watching alice --limit 100
-  ag user watching alice --json
+ag user watching alice --limit 100
+ag user watching alice --json
 ```
 
 
@@ -4528,9 +4528,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag workflow list owner/repo
-  ag workflow validate --file .gitcode/workflows/ci.yml
-  ag workflow run owner/repo 12345 --ref main
-  ag workflow run owner/repo ci.yml -f env=production
+ag workflow validate --file .gitcode/workflows/ci.yml
+ag workflow run owner/repo 12345 --ref main
+ag workflow run owner/repo ci.yml -f env=production
 ```
 
 
@@ -4585,7 +4585,7 @@ Aliases: `dispatch`
 
 ```bash
 ag workflow run owner/repo 12345 --ref main
-  ag workflow run owner/repo ci.yml --ref feature-branch -f env=prod -f debug=true
+ag workflow run owner/repo ci.yml --ref feature-branch -f env=prod -f debug=true
 ```
 
 
@@ -4615,6 +4615,6 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag workflow validate --file .gitcode/workflows/ci.yml
-  ag workflow validate owner/repo --file workflow.yml
-  ag workflow validate owner/repo --file workflow.yml --json
+ag workflow validate owner/repo --file workflow.yml
+ag workflow validate owner/repo --file workflow.yml --json
 ```

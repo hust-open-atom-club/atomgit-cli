@@ -17,7 +17,7 @@ func TestGenerateIsDeterministicAndIncludesCommandMetadata(t *testing.T) {
 			Short:   "Manage repositories",
 			Long:    "Long repository description",
 			Aliases: []string{"r"},
-			Example: "  ag repo demo",
+			Example: "  ag repo demo\n  ag repo other",
 		}
 		child.Flags().BoolP("json", "j", false, "Output JSON")
 		root.AddCommand(child)
@@ -47,7 +47,7 @@ func TestGenerateIsDeterministicAndIncludesCommandMetadata(t *testing.T) {
 		"`-j, --json`",
 		"`--host`",
 		"Scope",
-		"ag repo demo",
+		"```bash\nag repo demo\nag repo other\n```",
 	} {
 		if !strings.Contains(output, want) {
 			t.Errorf("generated output does not contain %q:\n%s", want, output)
@@ -58,6 +58,24 @@ func TestGenerateIsDeterministicAndIncludesCommandMetadata(t *testing.T) {
 func TestGenerateRejectsNilRoot(t *testing.T) {
 	if err := Generate(&bytes.Buffer{}, nil); err == nil {
 		t.Fatal("Generate(nil) succeeded")
+	}
+}
+
+func TestNormalizeExample(t *testing.T) {
+	for _, tt := range []struct {
+		name, input, want string
+	}{
+		{"empty", " \n\t\n", ""},
+		{"shared spaces", "  ag repo demo\n  ag repo other", "ag repo demo\nag repo other"},
+		{"continuation", "\n  ag repo list \\\n    --json\n  \n  ag repo view\n", "ag repo list \\\n  --json\n\nag repo view"},
+		{"tabs and CRLF", "\r\n\tag repo list\r\n\t\t--help\r\n", "ag repo list\n\t--help"},
+		{"already unindented", "ag repo list\n  --help", "ag repo list\n  --help"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := normalizeExample(tt.input); got != tt.want {
+				t.Fatalf("normalizeExample() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 
