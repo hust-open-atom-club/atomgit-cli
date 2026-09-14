@@ -95,6 +95,12 @@
    关闭竞态运行时退出前的一秒等待可以加快这些辅助进程，同时不会抑制竞态报告。
    参见 [Go 竞态检测器文档](https://go.dev/doc/articles/race_detector)。
 
+   CI 将跨平台检查合并为两个顺序执行的 job，减少托管 Runner 排队，同时保持平台
+   覆盖不变：`make cross-build` 在一个 job 中编译 Linux amd64/arm64/loong64、
+   macOS amd64/arm64 和 Windows amd64/arm64；`make test-platform-compile` 在另一
+   个 job 中编译 macOS amd64 和 Windows amd64 测试。两个目标都会在开始处理每个
+   平台时打印对应的 `GOOS/GOARCH`，任一目标失败都会终止所在 job。
+
    AtomGit 托管 Runner 文档目前只列出基于 Linux 的 Ubuntu 和 Euler 环境，因此
    CI 无法执行原生 macOS 或 Windows 测试。`make test-platform-compile` 对
    `darwin/amd64` 和 `windows/amd64` 使用 `go test -exec=true`：所有目标平台专用的
@@ -119,7 +125,7 @@
    npm 测试使用假的 registry 和子进程注入，不得发布软件包、读取真实 npm token，
    也不得访问真实 registry。
 
-   修改命令参数或输出时，请执行对应命令的 `--help` 冒烟检查；纯文档修改至少运行 `git diff --check`。
+   修改命令参数或输出时，请执行对应命令的 `--help` 冒烟检查；纯文档修改至少运行 `git diff --check`。命令树或命令元数据发生变化时，请运行 `make docs-reference` 更新自动生成的 `docs/command-reference.md`，并运行 `make docs-reference-check` 确认没有文档漂移。
 
 5. **提交更改**
 
