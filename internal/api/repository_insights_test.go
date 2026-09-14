@@ -107,8 +107,11 @@ func TestRepositoryInsightUsersPaginateAndHonorLimit(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(users) != 101 || users[100].Login != "user-100" || requests != 2 {
-				t.Fatalf("users = %d, last = %#v, requests = %d", len(users), users[len(users)-1], requests)
+			if len(users) != 101 {
+				t.Fatalf("users = %d, want 101", len(users))
+			}
+			if users[100].Login != "user-100" || requests != 2 {
+				t.Fatalf("last = %#v, requests = %d", users[100], requests)
 			}
 		})
 	}

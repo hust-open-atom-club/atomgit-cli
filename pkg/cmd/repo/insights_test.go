@@ -2,6 +2,7 @@ package repo
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -82,7 +83,7 @@ func TestRepoInsightsEventsPaginatesAndHonorsLimit(t *testing.T) {
 			t.Fatalf("request = %s", req.URL.RequestURI())
 		}
 		if requests == 1 {
-			return forkResponse(http.StatusOK, `{"events":[{"action":1,"created_at":"a","target_id":1},{"action":2,"created_at":"b","target_id":2}],"has_next_page":true}`), nil
+			return forkResponse(http.StatusOK, `{"events":[{"action":1,"author":{"id":7,"username":"ada"},"created_at":"a","target_id":1},{"action":2,"created_at":"b","target_id":2}],"has_next_page":true}`), nil
 		}
 		return forkResponse(http.StatusOK, `{"events":[{"action":3,"created_at":"c","target_id":3},{"action":4,"created_at":"d","target_id":4}],"has_next_page":false}`), nil
 	})
@@ -90,7 +91,7 @@ func TestRepoInsightsEventsPaginatesAndHonorsLimit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if requests != 2 || strings.Count(out, `"action":`) != 3 || strings.Contains(out, `"action": 4`) {
+	if requests != 2 || strings.Count(out, `"action":`) != 3 || strings.Contains(out, `"action": 4`) || !strings.Contains(out, `"authorId": 7`) || !strings.Contains(out, `"authorUsername": "ada"`) {
 		t.Fatalf("requests = %d, output = %s", requests, out)
 	}
 }
@@ -101,6 +102,16 @@ func TestRepoInsightsEventsRejectsPaginationWithoutProgress(t *testing.T) {
 		return forkResponse(http.StatusOK, response), nil
 	})
 	if err == nil || !strings.Contains(err.Error(), "made no progress") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestRepoInsightsEventsRejectsRepeatedPage(t *testing.T) {
+	response := `{"events":[{"action":1,"created_at":"a","target_id":1}],"has_next_page":true}`
+	_, err := runInsightCommand(t, "events", []string{"team/demo", "--limit", "2"}, func(*http.Request) (*http.Response, error) {
+		return forkResponse(http.StatusOK, response), nil
+	})
+	if err == nil || !strings.Contains(err.Error(), "repeated an earlier event page") {
 		t.Fatalf("error = %v", err)
 	}
 }
@@ -147,6 +158,14 @@ func TestRepoInsightsDownloadsOrderingAndEmpty(t *testing.T) {
 	})
 	if err != nil || out != "Period downloads: 0\nHistory downloads: 0\n" {
 		t.Fatalf("empty output = %q, error = %v", out, err)
+	}
+}
+
+func TestWriteDownloadsReturnsHeaderWriteError(t *testing.T) {
+	wantErr := errors.New("write failed")
+	err := writeDownloads(failingContentWriter{err: wantErr}, downloadsJSON{})
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error = %v, want %v", err, wantErr)
 	}
 }
 

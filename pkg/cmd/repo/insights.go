@@ -356,10 +356,7 @@ func listRepositoryEvents(client *api.Client, owner, repo string, limit int) ([]
 	}
 	result := make([]api.RepositoryEvent, 0, min(limit, 100))
 	seenPages := make(map[string]struct{})
-	for page := 1; len(result) < limit; page++ {
-		if page > 100 {
-			return nil, fmt.Errorf("pagination reached the maximum of 100 pages with %d unique events", len(result))
-		}
+	for page := 1; ; page++ {
 		response, err := api.GetRepositoryEventsPage(client, owner, repo, page, 100)
 		if err != nil {
 			return nil, err
@@ -389,7 +386,6 @@ func listRepositoryEvents(client *api.Client, owner, repo string, limit int) ([]
 			return result, nil
 		}
 	}
-	return result, nil
 }
 
 func repositoryEventKey(event api.RepositoryEvent) string {
@@ -404,13 +400,17 @@ func repositoryEventKey(event api.RepositoryEvent) string {
 func repositoryEventsJSON(events []api.RepositoryEvent) []repositoryEventJSON {
 	result := make([]repositoryEventJSON, 0, len(events))
 	for _, event := range events {
+		authorID := event.AuthorID
+		if authorID == 0 {
+			authorID = event.Author.ID
+		}
 		authorUsername := event.AuthorUsername
 		if authorUsername == "" {
 			authorUsername = event.Author.Username
 		}
 		result = append(result, repositoryEventJSON{
 			Action: event.Action, ActionName: event.ActionName,
-			AuthorID: event.AuthorID, AuthorUsername: authorUsername,
+			AuthorID: authorID, AuthorUsername: authorUsername,
 			AuthorName: event.Author.Name, AuthorURL: event.Author.WebURL,
 			CreatedAt: event.CreatedAt, ProjectID: event.ProjectID, Title: event.Title,
 			FilterSensitive: bool(event.FilterSensitive), TargetID: event.TargetID,
@@ -527,7 +527,9 @@ func writeStargazers(out io.Writer, stargazers []stargazerJSON) error {
 }
 
 func writeDownloads(out io.Writer, downloads downloadsJSON) error {
-	fmt.Fprintf(out, "Period downloads: %d\nHistory downloads: %d\n", downloads.PeriodDownloads, downloads.HistoryDownloads)
+	if _, err := fmt.Fprintf(out, "Period downloads: %d\nHistory downloads: %d\n", downloads.PeriodDownloads, downloads.HistoryDownloads); err != nil {
+		return err
+	}
 	if len(downloads.Details) == 0 {
 		return nil
 	}
