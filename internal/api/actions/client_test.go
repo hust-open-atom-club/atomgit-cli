@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -684,6 +685,53 @@ func TestListWorkflowsDefaultsToNoQuery(t *testing.T) {
 	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
 	if _, err := client.ListWorkflows("team", "demo", ListWorkflowsOptions{}); err != nil {
 		t.Fatalf("ListWorkflows failed: %v", err)
+	}
+}
+
+func TestListRunnersUsesRepositoryAndSharedPaths(t *testing.T) {
+	paths := []string{
+		"/api/v8/repos/team/demo/actions/runners",
+		"/api/v8/repos/team/demo/actions/runners/shared-runners",
+	}
+	request := 0
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodGet || request >= len(paths) || req.URL.Path != paths[request] {
+			t.Fatalf("request %d = %s %s", request, req.Method, req.URL.Path)
+		}
+		if req.URL.Query().Get("page") != "2" || req.URL.Query().Get("per_page") != "50" {
+			t.Fatalf("query = %q", req.URL.RawQuery)
+		}
+		request++
+		return response(req, http.StatusOK, `{"total_count":1,"runners":[{"id":42,"name":"runner-1","status":"online","busy":false,"labels":[{"id":1,"name":"self-hosted","type":"read-only"}]}]}`), nil
+	})
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+
+	result, err := client.ListRunners("team", "demo", ListRunnersOptions{Page: 2, PerPage: 50})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.TotalCount != 1 || len(result.Runners) != 1 || result.Runners[0].ID != "42" || result.Runners[0].Labels[0].Name != "self-hosted" {
+		t.Fatalf("result = %#v", result)
+	}
+	if _, err := client.ListSharedRunners("team", "demo", ListRunnersOptions{Page: 2, PerPage: 50}); err != nil {
+		t.Fatal(err)
+	}
+	if request != len(paths) {
+		t.Fatalf("request count = %d, want %d", request, len(paths))
+	}
+}
+
+func TestRunnerLabelsAcceptStringForm(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return response(req, http.StatusOK, `{"total_count":1,"runners":[{"id":"runner-1","name":"runner","labels":["self-hosted","linux"]}]}`), nil
+	})
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+	result, err := client.ListRunners("team", "demo", ListRunnersOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := []string{result.Runners[0].Labels[0].Name, result.Runners[0].Labels[1].Name}; !reflect.DeepEqual(got, []string{"self-hosted", "linux"}) {
+		t.Fatalf("labels = %#v", got)
 	}
 }
 

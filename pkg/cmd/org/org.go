@@ -31,9 +31,12 @@ func NewCmdOrg(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "org",
 		Short: "Manage organizations",
-		Long:  "View organizations associated with your AtomGit account.",
+		Long:  "List organizations associated with your AtomGit account and inspect organization details, members, and repositories.",
 	}
 	cmd.AddCommand(newCmdOrgList(f))
+	cmd.AddCommand(newCmdOrgView(f))
+	cmd.AddCommand(newCmdOrgMembers(f))
+	cmd.AddCommand(newCmdOrgRepos(f))
 	return cmd
 }
 

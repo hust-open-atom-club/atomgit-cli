@@ -122,12 +122,13 @@ Run `ag auth login` for the initial OAuth login. In an environment without a bro
 
 ## Usage
 
-Run `ag --help` for a command overview or `ag <command> --help` for command-specific options. See the [usage guide](docs/usage.md) for complete examples and explanations.
+Run `ag --help` for a command overview or `ag <command> --help` for command-specific options. See the [usage guide](docs/usage.md) for complete examples and explanations. The [command reference](docs/command-reference.md) lists every command and its options.
 
 See the [FAQ](docs/faq.md) for common installation, authentication, usage, and troubleshooting questions.
 
 ## More Documentation
 
+- [Command reference](docs/command-reference.md) (generated from the Cobra command tree)
 - [Release guide](docs/releasing.md)
 - [Project structure](docs/project-structure.md)
 

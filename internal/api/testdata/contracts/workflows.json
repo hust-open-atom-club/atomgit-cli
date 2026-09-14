@@ -1,0 +1,91 @@
+{
+  "name": "workflows",
+  "source": "synthetic; modeled on existing client implementation and mock tests; not a live capture",
+  "version": "v8",
+  "method": "GET",
+  "path": "/repos/{owner}/{repo}/actions/workflows",
+  "statuses": [
+    200
+  ],
+  "body_policy": "required",
+  "examples": [
+    {
+      "name": "first-page",
+      "status": 200,
+      "body": {
+        "total_count": 1,
+        "workflows": [
+          {
+            "workflow_id": "workflow-fixture",
+            "name": "Synthetic CI",
+            "file_path": ".gitcode/workflows/ci.yml"
+          }
+        ]
+      },
+      "query": {
+        "page": "1",
+        "per_page": "2"
+      }
+    },
+    {
+      "name": "empty-page",
+      "status": 200,
+      "body": {
+        "total_count": 1,
+        "workflows": []
+      },
+      "query": {
+        "page": "2",
+        "per_page": "2"
+      }
+    }
+  ],
+  "shape": {
+    "types": [
+      "object"
+    ],
+    "properties": {
+      "total_count": {
+        "types": [
+          "integer"
+        ]
+      },
+      "workflows": {
+        "types": [
+          "array"
+        ],
+        "items": {
+          "types": [
+            "object"
+          ],
+          "properties": {
+            "workflow_id": {
+              "types": [
+                "string"
+              ]
+            },
+            "name": {
+              "types": [
+                "string"
+              ]
+            },
+            "file_path": {
+              "types": [
+                "string"
+              ]
+            }
+          },
+          "required": [
+            "workflow_id",
+            "name",
+            "file_path"
+          ]
+        }
+      }
+    },
+    "required": [
+      "total_count",
+      "workflows"
+    ]
+  }
+}

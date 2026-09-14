@@ -1,0 +1,125 @@
+{
+  "name": "issue-list",
+  "source": "synthetic; modeled on existing client implementation and mock tests; not a live capture",
+  "version": "v5",
+  "method": "GET",
+  "path": "/repos/{owner}/{repo}/issues",
+  "statuses": [
+    200
+  ],
+  "body_policy": "required",
+  "examples": [
+    {
+      "name": "first-page",
+      "status": 200,
+      "body": [
+        {
+          "id": 1,
+          "number": "1",
+          "title": "Synthetic contract issue",
+          "state": "open"
+        },
+        {
+          "id": 2,
+          "number": "2",
+          "title": "Synthetic contract issue",
+          "state": "open"
+        }
+      ],
+      "query": {
+        "page": "1",
+        "per_page": "2"
+      },
+      "headers": {
+        "X-Page": "1",
+        "X-Per-Page": "2",
+        "X-Total": "4",
+        "X-Total-Pages": "2"
+      }
+    },
+    {
+      "name": "second-page",
+      "status": 200,
+      "body": [
+        {
+          "id": 3,
+          "number": "3",
+          "title": "Synthetic contract issue",
+          "state": "open"
+        },
+        {
+          "id": 4,
+          "number": "4",
+          "title": "Synthetic contract issue",
+          "state": "open"
+        }
+      ],
+      "query": {
+        "page": "2",
+        "per_page": "2"
+      },
+      "headers": {
+        "X-Page": "2",
+        "X-Per-Page": "2",
+        "X-Total": "4",
+        "X-Total-Pages": "2"
+      }
+    },
+    {
+      "name": "empty-page",
+      "status": 200,
+      "body": [],
+      "query": {
+        "page": "3",
+        "per_page": "2"
+      }
+    }
+  ],
+  "shape": {
+    "types": [
+      "array"
+    ],
+    "items": {
+      "types": [
+        "object"
+      ],
+      "properties": {
+        "id": {
+          "types": [
+            "integer"
+          ]
+        },
+        "number": {
+          "types": [
+            "string",
+            "integer"
+          ]
+        },
+        "title": {
+          "types": [
+            "string"
+          ]
+        },
+        "state": {
+          "types": [
+            "string"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "number",
+        "title",
+        "state"
+      ]
+    }
+  },
+  "header_types": {
+    "X-Page": "integer",
+    "X-Per-Page": "integer",
+    "X-Total": "integer",
+    "X-Total-Pages": "integer",
+    "Link": "string",
+    "Retry-After": "integer"
+  }
+}

@@ -40,7 +40,7 @@ PRERELEASE ?=
 
 .DEFAULT_GOAL := build
 
-.PHONY: all go-min-version go-version build cross-build install uninstall test test-min-go test-race test-platform-compile vet lint vulncheck fmt fmt-check coverage release release-snapshot publish clean help
+.PHONY: all go-min-version go-version build cross-build install uninstall test test-min-go test-race test-contract test-contract-live test-platform-compile vet lint vulncheck fmt fmt-check docs-reference docs-reference-check coverage release release-snapshot publish clean help
 
 all: lint test build
 
@@ -121,6 +121,17 @@ uninstall:
 test:
 	$(GO) test ./...
 
+# Offline fixtures also run as part of the normal test suite and existing CI.
+test-contract:
+	$(GO) test ./internal/apicontract ./internal/api -count=1
+
+# An explicit invocation is the opt-in. No CLI config or default user token is read.
+test-contract-live:
+	@test -n "$$ATOMGIT_CONTRACT_TOKEN" -a -n "$$ATOMGIT_CONTRACT_REPO" || { \
+		echo "Set dedicated ATOMGIT_CONTRACT_TOKEN and ATOMGIT_CONTRACT_REPO=owner/repo" >&2; exit 1; \
+	}
+	ATOMGIT_CONTRACT_LIVE=1 $(GO) test -tags=contractlive ./internal/api -run '^TestLiveAPIContracts$$' -count=1 -v
+
 test-min-go:
 	GOTOOLCHAIN=$(GO_MIN_TOOLCHAIN) $(GO) test ./...
 
@@ -170,6 +181,12 @@ fmt-check:
 		printf '%s\n' "$$files"; \
 		exit 1; \
 	}
+
+docs-reference:
+	$(GO) run ./scripts/generate-command-reference
+
+docs-reference-check:
+	$(GO) run ./scripts/generate-command-reference --check
 
 coverage:
 	$(GO) test ./... -coverprofile=$(COVERAGE_FILE)
@@ -226,12 +243,16 @@ help:
 	@echo "  make go-version             Download and verify release $(GO_TOOLCHAIN)"
 	@echo "  make test                   Run the standard test suite"
 	@echo "  make test-min-go            Run tests with minimum Go $(GO_MIN_VERSION)"
+	@echo "  make test-contract          Run offline API contracts and regressions"
+	@echo "  make test-contract-live     Opt in to dedicated-account GET-only smoke checks"
 	@echo "  make test-race              Run race detection for $(RACE_PACKAGES)"
 	@echo "  make test-platform-compile  Compile tests for macOS and Windows targets"
 	@echo "  make lint                   Check formatting and run go vet (no file changes)"
 	@echo "  make cross-build            Compile all seven supported release targets"
 	@echo "  make vulncheck              Build and scan the $(GO_TOOLCHAIN) release binary"
 	@echo "  make coverage               Run tests and generate $(COVERAGE_FILE)"
+	@echo "  make docs-reference         Regenerate docs/command-reference.md"
+	@echo "  make docs-reference-check   Check command reference is up to date"
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make fmt                    Format Go source files in place"

@@ -95,6 +95,12 @@
    关闭竞态运行时退出前的一秒等待可以加快这些辅助进程，同时不会抑制竞态报告。
    参见 [Go 竞态检测器文档](https://go.dev/doc/articles/race_detector)。
 
+   CI 将跨平台检查合并为两个顺序执行的 job，减少托管 Runner 排队，同时保持平台
+   覆盖不变：`make cross-build` 在一个 job 中编译 Linux amd64/arm64/loong64、
+   macOS amd64/arm64 和 Windows amd64/arm64；`make test-platform-compile` 在另一
+   个 job 中编译 macOS amd64 和 Windows amd64 测试。两个目标都会在开始处理每个
+   平台时打印对应的 `GOOS/GOARCH`，任一目标失败都会终止所在 job。
+
    AtomGit 托管 Runner 文档目前只列出基于 Linux 的 Ubuntu 和 Euler 环境，因此
    CI 无法执行原生 macOS 或 Windows 测试。`make test-platform-compile` 对
    `darwin/amd64` 和 `windows/amd64` 使用 `go test -exec=true`：所有目标平台专用的
@@ -119,7 +125,7 @@
    npm 测试使用假的 registry 和子进程注入，不得发布软件包、读取真实 npm token，
    也不得访问真实 registry。
 
-   修改命令参数或输出时，请执行对应命令的 `--help` 冒烟检查；纯文档修改至少运行 `git diff --check`。
+   修改命令参数或输出时，请执行对应命令的 `--help` 冒烟检查；纯文档修改至少运行 `git diff --check`。命令树或命令元数据发生变化时，请运行 `make docs-reference` 更新自动生成的 `docs/command-reference.md`，并运行 `make docs-reference-check` 确认没有文档漂移。
 
 5. **提交更改**
 
@@ -204,6 +210,23 @@ atomgit-cli/
 - Actions run、job、日志和 artifact 使用 `internal/api/actions` 中的 API v8 客户端
 - 请求和响应类型应使用明确的 `json` 标签，并与对应 API 的路径、HTTP 方法和成功状态码保持一致
 - 通过小型接口和 `cmdutil.Factory` 注入依赖；测试使用模拟 HTTP 服务，不依赖真实凭据或外部网络
+
+### OpenAPI 契约验证
+
+新增或修改 API 路径、成功状态码、空响应约定、分页结构或 DTO 时，同步维护
+`internal/api/testdata/contracts/` 的 fixture 和 `internal/api/contract_test.go`
+中的客户端回放。运行 `make test-contract`；这些离线检查也包含在默认 `go test ./...`
+和现有 CI 中，不需要真实凭据。
+
+fixture 必须注明合成或脱敏采集来源。使用专用测试仓库采集只读响应，在仓库外完成脱敏：
+把账号、仓库、ID、时间、正文和 URL 替换为合成值，移除所有凭据及私有信息，
+只保留契约需要的结构和白名单响应头。不要将原始响应放进 Git 再删除。
+写操作只使用合成样例或既有经人工审查的脱敏样例，不为更新 fixture 操作真实资源。
+评审时核对差异是否是服务契约变化，而不是放宽类型或删掉必需字段让测试通过。
+详细格式、采集与审查步骤见 [API 契约测试](docs/api-contracts.md)。
+
+在线检查仅通过 `make test-contract-live` 显式启用，必须提供单独的测试账号 token 和测试仓库。
+它只发送 GET，不读取 `ag auth` 配置，不打印或保存响应正文，也不自动覆盖 fixture。
 
 ### 代码风格
 
