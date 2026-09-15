@@ -80,6 +80,16 @@
 - SSH 克隆（如 `git@atomgit.com:owner/repo.git`）、明文 `http://` 地址以及非 AtomGit/GitCode 主机（如 `github.com`）的克隆**不受影响**，保持原有匿名或用户自行配置的 Git 凭据行为；
 - 访问令牌无效或无权访问目标仓库时，克隆会直接失败并提示认证错误，而**不会弹出交互式 Git 用户名/密码提示**（克隆进程设置了 `GIT_TERMINAL_PROMPT=0`）。令牌过期或失效时，可运行 `ag auth refresh`（OAuth 登录）或重新执行 `ag auth login --with-token`（PAT 登录）后重试。
 
+### 为普通 Git HTTPS 操作配置 credential helper
+
+`ag repo clone` 会按上述方式自动为单次克隆提供凭据。如需让直接执行的 `git clone`、`git pull` 和 `git push` 等 HTTPS 操作复用当前活动账号，可在登录后运行：
+
+```bash
+ag auth setup-git
+```
+
+该命令仅在全局 Git 配置中为 `https://atomgit.com` 注册 `ag` credential helper，不会把访问令牌写入 Git 配置或 remote URL。Git 每次需要凭据时会从 `ag` 的凭据文件读取当前活动账号；使用 `ag auth switch` 切换账号后无需重新运行。SSH remote 不受此设置影响。
+
 ## 输出安全
 
 `ag` 默认会将终端控制字符转换为可见转义文本，包括输出经管道转发时，以防止仓库、Issue、PR 或 Git 服务端返回的内容注入终端控制序列。确实需要为机器处理保留原始字节时，可显式使用全局参数 `--raw-output`，例如 `ag --raw-output pr diff owner/repo 123`；请勿将未经检查的原始输出直接转发到终端。

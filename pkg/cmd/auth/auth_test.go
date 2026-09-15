@@ -81,7 +81,7 @@ func TestIsolateAuthConfigUsesTemporaryHome(t *testing.T) {
 
 func TestNewCmdAuthRegistersSubcommands(t *testing.T) {
 	cmd := NewCmdAuth(&cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated")}})
-	want := map[string]bool{"list": false, "login": false, "logout": false, "refresh": false, "status": false, "switch": false, "token": false}
+	want := map[string]bool{"list": false, "login": false, "logout": false, "refresh": false, "setup-git": false, "status": false, "switch": false, "token": false}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
 			want[child.Name()] = true

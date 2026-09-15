@@ -14,10 +14,12 @@
 - [ag alias set](#ag-alias-set) — Create a shortcut for an ag command
 - [ag api](#ag-api) — Make an authenticated AtomGit API request
 - [ag auth](#ag-auth) — Authenticate with AtomGit
+- [ag auth git-credential](#ag-auth-git-credential) — Implement the Git credential helper protocol
 - [ag auth list](#ag-auth-list) — List saved AtomGit accounts
 - [ag auth login](#ag-auth-login) — Log in with AtomGit OAuth (opens browser, saves token.json)
 - [ag auth logout](#ag-auth-logout) — Remove the active or a selected stored account
 - [ag auth refresh](#ag-auth-refresh) — Refresh the access token using the stored refresh_token
+- [ag auth setup-git](#ag-auth-setup-git) — Configure Git to use ag as a credential helper
 - [ag auth status](#ag-auth-status) — View authentication status
 - [ag auth switch](#ag-auth-switch) — Switch the active account and synchronize Git identity
 - [ag auth token](#ag-auth-token) — Print the authentication token
@@ -336,6 +338,22 @@ Manage authentication state for AtomGit.
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 
 
+## ag auth git-credential
+
+Usage: `ag auth git-credential <operation>`
+
+Implement the Git credential helper protocol
+
+> Hidden command.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+
 ## ag auth list
 
 Usage: `ag auth list [flags]`
@@ -409,6 +427,24 @@ otherwise switch to another account first. Use --all to remove every account.
 Usage: `ag auth refresh`
 
 Refresh the access token using the stored refresh_token
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+
+## ag auth setup-git
+
+Usage: `ag auth setup-git`
+
+Configure Git to use ag as a credential helper
+
+Configure Git to use AtomGit CLI as the HTTPS credential helper for
+atomgit.com. Git requests credentials from the active account selected by
+ag auth switch; access tokens are not written to Git configuration.
 
 ### Flags
 
