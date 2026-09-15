@@ -516,6 +516,33 @@ ag --raw-output commit patch owner/repo <sha>
 
 文本比较输出包含 base、merge base、提交列表和文件统计；文件行使用独立的元数据列标记二进制文件及服务端截断的文件，字段中的制表符、换行和反斜杠会转义。空比较仍会输出零提交、零文件；JSON 模式中的 `commits` 和 `files` 固定为空数组。`diff` 与 `patch` 不做 JSON 解码，默认仍遵循全局终端安全清理；保存为可直接处理的原始 diff/patch 时使用 `ag --raw-output commit diff ...` 或 `ag --raw-output commit patch ...`。接口文档声明的成功状态 `200` 会直接输出正文，其他状态会作为命令错误返回。
 
+### Commit 评论
+
+commit 评论独立于 Issue 评论和 PR 评论，使用专门的 commit 评论接口；`view`、`edit`、`delete` 作用于仓库级评论 ID，传入 Issue/PR 评论的 ID 会被拒绝。
+
+```bash
+# 列出某个 commit（完整或短 SHA、分支名）下的评论（默认 30 条）
+ag commit comment list owner/repo abcdef1
+ag commit comment list owner/repo abcdef1 --limit 100
+ag commit comment list owner/repo abcdef1 --json
+
+# 查看仓库级评论 ID 的详情
+ag commit comment view owner/repo 12345
+ag commit comment view owner/repo 12345 --json
+
+# 在指定 commit 上创建评论，正文支持多行文本
+ag commit comment create owner/repo abcdef1 --body "LGTM"
+ag commit comment create owner/repo abcdef1 --body-file notes.md
+cat notes.md | ag commit comment create owner/repo abcdef1 --body-file -
+
+# 编辑自己的评论（只提交正文字段）
+ag commit comment edit owner/repo 12345 --body "updated text"
+
+# 删除自己的评论，需确认，--yes 跳过
+ag commit comment delete owner/repo 12345
+ag commit comment delete owner/repo 12345 --yes
+```
+
 ## Browse
 
 在默认浏览器中打开仓库页面或指定资源：
