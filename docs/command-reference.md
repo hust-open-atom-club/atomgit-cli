@@ -133,6 +133,13 @@
 - [ag repo edit](#ag-repo-edit) — Edit repository settings
 - [ag repo fork](#ag-repo-fork) — Fork a repository
 - [ag repo fork list](#ag-repo-fork-list) — List forks of a repository
+- [ag repo insights](#ag-repo-insights) — Inspect repository activity and statistics
+- [ag repo insights contributors](#ag-repo-insights-contributors) — List repository contributor statistics
+- [ag repo insights downloads](#ag-repo-insights-downloads) — Show repository download statistics
+- [ag repo insights events](#ag-repo-insights-events) — List repository activity events
+- [ag repo insights languages](#ag-repo-insights-languages) — Show repository language percentages
+- [ag repo insights stargazers](#ag-repo-insights-stargazers) — List repository stargazers
+- [ag repo insights watchers](#ag-repo-insights-watchers) — List repository watchers
 - [ag repo list](#ag-repo-list) — List repositories
 - [ag repo mirror](#ag-repo-mirror) — Inspect repository remote mirrors
 - [ag repo mirror list](#ag-repo-mirror-list) — List configured push remote mirrors
@@ -3180,6 +3187,142 @@ ag repo fork list owner/repo
 ag repo fork list owner/repo --limit 100 --json
 ag repo fork list
 ```
+
+
+## ag repo insights
+
+Usage: `ag repo insights`
+
+Inspect repository activity and statistics
+
+Inspect read-only repository languages, contributor statistics, events, watchers, stargazers, and download statistics.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+
+## ag repo insights contributors
+
+Usage: `ag repo insights contributors [<owner>/<repo>] [flags]`
+
+List repository contributor statistics
+
+List repository contributor statistics
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output contributors as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of contributors to list | `30` | local |
+
+
+## ag repo insights downloads
+
+Usage: `ag repo insights downloads [<owner>/<repo>] [flags]`
+
+Show repository download statistics
+
+Show repository download statistics
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output download statistics as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+
+## ag repo insights events
+
+Usage: `ag repo insights events [<owner>/<repo>] [flags]`
+
+List repository activity events
+
+List repository activity events
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output events as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of events to list | `30` | local |
+
+
+## ag repo insights languages
+
+Usage: `ag repo insights languages [<owner>/<repo>] [flags]`
+
+Show repository language percentages
+
+Show repository language percentages
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output languages as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+
+## ag repo insights stargazers
+
+Usage: `ag repo insights stargazers [<owner>/<repo>] [flags]`
+
+List repository stargazers
+
+List repository stargazers
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output stargazers as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of stargazers to list | `30` | local |
+
+
+## ag repo insights watchers
+
+Usage: `ag repo insights watchers [<owner>/<repo>] [flags]`
+
+List repository watchers
+
+List repository watchers
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output watchers as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of watchers to list | `30` | local |
 
 
 ## ag repo list
