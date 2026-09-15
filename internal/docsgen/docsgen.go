@@ -127,7 +127,7 @@ func collectCommands(root *cobra.Command) []commandInfo {
 			aliases:    append([]string(nil), command.Aliases...),
 			deprecated: strings.TrimSpace(command.Deprecated),
 			hidden:     command.Hidden,
-			example:    strings.TrimSpace(command.Example),
+			example:    normalizeExample(command.Example),
 			flags:      collectFlags(command),
 		})
 
@@ -141,6 +141,38 @@ func collectCommands(root *cobra.Command) []commandInfo {
 	}
 	visit(root)
 	return result
+}
+
+// normalizeExample removes shared help-text indentation while preserving
+// relative indentation in shell continuations and nested examples.
+func normalizeExample(example string) string {
+	lines := strings.Split(strings.ReplaceAll(example, "\r\n", "\n"), "\n")
+	for len(lines) > 0 && strings.TrimSpace(lines[0]) == "" {
+		lines = lines[1:]
+	}
+	for len(lines) > 0 && strings.TrimSpace(lines[len(lines)-1]) == "" {
+		lines = lines[:len(lines)-1]
+	}
+	if len(lines) == 0 {
+		return ""
+	}
+	prefix := lines[0][:len(lines[0])-len(strings.TrimLeft(lines[0], " \t"))]
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		for !strings.HasPrefix(line, prefix) {
+			prefix = prefix[:len(prefix)-1]
+		}
+	}
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			lines[i] = ""
+		} else {
+			lines[i] = strings.TrimPrefix(line, prefix)
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func collectFlags(command *cobra.Command) []flagInfo {
