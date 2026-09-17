@@ -335,6 +335,33 @@ func (b FlexibleBool) Bool() bool {
 	return bool(b)
 }
 
+// FlexibleIdentifier decodes identifier fields that AtomGit returns as JSON
+// numbers on some endpoints and strings on others, keeping the decoded value
+// stable as a string.
+type FlexibleIdentifier string
+
+func (id *FlexibleIdentifier) UnmarshalJSON(data []byte) error {
+	data = bytes.TrimSpace(data)
+	if len(data) == 0 || bytes.Equal(data, []byte("null")) {
+		*id = ""
+		return nil
+	}
+	if data[0] == '"' {
+		var value string
+		if err := json.Unmarshal(data, &value); err != nil {
+			return fmt.Errorf("decode identifier: %w", err)
+		}
+		*id = FlexibleIdentifier(value)
+		return nil
+	}
+	var number json.Number
+	if err := json.Unmarshal(data, &number); err != nil {
+		return fmt.Errorf("decode identifier: %w", err)
+	}
+	*id = FlexibleIdentifier(number.String())
+	return nil
+}
+
 // Branch represents a git branch
 type Branch struct {
 	Ref                string       `json:"ref"`

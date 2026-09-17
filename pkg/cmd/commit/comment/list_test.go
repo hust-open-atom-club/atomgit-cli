@@ -16,6 +16,7 @@ func TestListOutputsRowsAndPaginates(t *testing.T) {
 			t.Fatalf("method = %s", req.Method)
 		}
 		if got := req.URL.EscapedPath(); got != "/api/v5/repos/alice/demo/commits/feature%2Fone/comments" {
+			t.Fatalf("path = %q", got)
 		}
 		if got := req.URL.Query().Get("per_page"); got != "100" {
 			t.Fatalf("per_page = %q", got)
@@ -71,7 +72,7 @@ func TestListMarksCurrentUserAndEscapesCells(t *testing.T) {
 
 func TestListJSONOutputIsStable(t *testing.T) {
 	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		return jsonResponse(req, http.StatusOK, `[{"id":9,"body":"hello","user":{"id":"u1","login":"bob","name":"Bob"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T11:00:00+08:00"}]`), nil
+		return jsonResponse(req, http.StatusOK, `[{"id":9,"body":"hello","user":{"id":99,"login":"bob","name":"Bob"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T11:00:00+08:00"}]`), nil
 	})
 
 	var out bytes.Buffer
@@ -148,7 +149,7 @@ func TestListRejectsBadInputBeforeNetwork(t *testing.T) {
 func commentsPage(first, count int) string {
 	items := make([]string, count)
 	for i := range count {
-		items[i] = fmt.Sprintf(`{"id":%d,"body":"note %d","user":{"login":"alice"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T10:00:00+08:00"}`, first+i, first+i)
+		items[i] = fmt.Sprintf(`{"id":%d,"body":"note %d","user":{"id":1001,"login":"alice"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T10:00:00+08:00"}`, first+i, first+i)
 	}
 	return "[" + strings.Join(items, ",") + "]"
 }

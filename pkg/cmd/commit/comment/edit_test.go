@@ -18,14 +18,14 @@ func TestEditPatchesOnlyBody(t *testing.T) {
 			if req.URL.Path != "/api/v5/repos/alice/demo/comments/7" {
 				t.Fatalf("GET path = %q", req.URL.Path)
 			}
-			return jsonResponse(req, http.StatusOK, `{"id":7,"body":"old","user":{"login":"alice"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T10:00:00+08:00"}`), nil
+			return jsonResponse(req, http.StatusOK, `{"id":7,"body":"old","user":{"id":1001,"login":"alice"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T10:00:00+08:00"}`), nil
 		case http.MethodPatch:
 			if req.URL.Path != "/api/v5/repos/alice/demo/comments/7" {
 				t.Fatalf("PATCH path = %q", req.URL.Path)
 			}
 			raw, _ := io.ReadAll(req.Body)
 			patchBody = string(raw)
-			return jsonResponse(req, http.StatusOK, `{"id":7,"body":"new body","user":{"login":"alice"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T12:00:00+08:00","html_url":"https://atomgit.com/alice/demo/-/commit_comment/7"}`), nil
+			return jsonResponse(req, http.StatusOK, `{"id":7,"body":"new body","user":{"id":1001,"login":"alice"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T12:00:00+08:00","html_url":"https://atomgit.com/alice/demo/-/commit_comment/7"}`), nil
 		default:
 			t.Fatalf("unexpected method %s", req.Method)
 			return nil, nil
@@ -57,7 +57,7 @@ func TestEditRejectsForeignAndWrongTypeComments(t *testing.T) {
 			if req.Method == http.MethodPatch {
 				patches++
 			}
-			return jsonResponse(req, http.StatusOK, `{"id":7,"body":"old","user":{"login":"bob"}}`), nil
+			return jsonResponse(req, http.StatusOK, `{"id":7,"body":"old","user":{"id":1002,"login":"bob"}}`), nil
 		})
 		cmd := newCmdEdit(newFactory(t, &testConfig{}, transport))
 		cmd.SetOut(&bytes.Buffer{})

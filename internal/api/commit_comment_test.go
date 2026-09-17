@@ -70,7 +70,7 @@ func TestListCommitCommentsHonorsLimitAndEmptyPage(t *testing.T) {
 func commentsBody(first, count int) string {
 	items := make([]string, count)
 	for i := range count {
-		items[i] = fmt.Sprintf(`{"id":%d,"body":"note %d","user":{"login":"alice"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T10:00:00+08:00"}`, first+i, first+i)
+		items[i] = fmt.Sprintf(`{"id":%d,"body":"note %d","user":{"id":1001,"login":"alice"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T10:00:00+08:00"}`, first+i, first+i)
 	}
 	return "[" + strings.Join(items, ",") + "]"
 }
@@ -154,7 +154,7 @@ func TestUpdateCommitCommentPatchesBodyOnly(t *testing.T) {
 		}
 		raw, _ := io.ReadAll(r.Body)
 		body = string(raw)
-		writeJSON(t, w, json.RawMessage(`{"id":7,"body":"new","user":{"login":"alice"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T11:00:00+08:00"}`))
+		writeJSON(t, w, json.RawMessage(`{"id":7,"body":"new","user":{"id":1001,"login":"alice"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T11:00:00+08:00"}`))
 	})
 
 	comment, err := UpdateCommitComment(client, "alice", "demo", 7, "new")
@@ -185,4 +185,35 @@ func TestDeleteCommitCommentSucceedsOnNoContent(t *testing.T) {
 	if !called {
 		t.Fatal("delete was not sent")
 	}
+}
+
+func TestCommitCommentDecodesDocumentedUserShapes(t *testing.T) {
+	numeric := decodeCommitComment(t, `{"id":7,"user":{"id":1001,"login":"alice","name":"Alice"}}`)
+	if numeric.User.ID != "1001" || numeric.User.Login != "alice" || numeric.User.Name != "Alice" {
+		t.Fatalf("numeric user = %+v", numeric.User)
+	}
+	textual := decodeCommitComment(t, `{"id":8,"user":{"id":"u1001","login":"bob","name":"Bob"}}`)
+	if textual.User.ID != "u1001" || textual.User.Login != "bob" || textual.User.Name != "Bob" {
+		t.Fatalf("string user = %+v", textual.User)
+	}
+	missing := decodeCommitComment(t, `{"id":9}`)
+	if missing.User.ID != "" || missing.User.Login != "" {
+		t.Fatalf("missing user = %+v", missing.User)
+	}
+	nullID := decodeCommitComment(t, `{"id":10,"user":{"id":null,"login":"carol"}}`)
+	if nullID.User.ID != "" || nullID.User.Login != "carol" {
+		t.Fatalf("null-id user = %+v", nullID.User)
+	}
+}
+
+func decodeCommitComment(t *testing.T, response string) CommitComment {
+	t.Helper()
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(t, w, json.RawMessage(response))
+	})
+	comment, err := GetCommitComment(client, "alice", "demo", 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return comment
 }

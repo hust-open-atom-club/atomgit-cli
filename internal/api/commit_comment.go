@@ -10,12 +10,22 @@ import (
 
 // CommitComment is a comment attached to a repository commit.
 type CommitComment struct {
-	ID        int64  `json:"id"`
-	Body      string `json:"body"`
-	User      User   `json:"user"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
-	HTMLURL   string `json:"html_url"`
+	ID        int64             `json:"id"`
+	Body      string            `json:"body"`
+	User      CommitCommentUser `json:"user"`
+	CreatedAt string            `json:"created_at"`
+	UpdatedAt string            `json:"updated_at"`
+	HTMLURL   string            `json:"html_url"`
+}
+
+// CommitCommentUser is the endpoint-specific user shape embedded in commit
+// comment responses. These endpoints document user.id as an integer, unlike
+// the string-identified User shape; FlexibleIdentifier also tolerates string
+// forms so neither shape breaks decoding.
+type CommitCommentUser struct {
+	ID    FlexibleIdentifier `json:"id"`
+	Login string             `json:"login"`
+	Name  string             `json:"name"`
 }
 
 // ErrNotCommitComment reports that a repository comment ID does not belong to

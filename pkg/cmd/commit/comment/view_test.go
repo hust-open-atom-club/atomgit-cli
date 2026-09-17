@@ -12,7 +12,7 @@ func TestViewPrintsCommentDetail(t *testing.T) {
 		if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/comments/7" {
 			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 		}
-		return jsonResponse(req, http.StatusOK, `{"id":7,"body":"looks good\nship it","user":{"login":"alice"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T11:30:00+08:00","target":{"sha":"abc1234"}}`), nil
+		return jsonResponse(req, http.StatusOK, `{"id":7,"body":"looks good\nship it","user":{"id":1001,"login":"alice"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T11:30:00+08:00","target":{"sha":"abc1234"}}`), nil
 	})
 
 	var out bytes.Buffer
@@ -30,7 +30,7 @@ func TestViewPrintsCommentDetail(t *testing.T) {
 
 func TestViewJSONOutput(t *testing.T) {
 	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		return jsonResponse(req, http.StatusOK, `{"id":7,"body":"hello","user":{"login":"bob"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T10:00:00+08:00"}`), nil
+		return jsonResponse(req, http.StatusOK, `{"id":7,"body":"hello","user":{"id":1002,"login":"bob"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T10:00:00+08:00"}`), nil
 	})
 
 	var out bytes.Buffer

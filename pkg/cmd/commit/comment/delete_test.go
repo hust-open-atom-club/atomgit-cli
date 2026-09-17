@@ -44,7 +44,7 @@ func TestDeleteConfirmation(t *testing.T) {
 					if req.URL.Path != "/api/v5/repos/alice/demo/comments/7" {
 						t.Fatalf("GET path = %q", req.URL.Path)
 					}
-					return jsonResponse(req, http.StatusOK, `{"id":7,"body":"old","user":{"login":"alice"}}`), nil
+					return jsonResponse(req, http.StatusOK, `{"id":7,"body":"old","user":{"id":1001,"login":"alice"}}`), nil
 				case http.MethodDelete:
 					deletes++
 					return &http.Response{StatusCode: http.StatusNoContent, Status: "204 No Content", Header: make(http.Header), Body: http.NoBody, Request: req}, nil
@@ -92,7 +92,7 @@ func TestDeleteRejectsForeignAndWrongTypeComments(t *testing.T) {
 			if req.Method == http.MethodDelete {
 				deletes++
 			}
-			return jsonResponse(req, http.StatusOK, `{"id":7,"body":"old","user":{"login":"bob"}}`), nil
+			return jsonResponse(req, http.StatusOK, `{"id":7,"body":"old","user":{"id":1002,"login":"bob"}}`), nil
 		})
 		cmd := newCmdDelete(newFactory(t, &testConfig{}, transport))
 		cmd.SetOut(&bytes.Buffer{})
