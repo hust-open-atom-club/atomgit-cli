@@ -29,13 +29,15 @@ push。PR 运行检出最新 head 提交，合并后的运行检出进入 `main`
 Go 1.26.8 执行格式检查、`go vet`、命令参考检查和本机构建。发布工具链下的完整
 package 集合由 `go test -race ./...` 验证，因此门禁不再重复运行普通 `go test`。
 race、交叉编译、平台测试编译和漏洞扫描显式依赖门禁成功，并在门禁之后相互并行；
-npm 测试保持独立。门禁完成后 setup-go 缓存已可供后续 Go job 恢复，冷缓存也只会
-增加下载和准备时间，不会绕过检查。
+npm 测试保持独立。各 Go job 通过显式 `cache` 步骤分别缓存 `~/go/pkg/mod`（模块和
+下载的 Go 工具链）及 `~/.cache/go-build`。门禁结束后 cache action 才保存未命中的
+内容，后续 job 是否成功复用必须以对应恢复步骤的远端日志为准；cache miss 只会增加
+下载和准备时间，不会绕过检查。
 
-关键命令通过 shell `time` 输出实际耗时；setup-go 步骤日志提供 cache 恢复结果，
-Actions 运行详情提供 job 和 workflow 的开始、结束时间。评估 CI 调整时应分别记录
-冷缓存与热缓存的 cache 状态、门禁耗时、失败时启动的 Runner job 数，以及绿色运行
-的总耗时，避免以减少覆盖或不必要串行化换取表面上的加速。
+关键命令通过 shell `time` 输出实际耗时；两个 cache 步骤分别提供模块/工具链与构建
+缓存的恢复结果，Actions 运行详情提供 job 和 workflow 的开始、结束时间。评估 CI
+调整时应分别记录冷缓存与热缓存的两个 cache 状态、门禁耗时、失败时启动的 Runner
+job 数，以及绿色运行的总耗时，避免以减少覆盖或不必要串行化换取表面上的加速。
 
 Nix 更新使用独立的 `.gitcode/workflows/update-nix.yml`。该 workflow 保留
 `main`、`test`、`nix-update` 分支 push 和手动触发入口，并在自身流程中构建、验证

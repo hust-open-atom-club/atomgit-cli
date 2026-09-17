@@ -101,9 +101,11 @@
    覆盖并保持后续 job 并行。
 
    各关键命令使用 shell `time` 输出耗时；workflow 和 job 总耗时以 Actions 运行
-   详情的开始/结束时间为准。每个 Go job 的 `Set up bootstrap Go and restore cache`
-   日志记录 setup-go 的 cache 恢复结果。比较冷、热缓存时，应同时记录该日志、门禁
-   耗时和完整 workflow 耗时；cache miss 只影响准备时间，不会跳过任何验证步骤。
+   详情的开始/结束时间为准。每个 Go job 使用两个显式的 `cache` 步骤，分别记录
+   `~/go/pkg/mod`（模块和下载的 Go 工具链）与 `~/.cache/go-build` 的恢复结果。
+   比较冷、热缓存时，应同时记录两个 cache 步骤的命中状态、门禁耗时和完整 workflow
+   耗时；只有远端日志显示下游 job 命中，才能确认跨 job 复用生效。cache miss 只影响
+   准备时间，不会跳过任何验证步骤。
 
    `Update Nix packages` 是独立的维护 workflow，仍可在 `main`、`test`、
    `nix-update` 分支 push 或手动触发时运行。它会在自身流程中完成 Nix package

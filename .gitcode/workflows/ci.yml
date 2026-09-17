@@ -31,11 +31,26 @@ jobs:
 
       # AtomGit setup-go currently provides Go 1.26.1. The Go command then
       # downloads the minimum and preferred versions declared in go.mod.
-      - name: Set up bootstrap Go and restore cache
+      - name: Set up bootstrap Go
         uses: setup-go
         with:
           version: "1.26.1"
-          cache: true
+
+      - name: Restore Go modules and downloaded toolchains
+        uses: cache
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum') }}
+          restore-keys: |
+            go-mod-${{ runner.os }}-
+
+      - name: Restore Go build cache
+        uses: cache
+        with:
+          path: ~/.cache/go-build
+          key: go-build-${{ runner.os }}-${{ hashFiles('**/*.go', 'go.mod', 'go.sum') }}
+          restore-keys: |
+            go-build-${{ runner.os }}-
 
       - name: Test minimum supported Go toolchain
         run: time make go-min-version test-min-go
@@ -70,13 +85,28 @@ jobs:
         if: ${{ atomgit.head_ref == '' }}
         uses: checkout
 
-      # This starts after the gate has saved its setup-go/module/build cache,
-      # while remaining parallel with the other expensive Go jobs.
-      - name: Set up bootstrap Go and restore cache
+      # This starts after the gate's cache post-steps have completed, while
+      # remaining parallel with the other expensive Go jobs.
+      - name: Set up bootstrap Go
         uses: setup-go
         with:
           version: "1.26.1"
-          cache: true
+
+      - name: Restore Go modules and downloaded toolchains
+        uses: cache
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum') }}
+          restore-keys: |
+            go-mod-${{ runner.os }}-
+
+      - name: Restore Go build cache
+        uses: cache
+        with:
+          path: ~/.cache/go-build
+          key: go-build-${{ runner.os }}-${{ hashFiles('**/*.go', 'go.mod', 'go.sum') }}
+          restore-keys: |
+            go-build-${{ runner.os }}-
 
       - name: Select release Go toolchain
         run: make go-version
@@ -102,11 +132,26 @@ jobs:
         if: ${{ atomgit.head_ref == '' }}
         uses: checkout
 
-      - name: Set up bootstrap Go and restore cache
+      - name: Set up bootstrap Go
         uses: setup-go
         with:
           version: "1.26.1"
-          cache: true
+
+      - name: Restore Go modules and downloaded toolchains
+        uses: cache
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum') }}
+          restore-keys: |
+            go-mod-${{ runner.os }}-
+
+      - name: Restore Go build cache
+        uses: cache
+        with:
+          path: ~/.cache/go-build
+          key: go-build-${{ runner.os }}-${{ hashFiles('**/*.go', 'go.mod', 'go.sum') }}
+          restore-keys: |
+            go-build-${{ runner.os }}-
 
       - name: Select release Go toolchain
         run: make go-version
@@ -132,11 +177,26 @@ jobs:
         if: ${{ atomgit.head_ref == '' }}
         uses: checkout
 
-      - name: Set up bootstrap Go and restore cache
+      - name: Set up bootstrap Go
         uses: setup-go
         with:
           version: "1.26.1"
-          cache: true
+
+      - name: Restore Go modules and downloaded toolchains
+        uses: cache
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum') }}
+          restore-keys: |
+            go-mod-${{ runner.os }}-
+
+      - name: Restore Go build cache
+        uses: cache
+        with:
+          path: ~/.cache/go-build
+          key: go-build-${{ runner.os }}-${{ hashFiles('**/*.go', 'go.mod', 'go.sum') }}
+          restore-keys: |
+            go-build-${{ runner.os }}-
 
       - name: Select release Go toolchain
         run: make go-version
@@ -162,11 +222,26 @@ jobs:
         if: ${{ atomgit.head_ref == '' }}
         uses: checkout
 
-      - name: Set up bootstrap Go and restore cache
+      - name: Set up bootstrap Go
         uses: setup-go
         with:
           version: "1.26.1"
-          cache: true
+
+      - name: Restore Go modules and downloaded toolchains
+        uses: cache
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum') }}
+          restore-keys: |
+            go-mod-${{ runner.os }}-
+
+      - name: Restore Go build cache
+        uses: cache
+        with:
+          path: ~/.cache/go-build
+          key: go-build-${{ runner.os }}-${{ hashFiles('**/*.go', 'go.mod', 'go.sum') }}
+          restore-keys: |
+            go-build-${{ runner.os }}-
 
       - name: Select release Go toolchain
         run: make go-version

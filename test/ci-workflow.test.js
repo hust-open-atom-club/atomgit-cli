@@ -41,7 +41,7 @@ test('expensive Go jobs wait for the quality gate and then remain independent', 
   assert.doesNotMatch(job('npm-test'), /^    needs:/m);
 });
 
-test('each Go job restores the shared setup-go cache', () => {
+test('each Go job explicitly restores module, toolchain, and build caches', () => {
   const goJobs = [
     'quality-and-test',
     'race-test',
@@ -53,6 +53,19 @@ test('each Go job restores the shared setup-go cache', () => {
   for (const name of goJobs) {
     const body = job(name);
     assert.equal((body.match(/uses: setup-go/g) || []).length, 1, name);
-    assert.match(body, /^          cache: true$/m, name);
+    assert.equal((body.match(/uses: cache/g) || []).length, 2, name);
+    assert.match(body, /^          path: ~\/go\/pkg\/mod$/m, name);
+    assert.match(body, /^          path: ~\/\.cache\/go-build$/m, name);
+    assert.match(
+      body,
+      /^          key: go-mod-\$\{\{ runner\.os \}\}-\$\{\{ hashFiles\('go\.mod', 'go\.sum'\) \}\}$/m,
+      name,
+    );
+    assert.match(
+      body,
+      /^          key: go-build-\$\{\{ runner\.os \}\}-\$\{\{ hashFiles\('\*\*\/\*\.go', 'go\.mod', 'go\.sum'\) \}\}$/m,
+      name,
+    );
+    assert.doesNotMatch(body, /^          cache: true$/m, name);
   }
 });
