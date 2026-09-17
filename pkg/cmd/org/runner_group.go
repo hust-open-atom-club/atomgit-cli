@@ -275,14 +275,7 @@ func organizationActionsClient(f *cmdutil.Factory) (*actions.Client, error) {
 	if err != nil {
 		return nil, cmdutil.AuthenticationError(err)
 	}
-	if f.HttpClient == nil {
-		return actions.NewClient(token), nil
-	}
-	httpClient, err := f.HttpClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
-	}
-	return actions.NewClientWithHTTPClient(token, httpClient), nil
+	return f.NewActionsClient(token)
 }
 
 func collectRunnerGroupPages[T any](limit int, identity func(T) string, fetch func(page, perPage int) (int, []T, error)) ([]T, error) {

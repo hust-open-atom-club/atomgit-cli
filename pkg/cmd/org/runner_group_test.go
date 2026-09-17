@@ -2,7 +2,9 @@ package org
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -298,6 +300,55 @@ func TestRunnerGroupContextualAPIErrors(t *testing.T) {
 				t.Fatalf("error = %v", err)
 			}
 		})
+	}
+}
+
+func TestRunnerGroupCommandsHonorFactoryContextCancellation(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		body string
+	}{
+		{"list", []string{"list", "team"}, `{"total_count":0,"runner_groups":[]}`},
+		{"view", []string{"view", "team", "group-1"}, `{}`},
+		{"runners", []string{"runners", "team", "group-1"}, `{"total_count":0,"runners":[]}`},
+		{"runner sets", []string{"runner-sets", "team", "group-1"}, `{"total_count":0,"runner_sets":[]}`},
+		{"namespaces", []string{"namespaces", "team", "group-1"}, `{"total_count":0,"shared_namespaces":[]}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			factory := orgFactory(orgTestConfig{}, func(req *http.Request) (*http.Response, error) {
+				if err := req.Context().Err(); err != nil {
+					return nil, err
+				}
+				return orgResponse(http.StatusOK, tt.body), nil
+			})
+			factory.Context = func() context.Context { return ctx }
+
+			_, err := executeRunnerGroupCommand(t, factory, tt.args...)
+			if !errors.Is(err, context.Canceled) {
+				t.Fatalf("error = %v, want context canceled", err)
+			}
+		})
+	}
+}
+
+func TestRunnerGroupDefaultClientHonorsFactoryContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	factory := &cmdutil.Factory{
+		Config:  orgTestConfig{},
+		Context: func() context.Context { return ctx },
+	}
+	client, err := organizationActionsClient(factory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.ListOrganizationRunnerGroups("team", actions.ListRunnerGroupsOptions{Page: 1, PerPage: 1})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v, want context canceled", err)
 	}
 }
 
