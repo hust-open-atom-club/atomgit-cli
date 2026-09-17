@@ -46,7 +46,7 @@
 | user | v5 | Users：/user、/users/{name}、/emails、namespaces、starred/subscriptions、events；显式字段更新个人资料 | implemented | project | source,mock | [命令与测试](../pkg/cmd/user/) | [#80](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/80)、[PR #275](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/275) 已合入；不是账号管理全覆盖 |
 | search | v5 | Search：/search/repositories、users、issues | implemented | project | source,mock | [命令与测试](../pkg/cmd/search/) | [#31](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/31) |
 | discussion | v5 | Discussion：/repos/{owner}/{repo}/discuss，列表/详情、评论与回复读取 | partial | project | source,mock | [命令与测试](../pkg/cmd/discussion/)、[API](../internal/api/discussion.go) | [#71](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/71)、[#72](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/72)；没有专用写命令 |
-| ssh-key | v5 | Users SSH keys：认证用户 SSH 公钥列举与删除 | implemented | project | source,mock | [命令与测试](../pkg/cmd/ssh-key/) | [#27](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/27)；不代表所有 SSH key 端点已覆盖 |
+| ssh-key | v5 | Users SSH keys：认证用户 SSH 公钥添加、列举与删除 | implemented | project | source,mock | [命令与测试](../pkg/cmd/ssh-key/) | [#27](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/27)；不代表所有 SSH key 端点已覆盖 |
 | kanban | v5 | Dashboard：/org/{org}/kanban/list、detail、item_list；仅组织看板只读发现 | partial | partner | source,mock | [命令与测试](../pkg/cmd/kanban/)、[API](../internal/api/kanban.go) | [#87](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/87) 已实现部分由本项目维护；完整模块/写操作由合作方负责 |
 
 ### API v8 与跨版本命令
@@ -67,7 +67,7 @@
 | license | external | openEuler compliance /check；不属于 AtomGit OpenAPI | implemented | project | source | [实现](../pkg/cmd/license/check.go)、[结构测试](../pkg/cmd/license/license_test.go) | 外部服务响应尚无本清单可引用的 HTTP mock/在线验证 |
 | update | v5,external,local | AtomGit Release 版本检查；按安装来源处理 npm/Homebrew 更新与本地制品验证 | implemented | project | source,mock | [实现与注入测试](../pkg/cmd/update/) | [#53](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/53)、[PR #230](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/230)；不是通用包管理 API |
 | check-update | v5,external,local | 已弃用的兼容入口：只检查更新，复用 update 的版本发现逻辑 | implemented | project | source,mock | [实现与测试](../pkg/cmd/update/) | [#70](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/70)；兼容命令不重复计算 API 覆盖 |
-| alias | local | 本地 ag JSON 配置中的命令/受控 shell 别名，不使用 Git config | implemented | project | source,local | [命令与测试](../pkg/cmd/alias/)、[存储](../internal/config/aliases.go)、[存储测试](../internal/config/aliases_test.go) | [PR #130](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/130)；无 AtomGit API |
+| alias | local | 本地 ag JSON 配置中的内置 ag 命令别名；不支持 shell 别名，不使用 Git config | implemented | project | source,local | [命令与测试](../pkg/cmd/alias/)、[存储](../internal/config/aliases.go)、[存储测试](../internal/config/aliases_test.go) | [PR #130](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/130)；无 AtomGit API |
 | version | local | 显示 Version/Commit/BuildDate 与 Go 构建信息回退 | implemented | project | source,local | [命令与测试](../pkg/cmd/version/)、[元数据](../internal/version/) | [#61](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/61)；无 AtomGit API |
 <!-- coverage:end -->
 
@@ -115,4 +115,4 @@
 5. 新增 `live` 证据需注明验证日期、commit、端点/操作范围及脱敏记录链接；其他场景仍未验证。没有证据的能力使用 unverified/deferred，不据接口名称猜测。
 6. 运行 `go test ./pkg/cmd/root -run TestOpenAPICoverage -count=1` 检查清单，再运行 `go test ./...` 和 `make docs-reference-check`。该检查自动进入已有 Go 测试/CI，不新建 workflow。外部网页及邮件服务可达性不由离线测试保证。
 
-仓库文档、代码、测试之间一律使用相对链接，保证 AtomGit 与 GitHub mirror 的文件导航一致。Issue/PR 是 AtomGit 上的协作记录，使用完整 AtomGit URL，避免 mirror 的同号 Issue 被误认为原任务。此文件是人工清单，不运行生成器覆盖它。
+仓库文档、代码、测试之间一律使用相对链接，保证 AtomGit 与 GitHub mirror 的文件导航一致。GitHub mirror 不承载本项目的 Issue/PR 协作；活跃的 Issue/PR 记录仅在 AtomGit 上维护，因此相关链接使用完整 AtomGit URL。此文件是人工清单，不运行生成器覆盖它。

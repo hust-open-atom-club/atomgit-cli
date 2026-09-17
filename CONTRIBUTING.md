@@ -232,7 +232,8 @@ OpenAPI 变化或契约失败时重新核对实现状态，不将 mock 通过写
 
 运行 `go test ./pkg/cmd/root -run TestOpenAPICoverage -count=1` 检查根命令覆盖、
 清单字段及仓库相对链接；该检查包含在默认 `go test ./...` 和 CI 中。
-文档与源码链接使用相对路径，Issue/PR 链接使用 AtomGit 原始记录，避免 mirror 同号歧义。
+文档与源码链接使用相对路径；GitHub mirror 不承载本项目的 Issue/PR 协作，
+活跃记录仅在 AtomGit 上维护，Issue/PR 链接使用完整 AtomGit URL。
 
 ### OpenAPI 契约验证
 
