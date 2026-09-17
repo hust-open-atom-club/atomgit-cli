@@ -17,14 +17,17 @@ type inspectionOptions struct {
 }
 
 type issueActivityJSON struct {
-	ID        int64  `json:"id"`
-	Author    string `json:"author"`
-	Action    string `json:"action"`
-	Content   string `json:"content"`
-	CreatedAt string `json:"createdAt"`
-	UpdatedAt string `json:"updatedAt"`
-	IssueID   string `json:"issueId"`
-	Title     string `json:"title"`
+	ID        int64                 `json:"id"`
+	Author    string                `json:"author"`
+	Action    string                `json:"action"`
+	Content   string                `json:"content"`
+	CreatedAt string                `json:"createdAt"`
+	UpdatedAt string                `json:"updatedAt"`
+	IssueID   string                `json:"issueId"`
+	Title     string                `json:"title"`
+	Body      string                `json:"body"`
+	Head      *api.IssueActivityRef `json:"head"`
+	Base      *api.IssueActivityRef `json:"base"`
 }
 type issueHistoryJSON struct {
 	ID        string `json:"id"`
@@ -46,7 +49,7 @@ type issueReactionJSON struct {
 func newCmdIssueActivity(f *cmdutil.Factory) *cobra.Command {
 	return newIssueInspection(f, "activity", "List operation logs for an issue", api.ListIssueActivity,
 		func(item api.IssueActivity) any {
-			return issueActivityJSON{item.ID, item.User.Login, item.ActionType, item.Content, item.CreatedAt, item.UpdatedAt, item.IssueID, item.Title}
+			return issueActivityJSON{ID: item.ID, Author: item.User.Login, Action: item.ActionType, Content: item.Content, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt, IssueID: item.IssueID, Title: item.Title, Body: item.Body, Head: item.Head, Base: item.Base}
 		},
 		"The API returns an unpaginated list; --limit caps the displayed entries in server order.",
 		"ACTOR\tACTION\tISSUE\tCREATED AT\tCONTENT", func(out io.Writer, number string, item api.IssueActivity) {

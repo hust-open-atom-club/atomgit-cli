@@ -818,7 +818,7 @@ ag issue reactions 42 --limit 100 --json
 
 [操作日志接口](https://docs.atomgit.com/docs/apis/get-api-v-5-repos-owner-issues-number-operate-logs/)和[修改历史接口](https://docs.atomgit.com/docs/apis/get-api-v-5-repos-owner-repo-issues-number-modify-history/)未声明分页参数，因此单次读取列表后应用 `--limit`，该参数不限制服务端响应大小。[表态接口](https://docs.atomgit.com/docs/apis/get-api-v-5-repos-owner-repo-issues-number-user-reactions/)支持 `page/per_page`，按页获取直到达到限制或列表结束。
 
-JSON 字段固定：activity 为 `id/author/action/content/createdAt/updatedAt/issueId/title`；history 为 `id/author/updatedBy/content/createdAt/updatedAt/created/deleted`；reactions 为 `id/author/emoji/emojiName`。activity 的 `id` 为整数，history 和 reactions 的 `id` 为不透明字符串；`author`、`updatedBy` 为登录名。JSON 保留正文中的换行，文本表格将空白折叠为单行，并继续经过默认终端控制字符清理。
+JSON 字段固定：activity 为 `id/author/action/content/createdAt/updatedAt/issueId/title/body/head/base`；history 为 `id/author/updatedBy/content/createdAt/updatedAt/created/deleted`；reactions 为 `id/author/emoji/emojiName`。activity 的 `id` 为整数，history 和 reactions 的 `id` 为不透明字符串；`author`、`updatedBy` 为登录名。activity 的 `head/base` 保留关联 PR 的 `ref`、`sha`、`repo`（`path/name`）及 `assigner`（`login/name`）；未提供的分支、仓库或指派人为 `null`，未提供的 `body` 为 `""`。JSON 保留正文中的换行，文本表格将空白折叠为单行，并继续经过默认终端控制字符清理。
 
 #### Issue 评论
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -19,7 +20,7 @@ var inspectionCases = []struct {
 	text             []string
 }{
 	{"activity", "/api/v5/repos/alice/issues/7/operate_logs", `[{"id":1,"user":{"id":"opaque","login":"alice","name":"Alice"},"content":"changed milestone","created_at":"2026-09-17","update_at":"2026-09-18","action_type":"milestone","issue_id":"42","title":null}]`, newCmdIssueActivity,
-		[]string{"id", "author", "content", "createdAt", "updatedAt", "action", "issueId", "title"}, []string{"alice", "milestone", "#7", "2026-09-17", "changed milestone"}},
+		[]string{"id", "author", "content", "createdAt", "updatedAt", "action", "issueId", "title", "body", "head", "base"}, []string{"alice", "milestone", "#7", "2026-09-17", "changed milestone"}},
 	{"history", "/api/v5/repos/alice/demo/issues/7/modify_history", `[{"id":"history-a","created_at":"2026-09-17","updated_at":"2026-09-18","created":false,"deleted":false,"content":"new body 中文","user":{"login":"alice"},"updated_user":{"login":"bob"}}]`, newCmdIssueHistory,
 		[]string{"id", "createdAt", "updatedAt", "created", "deleted", "content", "author", "updatedBy"}, []string{"bob", "updated", "#7", "2026-09-18", "new body 中文"}},
 	{"reactions", "/api/v5/repos/alice/demo/issues/7/user_reactions", `[{"id":"reaction-a","emoji":"👍","emoji_name":"like","user":{"login":"alice","name":"Alice","object_id":"user-a"}}]`, newCmdIssueReactions,
@@ -308,6 +309,51 @@ func TestIssueHistoryActions(t *testing.T) {
 			for _, want := range []string{tc.action, "Display Name", "2026-09-17"} {
 				if !strings.Contains(out.String(), want) {
 					t.Fatalf("output %q lacks %q", out.String(), want)
+				}
+			}
+		})
+	}
+}
+
+func TestIssueActivityJSONPreservesAuditContext(t *testing.T) {
+	for _, tc := range []struct{ name, fields, expected string }{
+		{"linked PR", `"body":"PR body\n中文","head":{"ref":"feature","sha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","repo":{"path":"demo-fork","name":"Fork"},"assigner":{"login":"alice","name":"Alice"}},"base":{"ref":"main","sha":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","repo":{"path":"demo","name":"Demo"},"assigner":null}`,
+			`{"body":"PR body\n中文","head":{"ref":"feature","sha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","repo":{"path":"demo-fork","name":"Fork"},"assigner":{"login":"alice","name":"Alice"}},"base":{"ref":"main","sha":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","repo":{"path":"demo","name":"Demo"},"assigner":null}}`},
+		{"null context", `"body":null,"head":null,"base":null`, `{"body":"","head":null,"base":null}`},
+		{"missing context", `"content":"milestone changed"`, `{"body":"","head":null,"base":null}`},
+		{"partial branch", `"head":{"ref":"feature"}`, `{"body":"","head":{"ref":"feature","sha":"","repo":null,"assigner":null},"base":null}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := &cmdutil.Factory{Config: issueTestConfig{}, HttpClient: func() (*http.Client, error) {
+				return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+					if req.Method != "GET" || req.URL.Path != "/api/v5/repos/alice/issues/7/operate_logs" || req.URL.Query().Get("repo") != "demo" {
+						t.Fatalf("unexpected request %s %s", req.Method, req.URL)
+					}
+					return issueResponse(200, `[{"id":1,"action_type":"add_issue_mr_link",`+tc.fields+`}]`), nil
+				})}, nil
+			}}
+			cmd := newCmdIssueActivity(f)
+			cmd.SetArgs([]string{"alice/demo", "7", "--json"})
+			var out bytes.Buffer
+			cmd.SetOut(&out)
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			var rows []map[string]any
+			if err := json.Unmarshal(out.Bytes(), &rows); err != nil {
+				t.Fatal(err)
+			}
+			if len(rows) != 1 {
+				t.Fatalf("rows %d", len(rows))
+			}
+			var want map[string]any
+			if err := json.Unmarshal([]byte(tc.expected), &want); err != nil {
+				t.Fatal(err)
+			}
+			for _, key := range []string{"body", "head", "base"} {
+				value, present := rows[0][key]
+				if !present || !reflect.DeepEqual(value, want[key]) {
+					t.Errorf("%s = %#v, want %#v", key, value, want[key])
 				}
 			}
 		})

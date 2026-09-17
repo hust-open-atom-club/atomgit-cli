@@ -14,15 +14,31 @@ type IssueActor struct {
 	Name  string `json:"name"`
 }
 
+// IssueActivityRef describes the PR branch snapshot attached to an audit event.
+type IssueActivityRef struct {
+	Ref      string                   `json:"ref"`
+	SHA      string                   `json:"sha"`
+	Repo     *IssueActivityRepository `json:"repo"`
+	Assigner *IssueActor              `json:"assigner"`
+}
+
+type IssueActivityRepository struct {
+	Path string `json:"path"`
+	Name string `json:"name"`
+}
+
 type IssueActivity struct {
-	ID         int64      `json:"id"`
-	User       IssueActor `json:"user"`
-	Content    string     `json:"content"`
-	CreatedAt  string     `json:"created_at"`
-	UpdatedAt  string     `json:"update_at"`
-	ActionType string     `json:"action_type"`
-	IssueID    string     `json:"issue_id"`
-	Title      string     `json:"title"`
+	ID         int64             `json:"id"`
+	User       IssueActor        `json:"user"`
+	Content    string            `json:"content"`
+	CreatedAt  string            `json:"created_at"`
+	UpdatedAt  string            `json:"update_at"`
+	ActionType string            `json:"action_type"`
+	IssueID    string            `json:"issue_id"`
+	Title      string            `json:"title"`
+	Body       string            `json:"body"`
+	Head       *IssueActivityRef `json:"head"`
+	Base       *IssueActivityRef `json:"base"`
 }
 
 type IssueHistory struct {
