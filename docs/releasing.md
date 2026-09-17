@@ -19,10 +19,23 @@
 
 通用 `.gitcode/workflows/ci.yml` 监听面向 `main` 的 Pull Request 和 `main` 分支
 push。PR 运行检出最新 head 提交，合并后的运行检出进入 `main` 的实际提交；两者
-均执行完整测试、竞态检测、发布目标交叉编译、平台测试编译、漏洞扫描和 npm 测试。
+均执行最低 Go 版本完整测试、发布 Go 版本的格式与静态检查、本机构建、竞态检测、
+发布目标交叉编译、平台测试编译、漏洞扫描和 npm 测试。
 其他分支的 push 不触发通用 CI。PR 作者仍需完成与改动相符的本地验证并记录结果，
 合并前确认当前 PR 提交的 CI 通过。发布前应确认 `main` 的运行成功，失败时停止后续
 发布并优先修复或回退。
+
+`Fast quality gate` 先使用 Go 1.26.6 运行一次完整的 `go test ./...`，再切换到
+Go 1.26.8 执行格式检查、`go vet`、命令参考检查和本机构建。发布工具链下的完整
+package 集合由 `go test -race ./...` 验证，因此门禁不再重复运行普通 `go test`。
+race、交叉编译、平台测试编译和漏洞扫描显式依赖门禁成功，并在门禁之后相互并行；
+npm 测试保持独立。门禁完成后 setup-go 缓存已可供后续 Go job 恢复，冷缓存也只会
+增加下载和准备时间，不会绕过检查。
+
+关键命令通过 shell `time` 输出实际耗时；setup-go 步骤日志提供 cache 恢复结果，
+Actions 运行详情提供 job 和 workflow 的开始、结束时间。评估 CI 调整时应分别记录
+冷缓存与热缓存的 cache 状态、门禁耗时、失败时启动的 Runner job 数，以及绿色运行
+的总耗时，避免以减少覆盖或不必要串行化换取表面上的加速。
 
 Nix 更新使用独立的 `.gitcode/workflows/update-nix.yml`。该 workflow 保留
 `main`、`test`、`nix-update` 分支 push 和手动触发入口，并在自身流程中构建、验证
