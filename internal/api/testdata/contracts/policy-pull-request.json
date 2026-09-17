@@ -1,0 +1,106 @@
+{
+  "name": "policy-pull-request",
+  "source": "synthetic; official repository API https://docs.gitcode.com/en/docs/repos/ and per-endpoint API v5 status documentation, reviewed 2026-09-17; not a live capture",
+  "version": "v5",
+  "method": "GET",
+  "path": "/repos/{owner}/{repo}/pull_request_settings",
+  "statuses": [
+    200
+  ],
+  "body_policy": "required",
+  "shape": {
+    "types": [
+      "object"
+    ],
+    "required": [
+      "merge_request_setting",
+      "only_allow_merge_if_all_discussions_are_resolved",
+      "only_allow_merge_if_pipeline_succeeds",
+      "merge_method"
+    ],
+    "properties": {
+      "merge_request_setting": {
+        "types": [
+          "object"
+        ],
+        "required": [
+          "approval_approvers",
+          "approval_testers",
+          "approval_required_approvers",
+          "approval_required_testers",
+          "can_force_merge"
+        ],
+        "properties": {
+          "approval_approvers": {
+            "types": [
+              "array"
+            ],
+            "items": {
+              "types": [
+                "object"
+              ]
+            }
+          },
+          "approval_testers": {
+            "types": [
+              "array"
+            ],
+            "items": {
+              "types": [
+                "object"
+              ]
+            }
+          },
+          "approval_required_approvers": {
+            "types": [
+              "integer"
+            ]
+          },
+          "approval_required_testers": {
+            "types": [
+              "integer"
+            ]
+          },
+          "can_force_merge": {
+            "types": [
+              "boolean"
+            ]
+          }
+        }
+      },
+      "only_allow_merge_if_all_discussions_are_resolved": {
+        "types": [
+          "boolean"
+        ]
+      },
+      "only_allow_merge_if_pipeline_succeeds": {
+        "types": [
+          "boolean"
+        ]
+      },
+      "merge_method": {
+        "types": [
+          "string"
+        ]
+      }
+    }
+  },
+  "examples": [
+    {
+      "name": "success",
+      "status": 200,
+      "body": {
+        "merge_request_setting": {
+          "approval_approvers": [],
+          "approval_testers": [],
+          "approval_required_approvers": 0,
+          "approval_required_testers": 0,
+          "can_force_merge": false
+        },
+        "only_allow_merge_if_all_discussions_are_resolved": false,
+        "only_allow_merge_if_pipeline_succeeds": true,
+        "merge_method": "merge"
+      }
+    }
+  ]
+}

@@ -144,6 +144,9 @@
 - [ag repo mirror](#ag-repo-mirror) — Inspect repository remote mirrors
 - [ag repo mirror list](#ag-repo-mirror-list) — List configured push remote mirrors
 - [ag repo mirror view](#ag-repo-mirror-view) — View repository remote mirror state
+- [ag repo policy](#ag-repo-policy) — View and edit repository policy settings
+- [ag repo policy edit](#ag-repo-policy-edit) — Edit one repository policy section
+- [ag repo policy view](#ag-repo-policy-view) — View repository policy settings
 - [ag repo push-rule](#ag-repo-push-rule) — Manage repository push rules
 - [ag repo push-rule edit](#ag-repo-push-rule-edit) — Edit repository push rules
 - [ag repo push-rule view](#ag-repo-push-rule-view) — View repository push rules
@@ -3422,6 +3425,116 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ```bash
 ag repo mirror view owner/repo
 ag repo mirror view --json
+```
+
+
+## ag repo policy
+
+Usage: `ag repo policy`
+
+View and edit repository policy settings
+
+Manage permission mode, code-review defaults, and pull-request settings.
+Push rules and branch/tag protection are managed separately.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+
+## ag repo policy edit
+
+Usage: `ag repo policy edit [<owner>/<repo>] [flags]`
+
+Edit one repository policy section
+
+Send only explicitly supplied settings. False, zero, and empty strings are preserved.
+All changes require confirmation unless --yes is supplied.
+Code-review assignees/testers are usernames; pull-request approver/tester IDs are IDs.
+Permission mode must be 1 (inherited) or 2 (independent).
+Approval-required-reviewers must be 0..5; other counts must be nonnegative.
+Merge-method: merge, rebase_merge, ff. Merged-commit-author: merged_by, created_by.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--add-notes-after-merged` | Allow review and comments after merging (pull-request section) | `false` | local |
+| `--approval-approver-ids` | Comma-separated approver user IDs (empty clears) (pull-request section) | `` | local |
+| `--approval-required-approvers` | Minimum approver count (nonnegative) (pull-request section) | `0` | local |
+| `--approval-required-reviewers` | Minimum reviewer count: 0 disables, otherwise 1..5 (pull-request section) | `0` | local |
+| `--approval-required-reviewers-enable` | Enable the minimum reviewer gate (pull-request section) | `false` | local |
+| `--approval-required-testers` | Minimum tester count (nonnegative) (pull-request section) | `0` | local |
+| `--approval-tester-ids` | Comma-separated tester user IDs (empty clears) (pull-request section) | `` | local |
+| `--assignees` | Comma-separated approver usernames (empty clears) | `` | local |
+| `--assignees-number` | Minimum approver count (0 disables) | `0` | local |
+| `--auto-squash-merge` | Enable squash by default for new pull requests (pull-request section) | `false` | local |
+| `--can-force-merge` | Allow administrators to force merge (pull-request section) | `false` | local |
+| `--can-reopen` | Allow reopening closed pull requests (pull-request section) | `false` | local |
+| `--close-issue-when-mr-merged` | Select closing linked issues by default (pull-request section) | `false` | local |
+| `--delete-source-branch-when-merged` | Delete the source branch by default after merging (pull-request section) | `false` | local |
+| `--disable-merge-by-self` | Prevent authors from merging their own pull requests (pull-request section) | `false` | local |
+| `--disable-squash-merge` | Disable squash merging (pull-request section) | `false` | local |
+| `--help` | Show help for command | `false` | inherited |
+| `--is-allow-lite-merge-request` | Enable lightweight pull requests (pull-request section) | `false` | local |
+| `--is-check-cla` | Require CLA validation (pull-request section) | `false` | local |
+| `--json` | Output the submitted fields as JSON | `false` | local |
+| `--lite-merge-request-prefix-title` | Lightweight pull request title prefix (empty clears) (pull-request section) | `` | local |
+| `--mark-auto-merged-mr-as-closed` | Mark automatically merged pull requests as closed (pull-request section) | `false` | local |
+| `--merge-method` | Merge method: merge, rebase_merge, or ff (pull-request section) | `` | local |
+| `--merged-commit-author` | Merge commit author: merged_by or created_by (pull-request section) | `` | local |
+| `--mode` | Permission mode: 1 (inherited), 2 (independent) | `0` | local |
+| `--only-allow-merge-if-all-discussions-are-resolved` | Require all review discussions to be resolved (pull-request section) | `false` | local |
+| `--only-allow-merge-if-pipeline-succeeds` | Require a successful pipeline before merging (pull-request section) | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--section` | Section: permission, code-review, or pull-request (required) | `` | local |
+| `--squash-merge-with-no-merge-commit` | Do not create a merge commit for squash merges (pull-request section) | `false` | local |
+| `--testers` | Comma-separated tester usernames (empty clears) | `` | local |
+| `--testers-number` | Minimum tester count (0 disables) | `0` | local |
+| `-y, --yes` | Skip update confirmation | `false` | local |
+
+### Example
+
+```bash
+ag repo policy edit owner/repo --section permission --mode 2 --yes
+ag repo policy edit --section code-review --assignees alice,bob --testers-number 0
+ag repo policy edit owner/repo --section pull-request --can-force-merge=false --yes
+```
+
+
+## ag repo policy view
+
+Usage: `ag repo policy view [<owner>/<repo>] [flags]`
+
+View repository policy settings
+
+View all three sections, or select one with --section.
+Code-review defaults are read from pull_request_settings, not GET /reviewer.
+JSON uses repository and settings keys; unavailable optional fields are null.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output policy settings as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--section` | Section: permission, code-review, or pull-request (default: all) | `` | local |
+
+### Example
+
+```bash
+ag repo policy view owner/repo
+ag repo policy view --section permission --json
 ```
 
 

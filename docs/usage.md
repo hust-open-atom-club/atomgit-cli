@@ -203,6 +203,35 @@ ag repo delete owner/repo --yes
 
 该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。
 
+#### 仓库策略设置
+
+```bash
+# 默认查看全部三类设置，也可以只查看一类
+ag repo policy view owner/repo
+ag repo policy view --section permission --json
+ag repo policy view owner/repo --section code-review
+ag repo policy view owner/repo --section pull-request --json
+
+# 权限模式：1 继承模式，2 独立模式；改变成员权限来源前请确认影响
+ag repo policy edit owner/repo --section permission --mode 2
+# 代码审查使用用户名，不是用户 ID；空字符串清空列表，0 保留为显式值
+ag repo policy edit owner/repo --section code-review --assignees alice,bob --testers-number 0
+ag repo policy edit owner/repo --section code-review --testers "" --yes
+# PR 设置使用对应的独立字段；显式 false 不会被省略
+ag repo policy edit owner/repo --section pull-request --can-force-merge=false --yes
+ag repo policy edit owner/repo --section pull-request --merge-method ff --yes --json
+```
+
+`view` 默认读取全部设置；指定 `--section permission|code-review|pull-request` 时只输出该类。权限模式来自 `GET /repos/{owner}/{repo}/transition`。PR 设置来自 `GET /repos/{owner}/{repo}/pull_request_settings`；代码审查查看是该响应中审批人、测试人及最低人数的投影，不调用未文档化的 `GET /reviewer`。响应中的人员信息保留 API 返回的对象，不能将其当作编辑接口的用户名字符串。
+
+`edit` 必须指定一个 section 和至少一个该类字段，拒绝混用其他类参数。权限模式仅接受 `--mode 1|2`；代码审查支持 `--assignees`、`--testers`（逗号分隔用户名）及非负的 `--assignees-number`、`--testers-number`。PR 参数对应官方更新接口字段，将下划线改为连字符；完整列表见 `ag repo policy edit --help` 和[命令参考](command-reference.md)。其中 `--approval-approver-ids`/`--approval-tester-ids` 接受用户 ID 而非用户名；`--approval-required-reviewers` 为 0–5，其他人数为非负整数；`--merge-method` 为 `merge`、`rebase_merge` 或 `ff`，`--merged-commit-author` 为 `merged_by` 或 `created_by`。
+
+每次更新仅发送显式参数，保留 `false`、`0` 和允许字段中的空字符串，不读取后回写整份设置。所有修改默认显示仓库、section 和变更字段并要求确认，`--yes` 跳过确认；提示写入 stderr，取消不会发出修改请求。三类编辑分别使用 `PUT /transition`、`PUT /reviewer`、`PUT /pull_request_settings`，只接受文档约定的 HTTP 200 及有效响应，不自动重试写入。网络失败时需先用 `view` 核实当前状态，再决定是否重试。
+
+查看 JSON 使用固定的 `repository` 和 `settings`（以 section 为键）结构；未返回的可选设置显示为 `null`，不冒充 `false` 或 `0`。编辑 JSON 为 `repository`、`section`、`changed_fields`，记录成功请求中发送的字段，不代表完整设置或额外在线回读。pull-request 更新会核对响应中返回的对应标量设置；与请求不一致时返回非零退出码，不输出成功结果。此时可能已有部分设置生效，请先查看策略再决定是否重试。接口未返回的字段和无法对应到审批人员对象的 ID 字段仅获请求成功确认，不代表逐字段验证通过。审批人员数组必须由 JSON 对象组成。接口权限不足、设置不可用或响应格式错误会返回非零退出码。仓库策略与 push-rule、分支/标签保护仍是独立命令。
+
+接口依据：[仓库 API 字段说明](https://docs.gitcode.com/en/docs/repos/)、[权限模式更新](https://docs.gitcode.com/docs/apis/put-api-v-5-repos-owner-repo-transition/)、[代码审查更新](https://docs.gitcode.com/en/docs/apis/put-api-v-5-repos-owner-repo-reviewer/)、[PR 设置更新](https://docs.gitcode.com/docs/apis/put-api-v-5-repos-owner-repo-pull-request-settings/)。测试使用合成响应，不代表真实仓库写入已验证。
+
 `ag repo push-rule view` 展示签名提交要求、提交信息正则、单文件大小限制、管理员豁免和强推限制。`ag repo push-rule edit` 只发送命令行中明确指定的字段，并保留显式的 `false`、空字符串和 `0`；未指定的远端规则保持不变。所有更新默认需要确认，可使用 `--yes` 跳过。仓库级推送规则与分支、标签保护规则相互独立。
 
 `ag repo mirror list` 通过 `/push_remote_mirrors` 分页列出 AtomGit 上配置的推送镜像，`ag repo mirror view` 通过 `/repo_remote_mirror` 查看仓库镜像状态。两个命令都只发送 GET 请求，不会创建、修改或触发镜像同步，也不会同步或修改本地 Git remote。文本和 JSON 输出会删除镜像 URL 中的 userinfo、查询参数和 fragment，并对返回的错误或消息中的嵌入 URL 做同样处理；未由 API 返回的状态、时间和错误字段不会被补造。
