@@ -1,5 +1,7 @@
 ## 变更概述
 
+<!-- 尚未披露的安全问题请先按 https://atomgit.com/hust-open-atom-club/atomgit-cli/blob/main/SECURITY.md 私下报告；不要通过公开 PR 或 CI 提交复现材料。 -->
+
 <!-- 请说明面向用户的问题，以及本次变更如何解决它。 -->
 
 ## 关联 Issue
