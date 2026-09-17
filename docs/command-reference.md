@@ -188,6 +188,7 @@
 - [ag tag protection view](#ag-tag-protection-view) — View a protected tag rule
 - [ag update](#ag-update) — Update AtomGit CLI to the latest stable release
 - [ag user](#ag-user) — View AtomGit users, repositories, namespaces, and activity
+- [ag user edit](#ag-user-edit) — Edit the authenticated user's profile
 - [ag user emails](#ag-user-emails) — List email addresses for the authenticated user
 - [ag user events](#ag-user-events) — List personal activity events for a user
 - [ag user namespaces](#ag-user-namespaces) — List namespaces for the authenticated user
@@ -4515,6 +4516,43 @@ View AtomGit user profiles, email addresses, starred and watched repositories, a
 | --- | --- | --- | --- |
 | `--help` | Show help for command | `false` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+
+## ag user edit
+
+Usage: `ag user edit [flags]`
+
+Edit the authenticated user's profile
+
+Edit supported profile fields for the authenticated AtomGit user.
+
+Only flags explicitly provided are sent to AtomGit. Pass an empty string to
+clear a supported field. This command does not upload avatar files, verify
+email addresses, or rename the account login.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--avatar` | Avatar URL | `` | local |
+| `--company` | Company name | `` | local |
+| `--description` | Profile description | `` | local |
+| `--email` | Public email address | `` | local |
+| `--github-account` | GitHub account name | `` | local |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output the updated profile as JSON | `false` | local |
+| `--location` | Profile location | `` | local |
+| `--nickname` | Profile nickname | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--website` | Website URL | `` | local |
+
+### Example
+
+```bash
+ag user edit --nickname "Alice" --company "Example Inc."
+ag user edit --description "" --location "Wuhan"
+ag user edit --website "https://example.com" --json
+```
 
 
 ## ag user emails
