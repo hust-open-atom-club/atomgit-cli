@@ -220,6 +220,21 @@ atomgit-cli/
 - 请求和响应类型应使用明确的 `json` 标签，并与对应 API 的路径、HTTP 方法和成功状态码保持一致
 - 通过小型接口和 `cmdutil.Factory` 注入依赖；测试使用模拟 HTTP 服务，不依赖真实凭据或外部网络
 
+### OpenAPI 覆盖与责任清单
+
+[覆盖与责任清单](docs/openapi-coverage.md) 是 API 家族、命令范围、已知缺口、
+维护归属和验证证据的人工事实源，不由命令参考生成器或契约 fixture 替代。
+新增、删除或改变命令/API 家族时，在同一 PR 更新相应行及 Issue/PR 链接；
+新增根命令必须登记，新增子命令也必须人工核对家族范围。
+OpenAPI 变化或契约失败时重新核对实现状态，不将 mock 通过写成在线验证。
+合作方模块移交需附明确的协作决定和接收范围；合入实现后再更新缺口状态。
+在线证据必须注明日期、提交、端点/场景与脱敏记录，不能包含凭据或私有响应。
+
+运行 `go test ./pkg/cmd/root -run TestOpenAPICoverage -count=1` 检查根命令覆盖、
+清单字段及仓库相对链接；该检查包含在默认 `go test ./...` 和 CI 中。
+文档与源码链接使用相对路径；GitHub mirror 不承载本项目的 Issue/PR 协作，
+活跃记录仅在 AtomGit 上维护，Issue/PR 链接使用完整 AtomGit URL。
+
 ### OpenAPI 契约验证
 
 新增或修改 API 路径、成功状态码、空响应约定、分页结构或 DTO 时，同步维护

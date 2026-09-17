@@ -128,6 +128,7 @@ go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 
 ## 更多文档
 
+- [OpenAPI 覆盖与责任清单](docs/openapi-coverage.md)
 - [命令参考](docs/command-reference.md)（由 Cobra 命令树生成）
 - [发布指南](docs/releasing.md)
 - [项目结构](docs/project-structure.md)

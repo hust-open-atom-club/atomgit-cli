@@ -2,6 +2,8 @@
 
 本文档介绍 AtomGit CLI 各命令的常用参数和示例。安装方法请参阅[安装指南](installation.md)，认证与其他配置请参阅[配置指南](configuration.md)。完整的命令树、参数和别名索引参阅[命令参考](command-reference.md)。
 
+需要了解 API 覆盖边界、尚未实现的功能和维护归属时，请参阅 [OpenAPI 覆盖与责任清单](openapi-coverage.md)。
+
 ## 目录
 
 - [认证](#认证)
