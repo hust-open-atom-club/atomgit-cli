@@ -42,7 +42,7 @@
 | milestone | v5 | Milestone：列表、详情、创建、编辑、关闭、重开、删除 | implemented | project | source,mock | [命令与测试](../pkg/cmd/milestone/) | [#67](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/67) |
 | notification | v5 | /repos/{owner}/{repo}/notifications：仓库通知列表、标记已读 | implemented | project | source,mock | [命令与测试](../pkg/cmd/notification/)、[API](../internal/api/notifications.go) | [#92](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/92)；不是全站消息中心 |
 | release | v5 | Release：列举/详情/创建/编辑，附件上传、下载；含独立附件传输 | implemented | project | source,mock | [命令与测试](../pkg/cmd/release/)、[附件 API](../internal/api/release_assets.go) | [#32](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/32)；不代表签名/SBOM 已发布 |
-| org | v5 | Organizations/Member：/users/orgs、/orgs/{org}、members、repos，只读发现 | partial | project | source,mock | [命令与测试](../pkg/cmd/org/) | [#75](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/75)；v8 runner-group 未实现 |
+| org | v5,v8 | Organizations/Member v5：/users/orgs、/orgs/{org}、members、repos；Actions v8：组织 runner-group 的列表/详情及 runners、runner-sets、shared-namespaces，只读发现 | partial | project | source,mock | [命令与测试](../pkg/cmd/org/)、[v8 API](../internal/api/actions/client.go) | [#75](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/75)、[#116](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/116)；不含 runner-group 写操作 |
 | user | v5 | Users：/user、/users/{name}、/emails、namespaces、starred/subscriptions、events；显式字段更新个人资料 | implemented | project | source,mock | [命令与测试](../pkg/cmd/user/) | [#80](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/80)、[PR #275](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/275) 已合入；不是账号管理全覆盖 |
 | search | v5 | Search：/search/repositories、users、issues | implemented | project | source,mock | [命令与测试](../pkg/cmd/search/) | [#31](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/31) |
 | discussion | v5 | Discussion：/repos/{owner}/{repo}/discuss，列表/详情、评论与回复读取 | partial | project | source,mock | [命令与测试](../pkg/cmd/discussion/)、[API](../internal/api/discussion.go) | [#71](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/71)、[#72](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/72)；没有专用写命令 |
@@ -78,7 +78,6 @@
 | API/模块 | 状态 | 责任 | 未交付范围/重新评估条件 | 验证与跟踪 |
 | --- | --- | --- | --- | --- |
 | v5 Commit comments | missing | project | 专用 list/view/create/edit/delete 尚未进入基线；PR 合入后再更新 | source；[#113](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/113)、[PR #276](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/276) |
-| v8 organization runner-groups | missing | project | list/detail/runners/runner-sets/shared-namespaces；不同于仓库 runner | source（需求核对）；[#116](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/116) 提供官方接口引用，本次未重新验证具体文档契约，未 mock/在线验证 |
 | v5 repository policy | missing | project | permission/code-review/pull-request settings；不与 push-rule/保护分支混淆 | source；[#90](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/90) |
 | v5 Issue activity/history/reactions | partial | project | branches 已有，其余三项未实现 | source；[#86](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/86) |
 | v5 PR activity/history | partial | project | reactions 已有，但还需核对其 --limit/分页契约；activity/history 缺失 | source；[#93](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/93) |
@@ -98,7 +97,7 @@
 | [#113](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/113) | missing | Commit 评论 [PR #276](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/276) 尚未合入 |
 | [#114](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/114) | implemented | [artifact 命令](../pkg/cmd/run/artifact.go)，[PR #219](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/219)；v8 删除/确认 |
 | [#115](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/115) | implemented | [runner 测试](../pkg/cmd/runner/runner_test.go)，[PR #222](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/222)；只读仓库/共享 runner |
-| [#116](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/116) | missing | 组织 runner-group 是独立 v8 需求，不被 #115 覆盖 |
+| [#116](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/116) | implemented | [组织 runner-group 命令与测试](../pkg/cmd/org/runner_group.go)、[v8 客户端](../internal/api/actions/client.go)；只读 list/detail/runners/runner-sets/shared-namespaces，不被 #115 覆盖 |
 | [#117](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/117) | implemented | [fork API 与分页](../internal/api/forks.go)，[PR #221](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/221) |
 | [#118](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/118) | implemented | [mirror API](../internal/api/remote_mirror.go)，[PR #231](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/231)；只读，不含写管理 |
 | [#119](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/119) | implemented | [transfer API](../internal/api/repository_transfer.go)，[PR #229](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/229) |

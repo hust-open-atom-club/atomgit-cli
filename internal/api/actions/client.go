@@ -55,6 +55,11 @@ type ListRunnersOptions struct {
 	PerPage int
 }
 
+type ListRunnerGroupsOptions struct {
+	Page    int
+	PerPage int
+}
+
 type ListJobsOptions struct {
 	Page    int
 	PerPage int
@@ -296,6 +301,67 @@ func (c *Client) listRunners(operation, path string, opts ListRunnersOptions) (R
 	return result, nil
 }
 
+func (c *Client) ListOrganizationRunnerGroups(organization string, opts ListRunnerGroupsOptions) (RunnerGroupListResponse, error) {
+	query := paginationQuery(opts.Page, opts.PerPage)
+	var result RunnerGroupListResponse
+	path := organizationPath(organization) + "/actions/runner-groups" + encodeQuery(query)
+	if err := c.getJSON("list organization runner groups", path, &result); err != nil {
+		return RunnerGroupListResponse{}, err
+	}
+	if result.RunnerGroups == nil {
+		result.RunnerGroups = make([]RunnerGroup, 0)
+	}
+	return result, nil
+}
+
+func (c *Client) GetOrganizationRunnerGroup(organization, groupID string) (RunnerGroupDetail, error) {
+	var result RunnerGroupDetail
+	path := organizationRunnerGroupPath(organization, groupID)
+	if err := c.getJSON("get organization runner group", path, &result); err != nil {
+		return RunnerGroupDetail{}, err
+	}
+	return result, nil
+}
+
+func (c *Client) ListOrganizationRunnerGroupRunners(organization, groupID string, opts ListRunnerGroupsOptions) (OrganizationRunnerListResponse, error) {
+	query := paginationQuery(opts.Page, opts.PerPage)
+	var result OrganizationRunnerListResponse
+	path := organizationRunnerGroupPath(organization, groupID) + "/runners" + encodeQuery(query)
+	if err := c.getJSON("list organization runner group runners", path, &result); err != nil {
+		return OrganizationRunnerListResponse{}, err
+	}
+	if result.Runners == nil {
+		result.Runners = make([]OrganizationRunner, 0)
+	}
+	return result, nil
+}
+
+func (c *Client) ListOrganizationRunnerGroupRunnerSets(organization, groupID string, opts ListRunnerGroupsOptions) (RunnerSetListResponse, error) {
+	query := paginationQuery(opts.Page, opts.PerPage)
+	var result RunnerSetListResponse
+	path := organizationRunnerGroupPath(organization, groupID) + "/runner-sets" + encodeQuery(query)
+	if err := c.getJSON("list organization runner group runner sets", path, &result); err != nil {
+		return RunnerSetListResponse{}, err
+	}
+	if result.RunnerSets == nil {
+		result.RunnerSets = make([]RunnerSet, 0)
+	}
+	return result, nil
+}
+
+func (c *Client) ListOrganizationRunnerGroupSharedNamespaces(organization, groupID string, opts ListRunnerGroupsOptions) (SharedNamespaceListResponse, error) {
+	query := paginationQuery(opts.Page, opts.PerPage)
+	var result SharedNamespaceListResponse
+	path := organizationRunnerGroupPath(organization, groupID) + "/shared-namespaces" + encodeQuery(query)
+	if err := c.getJSON("list organization runner group shared namespaces", path, &result); err != nil {
+		return SharedNamespaceListResponse{}, err
+	}
+	if result.SharedNamespaces == nil {
+		result.SharedNamespaces = make([]SharedNamespace, 0)
+	}
+	return result, nil
+}
+
 func (c *Client) CreateWorkflowDispatch(owner, repo, workflowID string, payload WorkflowDispatchPayload) error {
 	path := repositoryPath(owner, repo) + "/actions/workflows/" + url.PathEscape(workflowID) + "/dispatches"
 	return c.postJSON("create workflow dispatch", path, payload, nil)
@@ -390,6 +456,21 @@ func responseError(operation string, resp *http.Response) error {
 
 func repositoryPath(owner, repo string) string {
 	return "/repos/" + url.PathEscape(owner) + "/" + url.PathEscape(repo)
+}
+
+func organizationPath(organization string) string {
+	return "/orgs/" + url.PathEscape(organization)
+}
+
+func organizationRunnerGroupPath(organization, groupID string) string {
+	return organizationPath(organization) + "/actions/runner-groups/" + url.PathEscape(groupID)
+}
+
+func paginationQuery(page, perPage int) url.Values {
+	query := url.Values{}
+	setPositiveInt(query, "page", page)
+	setPositiveInt(query, "per_page", perPage)
+	return query
 }
 
 func artifactQuery(opts ListArtifactsOptions) url.Values {
