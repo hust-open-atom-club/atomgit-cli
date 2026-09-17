@@ -1,9 +1,10 @@
 name: CI
 
-# Run the complete matrix only after a change has entered main. Pull requests
-# are validated locally by their authors and through review before merge.
 on:
   push:
+    branches:
+      - main
+  pull_request:
     branches:
       - main
 
@@ -17,7 +18,15 @@ jobs:
     env:
       GOPROXY: https://mirrors.cernet.edu.cn/go|https://goproxy.cn|direct
     steps:
-      - name: Check out pushed commit
+      - name: Check out PR code
+        if: ${{ atomgit.head_ref != '' }}
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check out pushed code
+        if: ${{ atomgit.head_ref == '' }}
         uses: checkout
 
       # AtomGit setup-go currently provides Go 1.26.1. The Go command then
@@ -49,7 +58,15 @@ jobs:
     env:
       GOPROXY: https://goproxy.cn,direct
     steps:
-      - name: Check out pushed commit
+      - name: Check out PR code
+        if: ${{ atomgit.head_ref != '' }}
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check out pushed code
+        if: ${{ atomgit.head_ref == '' }}
         uses: checkout
 
       - name: Set up bootstrap Go
@@ -70,7 +87,15 @@ jobs:
     env:
       GOPROXY: https://goproxy.cn,direct
     steps:
-      - name: Check out pushed commit
+      - name: Check out PR code
+        if: ${{ atomgit.head_ref != '' }}
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check out pushed code
+        if: ${{ atomgit.head_ref == '' }}
         uses: checkout
 
       - name: Set up bootstrap Go
@@ -91,7 +116,15 @@ jobs:
     env:
       GOPROXY: https://goproxy.cn,direct
     steps:
-      - name: Check out pushed commit
+      - name: Check out PR code
+        if: ${{ atomgit.head_ref != '' }}
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check out pushed code
+        if: ${{ atomgit.head_ref == '' }}
         uses: checkout
 
       - name: Set up bootstrap Go
@@ -112,7 +145,15 @@ jobs:
     env:
       GOPROXY: https://goproxy.cn,direct
     steps:
-      - name: Check out pushed commit
+      - name: Check out PR code
+        if: ${{ atomgit.head_ref != '' }}
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check out pushed code
+        if: ${{ atomgit.head_ref == '' }}
         uses: checkout
 
       - name: Set up bootstrap Go
@@ -131,7 +172,15 @@ jobs:
     name: npm test
     runs-on: [ubuntu-latest, x64, small]
     steps:
-      - name: Check out pushed commit
+      - name: Check out PR code
+        if: ${{ atomgit.head_ref != '' }}
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check out pushed code
+        if: ${{ atomgit.head_ref == '' }}
         uses: checkout
 
       - name: Set up Node.js

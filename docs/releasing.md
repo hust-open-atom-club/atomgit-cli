@@ -17,11 +17,12 @@
 
 ## CI 验证时机
 
-通用 `.gitcode/workflows/ci.yml` 只监听 `main` 分支的 push，不在 Pull Request 或
-其他分支 push 时运行。完整测试、竞态检测、发布目标交叉编译、平台测试编译、漏洞
-扫描和 npm 测试因此针对已经进入 `main` 的精确提交执行。PR 作者需在合并前完成与
-改动相符的本地验证并在 PR 描述中记录结果；PR 不应依赖一个不会启动的通用 CI
-必需检查。合并后应确认 `main` 的运行成功，失败时停止后续发布并优先修复或回退。
+通用 `.gitcode/workflows/ci.yml` 监听面向 `main` 的 Pull Request 和 `main` 分支
+push。PR 运行检出最新 head 提交，合并后的运行检出进入 `main` 的实际提交；两者
+均执行完整测试、竞态检测、发布目标交叉编译、平台测试编译、漏洞扫描和 npm 测试。
+其他分支的 push 不触发通用 CI。PR 作者仍需完成与改动相符的本地验证并记录结果，
+合并前确认当前 PR 提交的 CI 通过。发布前应确认 `main` 的运行成功，失败时停止后续
+发布并优先修复或回退。
 
 Nix 更新使用独立的 `.gitcode/workflows/update-nix.yml`。该 workflow 保留
 `main`、`test`、`nix-update` 分支 push 和手动触发入口，并在自身流程中构建、验证
