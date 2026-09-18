@@ -196,6 +196,15 @@ func newCmdRunnerGroupNamespaces(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// The shared-namespaces endpoint also returns an empty successful
+			// response for missing groups, so verify the group before listing.
+			group, err := client.GetOrganizationRunnerGroup(organization, groupID)
+			if err != nil {
+				return fmt.Errorf("failed to list shared namespaces for runner group %q in organization %q: verify runner group: %w", groupID, organization, err)
+			}
+			if group.RunnerGroupID != groupID {
+				return fmt.Errorf("failed to verify runner group %q in organization %q: detail response returned runner_group_id %q", groupID, organization, group.RunnerGroupID)
+			}
 			namespaces, err := collectRunnerGroupPages(opts.Limit, func(namespace actions.SharedNamespace) string { return namespace.ID }, func(page, perPage int) (int, []actions.SharedNamespace, error) {
 				response, err := client.ListOrganizationRunnerGroupSharedNamespaces(organization, groupID, actions.ListRunnerGroupsOptions{Page: page, PerPage: perPage})
 				return response.TotalCount, response.SharedNamespaces, err

@@ -138,6 +138,9 @@ func TestRunnerGroupAssociationCommands(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			transport := orgRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if tt.command == "namespaces" && req.URL.Path == "/api/v8/orgs/team/actions/runner-groups/group-1" {
+					return orgResponse(http.StatusOK, `{"runner_group_id":"group-1"}`), nil
+				}
 				wantPath := "/api/v8/orgs/team/actions/runner-groups/group-1" + tt.pathSuffix
 				if req.URL.Path != wantPath {
 					t.Fatalf("path = %q, want %q", req.URL.Path, wantPath)
@@ -181,7 +184,10 @@ func TestRunnerGroupEmptyAssociations(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.command, func(t *testing.T) {
-			transport := orgRoundTripFunc(func(*http.Request) (*http.Response, error) {
+			transport := orgRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if tt.command == "namespaces" && req.URL.Path == "/api/v8/orgs/team/actions/runner-groups/group-1" {
+					return orgResponse(http.StatusOK, `{"runner_group_id":"group-1"}`), nil
+				}
 				return orgResponse(http.StatusOK, tt.body), nil
 			})
 			args := []string{tt.command, "team"}
@@ -288,7 +294,10 @@ func TestRunnerGroupContextualAPIErrors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			transport := orgRoundTripFunc(func(*http.Request) (*http.Response, error) {
+			transport := orgRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if tt.command == "namespaces" && req.URL.Path == "/api/v8/orgs/team/actions/runner-groups/group-1" {
+					return orgResponse(http.StatusOK, `{"runner_group_id":"group-1"}`), nil
+				}
 				return orgResponse(tt.status, `{"message":"denied"}`), nil
 			})
 			args := []string{tt.command, "team"}
