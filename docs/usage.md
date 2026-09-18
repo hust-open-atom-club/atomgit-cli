@@ -645,10 +645,12 @@ ag pr merge owner/repo 123 --rebase --squash --admin --subject "Merge PR #123" -
 
 # 创建 PR
 ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch
+ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch --draft
 ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature-branch
 cat description.md | ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature-branch
 ag pr create owner/repo --title "Fix bug" --head feature-branch \
   --assignee alice --reviewer bob --tester carol --label Bug --milestone v1.0
+ag pr create owner/repo --title "Fix bug" --head feature-branch --prune-branch
 
 # 修改 PR 协作元数据
 ag pr edit owner/repo 123 --add-assignee alice --remove-assignee bob
@@ -832,6 +834,24 @@ ag issue branches owner/repo 42 --add new-feature --remove stale-feature --yes
 AtomGit 关联分支接口使用整列表替换语义，因此 CLI 采用读-改-写流程：先 GET 当前列表，计算目标列表（保留现有顺序，追加新分支，移除指定分支），仅在目标列表与当前列表不同时发送一次 PUT。PUT 不会自动重试。如果目标列表与当前列表相同，则只发送 GET，不发送 PUT。
 
 **并发注意**：由于接口没有提供条件写令牌或原子增删操作，如果在 GET 和 PUT 之间另一个客户端修改了关联列表，本次 PUT 可能覆盖其变更。CLI 只能保证保留 GET 快照中的关联，不能防止并发写入竞态。
+
+### Issue 活动、修改历史与表态
+
+```bash
+ag issue activity owner/repo 42 --limit 50
+ag issue history owner/repo 42 --json
+ag issue reactions 42 --limit 100 --json
+```
+
+三个命令均只读，支持显式仓库或 Git remote 推断；Issue 编号和 `--limit` 必须为正整数，默认最多输出 30 条。空结果的 JSON 为 `[]`，文本显示空状态提示。输出顺序保留服务端顺序，不额外按时间排序。 如果返回列表含空元素或无效记录标识，命令报错并停止，不输出部分结果或虚假的零值记录。
+
+- `activity` 显示操作者、操作类型、Issue 编号、创建时间及操作描述。
+- `history` 显示修改者（缺失时回退到创建者）、创建/修改/删除状态、Issue 编号、时间及内容。JSON 分别保留 `author` 与 `updatedBy`，以及 `created`、`deleted` 标记。
+- `reactions` 显示用户、表态名称及 emoji；接口未提供时间字段，不生成虚假时间。
+
+[操作日志接口](https://docs.atomgit.com/docs/apis/get-api-v-5-repos-owner-issues-number-operate-logs/)和[修改历史接口](https://docs.atomgit.com/docs/apis/get-api-v-5-repos-owner-repo-issues-number-modify-history/)未声明分页参数，因此单次读取列表后应用 `--limit`，该参数不限制服务端响应大小。[表态接口](https://docs.atomgit.com/docs/apis/get-api-v-5-repos-owner-repo-issues-number-user-reactions/)支持 `page/per_page`，按页获取直到达到限制或列表结束。
+
+JSON 字段固定：activity 为 `id/author/action/content/createdAt/updatedAt/issueId/title/body/head/base`；history 为 `id/author/updatedBy/content/createdAt/updatedAt/created/deleted`；reactions 为 `id/author/emoji/emojiName`。activity 的 `id` 为整数，history 和 reactions 的 `id` 为不透明字符串；`author`、`updatedBy` 为登录名。activity 的 `head/base` 保留关联 PR 的 `ref`、`sha`、`repo`（`path/name`）及 `assigner`（`login/name`）；未提供的分支、仓库或指派人为 `null`，未提供的 `body` 为 `""`。JSON 保留正文中的换行，文本表格将空白折叠为单行，并继续经过默认终端控制字符清理。
 
 #### Issue 评论
 

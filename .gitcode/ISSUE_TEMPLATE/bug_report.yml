@@ -6,6 +6,7 @@ body:
     attributes:
       value: |
         感谢你报告问题。提交日志前，请删除令牌、Cookie、私有仓库信息和其他敏感内容。
+        漏洞或可被利用的行为请按[安全策略](https://atomgit.com/hust-open-atom-club/atomgit-cli/blob/main/SECURITY.md)私下报告，不要在本公开表单中填写复现细节。
 
   - type: input
     id: version
