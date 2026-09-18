@@ -6,6 +6,8 @@
 
 ### 报告问题
 
+漏洞、凭据泄露或可被利用的行为请按[安全策略](SECURITY.md)私下报告，不要创建公开 Issue、Discussion 或 PR，也不要在 CI 日志中附带复现材料。安全修复须先协调披露与下游通知，再进入下面的公开贡献流程。
+
 如果你发现了 bug 或有功能建议，请通过以下方式提交：
 
 1. **Bug 报告**：请提供以下信息
@@ -88,11 +90,10 @@
    npm test
    ```
 
-   通用 `CI` workflow 不在 Pull Request 或非 `main` 分支 push 时运行；它只在提交
-   进入 `main` 后执行完整测试矩阵，以验证实际合并提交。PR 作者必须在提交前运行与
-   改动相符的本地检查，并在 PR 描述中列出结果；评审者据此审查改动。PR 中没有
-   `CI` 检查是预期行为，不应等待该检查或将其配置为合并所需状态。合并后由维护者
-   跟踪 `main` 上的完整 CI，失败时应及时修复，必要时回退对应合并。
+   通用 `CI` workflow 在面向 `main` 的 Pull Request 和 `main` 分支 push 时运行。
+   PR 流水线检出 PR 的最新 head 提交，合并后的流水线验证进入 `main` 的实际提交。
+   PR 作者仍需在提交前运行与改动相符的本地检查，并在 PR 描述中列出结果；合并前
+   应确认当前 PR 提交的 CI 检查通过，合并后继续跟踪 `main` 上的验证结果。
 
    `Update Nix packages` 是独立的维护 workflow，仍可在 `main`、`test`、
    `nix-update` 分支 push 或手动触发时运行。它会在自身流程中完成 Nix package
@@ -165,7 +166,7 @@
    - 描述更改的内容和原因
    - 关联相关的 issue（如果有）
    - 说明执行过的测试及结果
-   - 确认没有未解释的评审阻塞项；通用 CI 将在合并到 `main` 后运行
+   - 确保当前 PR 提交的 CI 检查通过，且没有未解释的评审阻塞项
 
 7. **请求 AI 代码评审**
 
@@ -220,6 +221,21 @@ atomgit-cli/
 - Actions run、job、日志和 artifact 使用 `internal/api/actions` 中的 API v8 客户端
 - 请求和响应类型应使用明确的 `json` 标签，并与对应 API 的路径、HTTP 方法和成功状态码保持一致
 - 通过小型接口和 `cmdutil.Factory` 注入依赖；测试使用模拟 HTTP 服务，不依赖真实凭据或外部网络
+
+### OpenAPI 覆盖与责任清单
+
+[覆盖与责任清单](docs/openapi-coverage.md) 是 API 家族、命令范围、已知缺口、
+维护归属和验证证据的人工事实源，不由命令参考生成器或契约 fixture 替代。
+新增、删除或改变命令/API 家族时，在同一 PR 更新相应行及 Issue/PR 链接；
+新增根命令必须登记，新增子命令也必须人工核对家族范围。
+OpenAPI 变化或契约失败时重新核对实现状态，不将 mock 通过写成在线验证。
+合作方模块移交需附明确的协作决定和接收范围；合入实现后再更新缺口状态。
+在线证据必须注明日期、提交、端点/场景与脱敏记录，不能包含凭据或私有响应。
+
+运行 `go test ./pkg/cmd/root -run TestOpenAPICoverage -count=1` 检查根命令覆盖、
+清单字段及仓库相对链接；该检查包含在默认 `go test ./...` 和 CI 中。
+文档与源码链接使用相对路径；GitHub mirror 不承载本项目的 Issue/PR 协作，
+活跃记录仅在 AtomGit 上维护，Issue/PR 链接使用完整 AtomGit URL。
 
 ### OpenAPI 契约验证
 

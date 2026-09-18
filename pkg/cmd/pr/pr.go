@@ -402,12 +402,14 @@ func extractLogins(users []api.User) []string {
 }
 func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
-		Title    string
-		Body     string
-		BodyFile string
-		Base     string
-		Head     string
-		Metadata prCreateMetadataOptions
+		Title             string
+		Body              string
+		BodyFile          string
+		Base              string
+		Draft             bool
+		Head              string
+		PruneSourceBranch bool
+		Metadata          prCreateMetadataOptions
 	}
 
 	cmd := &cobra.Command{
@@ -419,8 +421,10 @@ Assignees own follow-up work, approval reviewers approve the change, and
 testers verify it. These AtomGit roles are managed independently. Labels and
 milestones must already exist in the repository.`,
 		Example: `  ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature
+  ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature --draft
   ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature
-  ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature`,
+  ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature
+  ag pr create owner/repo --title "Fix bug" --head feature --prune-branch`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.Title == "" {
@@ -499,6 +503,13 @@ milestones must already exist in the repository.`,
 				"head":  head,
 			}
 			metadata.addToCreateBody(body)
+			if cmd.Flags().Changed("draft") {
+				body["draft"] = opts.Draft
+			}
+
+			if cmd.Flags().Changed("prune-branch") {
+				body["prune_source_branch"] = opts.PruneSourceBranch
+			}
 
 			var pr api.PullRequestWriteResponse
 			path := fmt.Sprintf("/repos/%s/%s/pulls", owner, repo)
@@ -525,6 +536,8 @@ milestones must already exist in the repository.`,
 	cmd.Flags().StringVarP(&opts.BodyFile, "body-file", "F", "", "Read PR body from file (use - for stdin)")
 	cmd.Flags().StringVar(&opts.Base, "base", "", "Base branch (defaults to repository default)")
 	cmd.Flags().StringVar(&opts.Head, "head", "", "Head branch")
+	cmd.Flags().BoolVar(&opts.Draft, "draft", false, "Mark pull request as a draft")
+	cmd.Flags().BoolVar(&opts.PruneSourceBranch, "prune-branch", false, "Delete the source branch after the PR is merged")
 	cmd.Flags().StringSliceVar(&opts.Metadata.Assignees, "assignee", nil, "Assignee login (repeat for multiple users)")
 	cmd.Flags().StringSliceVar(&opts.Metadata.Reviewers, "reviewer", nil, "Approval reviewer login (repeat for multiple users)")
 	cmd.Flags().StringSliceVar(&opts.Metadata.Testers, "tester", nil, "Tester login (repeat for multiple users)")

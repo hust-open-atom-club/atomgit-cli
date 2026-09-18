@@ -116,6 +116,11 @@ atomgit-cli/
 - 用户配置和凭据由 `internal/config` 管理，并兼容 XDG 主路径与旧版 token 路径。
 - OAuth 浏览器登录流程位于 `internal/oauth`，系统浏览器调用封装在 `internal/browser`。
 
+各命令族与 v5/v8/OAuth/外部服务、本地行为的对应关系，已知缺口及合作方模块归属，
+统一维护在 [OpenAPI 覆盖与责任清单](openapi-coverage.md)。该清单区分源码核对、
+mock 和在线证据，不以注册命令数推断整个 OpenAPI 的覆盖率；
+`pkg/cmd/root/coverage_manifest_test.go` 在常规测试中校验登记与相对链接。
+
 ## 测试
 
 Go 测试文件与被测包放在同一目录，API 响应样本放在 `internal/api/testdata`；`test/` 包含 npm 平台包和发布流程测试。命令测试通过依赖注入、临时目录和模拟 HTTP 服务运行，不依赖真实 AtomGit/npm 凭据或外部网络。

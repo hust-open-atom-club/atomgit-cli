@@ -18,6 +18,7 @@ func NewCmdUser(f *cmdutil.Factory) *cobra.Command {
 		Long:  "View AtomGit user profiles, email addresses, starred and watched repositories, authenticated namespaces, and personal activity events.",
 	}
 	cmd.AddCommand(newCmdUserView(f))
+	cmd.AddCommand(newCmdUserEdit(f))
 	cmd.AddCommand(newCmdUserEmails(f))
 	cmd.AddCommand(newCmdUserStarred(f))
 	cmd.AddCommand(newCmdUserWatching(f))

@@ -128,6 +128,8 @@ See the [FAQ](docs/faq.md) for common installation, authentication, usage, and t
 
 ## More Documentation
 
+- [Security policy and private vulnerability reporting](SECURITY.md) (do not submit sensitive reports in public issues or PRs)
+- [OpenAPI coverage and ownership manifest](docs/openapi-coverage.md)
 - [Command reference](docs/command-reference.md) (generated from the Cobra command tree)
 - [Release guide](docs/releasing.md)
 - [Project structure](docs/project-structure.md)

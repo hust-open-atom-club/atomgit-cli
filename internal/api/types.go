@@ -203,6 +203,34 @@ type User struct {
 	TopLanguages []string `json:"top_languages"`
 }
 
+// UpdateUserProfileRequest is the body for PATCH /user. Pointer fields allow
+// callers to distinguish an omitted value from an explicitly supplied empty
+// string used to clear a profile field.
+type UpdateUserProfileRequest struct {
+	Avatar        *string `json:"avatar,omitempty"`
+	Nickname      *string `json:"nickname,omitempty"`
+	Company       *string `json:"company,omitempty"`
+	Description   *string `json:"description,omitempty"`
+	Email         *string `json:"email,omitempty"`
+	GitHubAccount *string `json:"github_account,omitempty"`
+	Website       *string `json:"website,omitempty"`
+	Location      *string `json:"location,omitempty"`
+}
+
+// UpdatedUserProfile is returned by PATCH /user.
+type UpdatedUserProfile struct {
+	Avatar        string `json:"avatar"`
+	Nickname      string `json:"nickname"`
+	Company       string `json:"company"`
+	Description   string `json:"description"`
+	Email         string `json:"email"`
+	GitHubAccount string `json:"github_account"`
+	Website       string `json:"website"`
+	Location      string `json:"location"`
+	ID            string `json:"id"`
+	Login         string `json:"login"`
+}
+
 // EmailAddress represents one email address visible to the authenticated user.
 type EmailAddress struct {
 	Email string `json:"email"`

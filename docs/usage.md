@@ -2,6 +2,8 @@
 
 本文档介绍 AtomGit CLI 各命令的常用参数和示例。安装方法请参阅[安装指南](installation.md)，认证与其他配置请参阅[配置指南](configuration.md)。完整的命令树、参数和别名索引参阅[命令参考](command-reference.md)。
 
+需要了解 API 覆盖边界、尚未实现的功能和维护归属时，请参阅 [OpenAPI 覆盖与责任清单](openapi-coverage.md)。
+
 ## 目录
 
 - [认证](#认证)
@@ -356,6 +358,12 @@ ag user view alice --json
 # 在浏览器中打开资料页
 ag user view alice --web
 
+# 更新当前认证账号的资料（只发送显式提供的字段）
+ag user edit --nickname "Alice" --company "Example Inc."
+
+# 用空字符串清除字段，并以 JSON 输出更新后的资料
+ag user edit --description "" --json
+
 # 列出当前认证账号的邮件地址（会输出隐私信息）
 ag user emails
 
@@ -416,6 +424,8 @@ ag user watching alice --limit 100 --json
 ```
 
 字段说明：`id`/`login`/`name`/`email`/`url`/`type` 为用户基本信息；`bio`/`company`/`website`/`location` 为个人资料文本；`followers`/`following` 为关注计数；`topLanguages` 为仓库语言列表（缺失时输出 `[]`）。
+
+`ag user edit` 需要认证，可通过 `--avatar`、`--nickname`、`--company`、`--description`、`--email`、`--github-account`、`--website` 和 `--location` 更新当前账号资料。命令只发送显式提供的字段，因此省略的字段保持不变；显式传入空字符串可清除支持的字段。默认文本输出账号和资料页 URL，`--json` 输出 API 返回的完整更新结果。该命令不上传头像文件、不验证邮箱，也不修改登录名。
 
 `ag user emails` 需要认证，并且只会在明确调用时将当前账号的邮件地址输出到标准输出。文本模式显示邮件地址和状态；`--json` 输出固定 `email`、`state` 字段的数组。没有邮件地址时，文本模式输出 `No email addresses found.`，JSON 模式输出 `[]`。
 
@@ -631,10 +641,12 @@ ag pr merge owner/repo 123 --rebase --squash --admin --subject "Merge PR #123" -
 
 # 创建 PR
 ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch
+ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch --draft
 ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature-branch
 cat description.md | ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature-branch
 ag pr create owner/repo --title "Fix bug" --head feature-branch \
   --assignee alice --reviewer bob --tester carol --label Bug --milestone v1.0
+ag pr create owner/repo --title "Fix bug" --head feature-branch --prune-branch
 
 # 修改 PR 协作元数据
 ag pr edit owner/repo 123 --add-assignee alice --remove-assignee bob
