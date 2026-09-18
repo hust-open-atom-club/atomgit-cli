@@ -1,0 +1,35 @@
+{
+  "name": "policy-permission",
+  "source": "synthetic; official repository API https://docs.gitcode.com/en/docs/repos/ and per-endpoint API v5 status documentation, reviewed 2026-09-17; not a live capture",
+  "version": "v5",
+  "method": "GET",
+  "path": "/repos/{owner}/{repo}/transition",
+  "statuses": [
+    200
+  ],
+  "body_policy": "required",
+  "shape": {
+    "types": [
+      "object"
+    ],
+    "required": [
+      "memberMgntMode"
+    ],
+    "properties": {
+      "memberMgntMode": {
+        "types": [
+          "integer"
+        ]
+      }
+    }
+  },
+  "examples": [
+    {
+      "name": "success",
+      "status": 200,
+      "body": {
+        "memberMgntMode": 2
+      }
+    }
+  ]
+}

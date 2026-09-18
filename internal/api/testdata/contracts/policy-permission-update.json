@@ -1,0 +1,42 @@
+{
+  "name": "policy-permission-update",
+  "source": "synthetic; official repository API https://docs.gitcode.com/en/docs/repos/ and per-endpoint API v5 status documentation, reviewed 2026-09-17; not a live capture",
+  "version": "v5",
+  "method": "PUT",
+  "path": "/repos/{owner}/{repo}/transition",
+  "statuses": [
+    200
+  ],
+  "body_policy": "required",
+  "shape": {
+    "types": [
+      "object"
+    ],
+    "required": [
+      "code",
+      "msg"
+    ],
+    "properties": {
+      "code": {
+        "types": [
+          "integer"
+        ]
+      },
+      "msg": {
+        "types": [
+          "string"
+        ]
+      }
+    }
+  },
+  "examples": [
+    {
+      "name": "success",
+      "status": 200,
+      "body": {
+        "code": 1,
+        "msg": "success"
+      }
+    }
+  ]
+}
