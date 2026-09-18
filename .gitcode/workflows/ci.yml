@@ -29,13 +29,9 @@ jobs:
         if: ${{ atomgit.head_ref == '' }}
         uses: checkout
 
-      # AtomGit setup-go currently provides Go 1.26.1. The Go command then
-      # downloads the minimum and preferred versions declared in go.mod.
-      - name: Set up bootstrap Go
-        uses: setup-go
-        with:
-          version: "1.26.1"
-
+      # Restore before setup-go: its verification runs Go in the checkout and
+      # can download the go.mod toolchain into this cache directory. Restoring
+      # afterward would collide with the already extracted read-only files.
       - name: Restore Go modules and downloaded toolchains
         uses: cache
         with:
@@ -43,6 +39,12 @@ jobs:
           key: go-mod-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum') }}
           restore-keys: |
             go-mod-${{ runner.os }}-
+
+      # AtomGit setup-go provides Go 1.26.1; go.mod selects newer toolchains.
+      - name: Set up bootstrap Go
+        uses: setup-go
+        with:
+          version: "1.26.1"
 
       - name: Restore Go build cache
         uses: cache
@@ -87,11 +89,6 @@ jobs:
 
       # This starts after the gate's cache post-steps have completed, while
       # remaining parallel with the other expensive Go jobs.
-      - name: Set up bootstrap Go
-        uses: setup-go
-        with:
-          version: "1.26.1"
-
       - name: Restore Go modules and downloaded toolchains
         uses: cache
         with:
@@ -99,6 +96,12 @@ jobs:
           key: go-mod-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum') }}
           restore-keys: |
             go-mod-${{ runner.os }}-
+
+      # AtomGit setup-go provides Go 1.26.1; go.mod selects newer toolchains.
+      - name: Set up bootstrap Go
+        uses: setup-go
+        with:
+          version: "1.26.1"
 
       - name: Restore Go build cache
         uses: cache
@@ -132,11 +135,6 @@ jobs:
         if: ${{ atomgit.head_ref == '' }}
         uses: checkout
 
-      - name: Set up bootstrap Go
-        uses: setup-go
-        with:
-          version: "1.26.1"
-
       - name: Restore Go modules and downloaded toolchains
         uses: cache
         with:
@@ -144,6 +142,12 @@ jobs:
           key: go-mod-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum') }}
           restore-keys: |
             go-mod-${{ runner.os }}-
+
+      # AtomGit setup-go provides Go 1.26.1; go.mod selects newer toolchains.
+      - name: Set up bootstrap Go
+        uses: setup-go
+        with:
+          version: "1.26.1"
 
       - name: Restore Go build cache
         uses: cache
@@ -177,11 +181,6 @@ jobs:
         if: ${{ atomgit.head_ref == '' }}
         uses: checkout
 
-      - name: Set up bootstrap Go
-        uses: setup-go
-        with:
-          version: "1.26.1"
-
       - name: Restore Go modules and downloaded toolchains
         uses: cache
         with:
@@ -189,6 +188,12 @@ jobs:
           key: go-mod-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum') }}
           restore-keys: |
             go-mod-${{ runner.os }}-
+
+      # AtomGit setup-go provides Go 1.26.1; go.mod selects newer toolchains.
+      - name: Set up bootstrap Go
+        uses: setup-go
+        with:
+          version: "1.26.1"
 
       - name: Restore Go build cache
         uses: cache
@@ -222,11 +227,6 @@ jobs:
         if: ${{ atomgit.head_ref == '' }}
         uses: checkout
 
-      - name: Set up bootstrap Go
-        uses: setup-go
-        with:
-          version: "1.26.1"
-
       - name: Restore Go modules and downloaded toolchains
         uses: cache
         with:
@@ -234,6 +234,12 @@ jobs:
           key: go-mod-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum') }}
           restore-keys: |
             go-mod-${{ runner.os }}-
+
+      # AtomGit setup-go provides Go 1.26.1; go.mod selects newer toolchains.
+      - name: Set up bootstrap Go
+        uses: setup-go
+        with:
+          version: "1.26.1"
 
       - name: Restore Go build cache
         uses: cache

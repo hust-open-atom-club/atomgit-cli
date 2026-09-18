@@ -30,8 +30,11 @@ Go 1.26.8 执行格式检查、`go vet`、命令参考检查和本机构建。�
 package 集合由 `go test -race ./...` 验证，因此门禁不再重复运行普通 `go test`。
 race、交叉编译、平台测试编译和漏洞扫描显式依赖门禁成功，并在门禁之后相互并行；
 npm 测试保持独立。各 Go job 通过显式 `cache` 步骤分别缓存 `~/go/pkg/mod`（模块和
-下载的 Go 工具链）及 `~/.cache/go-build`。门禁结束后 cache action 才保存未命中的
-内容，后续 job 是否成功复用必须以对应恢复步骤的远端日志为准；cache miss 只会增加
+下载的 Go 工具链）及 `~/.cache/go-build`。模块/工具链缓存必须在 `setup-go` 之前
+恢复：该 action 的安装验证会在仓库目录运行 Go，并可能按 `go.mod` 提前下载工具链；
+如果先下载再恢复缓存，会向已有的只读工具链目录解压，导致 `File exists` / `Restore failed`。
+门禁结束后 cache action 才保存未命中的内容，后续 job 是否成功复用必须以对应恢复
+步骤的远端日志为准；cache miss 只会增加
 下载和准备时间，不会绕过检查。
 
 关键命令通过 shell `time` 输出实际耗时；两个 cache 步骤分别提供模块/工具链与构建
