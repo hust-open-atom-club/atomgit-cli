@@ -45,6 +45,7 @@
 - [ag discussion list](#ag-discussion-list) — List repository discussions
 - [ag discussion view](#ag-discussion-view) — View a repository discussion
 - [ag issue](#ag-issue) — Manage issues
+- [ag issue activity](#ag-issue-activity) — List operation logs for an issue
 - [ag issue branches](#ag-issue-branches) — List or update related branches for an issue
 - [ag issue close](#ag-issue-close) — Close an issue
 - [ag issue comment](#ag-issue-comment) — Manage issue comments
@@ -54,9 +55,11 @@
 - [ag issue comment view](#ag-issue-comment-view) — View all comments on an issue
 - [ag issue create](#ag-issue-create) — Create an issue
 - [ag issue edit](#ag-issue-edit) — Edit an issue
+- [ag issue history](#ag-issue-history) — List modification history for an issue
 - [ag issue label](#ag-issue-label) — Add or remove labels on an issue
 - [ag issue list](#ag-issue-list) — List issues
 - [ag issue prs](#ag-issue-prs) — List pull requests linked to an issue
+- [ag issue reactions](#ag-issue-reactions) — List reactions on an issue
 - [ag issue reopen](#ag-issue-reopen) — Reopen an issue
 - [ag issue view](#ag-issue-view) — View an issue
 - [ag kanban](#ag-kanban) — View organization Kanban boards
@@ -1007,6 +1010,35 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 
 
+## ag issue activity
+
+Usage: `ag issue activity [<owner>/<repo>] <number> [flags]`
+
+List operation logs for an issue
+
+List operation logs for an issue.
+
+The API returns an unpaginated list; --limit caps the displayed entries in server order.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output entries as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of entries to list | `30` | local |
+
+### Example
+
+```bash
+ag issue activity owner/repo 42
+ag issue activity 42 --limit 100 --json
+```
+
+
 ## ag issue branches
 
 Usage: `ag issue branches [<owner>/<repo>] <number> [flags]`
@@ -1220,6 +1252,35 @@ ag issue edit owner/repo 42 --body-file description.md
 ```
 
 
+## ag issue history
+
+Usage: `ag issue history [<owner>/<repo>] <number> [flags]`
+
+List modification history for an issue
+
+List modification history for an issue.
+
+The API returns an unpaginated list; --limit caps the displayed entries in server order. JSON includes both the creator and updater of each version.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output entries as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of entries to list | `30` | local |
+
+### Example
+
+```bash
+ag issue history owner/repo 42
+ag issue history 42 --limit 100 --json
+```
+
+
 ## ag issue label
 
 Usage: `ag issue label [<owner>/<repo>] <number> [<labels>] [flags]`
@@ -1301,6 +1362,35 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ```bash
 ag issue prs owner/repo 42
 ag issue prs owner/repo 42 --json
+```
+
+
+## ag issue reactions
+
+Usage: `ag issue reactions [<owner>/<repo>] <number> [flags]`
+
+List reactions on an issue
+
+List reactions on an issue.
+
+Fetch paginated reactions up to --limit. The API does not provide reaction timestamps.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output entries as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of entries to list | `30` | local |
+
+### Example
+
+```bash
+ag issue reactions owner/repo 42
+ag issue reactions 42 --limit 100 --json
 ```
 
 

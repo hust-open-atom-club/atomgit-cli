@@ -28,6 +28,9 @@ func NewCmdIssue(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdIssueReopen(f))
 	cmd.AddCommand(newCmdIssuePRS(f))
 	cmd.AddCommand(newCmdIssueBranches(f))
+	cmd.AddCommand(newCmdIssueActivity(f))
+	cmd.AddCommand(newCmdIssueHistory(f))
+	cmd.AddCommand(newCmdIssueReactions(f))
 	cmd.AddCommand(comment.NewCmdComment(f))
 	cmdutil.AddRepositoryContextHelp(cmd)
 
