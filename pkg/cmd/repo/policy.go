@@ -222,6 +222,7 @@ func newCmdRepoPolicyEdit(f *cmdutil.Factory) *cobra.Command {
 	addPolicyBool(cmd, &bindings, "pull-request", "is-allow-lite-merge-request", &opts.pullRequest.IsAllowLiteMergeRequest, "Enable lightweight pull requests (pull-request section)")
 	addPolicyString(cmd, &bindings, "pull-request", "lite-merge-request-prefix-title", &opts.pullRequest.LiteMergeRequestPrefixTitle, "Lightweight pull request title prefix (empty clears) (pull-request section)")
 	addPolicyBool(cmd, &bindings, "pull-request", "close-issue-when-mr-merged", &opts.pullRequest.CloseIssueWhenMRMerged, "Select closing linked issues by default (pull-request section)")
+	addPolicyBool(cmd, &bindings, "pull-request", "forbidden-pr-related-issue-closed", &opts.pullRequest.ForbiddenPRRelatedIssueClosed, "Disable the option to close linked issues after merging (pull-request section)")
 	return cmd
 }
 func addPolicyBool(cmd *cobra.Command, bindings *[]policyFlag, section, name string, target **bool, help string) {

@@ -220,6 +220,8 @@ ag repo policy edit owner/repo --section code-review --testers "" --yes
 # PR 设置使用对应的独立字段；显式 false 不会被省略
 ag repo policy edit owner/repo --section pull-request --can-force-merge=false --yes
 ag repo policy edit owner/repo --section pull-request --merge-method ff --yes --json
+# 禁用“合并后关闭已关联的 Issue”选项；传 false 可重新启用
+ag repo policy edit owner/repo --section pull-request --forbidden-pr-related-issue-closed --yes
 ```
 
 `view` 默认读取全部设置；指定 `--section permission|code-review|pull-request` 时只输出该类。权限模式来自 `GET /repos/{owner}/{repo}/transition`。PR 设置来自 `GET /repos/{owner}/{repo}/pull_request_settings`；代码审查查看是该响应中审批人、测试人及最低人数的投影，不调用未文档化的 `GET /reviewer`。响应中的人员信息保留 API 返回的对象，不能将其当作编辑接口的用户名字符串。
@@ -228,7 +230,7 @@ ag repo policy edit owner/repo --section pull-request --merge-method ff --yes --
 
 每次更新仅发送显式参数，保留 `false`、`0` 和允许字段中的空字符串，不读取后回写整份设置。所有修改默认显示仓库、section 和变更字段并要求确认，`--yes` 跳过确认；提示写入 stderr，取消不会发出修改请求。三类编辑分别使用 `PUT /transition`、`PUT /reviewer`、`PUT /pull_request_settings`，只接受文档约定的 HTTP 200 及有效响应，不自动重试写入。网络失败时需先用 `view` 核实当前状态，再决定是否重试。
 
-查看 JSON 使用固定的 `repository` 和 `settings`（以 section 为键）结构；未返回的可选设置显示为 `null`，不冒充 `false` 或 `0`。编辑 JSON 为 `repository`、`section`、`changed_fields`，记录成功请求中发送的字段，不代表完整设置或额外在线回读。pull-request 更新会核对响应中返回的对应标量设置；与请求不一致时返回非零退出码，不输出成功结果。此时可能已有部分设置生效，请先查看策略再决定是否重试。接口未返回的字段和无法对应到审批人员对象的 ID 字段仅获请求成功确认，不代表逐字段验证通过。审批人员数组必须由 JSON 对象组成。接口权限不足、设置不可用或响应格式错误会返回非零退出码。仓库策略与 push-rule、分支/标签保护仍是独立命令。
+查看 JSON 使用固定的 `repository` 和 `settings`（以 section 为键）结构；未返回的可选设置显示为 `null`，不冒充 `false` 或 `0`。PR 响应中的布尔值、`0/1` 及布尔字符串统一显示为 `true/false`，更新响应也按布尔语义核对。`--forbidden-pr-related-issue-closed` 控制是否禁用“合并后关闭已关联的 Issue”选项；禁用后，`--close-issue-when-mr-merged` 的默认选择设置无效。编辑 JSON 为 `repository`、`section`、`changed_fields`，记录成功请求中发送的字段，不代表完整设置或额外在线回读。pull-request 更新会核对响应中返回的对应标量设置；与请求不一致时返回非零退出码，不输出成功结果。此时可能已有部分设置生效，请先查看策略再决定是否重试。接口未返回的字段和无法对应到审批人员对象的 ID 字段仅获请求成功确认，不代表逐字段验证通过。审批人员数组必须由 JSON 对象组成。接口权限不足、设置不可用或响应格式错误会返回非零退出码。仓库策略与 push-rule、分支/标签保护仍是独立命令。
 
 接口依据：[仓库 API 字段说明](https://docs.gitcode.com/en/docs/repos/)、[权限模式更新](https://docs.gitcode.com/docs/apis/put-api-v-5-repos-owner-repo-transition/)、[代码审查更新](https://docs.gitcode.com/en/docs/apis/put-api-v-5-repos-owner-repo-reviewer/)、[PR 设置更新](https://docs.gitcode.com/docs/apis/put-api-v-5-repos-owner-repo-pull-request-settings/)。测试使用合成响应，不代表真实仓库写入已验证。
 

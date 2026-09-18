@@ -3482,6 +3482,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--delete-source-branch-when-merged` | Delete the source branch by default after merging (pull-request section) | `false` | local |
 | `--disable-merge-by-self` | Prevent authors from merging their own pull requests (pull-request section) | `false` | local |
 | `--disable-squash-merge` | Disable squash merging (pull-request section) | `false` | local |
+| `--forbidden-pr-related-issue-closed` | Disable the option to close linked issues after merging (pull-request section) | `false` | local |
 | `--help` | Show help for command | `false` | inherited |
 | `--is-allow-lite-merge-request` | Enable lightweight pull requests (pull-request section) | `false` | local |
 | `--is-check-cla` | Require CLA validation (pull-request section) | `false` | local |

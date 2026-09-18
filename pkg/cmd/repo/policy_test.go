@@ -14,7 +14,7 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
-const policySettingsFixture = `{"merge_request_setting":{"approval_approvers":[{"username":"alice"}],"approval_testers":[],"approval_required_approvers":1,"approval_required_testers":0,"can_force_merge":false},"only_allow_merge_if_all_discussions_are_resolved":false,"only_allow_merge_if_pipeline_succeeds":true,"merge_method":"merge"}`
+const policySettingsFixture = `{"merge_request_setting":{"approval_approvers":[{"username":"alice"}],"approval_testers":[],"approval_required_approvers":1,"approval_required_testers":0,"can_force_merge":0,"forbidden_pr_related_issue_closed":"0"},"only_allow_merge_if_all_discussions_are_resolved":0,"only_allow_merge_if_pipeline_succeeds":1,"merge_method":"merge"}`
 
 func policyFactory(t *testing.T, handle func(*http.Request) (int, string)) *cmdutil.Factory {
 	t.Helper()
@@ -175,6 +175,7 @@ func TestPolicyInvalidInputDoesNotRequest(t *testing.T) {
 		{"edit", "team/demo", "--section", "permission", "--mode", "3"},
 		{"edit", "team/demo", "--section", "permission", "--mode", "1", "--assignees", "alice"},
 		{"edit", "team/demo", "--section", "code-review", "--assignees-number", "-1"},
+		{"edit", "team/demo", "--section", "code-review", "--forbidden-pr-related-issue-closed=false"},
 		{"edit", "team/demo", "--section", "code-review", "--assignees", "alice,,bob"},
 		{"edit", "team/demo", "--section", "pull-request", "--approval-required-reviewers", "6"},
 		{"edit", "team/demo", "--section", "pull-request", "--merge-method="},

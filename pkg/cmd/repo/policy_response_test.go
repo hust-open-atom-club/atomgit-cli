@@ -12,8 +12,9 @@ func TestPolicyEditRejectsConflictingResponse(t *testing.T) {
 		{"--merge-method=ff", "merge_method", policySettingsFixture},
 		{"--only-allow-merge-if-pipeline-succeeds=false", "only_allow_merge_if_pipeline_succeeds", policySettingsFixture},
 		{"--can-force-merge=true", "can_force_merge", policySettingsFixture},
+		{"--forbidden-pr-related-issue-closed=true", "forbidden_pr_related_issue_closed", policySettingsFixture},
 		{"--approval-required-approvers=0", "approval_required_approvers", policySettingsFixture},
-		{"--lite-merge-request-prefix-title=", "lite_merge_request_prefix_title", strings.Replace(policySettingsFixture, `"can_force_merge":false`, `"can_force_merge":false,"lite_merge_request_prefix_title":"prefix"`, 1)},
+		{"--lite-merge-request-prefix-title=", "lite_merge_request_prefix_title", strings.Replace(policySettingsFixture, `"can_force_merge":0`, `"can_force_merge":0,"lite_merge_request_prefix_title":"prefix"`, 1)},
 	} {
 		for _, asJSON := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/json=%t", tc.field, asJSON), func(t *testing.T) {

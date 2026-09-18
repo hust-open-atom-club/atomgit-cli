@@ -82,12 +82,12 @@ func TestAPIContracts(t *testing.T) {
 							t.Fatal(err)
 						}
 						review, err := api.CodeReviewPolicyFrom(result)
-						if err != nil || review.ApprovalRequiredTesters == nil || *review.ApprovalRequiredTesters != 0 || result.MergeMethod == nil || *result.MergeMethod != "merge" || result.OnlyAllowMergeIfPipelineSucceeds == nil || !*result.OnlyAllowMergeIfPipelineSucceeds {
+						if err != nil || review.ApprovalRequiredTesters == nil || *review.ApprovalRequiredTesters != 0 || result.MergeMethod == nil || *result.MergeMethod != "merge" || result.OnlyAllowMergeIfPipelineSucceeds == nil || !bool(*result.OnlyAllowMergeIfPipelineSucceeds) {
 							t.Fatalf("policy DTO drift: %v", err)
 						}
 					case "policy-pull-request-update":
 						force := false
-						if err := api.UpdatePullRequestPolicy(v5, "fixture-owner", "fixture-repo", api.UpdatePullRequestPolicyRequest{CanForceMerge: &force}); err != nil {
+						if err := api.UpdatePullRequestPolicy(v5, "fixture-owner", "fixture-repo", api.UpdatePullRequestPolicyRequest{CanForceMerge: &force, ForbiddenPRRelatedIssueClosed: &force}); err != nil {
 							t.Fatal(err)
 						}
 					case "repository":

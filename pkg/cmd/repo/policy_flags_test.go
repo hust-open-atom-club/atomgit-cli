@@ -2,6 +2,7 @@ package repo
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"reflect"
@@ -16,6 +17,10 @@ func TestPolicyEveryPullRequestFlagIsPartial(t *testing.T) {
 		{"only-allow-merge-if-pipeline-succeeds", "false", `{"only_allow_merge_if_pipeline_succeeds":false}`},
 		{"disable-merge-by-self", "false", `{"disable_merge_by_self":false}`},
 		{"can-force-merge", "false", `{"can_force_merge":false}`},
+		{"can-force-merge", "true", `{"can_force_merge":true}`},
+		{"only-allow-merge-if-pipeline-succeeds", "true", `{"only_allow_merge_if_pipeline_succeeds":true}`},
+		{"forbidden-pr-related-issue-closed", "false", `{"forbidden_pr_related_issue_closed":false}`},
+		{"forbidden-pr-related-issue-closed", "true", `{"forbidden_pr_related_issue_closed":true}`},
 		{"add-notes-after-merged", "false", `{"add_notes_after_merged":false}`},
 		{"mark-auto-merged-mr-as-closed", "false", `{"mark_auto_merged_mr_as_closed":false}`},
 		{"can-reopen", "false", `{"can_reopen":false}`},
@@ -56,6 +61,15 @@ func TestPolicyEveryPullRequestFlagIsPartial(t *testing.T) {
 				}
 				settings := response["merge_request_setting"].(map[string]any)
 				for field, value := range want {
+					if b, ok := value.(bool); ok {
+						value = 0
+						if b {
+							value = 1
+						}
+						if field == "forbidden_pr_related_issue_closed" {
+							value = fmt.Sprint(value)
+						}
+					}
 					switch field {
 					case "merge_method", "only_allow_merge_if_pipeline_succeeds", "only_allow_merge_if_all_discussions_are_resolved":
 						response[field] = value

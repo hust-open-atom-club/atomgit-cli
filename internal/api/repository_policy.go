@@ -64,33 +64,39 @@ type UpdatePullRequestPolicyRequest struct {
 	IsAllowLiteMergeRequest                   *bool   `json:"is_allow_lite_merge_request,omitempty"`
 	LiteMergeRequestPrefixTitle               *string `json:"lite_merge_request_prefix_title,omitempty"`
 	CloseIssueWhenMRMerged                    *bool   `json:"close_issue_when_mr_merged,omitempty"`
+	ForbiddenPRRelatedIssueClosed             *bool   `json:"forbidden_pr_related_issue_closed,omitempty"`
 }
+
+// Response switches vary between JSON booleans, 0/1 integers, and strings
+// across the documented GET/PUT schemas. Normalize them to boolean semantics
+// while preserving nil for absent or null settings; requests remain *bool.
 type MergeRequestPolicySettings struct {
-	ApprovalRequiredReviewersEnable *bool             `json:"approval_required_reviewers_enable"`
+	ApprovalRequiredReviewersEnable *FlexibleBool     `json:"approval_required_reviewers_enable"`
 	ApprovalRequiredReviewers       *int              `json:"approval_required_reviewers"`
-	DisableMergeBySelf              *bool             `json:"disable_merge_by_self"`
-	CanForceMerge                   *bool             `json:"can_force_merge"`
-	AddNotesAfterMerged             *bool             `json:"add_notes_after_merged"`
-	MarkAutoMergedMRAsClosed        *bool             `json:"mark_auto_merged_mr_as_closed"`
-	CanReopen                       *bool             `json:"can_reopen"`
-	DeleteSourceBranchWhenMerged    *bool             `json:"delete_source_branch_when_merged"`
-	DisableSquashMerge              *bool             `json:"disable_squash_merge"`
-	AutoSquashMerge                 *bool             `json:"auto_squash_merge"`
-	SquashMergeWithNoMergeCommit    *bool             `json:"squash_merge_with_no_merge_commit"`
+	DisableMergeBySelf              *FlexibleBool     `json:"disable_merge_by_self"`
+	CanForceMerge                   *FlexibleBool     `json:"can_force_merge"`
+	AddNotesAfterMerged             *FlexibleBool     `json:"add_notes_after_merged"`
+	MarkAutoMergedMRAsClosed        *FlexibleBool     `json:"mark_auto_merged_mr_as_closed"`
+	CanReopen                       *FlexibleBool     `json:"can_reopen"`
+	DeleteSourceBranchWhenMerged    *FlexibleBool     `json:"delete_source_branch_when_merged"`
+	DisableSquashMerge              *FlexibleBool     `json:"disable_squash_merge"`
+	AutoSquashMerge                 *FlexibleBool     `json:"auto_squash_merge"`
+	SquashMergeWithNoMergeCommit    *FlexibleBool     `json:"squash_merge_with_no_merge_commit"`
 	MergedCommitAuthor              *string           `json:"merged_commit_author"`
 	ApprovalRequiredApprovers       *int              `json:"approval_required_approvers"`
 	ApprovalRequiredTesters         *int              `json:"approval_required_testers"`
-	IsCheckCLA                      *bool             `json:"is_check_cla"`
-	IsAllowLiteMergeRequest         *bool             `json:"is_allow_lite_merge_request"`
+	IsCheckCLA                      *FlexibleBool     `json:"is_check_cla"`
+	IsAllowLiteMergeRequest         *FlexibleBool     `json:"is_allow_lite_merge_request"`
 	LiteMergeRequestPrefixTitle     *string           `json:"lite_merge_request_prefix_title"`
-	CloseIssueWhenMRMerged          *bool             `json:"close_issue_when_mr_merged"`
+	CloseIssueWhenMRMerged          *FlexibleBool     `json:"close_issue_when_mr_merged"`
+	ForbiddenPRRelatedIssueClosed   *FlexibleBool     `json:"forbidden_pr_related_issue_closed"`
 	ApprovalApprovers               []json.RawMessage `json:"approval_approvers"`
 	ApprovalTesters                 []json.RawMessage `json:"approval_testers"`
 }
 type PullRequestPolicy struct {
 	MergeRequestSetting                       *MergeRequestPolicySettings `json:"merge_request_setting"`
-	OnlyAllowMergeIfAllDiscussionsAreResolved *bool                       `json:"only_allow_merge_if_all_discussions_are_resolved"`
-	OnlyAllowMergeIfPipelineSucceeds          *bool                       `json:"only_allow_merge_if_pipeline_succeeds"`
+	OnlyAllowMergeIfAllDiscussionsAreResolved *FlexibleBool               `json:"only_allow_merge_if_all_discussions_are_resolved"`
+	OnlyAllowMergeIfPipelineSucceeds          *FlexibleBool               `json:"only_allow_merge_if_pipeline_succeeds"`
 	MergeMethod                               *string                     `json:"merge_method"`
 }
 
