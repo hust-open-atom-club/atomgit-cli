@@ -2,8 +2,10 @@ package cmdutil
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api/actions"
@@ -58,4 +60,61 @@ func (f *Factory) NewActionsClient(token string) (*actions.Client, error) {
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
 	}
 	return actions.NewClientWithHTTPClient(token, httpClient).WithContext(f.CommandContext()), nil
+}
+
+// AuthenticatedAPIClient builds a v5 API client using stored credentials.
+// Missing credentials and credential-store failures become AuthenticationError.
+func (f *Factory) AuthenticatedAPIClient() (*api.Client, error) {
+	token, err := f.requiredToken()
+	if err != nil {
+		return nil, err
+	}
+	return f.NewAPIClient(token)
+}
+
+// OptionalAPIClient builds a v5 API client for publicly readable endpoints.
+// A missing login becomes an anonymous request; credential-store failures do not.
+func (f *Factory) OptionalAPIClient() (*api.Client, error) {
+	token, err := f.optionalToken()
+	if err != nil {
+		return nil, err
+	}
+	return f.NewAPIClient(token)
+}
+
+// AuthenticatedActionsClient builds a v8 Actions client using stored credentials.
+func (f *Factory) AuthenticatedActionsClient() (*actions.Client, error) {
+	token, err := f.requiredToken()
+	if err != nil {
+		return nil, err
+	}
+	return f.NewActionsClient(token)
+}
+
+func (f *Factory) requiredToken() (string, error) {
+	if f == nil || f.Config == nil {
+		return "", fmt.Errorf("configuration is unavailable")
+	}
+	token, err := f.Config.GetToken()
+	if err != nil {
+		return "", AuthenticationError(err)
+	}
+	if strings.TrimSpace(token) == "" {
+		return "", AuthenticationError(config.ErrNotAuthenticated)
+	}
+	return token, nil
+}
+
+func (f *Factory) optionalToken() (string, error) {
+	if f == nil || f.Config == nil {
+		return "", fmt.Errorf("configuration is unavailable")
+	}
+	token, err := f.Config.GetToken()
+	if err != nil {
+		if errors.Is(err, config.ErrNotAuthenticated) {
+			return "", nil
+		}
+		return "", AuthenticationError(err)
+	}
+	return token, nil
 }

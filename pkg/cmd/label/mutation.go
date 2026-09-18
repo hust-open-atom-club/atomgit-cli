@@ -2,7 +2,6 @@ package label
 
 import (
 	"fmt"
-	"net/url"
 	"regexp"
 	"strings"
 
@@ -36,21 +35,16 @@ func newCmdLabelCreate(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return cmdutil.AuthenticationError(err)
-			}
-			client, err := f.NewAPIClient(token)
+			client, err := f.AuthenticatedAPIClient()
 			if err != nil {
 				return err
 			}
 
-			path := fmt.Sprintf("/repos/%s/%s/labels", repository.Owner, repository.Name)
-			var created api.Label
-			if err := client.PostForm(path, url.Values{
-				"name":  {name},
-				"color": {color},
-			}, &created); err != nil {
+			created, err := api.CreateLabel(client, repository.Owner, repository.Name, api.CreateLabelRequest{
+				Name:  name,
+				Color: color,
+			})
+			if err != nil {
 				return fmt.Errorf("failed to create label: %w", err)
 			}
 
@@ -89,33 +83,28 @@ func newCmdLabelEdit(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid existing label name: %w", err)
 			}
 
-			fields := make(map[string]string)
+			var request api.UpdateLabelRequest
 			if nameChanged {
 				name = strings.TrimSpace(name)
 				if err := validateLabelName(name); err != nil {
 					return err
 				}
-				fields["name"] = name
+				request.Name = &name
 			}
 			if colorChanged {
 				color = strings.TrimSpace(color)
 				if err := validateLabelColor(color); err != nil {
 					return err
 				}
-				fields["color"] = color
+				request.Color = &color
 			}
 
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return cmdutil.AuthenticationError(err)
-			}
-			client, err := f.NewAPIClient(token)
+			client, err := f.AuthenticatedAPIClient()
 			if err != nil {
 				return err
 			}
 
-			path := fmt.Sprintf("/repos/%s/%s/labels/%s", repository.Owner, repository.Name, url.PathEscape(originalName))
-			if err := client.PatchForm(path, fields, nil); err != nil {
+			if err := api.UpdateLabel(client, repository.Owner, repository.Name, originalName, request); err != nil {
 				return fmt.Errorf("failed to edit label: %w", err)
 			}
 

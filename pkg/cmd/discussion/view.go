@@ -1,14 +1,12 @@
 package discussion
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
-	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -51,17 +49,7 @@ empty bodies are shown as explicit placeholders instead of blank text.`,
 				return fmt.Errorf("invalid discussion number %q: must be a positive integer", remaining[0])
 			}
 
-			// Discussions are public content, so a missing token falls back to
-			// an unauthenticated request (same as discussion list).
-			token, err := f.Config.GetToken()
-			if err != nil && !errors.Is(err, config.ErrNotAuthenticated) {
-				return err
-			}
-			if err != nil {
-				token = ""
-			}
-
-			client, err := f.NewAPIClient(token)
+			client, err := f.OptionalAPIClient()
 			if err != nil {
 				return err
 			}

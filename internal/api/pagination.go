@@ -1,6 +1,9 @@
 package api
 
-import "fmt"
+import (
+	"fmt"
+	"net/http"
+)
 
 const (
 	defaultMaxPerPage         = 100
@@ -17,7 +20,7 @@ func GetPaginated[T any](client *Client, limit int, pagePath func(page, perPage 
 // maximum page size. Use this for endpoints whose per_page limit differs from
 // the API-wide default.
 func GetPaginatedWithPageSize[T any](client *Client, limit, maxPerPage int, pagePath func(page, perPage int) string) ([]T, error) {
-	return getPaginated[T](client, limit, maxPerPage, true, nil, pagePath)
+	return getPaginated[T](limit, maxPerPage, true, nil, fetchJSONPage[T](client, pagePath))
 }
 
 // GetPaginatedUntilEmptyWithPageSize retrieves at most limit unique items and
@@ -29,10 +32,41 @@ func GetPaginatedUntilEmptyWithPageSize[T any](client *Client, limit, maxPerPage
 	if key == nil {
 		return nil, fmt.Errorf("item key function must not be nil")
 	}
-	return getPaginated[T](client, limit, maxPerPage, false, key, pagePath)
+	return getPaginated[T](limit, maxPerPage, false, key, fetchJSONPage[T](client, pagePath))
 }
 
-func getPaginated[T any](client *Client, limit, maxPerPage int, stopOnShortPage bool, key func(T) string, pagePath func(page, perPage int) string) ([]T, error) {
+func pageQuery(path string, page, perPage int) string {
+	return fmt.Sprintf("%s?page=%d&per_page=%d", path, page, perPage)
+}
+
+func fetchJSONPage[T any](client *Client, pagePath func(page, perPage int) string) func(page, perPage int) ([]T, error) {
+	return func(page, perPage int) ([]T, error) {
+		var pageItems []T
+		if err := client.Get(pagePath(page, perPage), &pageItems); err != nil {
+			return nil, err
+		}
+		return pageItems, nil
+	}
+}
+
+func getPaginatedWithPolicy[T any](client *Client, limit int, policy RequestPolicy, pagePath func(page, perPage int) string) ([]T, error) {
+	return getPaginated[T](limit, defaultMaxPerPage, true, nil, fetchJSONPageWithPolicy[T](client, policy, pagePath))
+}
+
+func fetchJSONPageWithPolicy[T any](client *Client, policy RequestPolicy, pagePath func(page, perPage int) string) func(page, perPage int) ([]T, error) {
+	return func(page, perPage int) ([]T, error) {
+		var pageItems []T
+		if err := client.doJSONRequest(http.MethodGet, pagePath(page, perPage), nil, "", "application/json", policy, &pageItems); err != nil {
+			return nil, err
+		}
+		if pageItems == nil {
+			pageItems = []T{}
+		}
+		return pageItems, nil
+	}
+}
+
+func getPaginated[T any](limit, maxPerPage int, stopOnShortPage bool, key func(T) string, fetch func(page, perPage int) ([]T, error)) ([]T, error) {
 	if limit <= 0 {
 		return nil, fmt.Errorf("invalid limit: %d (must be positive)", limit)
 	}
@@ -46,8 +80,8 @@ func getPaginated[T any](client *Client, limit, maxPerPage int, stopOnShortPage 
 		seen = make(map[string]struct{}, min(limit, maxPerPage))
 	}
 	for page := 1; len(items) < limit; page++ {
-		var pageItems []T
-		if err := client.Get(pagePath(page, maxPerPage), &pageItems); err != nil {
+		pageItems, err := fetch(page, maxPerPage)
+		if err != nil {
 			return nil, err
 		}
 		if len(pageItems) == 0 {

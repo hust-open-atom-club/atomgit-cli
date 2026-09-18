@@ -220,7 +220,10 @@ atomgit-cli/
 - 常规仓库功能使用 `internal/api` 中的 AtomGit API v5 客户端
 - Actions run、job、日志和 artifact 使用 `internal/api/actions` 中的 API v8 客户端
 - 请求和响应类型应使用明确的 `json` 标签，并与对应 API 的路径、HTTP 方法和成功状态码保持一致
-- 通过小型接口和 `cmdutil.Factory` 注入依赖；测试使用模拟 HTTP 服务，不依赖真实凭据或外部网络
+- 新增端点族必须提供类型化领域操作，由 Cobra 命令调用；不要在 `pkg/cmd` 中拼接路径或决定 HTTP 成功码。参考 `discussion` 与 `label`
+- 需要认证时使用 `Factory.AuthenticatedAPIClient` / `AuthenticatedActionsClient`；公开只读内容使用 `OptionalAPIClient`
+- 仓库与资源标识通过 `api.RepositoryPath` 转义一次，调用方传入原始值
+- 通过 `cmdutil.Factory` 注入依赖；测试使用模拟 HTTP 服务，不依赖真实凭据或外部网络
 
 ### OpenAPI 覆盖与责任清单
 

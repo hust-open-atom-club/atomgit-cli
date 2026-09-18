@@ -43,18 +43,11 @@ func newCmdLabelList(f *cmdutil.Factory) *cobra.Command {
 			}
 			owner, repo := repository.Owner, repository.Name
 
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return cmdutil.AuthenticationError(err)
-			}
-
-			client, err := f.NewAPIClient(token)
+			client, err := f.AuthenticatedAPIClient()
 			if err != nil {
 				return err
 			}
-			labels, err := api.GetPaginated[api.Label](client, limit, func(page, perPage int) string {
-				return fmt.Sprintf("/repos/%s/%s/labels?page=%d&per_page=%d", owner, repo, page, perPage)
-			})
+			labels, err := api.ListLabels(client, owner, repo, limit)
 			if err != nil {
 				return fmt.Errorf("failed to list labels: %w", err)
 			}
