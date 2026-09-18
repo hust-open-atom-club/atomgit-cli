@@ -90,6 +90,12 @@ ag auth setup-git
 
 该命令仅在全局 Git 配置中为 `https://atomgit.com` 注册 `ag` credential helper，不会把访问令牌写入 Git 配置或 remote URL。Git 每次需要凭据时会从 `ag` 的凭据文件读取当前活动账号；使用 `ag auth switch` 切换账号后无需重新运行。SSH remote 不受此设置影响。
 
+### 必需认证与可选认证
+
+大多数命令需要已登录账号；缺少凭据或凭据文件无法读取时，会返回规范的 `not authenticated` 错误并提示运行 `ag auth login`。
+
+部分公开只读命令（例如 `ag discussion list` 和 `ag discussion view`）在尚未登录时会以匿名方式请求。凭据文件损坏、权限错误或其他存储故障**不会**降级为匿名访问。
+
 ## 输出安全
 
 `ag` 默认会将终端控制字符转换为可见转义文本，包括输出经管道转发时，以防止仓库、Issue、PR 或 Git 服务端返回的内容注入终端控制序列。确实需要为机器处理保留原始字节时，可显式使用全局参数 `--raw-output`，例如 `ag --raw-output pr diff owner/repo 123`；请勿将未经检查的原始输出直接转发到终端。
