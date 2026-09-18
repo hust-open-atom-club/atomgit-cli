@@ -2220,10 +2220,12 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | --- | --- | --- | --- |
 | `--assignee` | Assignee login (repeat for multiple users) | `[]` | local |
 | `--base` | Base branch (defaults to repository default) | `` | local |
+| `--draft` | Mark pull request as a draft | `false` | local |
 | `--head` | Head branch | `` | local |
 | `--help` | Show help for command | `false` | inherited |
 | `--label` | Label name (repeat for multiple labels) | `[]` | local |
 | `--milestone` | Milestone number or exact title | `` | local |
+| `--prune-branch` | Delete the source branch after the PR is merged | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--reviewer` | Approval reviewer login (repeat for multiple users) | `[]` | local |
 | `--tester` | Tester login (repeat for multiple users) | `[]` | local |
@@ -2235,8 +2237,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature
+ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature --draft
 ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature
 ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature
+ag pr create owner/repo --title "Fix bug" --head feature --prune-branch
 ```
 
 
