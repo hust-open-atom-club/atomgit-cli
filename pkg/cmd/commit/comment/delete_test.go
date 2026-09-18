@@ -152,7 +152,7 @@ func TestDeleteSurfacesMissingCommentAndValidatesID(t *testing.T) {
 		cmd := newCmdDelete(newFactory(t, cfg, transport))
 		cmd.SetOut(&bytes.Buffer{})
 		_ = cmd.Flags().Set("yes", "true")
-		cmd.SetArgs([]string{"alice/demo", "x"})
+		cmd.SetArgs([]string{"alice/demo", "../7"})
 		err := cmd.Execute()
 		if err == nil || !strings.Contains(err.Error(), "invalid comment ID") || cfg.tokenCalls != 0 {
 			t.Fatalf("err = %v tokenCalls = %d", err, cfg.tokenCalls)

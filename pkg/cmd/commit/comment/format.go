@@ -9,7 +9,7 @@ import (
 
 // commentJSON is the stable JSON shape for one commit comment.
 type commentJSON struct {
-	ID        int64  `json:"id"`
+	ID        string `json:"id"`
 	Body      string `json:"body"`
 	Author    string `json:"author"`
 	CreatedAt string `json:"created_at"`
@@ -26,7 +26,7 @@ func commentsJSON(comments []api.CommitComment) []commentJSON {
 
 func newCommentJSON(comment api.CommitComment) commentJSON {
 	return commentJSON{
-		ID:        comment.ID,
+		ID:        string(comment.ID),
 		Body:      comment.Body,
 		Author:    comment.User.Login,
 		CreatedAt: comment.CreatedAt,

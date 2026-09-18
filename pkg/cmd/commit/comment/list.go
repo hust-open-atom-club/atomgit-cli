@@ -62,7 +62,7 @@ func newCmdList(f *cmdutil.Factory) *cobra.Command {
 
 			currentUser, _ := f.Config.GetUser()
 			for _, comment := range comments {
-				fmt.Fprintf(out, "%d\t%s\t%s\t%s\n",
+				fmt.Fprintf(out, "%s\t%s\t%s\t%s\n",
 					comment.ID,
 					cmdutil.EscapeTSVField(comment.User.Login),
 					cmdutil.EscapeTSVField(formatCommentTime(comment.CreatedAt)),

@@ -3,6 +3,8 @@
 package comment
 
 import (
+	"fmt"
+
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -21,4 +23,31 @@ func NewCmdComment(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdDelete(f))
 
 	return cmd
+}
+
+// validateCommentID checks that a comment identifier is safe to embed in an
+// API path. AtomGit documents comment IDs as opaque strings (the create
+// endpoint returns forms like "12312sadsa"), so any non-empty run of
+// unreserved path characters is accepted and passed through verbatim.
+func validateCommentID(value string) (string, error) {
+	if value == "" {
+		return "", fmt.Errorf("invalid comment ID: cannot be empty")
+	}
+	for _, r := range value {
+		if !isUnreservedPathRune(r) {
+			return "", fmt.Errorf("invalid comment ID: %q", value)
+		}
+	}
+	return value, nil
+}
+
+func isUnreservedPathRune(r rune) bool {
+	switch {
+	case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+		return true
+	case r == '-' || r == '.' || r == '_' || r == '~':
+		return true
+	default:
+		return false
+	}
 }

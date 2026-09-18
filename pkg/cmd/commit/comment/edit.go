@@ -2,7 +2,6 @@ package comment
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -28,9 +27,9 @@ func newCmdEdit(f *cmdutil.Factory) *cobra.Command {
 			}
 			owner, repo := repository.Owner, repository.Name
 
-			commentID, err := strconv.ParseInt(remaining[0], 10, 64)
-			if err != nil || commentID <= 0 {
-				return fmt.Errorf("invalid comment ID: %s", remaining[0])
+			commentID, err := validateCommentID(remaining[0])
+			if err != nil {
+				return err
 			}
 
 			bodyChanged := cmd.Flags().Changed("body")
@@ -74,7 +73,7 @@ func newCmdEdit(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			summary := fmt.Sprintf("Updated comment #%d", comment.ID)
+			summary := fmt.Sprintf("Updated comment #%s", comment.ID)
 			cmdutil.PrintResultWithOptionalURL(cmd.OutOrStdout(), summary, comment.HTMLURL)
 			return nil
 		},

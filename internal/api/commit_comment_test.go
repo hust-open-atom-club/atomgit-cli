@@ -43,8 +43,8 @@ func TestListCommitCommentsPaginatesAndEscapesRef(t *testing.T) {
 	if len(comments) != 102 {
 		t.Fatalf("len(comments) = %d, want 102", len(comments))
 	}
-	if comments[0].ID != 1 || comments[101].ID != 102 {
-		t.Fatalf("unexpected comment IDs: %d..%d", comments[0].ID, comments[101].ID)
+	if comments[0].ID != "1" || comments[101].ID != "102" {
+		t.Fatalf("unexpected comment IDs: %s..%s", comments[0].ID, comments[101].ID)
 	}
 }
 
@@ -106,7 +106,7 @@ func TestGetCommitCommentMapsNoteTypeRejection(t *testing.T) {
 		writeJSON(t, w, json.RawMessage(`{"error_code":400,"error_code_name":"UN_KNOW","error_message":"Note type is not correct.","trace_id":"t"}`))
 	})
 
-	_, err := GetCommitComment(client, "alice", "demo", 7)
+	_, err := GetCommitComment(client, "alice", "demo", "7")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -124,7 +124,7 @@ func TestGetCommitCommentSurfacesNotFound(t *testing.T) {
 		writeJSON(t, w, json.RawMessage(`{"error_code":404,"error_code_name":"UN_KNOW","error_message":"note not found by noteId","trace_id":"t"}`))
 	})
 
-	_, err := GetCommitComment(client, "alice", "demo", 7)
+	_, err := GetCommitComment(client, "alice", "demo", "7")
 	if err == nil || !strings.Contains(err.Error(), "get commit comment #7") || !strings.Contains(err.Error(), "404") {
 		t.Fatalf("err = %v", err)
 	}
@@ -139,7 +139,7 @@ func TestGetCommitCommentOtherBadRequestNotMapped(t *testing.T) {
 		writeJSON(t, w, json.RawMessage(`{"error_code":400,"error_message":"Something else"}`))
 	})
 
-	_, err := GetCommitComment(client, "alice", "demo", 7)
+	_, err := GetCommitComment(client, "alice", "demo", "7")
 	if err == nil || errors.Is(err, ErrNotCommitComment) {
 		t.Fatalf("err = %v, want a generic 400 error", err)
 	}
@@ -157,14 +157,14 @@ func TestUpdateCommitCommentPatchesBodyOnly(t *testing.T) {
 		writeJSON(t, w, json.RawMessage(`{"id":7,"body":"new","user":{"id":1001,"login":"alice"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T11:00:00+08:00"}`))
 	})
 
-	comment, err := UpdateCommitComment(client, "alice", "demo", 7, "new")
+	comment, err := UpdateCommitComment(client, "alice", "demo", "7", "new")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if method != http.MethodPatch || body != `{"body":"new"}` {
 		t.Fatalf("request = %s %q", method, body)
 	}
-	if comment.ID != 7 || comment.UpdatedAt != "2026-09-15T11:00:00+08:00" {
+	if comment.ID != "7" || comment.UpdatedAt != "2026-09-15T11:00:00+08:00" {
 		t.Fatalf("comment = %+v", comment)
 	}
 }
@@ -179,7 +179,7 @@ func TestDeleteCommitCommentSucceedsOnNoContent(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	if err := DeleteCommitComment(client, "alice", "demo", 7); err != nil {
+	if err := DeleteCommitComment(client, "alice", "demo", "7"); err != nil {
 		t.Fatal(err)
 	}
 	if !called {
@@ -211,9 +211,74 @@ func decodeCommitComment(t *testing.T, response string) CommitComment {
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(t, w, json.RawMessage(response))
 	})
-	comment, err := GetCommitComment(client, "alice", "demo", 7)
+	comment, err := GetCommitComment(client, "alice", "demo", "7")
 	if err != nil {
 		t.Fatal(err)
 	}
 	return comment
+}
+
+func TestCommitCommentEndpointsAcceptOpaqueStringIDs(t *testing.T) {
+	// The create endpoint's documented success example returns the id as the
+	// string "12312sadsa"; that exact identifier must flow into the
+	// get/update/delete paths unchanged.
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Path; got != "/repos/alice/demo/comments/12312sadsa" {
+			t.Fatalf("%s path = %q", r.Method, got)
+		}
+		switch r.Method {
+		case http.MethodGet, http.MethodPatch:
+			writeJSON(t, w, json.RawMessage(`{"id":"12312sadsa","body":"LGTM","user":{"id":1001,"login":"alice"}}`))
+		case http.MethodDelete:
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Fatalf("unexpected method %s", r.Method)
+		}
+	})
+
+	if _, err := GetCommitComment(client, "alice", "demo", "12312sadsa"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := UpdateCommitComment(client, "alice", "demo", "12312sadsa", "LGTM"); err != nil {
+		t.Fatal(err)
+	}
+	if err := DeleteCommitComment(client, "alice", "demo", "12312sadsa"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCommitCommentIDEscapedInPath(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.EscapedPath(); got != "/repos/alice/demo/comments/a%20b%2Fc" {
+			t.Fatalf("escaped path = %q", got)
+		}
+		writeJSON(t, w, json.RawMessage(`{"id":"a b/c","body":"x"}`))
+	})
+
+	comment, err := GetCommitComment(client, "alice", "demo", "a b/c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if comment.ID != "a b/c" {
+		t.Fatalf("id = %q", comment.ID)
+	}
+}
+
+func TestCommitCommentDecodesDocumentedIDShapes(t *testing.T) {
+	numeric := decodeCommitComment(t, `{"id":7,"body":"x"}`)
+	if numeric.ID != "7" {
+		t.Fatalf("numeric id = %q", numeric.ID)
+	}
+	textual := decodeCommitComment(t, `{"id":"12312sadsa","body":"x"}`)
+	if textual.ID != "12312sadsa" {
+		t.Fatalf("string id = %q", textual.ID)
+	}
+	missing := decodeCommitComment(t, `{"body":"x"}`)
+	if missing.ID != "" {
+		t.Fatalf("missing id = %q", missing.ID)
+	}
+	null := decodeCommitComment(t, `{"id":null,"body":"x"}`)
+	if null.ID != "" {
+		t.Fatalf("null id = %q", null.ID)
+	}
 }

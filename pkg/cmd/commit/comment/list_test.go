@@ -84,7 +84,7 @@ func TestListJSONOutputIsStable(t *testing.T) {
 	}
 	want := `[
   {
-    "id": 9,
+    "id": "9",
     "body": "hello",
     "author": "bob",
     "created_at": "2026-09-15T10:00:00+08:00",

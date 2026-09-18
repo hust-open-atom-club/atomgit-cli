@@ -8,14 +8,16 @@ import (
 	"net/url"
 )
 
-// CommitComment is a comment attached to a repository commit.
+// CommitComment is a comment attached to a repository commit. ID decodes both
+// the integer form documented for list/get responses and the string form the
+// create endpoint returns; identifiers stay opaque strings end to end.
 type CommitComment struct {
-	ID        int64             `json:"id"`
-	Body      string            `json:"body"`
-	User      CommitCommentUser `json:"user"`
-	CreatedAt string            `json:"created_at"`
-	UpdatedAt string            `json:"updated_at"`
-	HTMLURL   string            `json:"html_url"`
+	ID        FlexibleIdentifier `json:"id"`
+	Body      string             `json:"body"`
+	User      CommitCommentUser  `json:"user"`
+	CreatedAt string             `json:"created_at"`
+	UpdatedAt string             `json:"updated_at"`
+	HTMLURL   string             `json:"html_url"`
 }
 
 // CommitCommentUser is the endpoint-specific user shape embedded in commit
@@ -58,36 +60,38 @@ func CreateCommitComment(client *Client, owner, repo, sha, body string) (CreateC
 }
 
 // GetCommitComment fetches a repository comment by ID and verifies it is a
-// commit comment. Issue and pull request comment IDs are rejected with
-// ErrNotCommitComment; missing IDs surface the API's not-found error.
-func GetCommitComment(client *Client, owner, repo string, commentID int64) (CommitComment, error) {
+// commit comment. The ID is the opaque string returned by the create endpoint
+// (or a decimal form of the same). Issue and pull request comment IDs are
+// rejected with ErrNotCommitComment; missing IDs surface the API's not-found
+// error.
+func GetCommitComment(client *Client, owner, repo, commentID string) (CommitComment, error) {
 	var comment CommitComment
-	path := fmt.Sprintf("/repos/%s/%s/comments/%d", url.PathEscape(owner), url.PathEscape(repo), commentID)
+	path := fmt.Sprintf("/repos/%s/%s/comments/%s", url.PathEscape(owner), url.PathEscape(repo), url.PathEscape(commentID))
 	if err := client.Get(path, &comment); err != nil {
 		if isNotCommitCommentResponse(err) {
-			return CommitComment{}, fmt.Errorf("comment #%d: %w", commentID, ErrNotCommitComment)
+			return CommitComment{}, fmt.Errorf("comment #%s: %w", commentID, ErrNotCommitComment)
 		}
-		return CommitComment{}, fmt.Errorf("get commit comment #%d: %w", commentID, err)
+		return CommitComment{}, fmt.Errorf("get commit comment #%s: %w", commentID, err)
 	}
 	return comment, nil
 }
 
 // UpdateCommitComment replaces the body of an existing commit comment. Only
 // the supported body field is sent.
-func UpdateCommitComment(client *Client, owner, repo string, commentID int64, body string) (CommitComment, error) {
+func UpdateCommitComment(client *Client, owner, repo, commentID, body string) (CommitComment, error) {
 	var comment CommitComment
-	path := fmt.Sprintf("/repos/%s/%s/comments/%d", url.PathEscape(owner), url.PathEscape(repo), commentID)
+	path := fmt.Sprintf("/repos/%s/%s/comments/%s", url.PathEscape(owner), url.PathEscape(repo), url.PathEscape(commentID))
 	if err := client.Patch(path, CommentRequest{Body: body}, &comment); err != nil {
-		return CommitComment{}, fmt.Errorf("update commit comment #%d: %w", commentID, err)
+		return CommitComment{}, fmt.Errorf("update commit comment #%s: %w", commentID, err)
 	}
 	return comment, nil
 }
 
 // DeleteCommitComment removes a repository commit comment by ID.
-func DeleteCommitComment(client *Client, owner, repo string, commentID int64) error {
-	path := fmt.Sprintf("/repos/%s/%s/comments/%d", url.PathEscape(owner), url.PathEscape(repo), commentID)
+func DeleteCommitComment(client *Client, owner, repo, commentID string) error {
+	path := fmt.Sprintf("/repos/%s/%s/comments/%s", url.PathEscape(owner), url.PathEscape(repo), url.PathEscape(commentID))
 	if err := client.Delete(path); err != nil {
-		return fmt.Errorf("delete commit comment #%d: %w", commentID, err)
+		return fmt.Errorf("delete commit comment #%s: %w", commentID, err)
 	}
 	return nil
 }

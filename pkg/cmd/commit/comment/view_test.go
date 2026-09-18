@@ -41,7 +41,7 @@ func TestViewJSONOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := `{
-  "id": 7,
+  "id": "7",
   "body": "hello",
   "author": "bob",
   "created_at": "2026-09-15T10:00:00+08:00",
@@ -87,10 +87,30 @@ func TestViewRejectsNonCommitAndMissingComments(t *testing.T) {
 		})
 		cmd := newCmdView(newFactory(t, cfg, transport))
 		cmd.SetOut(&bytes.Buffer{})
-		cmd.SetArgs([]string{"alice/demo", "zero"})
+		cmd.SetArgs([]string{"alice/demo", "../7"})
 		err := cmd.Execute()
 		if err == nil || !strings.Contains(err.Error(), "invalid comment ID") || cfg.tokenCalls != 0 {
 			t.Fatalf("err = %v tokenCalls = %d", err, cfg.tokenCalls)
 		}
 	})
+}
+
+func TestViewAcceptsCreateResponseStringID(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/comments/12312sadsa" {
+			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+		}
+		return jsonResponse(req, http.StatusOK, `{"id":"12312sadsa","body":"LGTM","user":{"id":1001,"login":"alice"},"created_at":"2026-09-15T10:00:00+08:00","updated_at":"2026-09-15T10:00:00+08:00"}`), nil
+	})
+
+	var out bytes.Buffer
+	cmd := newCmdView(newFactory(t, &testConfig{}, transport))
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"alice/demo", "12312sadsa"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if want := "Comment #12312sadsa\nAuthor: @alice\nCreated: 2026-09-15 10:00\n\nLGTM\n"; out.String() != want {
+		t.Fatalf("output = %q, want %q", out.String(), want)
+	}
 }

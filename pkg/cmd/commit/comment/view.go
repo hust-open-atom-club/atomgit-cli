@@ -2,7 +2,6 @@ package comment
 
 import (
 	"fmt"
-	"strconv"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -26,9 +25,9 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 			}
 			owner, repo := repository.Owner, repository.Name
 
-			commentID, err := strconv.ParseInt(remaining[0], 10, 64)
-			if err != nil || commentID <= 0 {
-				return fmt.Errorf("invalid comment ID: %s", remaining[0])
+			commentID, err := validateCommentID(remaining[0])
+			if err != nil {
+				return err
 			}
 
 			token, err := f.Config.GetToken()
@@ -51,7 +50,7 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			out := cmd.OutOrStdout()
-			fmt.Fprintf(out, "Comment #%d\n", comment.ID)
+			fmt.Fprintf(out, "Comment #%s\n", comment.ID)
 			fmt.Fprintf(out, "Author: @%s\n", comment.User.Login)
 			fmt.Fprintf(out, "Created: %s\n", formatCommentTime(comment.CreatedAt))
 			if comment.UpdatedAt != "" && comment.UpdatedAt != comment.CreatedAt {

@@ -518,7 +518,7 @@ ag --raw-output commit patch owner/repo <sha>
 
 ### Commit 评论
 
-commit 评论独立于 Issue 评论和 PR 评论，使用专门的 commit 评论接口；`view`、`edit`、`delete` 作用于仓库级评论 ID，传入 Issue/PR 评论的 ID 会被拒绝。
+commit 评论独立于 Issue 评论和 PR 评论，使用专门的 commit 评论接口；`view`、`edit`、`delete` 作用于仓库级评论 ID，传入 Issue/PR 评论的 ID 会被拒绝。评论 ID 按不透明字符串处理：`create` 返回的 ID（官方接口示例为 `12312sadsa` 这类非纯数字字符串）可直接传给 `view`、`edit`、`delete`，命令只要求 ID 非空且由安全的路径字符（字母、数字、`-`、`.`、`_`、`~`）组成。
 
 ```bash
 # 列出某个 commit（完整或短 SHA、分支名）下的评论（默认 30 条）

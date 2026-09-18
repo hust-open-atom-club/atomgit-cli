@@ -2,7 +2,6 @@ package comment
 
 import (
 	"fmt"
-	"strconv"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -26,9 +25,9 @@ func newCmdDelete(f *cmdutil.Factory) *cobra.Command {
 			}
 			owner, repo := repository.Owner, repository.Name
 
-			commentID, err := strconv.ParseInt(remaining[0], 10, 64)
-			if err != nil || commentID <= 0 {
-				return fmt.Errorf("invalid comment ID: %s", remaining[0])
+			commentID, err := validateCommentID(remaining[0])
+			if err != nil {
+				return err
 			}
 
 			token, err := f.Config.GetToken()
@@ -56,7 +55,7 @@ func newCmdDelete(f *cmdutil.Factory) *cobra.Command {
 			out := cmd.OutOrStdout()
 
 			if !opts.Yes {
-				confirmed, err := cmdutil.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), fmt.Sprintf("确定要删除评论 #%d 吗? [y/N]: ", commentID))
+				confirmed, err := cmdutil.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), fmt.Sprintf("确定要删除评论 #%s 吗? [y/N]: ", commentID))
 				if err != nil {
 					return err
 				}
@@ -70,7 +69,7 @@ func newCmdDelete(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(out, "Deleted comment #%d\n", commentID)
+			fmt.Fprintf(out, "Deleted comment #%s\n", commentID)
 			return nil
 		},
 	}

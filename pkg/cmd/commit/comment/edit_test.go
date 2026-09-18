@@ -113,7 +113,7 @@ func TestEditValidatesBodyBeforeNetwork(t *testing.T) {
 	}{
 		{name: "no body flags", args: []string{"alice/demo", "7"}, want: "comment body is required"},
 		{name: "empty body", args: []string{"alice/demo", "7", "--body", " "}, want: "comment body cannot be empty"},
-		{name: "invalid id", args: []string{"alice/demo", "abc", "--body", "x"}, want: "invalid comment ID"},
+		{name: "invalid id", args: []string{"alice/demo", "../7", "--body", "x"}, want: "invalid comment ID"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
