@@ -115,6 +115,8 @@ func TestFollowUpCommandsValidateIDBeforeNetwork(t *testing.T) {
 		{name: "fragment", id: "7#note"},
 		{name: "space", id: "7 8"},
 		{name: "percent escape", id: "%2e%2e"},
+		{name: "dot segment", id: "."},
+		{name: "dotdot segment", id: ".."},
 		{name: "empty", id: ""},
 	}
 	for _, tc := range cases {
