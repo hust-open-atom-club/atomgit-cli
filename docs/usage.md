@@ -614,10 +614,12 @@ ag pr merge owner/repo 123 --rebase --squash --admin --subject "Merge PR #123" -
 
 # 创建 PR
 ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch
+ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature-branch --draft
 ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature-branch
 cat description.md | ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature-branch
 ag pr create owner/repo --title "Fix bug" --head feature-branch \
   --assignee alice --reviewer bob --tester carol --label Bug --milestone v1.0
+ag pr create owner/repo --title "Fix bug" --head feature-branch --prune-branch
 
 # 修改 PR 协作元数据
 ag pr edit owner/repo 123 --add-assignee alice --remove-assignee bob
