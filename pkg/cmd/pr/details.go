@@ -42,6 +42,26 @@ type prReactionJSON struct {
 	CreatedAt string `json:"createdAt"`
 }
 
+type prActivityJSON struct {
+	ID        int64  `json:"id"`
+	Action    string `json:"action"`
+	Content   string `json:"content"`
+	Author    string `json:"author"`
+	CreatedAt string `json:"createdAt"`
+	UpdatedAt string `json:"updatedAt"`
+}
+
+type prHistoryJSON struct {
+	ID        string `json:"id"`
+	Content   string `json:"content"`
+	Created   bool   `json:"created"`
+	Deleted   bool   `json:"deleted"`
+	Author    string `json:"author"`
+	UpdatedBy string `json:"updatedBy"`
+	CreatedAt string `json:"createdAt"`
+	UpdatedAt string `json:"updatedAt"`
+}
+
 func newCmdPRCommits(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
 		limit int
@@ -241,7 +261,8 @@ func newCmdPRFiles(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdPRReactions(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
-		json bool
+		limit int
+		json  bool
 	}
 
 	cmd := &cobra.Command{
@@ -249,13 +270,16 @@ func newCmdPRReactions(f *cmdutil.Factory) *cobra.Command {
 		Short: "List reactions on a pull request",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", opts.limit)
+			}
+
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
 			}
 			owner, repo := repository.Owner, repository.Name
-			number := remaining[0]
-			_, err = parsePRNumber(number)
+			number, err := parsePRNumber(remaining[0])
 			if err != nil {
 				return err
 			}
@@ -270,7 +294,7 @@ func newCmdPRReactions(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			reactions, err := api.ListPullRequestReactions(client, owner, repo, number)
+			reactions, err := api.ListPullRequestReactions(client, owner, repo, number, opts.limit)
 			if err != nil {
 				return err
 			}
@@ -301,9 +325,201 @@ func newCmdPRReactions(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().IntVarP(&opts.limit, "limit", "L", 30, "Maximum number of reactions to list")
 	cmd.Flags().BoolVar(&opts.json, "json", false, "Output reactions as JSON")
 
 	return cmd
+}
+
+func newCmdPRActivity(f *cmdutil.Factory) *cobra.Command {
+	var opts struct {
+		limit int
+		json  bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "activity [<owner>/<repo>] <number>",
+		Short: "List the operation log of a pull request",
+		Args:  cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", opts.limit)
+			}
+
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			number, err := parsePRNumber(remaining[0])
+			if err != nil {
+				return err
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
+
+			logs, err := api.ListPullRequestOperateLogs(client, owner, repo, number, opts.limit)
+			if err != nil {
+				return err
+			}
+
+			if opts.json {
+				result := make([]prActivityJSON, 0, len(logs))
+				for _, entry := range logs {
+					result = append(result, prActivityJSON{
+						ID:        entry.ID,
+						Action:    entry.Action,
+						Content:   entry.Content,
+						Author:    userLogin(entry.User),
+						CreatedAt: entry.CreatedAt,
+						UpdatedAt: entry.UpdatedAt,
+					})
+				}
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), result)
+			}
+
+			out := cmd.OutOrStdout()
+			for _, entry := range logs {
+				createdDisplay := displayTimestamp(entry.CreatedAt)
+				content := singleLine(entry.Content)
+				if content != "" {
+					fmt.Fprintf(out, "%s by %s %s: %s\n", entry.Action, userLogin(entry.User), createdDisplay, content)
+					continue
+				}
+				fmt.Fprintf(out, "%s by %s %s\n", entry.Action, userLogin(entry.User), createdDisplay)
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().IntVarP(&opts.limit, "limit", "L", 30, "Maximum number of activity entries to list")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Output activity as JSON")
+
+	return cmd
+}
+
+func newCmdPRHistory(f *cmdutil.Factory) *cobra.Command {
+	var opts struct {
+		limit int
+		json  bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "history [<owner>/<repo>] <number>",
+		Short: "List the modification history of a pull request",
+		Long: `List the modification history of a pull request.
+
+The modify_history endpoint does not support pagination: the full response is
+fetched and then truncated to --limit.`,
+		Args: cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", opts.limit)
+			}
+
+			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
+			if err != nil {
+				return err
+			}
+			owner, repo := repository.Owner, repository.Name
+			number, err := parsePRNumber(remaining[0])
+			if err != nil {
+				return err
+			}
+
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return cmdutil.AuthenticationError(err)
+			}
+
+			client, err := f.NewAPIClient(token)
+			if err != nil {
+				return err
+			}
+
+			history, err := api.ListPullRequestModifyHistory(client, owner, repo, number, opts.limit)
+			if err != nil {
+				return err
+			}
+
+			if opts.json {
+				result := make([]prHistoryJSON, 0, len(history))
+				for _, entry := range history {
+					result = append(result, prHistoryJSON{
+						ID:        entry.ID,
+						Content:   entry.Content,
+						Created:   entry.Created,
+						Deleted:   entry.Deleted,
+						Author:    userLogin(entry.User),
+						UpdatedBy: userLogin(entry.UpdatedUser),
+						CreatedAt: entry.CreatedAt,
+						UpdatedAt: entry.UpdatedAt,
+					})
+				}
+				return cmdutil.WriteJSON(cmd.OutOrStdout(), result)
+			}
+
+			out := cmd.OutOrStdout()
+			for _, entry := range history {
+				kind := "updated"
+				if entry.Created {
+					kind = "created"
+				}
+				if entry.Deleted {
+					kind = "deleted"
+				}
+				display := displayTimestamp(entry.CreatedAt)
+				if kind != "created" {
+					display = displayTimestamp(entry.UpdatedAt)
+				}
+				content := singleLine(entry.Content)
+				if content != "" {
+					fmt.Fprintf(out, "%s by %s %s: %s\n", kind, userLogin(entry.User), display, content)
+					continue
+				}
+				fmt.Fprintf(out, "%s by %s %s\n", kind, userLogin(entry.User), display)
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().IntVarP(&opts.limit, "limit", "L", 30, "Maximum number of history entries to list")
+	cmd.Flags().BoolVar(&opts.json, "json", false, "Output history as JSON")
+
+	return cmd
+}
+
+// userLogin returns the most specific available user identifier.
+func userLogin(user api.User) string {
+	if login := strings.TrimSpace(user.Login); login != "" {
+		return login
+	}
+	return strings.TrimSpace(user.Name)
+}
+
+// singleLine collapses a server-provided message to a single output line so a
+// multi-line body never breaks the one-entry-per-line text format.
+func singleLine(value string) string {
+	return strings.Join(strings.Fields(value), " ")
+}
+
+// displayTimestamp formats an RFC 3339 timestamp for display, falling back to
+// the raw value when it cannot be parsed.
+func displayTimestamp(value string) string {
+	if formatted, err := parseTimestamp(value); err == nil {
+		return formatted
+	}
+	return value
 }
 
 func parseTimestamp(ts string) (string, error) {

@@ -349,6 +349,34 @@ func TestPullRequestReactionDecode(t *testing.T) {
 	}
 }
 
+func TestPullRequestOperateLogDecode(t *testing.T) {
+	raw := `{"id":274531,"action":"add_mr_issue_link","content":"Create mr issue link","merge_request_id":70067,"discussion_id":"abc","project":"One/One","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z","user":{"login":"alice","name":"Alice"}}`
+	var entry PullRequestOperateLog
+	if err := json.Unmarshal([]byte(raw), &entry); err != nil {
+		t.Fatal(err)
+	}
+	if entry.ID != 274531 || entry.Action != "add_mr_issue_link" || entry.MergeRequestID != 70067 {
+		t.Fatalf("entry = %#v", entry)
+	}
+	if entry.User.Login != "alice" || entry.CreatedAt == "" {
+		t.Fatalf("entry = %#v", entry)
+	}
+}
+
+func TestPullRequestModifyHistoryDecode(t *testing.T) {
+	raw := `{"id":"abc","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-02T00:00:00Z","deleted":false,"created":true,"content":"initial","user":{"login":"alice"},"updated_user":{"login":"bob"}}`
+	var entry PullRequestModifyHistory
+	if err := json.Unmarshal([]byte(raw), &entry); err != nil {
+		t.Fatal(err)
+	}
+	if entry.ID != "abc" || !entry.Created || entry.Deleted {
+		t.Fatalf("entry = %#v", entry)
+	}
+	if entry.User.Login != "alice" || entry.UpdatedUser.Login != "bob" || entry.Content != "initial" {
+		t.Fatalf("entry = %#v", entry)
+	}
+}
+
 func TestPullRequestCollaborationFields(t *testing.T) {
 	t.Run("nullable milestone and empty arrays", func(t *testing.T) {
 		raw := `{"id":1,"number":"7","title":"PR","state":"open","assignees":[],"approval_reviewers":[],"testers":[],"milestone":null}`

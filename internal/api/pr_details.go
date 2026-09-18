@@ -69,21 +69,66 @@ func ListPullRequestFiles(client *Client, owner, repo, number string) ([]PullReq
 	return files, nil
 }
 
-func ListPullRequestReactions(client *Client, owner, repo, number string) ([]PullRequestReaction, error) {
+// ListPullRequestReactions lists up to limit reactions on a pull request. The
+// user_reactions endpoint supports page/per_page, so results are paginated.
+func ListPullRequestReactions(client *Client, owner, repo, number string, limit int) ([]PullRequestReaction, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("invalid limit: %d (must be positive)", limit)
+	}
+
 	escapedOwner := url.PathEscape(owner)
 	escapedRepo := url.PathEscape(repo)
 	escapedNumber := url.PathEscape(number)
 
-	path := fmt.Sprintf("/repos/%s/%s/pulls/%s/user_reactions", escapedOwner, escapedRepo, escapedNumber)
+	return GetPaginated[PullRequestReaction](client, limit, func(page, perPage int) string {
+		return fmt.Sprintf("/repos/%s/%s/pulls/%s/user_reactions?page=%d&per_page=%d",
+			escapedOwner, escapedRepo, escapedNumber, page, perPage)
+	})
+}
 
-	var reactions []PullRequestReaction
+// ListPullRequestOperateLogs lists up to limit operation-log entries for a pull
+// request. The operate_logs endpoint supports page/per_page, so results are
+// paginated.
+func ListPullRequestOperateLogs(client *Client, owner, repo, number string, limit int) ([]PullRequestOperateLog, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("invalid limit: %d (must be positive)", limit)
+	}
+
+	escapedOwner := url.PathEscape(owner)
+	escapedRepo := url.PathEscape(repo)
+	escapedNumber := url.PathEscape(number)
+
+	return GetPaginated[PullRequestOperateLog](client, limit, func(page, perPage int) string {
+		return fmt.Sprintf("/repos/%s/%s/pulls/%s/operate_logs?page=%d&per_page=%d",
+			escapedOwner, escapedRepo, escapedNumber, page, perPage)
+	})
+}
+
+// ListPullRequestModifyHistory lists modification-history entries for a pull
+// request. The modify_history endpoint does not support pagination, so the full
+// response is fetched and then truncated to limit locally.
+func ListPullRequestModifyHistory(client *Client, owner, repo, number string, limit int) ([]PullRequestModifyHistory, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("invalid limit: %d (must be positive)", limit)
+	}
+
+	escapedOwner := url.PathEscape(owner)
+	escapedRepo := url.PathEscape(repo)
+	escapedNumber := url.PathEscape(number)
+
+	path := fmt.Sprintf("/repos/%s/%s/pulls/%s/modify_history", escapedOwner, escapedRepo, escapedNumber)
+
+	var history []PullRequestModifyHistory
 	err := client.doJSONRequest(http.MethodGet, path, nil, "application/json", "application/json",
-		RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: true}, &reactions)
+		RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: true}, &history)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list pull request modify history: %w", err)
 	}
-	if reactions == nil {
-		reactions = make([]PullRequestReaction, 0)
+	if history == nil {
+		history = make([]PullRequestModifyHistory, 0)
 	}
-	return reactions, nil
+	if len(history) > limit {
+		history = history[:limit]
+	}
+	return history, nil
 }

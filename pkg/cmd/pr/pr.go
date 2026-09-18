@@ -40,6 +40,8 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdPRCommits(f))
 	cmd.AddCommand(newCmdPRFiles(f))
 	cmd.AddCommand(newCmdPRReactions(f))
+	cmd.AddCommand(newCmdPRActivity(f))
+	cmd.AddCommand(newCmdPRHistory(f))
 	cmdutil.AddRepositoryContextHelp(cmd)
 
 	return cmd

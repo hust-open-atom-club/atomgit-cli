@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -323,7 +324,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":1,"user":{"login":"alice"},"content":"+1","created_at":"2024-01-01T00:00:00Z"}]`)
 		})
-		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42")
+		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -337,7 +338,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 			w.WriteHeader(http.StatusNotFound)
 			_, _ = io.WriteString(w, `{"message":"not found"}`)
 		})
-		_, err := ListPullRequestReactions(client, "owner", "repo", "42")
+		_, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err == nil || !strings.Contains(err.Error(), "404") {
 			t.Fatalf("error = %v", err)
 		}
@@ -352,21 +353,21 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
 		})
-		_, err := ListPullRequestReactions(client, "special/owner", "repo", "42")
+		_, err := ListPullRequestReactions(client, "special/owner", "repo", "42", 30)
 		if err != nil {
 			t.Fatal(err)
 		}
 	})
 
-	t.Run("no speculative pagination parameters", func(t *testing.T) {
+	t.Run("paginated query parameters", func(t *testing.T) {
 		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.RawQuery != "" {
-				t.Errorf("unexpected query parameters: %s", r.URL.RawQuery)
+			if r.URL.Query().Get("page") != "1" || r.URL.Query().Get("per_page") != "100" {
+				t.Errorf("query = %s, want page=1&per_page=100", r.URL.RawQuery)
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
 		})
-		_, err := ListPullRequestReactions(client, "owner", "repo", "42")
+		_, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -380,7 +381,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
 		})
-		_, err := ListPullRequestReactions(client, "owner", "repo", "42")
+		_, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -391,7 +392,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
 		})
-		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42")
+		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -405,7 +406,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `null`)
 		})
-		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42")
+		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -419,7 +420,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":42,"user":{"login":"bob","name":"Bob"},"content":"heart","created_at":"2024-06-15T10:30:00Z"}]`)
 		})
-		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42")
+		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -434,7 +435,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":1,"user":{"login":"a"},"content":"+1","created_at":""},{"id":2,"user":{"login":"b"},"content":"-1","created_at":""}]`)
 		})
-		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42")
+		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -447,7 +448,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 		})
-		_, err := ListPullRequestReactions(client, "owner", "repo", "42")
+		_, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err == nil {
 			t.Fatal("expected error for 204")
 		}
@@ -551,7 +552,7 @@ func TestPullRequestDetailsFilesNoSpeculativeParams(t *testing.T) {
 	})
 }
 
-func TestPullRequestDetailsReactionsNoSpeculativeParams(t *testing.T) {
+func TestPullRequestDetailsModifyHistoryNoSpeculativeParams(t *testing.T) {
 	t.Run("no page parameter", func(t *testing.T) {
 		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Query().Get("page") != "" {
@@ -563,11 +564,238 @@ func TestPullRequestDetailsReactionsNoSpeculativeParams(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
 		})
-		_, err := ListPullRequestReactions(client, "owner", "repo", "42")
+		_, err := ListPullRequestModifyHistory(client, "owner", "repo", "42", 30)
 		if err != nil {
 			t.Fatal(err)
 		}
 	})
+}
+
+func TestPullRequestDetailsOperateLogs(t *testing.T) {
+	t.Run("exact HTTP 200 success", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodGet {
+				t.Errorf("method = %s, want GET", r.Method)
+			}
+			if r.URL.Path != "/repos/owner/repo/pulls/42/operate_logs" {
+				t.Errorf("path = %s", r.URL.Path)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[{"id":274531,"action":"add_mr_issue_link","content":"Create mr issue link","merge_request_id":70067,"created_at":"2024-04-23T11:32:08+08:00","updated_at":"2024-04-23T11:32:08+08:00","user":{"login":"alice","name":"Alice"}}]`)
+		})
+		logs, err := ListPullRequestOperateLogs(client, "owner", "repo", "42", 30)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(logs) != 1 || logs[0].ID != 274531 || logs[0].Action != "add_mr_issue_link" || logs[0].User.Login != "alice" {
+			t.Fatalf("logs = %#v", logs)
+		}
+	})
+
+	t.Run("empty array response", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[]`)
+		})
+		logs, err := ListPullRequestOperateLogs(client, "owner", "repo", "42", 30)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if logs == nil || len(logs) != 0 {
+			t.Fatalf("logs = %#v, want empty slice", logs)
+		}
+	})
+
+	t.Run("pagination stops at limit", func(t *testing.T) {
+		requests := 0
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			requests++
+			page := r.URL.Query().Get("page")
+			perPage := r.URL.Query().Get("per_page")
+			if perPage != "100" {
+				t.Errorf("per_page = %s, want 100", perPage)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			if page == "1" {
+				_, _ = io.WriteString(w, `[{"id":1,"user":{"login":"a"}},{"id":2,"user":{"login":"b"}},{"id":3,"user":{"login":"c"}}]`)
+				return
+			}
+			_, _ = io.WriteString(w, `[]`)
+		})
+		logs, err := ListPullRequestOperateLogs(client, "owner", "repo", "42", 2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(logs) != 2 || logs[0].ID != 1 || logs[1].ID != 2 {
+			t.Fatalf("logs = %#v", logs)
+		}
+		if requests != 1 {
+			t.Fatalf("requests = %d, want 1", requests)
+		}
+	})
+
+	t.Run("non-200 status returns error", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusForbidden)
+			_, _ = io.WriteString(w, `{"message":"forbidden"}`)
+		})
+		_, err := ListPullRequestOperateLogs(client, "owner", "repo", "42", 30)
+		if err == nil || !strings.Contains(err.Error(), "403") {
+			t.Fatalf("error = %v", err)
+		}
+	})
+
+	t.Run("malformed JSON returns error", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[{"id":`)
+		})
+		_, err := ListPullRequestOperateLogs(client, "owner", "repo", "42", 30)
+		if err == nil {
+			t.Fatal("expected error for malformed JSON")
+		}
+	})
+
+	t.Run("path escaped identifiers", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			raw := r.URL.RequestURI()
+			if !strings.Contains(raw, "%2F") {
+				t.Errorf("owner slash not escaped in path: %s", raw)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[]`)
+		})
+		_, err := ListPullRequestOperateLogs(client, "special/owner", "repo", "42", 30)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestPullRequestDetailsOperateLogsInvalidLimit(t *testing.T) {
+	for _, limit := range []int{0, -1} {
+		t.Run(fmt.Sprintf("limit %d fails without HTTP request", limit), func(t *testing.T) {
+			var called bool
+			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				called = true
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = io.WriteString(w, `[]`)
+			})
+			_, err := ListPullRequestOperateLogs(client, "owner", "repo", "42", limit)
+			if err == nil || !strings.Contains(err.Error(), "must be positive") {
+				t.Fatalf("error = %v", err)
+			}
+			if called {
+				t.Fatal("HTTP request made for invalid limit")
+			}
+		})
+	}
+}
+
+func TestPullRequestDetailsModifyHistory(t *testing.T) {
+	t.Run("exact HTTP 200 success", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodGet {
+				t.Errorf("method = %s, want GET", r.Method)
+			}
+			if r.URL.Path != "/repos/owner/repo/pulls/42/modify_history" {
+				t.Errorf("path = %s", r.URL.Path)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[{"id":"abc","created":true,"created_at":"2024-04-23T11:32:08+08:00","content":"initial","user":{"login":"alice","name":"Alice"},"updated_user":{"login":"alice","name":"Alice"}},{"id":"def","created":false,"deleted":false,"updated_at":"2024-04-24T11:32:08+08:00","content":"edited","user":{"login":"alice"},"updated_user":{"login":"bob"}}]`)
+		})
+		history, err := ListPullRequestModifyHistory(client, "owner", "repo", "42", 30)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(history) != 2 || history[0].ID != "abc" || !history[0].Created || history[1].UpdatedUser.Login != "bob" {
+			t.Fatalf("history = %#v", history)
+		}
+	})
+
+	t.Run("empty array response", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[]`)
+		})
+		history, err := ListPullRequestModifyHistory(client, "owner", "repo", "42", 30)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if history == nil || len(history) != 0 {
+			t.Fatalf("history = %#v, want empty slice", history)
+		}
+	})
+
+	t.Run("null response returns empty slice", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `null`)
+		})
+		history, err := ListPullRequestModifyHistory(client, "owner", "repo", "42", 30)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if history == nil || len(history) != 0 {
+			t.Fatalf("history = %#v, want empty slice", history)
+		}
+	})
+
+	t.Run("limit truncates locally since endpoint is unpaginated", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[{"id":"1"},{"id":"2"},{"id":"3"}]`)
+		})
+		history, err := ListPullRequestModifyHistory(client, "owner", "repo", "42", 2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(history) != 2 || history[1].ID != "2" {
+			t.Fatalf("history = %#v", history)
+		}
+	})
+
+	t.Run("non-200 status returns error", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = io.WriteString(w, `{"message":"unauthorized"}`)
+		})
+		_, err := ListPullRequestModifyHistory(client, "owner", "repo", "42", 30)
+		if err == nil || !strings.Contains(err.Error(), "401") {
+			t.Fatalf("error = %v", err)
+		}
+	})
+
+	t.Run("malformed JSON returns error", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `not json`)
+		})
+		_, err := ListPullRequestModifyHistory(client, "owner", "repo", "42", 30)
+		if err == nil {
+			t.Fatal("expected error for malformed JSON")
+		}
+	})
+}
+
+func TestPullRequestDetailsModifyHistoryInvalidLimit(t *testing.T) {
+	for _, limit := range []int{0, -1} {
+		t.Run(fmt.Sprintf("limit %d fails without HTTP request", limit), func(t *testing.T) {
+			var called bool
+			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				called = true
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = io.WriteString(w, `[]`)
+			})
+			_, err := ListPullRequestModifyHistory(client, "owner", "repo", "42", limit)
+			if err == nil || !strings.Contains(err.Error(), "must be positive") {
+				t.Fatalf("error = %v", err)
+			}
+			if called {
+				t.Fatal("HTTP request made for invalid limit")
+			}
+		})
+	}
 }
 
 func TestPullRequestDetailsMethodEnforcement(t *testing.T) {
@@ -577,7 +805,7 @@ func TestPullRequestDetailsMethodEnforcement(t *testing.T) {
 	}{
 		{"commits", func(c *Client) error { _, err := ListPullRequestCommits(c, "owner", "repo", "42", 30); return err }},
 		{"files", func(c *Client) error { _, err := ListPullRequestFiles(c, "owner", "repo", "42"); return err }},
-		{"reactions", func(c *Client) error { _, err := ListPullRequestReactions(c, "owner", "repo", "42"); return err }},
+		{"reactions", func(c *Client) error { _, err := ListPullRequestReactions(c, "owner", "repo", "42", 30); return err }},
 	}
 
 	for _, ep := range endpoints {
@@ -616,7 +844,7 @@ func TestPullRequestDetailsResponseVariants(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":1,"user":{"login":"a"},"content":"+1","created_at":"2024-01-01T00:00:00Z"}]`)
 		})
-		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42")
+		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -685,7 +913,7 @@ func TestPullRequestDetailsExactRequestCount(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
 		})
-		_, err := ListPullRequestReactions(client, "owner", "repo", "42")
+		_, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err != nil {
 			t.Fatal(err)
 		}

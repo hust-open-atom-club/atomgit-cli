@@ -959,6 +959,33 @@ type PullRequestReaction struct {
 	CreatedAt string `json:"created_at"`
 }
 
+// PullRequestOperateLog represents one read-only entry from a pull request's
+// operation log (GET /repos/:owner/:repo/pulls/:number/operate_logs).
+type PullRequestOperateLog struct {
+	ID             int64  `json:"id"`
+	Action         string `json:"action"`
+	Content        string `json:"content"`
+	MergeRequestID int64  `json:"merge_request_id"`
+	DiscussionID   string `json:"discussion_id"`
+	Project        string `json:"project"`
+	CreatedAt      string `json:"created_at"`
+	UpdatedAt      string `json:"updated_at"`
+	User           User   `json:"user"`
+}
+
+// PullRequestModifyHistory represents one read-only entry from a pull request's
+// modification history (GET /repos/:owner/:repo/pulls/:number/modify_history).
+type PullRequestModifyHistory struct {
+	ID          string `json:"id"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
+	Deleted     bool   `json:"deleted"`
+	Created     bool   `json:"created"`
+	Content     string `json:"content"`
+	User        User   `json:"user"`
+	UpdatedUser User   `json:"updated_user"`
+}
+
 // UserEventAuthor represents the author of a user activity event. Only fields
 // that are safe for stable, privacy-conscious CLI output are modeled.
 type UserEventAuthor struct {

@@ -469,6 +469,8 @@ func TestPRDetailsHelp(t *testing.T) {
 		{newCmdPRCommits, "commits"},
 		{newCmdPRFiles, "files"},
 		{newCmdPRReactions, "reactions"},
+		{newCmdPRActivity, "activity"},
+		{newCmdPRHistory, "history"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -593,5 +595,274 @@ func TestPRFilesZeroValueFallbacks(t *testing.T) {
 	}
 	if f["tooLarge"] != false {
 		t.Fatalf("tooLarge = %v", f["tooLarge"])
+	}
+}
+
+func TestPRActivityTextOutput(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return prResponse(http.StatusOK, `[{"id":1,"action":"add_mr_issue_link","content":"Create mr issue link","created_at":"2024-06-15T10:30:00Z","user":{"login":"alice"}},{"id":2,"action":"closed","content":"","created_at":"2024-06-14T08:00:00Z","user":{"login":"","name":"Bob"}}]`), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRActivity(factory)
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("lines = %d: %q", len(lines), output.String())
+	}
+	if !strings.Contains(lines[0], "add_mr_issue_link") || !strings.Contains(lines[0], "alice") || !strings.Contains(lines[0], "2024-06-15 10:30:00Z") || !strings.Contains(lines[0], "Create mr issue link") {
+		t.Errorf("line 0 = %s", lines[0])
+	}
+	if !strings.Contains(lines[1], "closed") || !strings.Contains(lines[1], "Bob") {
+		t.Errorf("line 1 = %s", lines[1])
+	}
+}
+
+func TestPRActivityJSON(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return prResponse(http.StatusOK, `[{"id":9,"action":"approved","content":"lgtm","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-02T00:00:00Z","user":{"login":"alice"}}]`), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRActivity(factory)
+	_ = cmd.Flags().Set("json", "true")
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+	var items []map[string]any
+	if err := json.Unmarshal(output.Bytes(), &items); err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("len(items) = %d, want 1", len(items))
+	}
+	entry := items[0]
+	if entry["id"].(float64) != 9 || entry["action"] != "approved" || entry["content"] != "lgtm" || entry["author"] != "alice" || entry["createdAt"] != "2024-01-01T00:00:00Z" {
+		t.Fatalf("entry = %#v", entry)
+	}
+}
+
+func TestPRActivityEmptyResponse(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return prResponse(http.StatusOK, `[]`), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRActivity(factory)
+	_ = cmd.Flags().Set("json", "true")
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(output.String()) != "[]" {
+		t.Fatalf("output = %q", output.String())
+	}
+}
+
+func TestPRActivityInvalidLimitBeforeAuth(t *testing.T) {
+	for _, limit := range []string{"0", "-1"} {
+		t.Run(limit, func(t *testing.T) {
+			cfg := &recordingConfig{}
+			cmd := newCmdPRActivity(&cmdutil.Factory{Config: cfg})
+			_ = cmd.Flags().Set("limit", limit)
+			err := cmd.RunE(cmd, []string{"alice/demo", "42"})
+			if err == nil || !strings.Contains(err.Error(), "must be positive") {
+				t.Fatalf("error = %v", err)
+			}
+			if cfg.getTokenCalls != 0 {
+				t.Fatalf("GetToken called %d times", cfg.getTokenCalls)
+			}
+		})
+	}
+}
+
+func TestPRActivityInvalidPRNumberBeforeAuth(t *testing.T) {
+	cfg := &recordingConfig{}
+	cmd := newCmdPRActivity(&cmdutil.Factory{Config: cfg})
+	err := cmd.RunE(cmd, []string{"alice/demo", "0"})
+	if err == nil || !strings.Contains(err.Error(), "invalid PR number") {
+		t.Fatalf("error = %v", err)
+	}
+	if cfg.getTokenCalls != 0 {
+		t.Fatalf("GetToken called %d times", cfg.getTokenCalls)
+	}
+}
+
+func TestPRActivityPaginationQuery(t *testing.T) {
+	var rawQuery string
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				rawQuery = req.URL.RawQuery
+				return prResponse(http.StatusOK, `[]`), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRActivity(factory)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rawQuery, "page=1") || !strings.Contains(rawQuery, "per_page=100") {
+		t.Errorf("rawQuery = %s", rawQuery)
+	}
+}
+
+func TestPRHistoryTextOutput(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return prResponse(http.StatusOK, `[{"id":"a","created":true,"created_at":"2024-06-15T10:30:00Z","content":"initial","user":{"login":"alice"}},{"id":"b","created":false,"updated_at":"2024-06-16T10:30:00Z","content":"edited","user":{"login":"alice"},"updated_user":{"login":"bob"}}]`), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRHistory(factory)
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("lines = %d: %q", len(lines), output.String())
+	}
+	if !strings.Contains(lines[0], "created") || !strings.Contains(lines[0], "alice") || !strings.Contains(lines[0], "initial") {
+		t.Errorf("line 0 = %s", lines[0])
+	}
+	if !strings.Contains(lines[1], "updated") || !strings.Contains(lines[1], "edited") {
+		t.Errorf("line 1 = %s", lines[1])
+	}
+}
+
+func TestPRHistoryJSON(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return prResponse(http.StatusOK, `[{"id":"a","created":true,"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-02T00:00:00Z","content":"initial","user":{"login":"alice"},"updated_user":{"login":"bob"}}]`), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRHistory(factory)
+	_ = cmd.Flags().Set("json", "true")
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+	var items []map[string]any
+	if err := json.Unmarshal(output.Bytes(), &items); err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("len(items) = %d, want 1", len(items))
+	}
+	entry := items[0]
+	if entry["id"] != "a" || entry["created"] != true || entry["author"] != "alice" || entry["updatedBy"] != "bob" || entry["content"] != "initial" {
+		t.Fatalf("entry = %#v", entry)
+	}
+}
+
+func TestPRHistoryEmptyResponse(t *testing.T) {
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return prResponse(http.StatusOK, `[]`), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRHistory(factory)
+	_ = cmd.Flags().Set("json", "true")
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(output.String()) != "[]" {
+		t.Fatalf("output = %q", output.String())
+	}
+}
+
+func TestPRHistoryNoPaginationQuery(t *testing.T) {
+	var rawQuery string
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				rawQuery = req.URL.RawQuery
+				return prResponse(http.StatusOK, `[]`), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPRHistory(factory)
+	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(rawQuery, "page=") || strings.Contains(rawQuery, "per_page=") {
+		t.Errorf("unexpected pagination query: %s", rawQuery)
+	}
+}
+
+func TestPRHistoryInvalidLimitBeforeAuth(t *testing.T) {
+	for _, limit := range []string{"0", "-1"} {
+		t.Run(limit, func(t *testing.T) {
+			cfg := &recordingConfig{}
+			cmd := newCmdPRHistory(&cmdutil.Factory{Config: cfg})
+			_ = cmd.Flags().Set("limit", limit)
+			err := cmd.RunE(cmd, []string{"alice/demo", "42"})
+			if err == nil || !strings.Contains(err.Error(), "must be positive") {
+				t.Fatalf("error = %v", err)
+			}
+			if cfg.getTokenCalls != 0 {
+				t.Fatalf("GetToken called %d times", cfg.getTokenCalls)
+			}
+		})
+	}
+}
+
+func TestPRHistoryInvalidPRNumberBeforeAuth(t *testing.T) {
+	cfg := &recordingConfig{}
+	cmd := newCmdPRHistory(&cmdutil.Factory{Config: cfg})
+	err := cmd.RunE(cmd, []string{"alice/demo", "0"})
+	if err == nil || !strings.Contains(err.Error(), "invalid PR number") {
+		t.Fatalf("error = %v", err)
+	}
+	if cfg.getTokenCalls != 0 {
+		t.Fatalf("GetToken called %d times", cfg.getTokenCalls)
+	}
+}
+
+func TestPRReactionsInvalidLimitBeforeAuth(t *testing.T) {
+	for _, limit := range []string{"0", "-1"} {
+		t.Run(limit, func(t *testing.T) {
+			cfg := &recordingConfig{}
+			cmd := newCmdPRReactions(&cmdutil.Factory{Config: cfg})
+			_ = cmd.Flags().Set("limit", limit)
+			err := cmd.RunE(cmd, []string{"alice/demo", "42"})
+			if err == nil || !strings.Contains(err.Error(), "must be positive") {
+				t.Fatalf("error = %v", err)
+			}
+			if cfg.getTokenCalls != 0 {
+				t.Fatalf("GetToken called %d times", cfg.getTokenCalls)
+			}
+		})
 	}
 }
