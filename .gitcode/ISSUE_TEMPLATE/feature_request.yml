@@ -6,6 +6,7 @@ body:
     attributes:
       value: |
         请先说明要解决的用户问题。包含凭据、私有仓库信息或可被利用细节的内容，不应公开发布。
+        涉及漏洞时，请按[安全策略](https://atomgit.com/hust-open-atom-club/atomgit-cli/blob/main/SECURITY.md)私下报告，不要继续填写公开表单。
 
   - type: textarea
     id: use_case
