@@ -35,7 +35,7 @@ func (f issueRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error)
 
 func TestNewCmdIssueRegistersSubcommands(t *testing.T) {
 	cmd := NewCmdIssue(&cmdutil.Factory{})
-	want := map[string]bool{"close": false, "comment": false, "create": false, "edit": false, "label": false, "list": false, "view": false, "reopen": false, "prs": false, "branches": false}
+	want := map[string]bool{"close": false, "comment": false, "create": false, "edit": false, "label": false, "list": false, "view": false, "reopen": false, "prs": false, "branches": false, "activity": false, "history": false, "reactions": false}
 	for _, child := range cmd.Commands() {
 		if _, ok := want[child.Name()]; ok {
 			want[child.Name()] = true

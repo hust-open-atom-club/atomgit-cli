@@ -1,0 +1,49 @@
+{
+  "name": "policy-code-review-update",
+  "source": "synthetic; official repository API https://docs.gitcode.com/en/docs/repos/ and per-endpoint API v5 status documentation, reviewed 2026-09-17; not a live capture",
+  "version": "v5",
+  "method": "PUT",
+  "path": "/repos/{owner}/{repo}/reviewer",
+  "statuses": [
+    200
+  ],
+  "body_policy": "required",
+  "shape": {
+    "types": [
+      "object"
+    ],
+    "required": [
+      "id",
+      "created_at",
+      "updated_at"
+    ],
+    "properties": {
+      "id": {
+        "types": [
+          "integer"
+        ]
+      },
+      "created_at": {
+        "types": [
+          "string"
+        ]
+      },
+      "updated_at": {
+        "types": [
+          "string"
+        ]
+      }
+    }
+  },
+  "examples": [
+    {
+      "name": "success",
+      "status": 200,
+      "body": {
+        "id": 1,
+        "created_at": "synthetic",
+        "updated_at": "synthetic"
+      }
+    }
+  ]
+}

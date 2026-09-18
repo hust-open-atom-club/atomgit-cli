@@ -2,6 +2,11 @@ name: 文档问题
 description: 报告项目文档缺失、错误或表述不清的问题。
 title: "[文档] "
 body:
+  - type: markdown
+    attributes:
+      value: |
+        文档中发现凭据泄露或可被利用的问题时，请按[安全策略](https://atomgit.com/hust-open-atom-club/atomgit-cli/blob/main/SECURITY.md)私下报告，不要在公开表单中复制敏感内容。
+
   - type: input
     id: location
     attributes:

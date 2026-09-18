@@ -19,6 +19,9 @@ make test-contract
 | Fixture | 契约 |
 | --- | --- |
 | `repository` | v5 仓库详情、标识及默认分支字段 |
+| `policy-permission` / `policy-permission-update` | v5 权限模式 GET/PUT、camelCase 读取字段与成功确认 |
+| `policy-code-review-update` | v5 审查配置 PUT、独立响应；仅使用合成写入样例 |
+| `policy-pull-request` / `policy-pull-request-update` | v5 PR 配置 GET/PUT、嵌套结构和代码审查只读投影 |
 | `issue-list` | v5 数组分页、多个页面及空尾页、分页响应头 |
 | `issue-create` | v5 创建 Issue 的 200/201，以及字符串/数字编号 |
 | `related-branches-update` | v5 更新关联分支允许的零字节或 JSON 响应 |

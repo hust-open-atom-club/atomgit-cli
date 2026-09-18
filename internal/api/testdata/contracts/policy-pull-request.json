@@ -1,0 +1,220 @@
+{
+  "name": "policy-pull-request",
+  "source": "synthetic; official GET schema and examples https://docs.gitcode.com/docs/apis/get-api-v-5-repos-owner-repo-pull-request-settings/ reviewed 2026-09-18; boolean GET and integer PUT variants; not a live capture",
+  "version": "v5",
+  "method": "GET",
+  "path": "/repos/{owner}/{repo}/pull_request_settings",
+  "statuses": [
+    200
+  ],
+  "body_policy": "required",
+  "shape": {
+    "types": [
+      "object"
+    ],
+    "required": [
+      "merge_request_setting",
+      "only_allow_merge_if_all_discussions_are_resolved",
+      "only_allow_merge_if_pipeline_succeeds",
+      "merge_method"
+    ],
+    "properties": {
+      "merge_request_setting": {
+        "types": [
+          "object"
+        ],
+        "required": [
+          "approval_approvers",
+          "approval_testers",
+          "approval_required_approvers",
+          "approval_required_testers",
+          "can_force_merge"
+        ],
+        "properties": {
+          "approval_approvers": {
+            "types": [
+              "array"
+            ],
+            "items": {
+              "types": [
+                "object"
+              ]
+            }
+          },
+          "approval_testers": {
+            "types": [
+              "array"
+            ],
+            "items": {
+              "types": [
+                "object"
+              ]
+            }
+          },
+          "approval_required_approvers": {
+            "types": [
+              "integer"
+            ]
+          },
+          "approval_required_testers": {
+            "types": [
+              "integer"
+            ]
+          },
+          "can_force_merge": {
+            "types": [
+              "integer",
+              "boolean"
+            ]
+          },
+          "disable_merge_by_self": {
+            "types": [
+              "integer",
+              "boolean"
+            ]
+          },
+          "disable_squash_merge": {
+            "types": [
+              "integer",
+              "boolean"
+            ]
+          },
+          "add_notes_after_merged": {
+            "types": [
+              "integer",
+              "boolean"
+            ]
+          },
+          "mark_auto_merged_mr_as_closed": {
+            "types": [
+              "integer",
+              "boolean"
+            ]
+          },
+          "delete_source_branch_when_merged": {
+            "types": [
+              "integer",
+              "boolean"
+            ]
+          },
+          "auto_squash_merge": {
+            "types": [
+              "integer",
+              "boolean"
+            ]
+          },
+          "squash_merge_with_no_merge_commit": {
+            "types": [
+              "integer",
+              "boolean"
+            ]
+          },
+          "close_issue_when_mr_merged": {
+            "types": [
+              "integer",
+              "boolean"
+            ]
+          },
+          "can_reopen": {
+            "types": [
+              "integer",
+              "boolean"
+            ]
+          },
+          "is_check_cla": {
+            "types": [
+              "integer",
+              "boolean"
+            ]
+          },
+          "is_allow_lite_merge_request": {
+            "types": [
+              "integer",
+              "boolean"
+            ]
+          },
+          "forbidden_pr_related_issue_closed": {
+            "types": [
+              "string"
+            ]
+          }
+        }
+      },
+      "only_allow_merge_if_all_discussions_are_resolved": {
+        "types": [
+          "integer",
+          "boolean"
+        ]
+      },
+      "only_allow_merge_if_pipeline_succeeds": {
+        "types": [
+          "integer",
+          "boolean"
+        ]
+      },
+      "merge_method": {
+        "types": [
+          "string"
+        ]
+      }
+    }
+  },
+  "examples": [
+    {
+      "name": "integer-settings",
+      "status": 200,
+      "body": {
+        "merge_request_setting": {
+          "approval_approvers": [],
+          "approval_testers": [],
+          "approval_required_approvers": 0,
+          "approval_required_testers": 0,
+          "can_force_merge": 0,
+          "disable_merge_by_self": 0,
+          "disable_squash_merge": 0,
+          "add_notes_after_merged": 1,
+          "mark_auto_merged_mr_as_closed": 0,
+          "delete_source_branch_when_merged": 1,
+          "auto_squash_merge": 0,
+          "squash_merge_with_no_merge_commit": 1,
+          "close_issue_when_mr_merged": 0,
+          "can_reopen": 1,
+          "is_check_cla": 0,
+          "is_allow_lite_merge_request": 1,
+          "forbidden_pr_related_issue_closed": "0"
+        },
+        "only_allow_merge_if_all_discussions_are_resolved": 0,
+        "only_allow_merge_if_pipeline_succeeds": 1,
+        "merge_method": "merge"
+      }
+    },
+    {
+      "name": "boolean-settings",
+      "status": 200,
+      "body": {
+        "merge_request_setting": {
+          "approval_approvers": [],
+          "approval_testers": [],
+          "approval_required_approvers": 0,
+          "approval_required_testers": 0,
+          "can_force_merge": false,
+          "disable_merge_by_self": false,
+          "disable_squash_merge": false,
+          "add_notes_after_merged": true,
+          "mark_auto_merged_mr_as_closed": false,
+          "delete_source_branch_when_merged": true,
+          "auto_squash_merge": false,
+          "squash_merge_with_no_merge_commit": true,
+          "close_issue_when_mr_merged": false,
+          "can_reopen": true,
+          "is_check_cla": false,
+          "is_allow_lite_merge_request": true,
+          "forbidden_pr_related_issue_closed": "false"
+        },
+        "only_allow_merge_if_all_discussions_are_resolved": false,
+        "only_allow_merge_if_pipeline_succeeds": true,
+        "merge_method": "merge"
+      }
+    }
+  ]
+}
