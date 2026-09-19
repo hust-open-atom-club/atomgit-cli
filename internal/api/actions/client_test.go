@@ -223,6 +223,91 @@ func TestListJobsUsesPaginationQuery(t *testing.T) {
 	}
 }
 
+func TestOrganizationRunnerGroupPathsPaginationAndAuth(t *testing.T) {
+	expected := []string{
+		"/api/v8/orgs/team%20ops/actions/runner-groups",
+		"/api/v8/orgs/team%20ops/actions/runner-groups/group%231",
+		"/api/v8/orgs/team%20ops/actions/runner-groups/group%231/runners",
+		"/api/v8/orgs/team%20ops/actions/runner-groups/group%231/runner-sets",
+		"/api/v8/orgs/team%20ops/actions/runner-groups/group%231/shared-namespaces",
+	}
+	request := 0
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if request >= len(expected) || req.URL.EscapedPath() != expected[request] {
+			t.Fatalf("request %d path = %q, want %q", request, req.URL.EscapedPath(), expected[request])
+		}
+		if got := req.Header.Get("Authorization"); got != "Bearer secret" {
+			t.Fatalf("Authorization = %q", got)
+		}
+		if request != 1 && req.URL.Query().Encode() != "page=2&per_page=25" {
+			t.Fatalf("query = %q", req.URL.RawQuery)
+		}
+		request++
+		switch request {
+		case 1:
+			return response(req, http.StatusOK, `{"total_count":1,"runner_groups":[{"id":"group#1","runner_group_name":"Builders"}]}`), nil
+		case 2:
+			return response(req, http.StatusOK, `{"runner_group_id":"group#1","runner_group_name":"Builders","share_all":true}`), nil
+		case 3:
+			return response(req, http.StatusOK, `{"total_count":1,"runners":[{"id":"runner-1","runner_group_id":"group#1"}]}`), nil
+		case 4:
+			return response(req, http.StatusOK, `{"total_count":1,"runner_sets":[{"id":"set-1","runner_group_id":"group#1"}]}`), nil
+		default:
+			return response(req, http.StatusOK, `{"total_count":1,"shared_namespaces":[{"id":"share-1","runner_group_id":"group#1"}]}`), nil
+		}
+	})
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+	opts := ListRunnerGroupsOptions{Page: 2, PerPage: 25}
+
+	groups, err := client.ListOrganizationRunnerGroups("team ops", opts)
+	if err != nil || groups.TotalCount != 1 || len(groups.RunnerGroups) != 1 {
+		t.Fatalf("groups = %#v, error = %v", groups, err)
+	}
+	detail, err := client.GetOrganizationRunnerGroup("team ops", "group#1")
+	if err != nil || detail.RunnerGroupID != "group#1" || !detail.ShareAll {
+		t.Fatalf("detail = %#v, error = %v", detail, err)
+	}
+	runners, err := client.ListOrganizationRunnerGroupRunners("team ops", "group#1", opts)
+	if err != nil || len(runners.Runners) != 1 {
+		t.Fatalf("runners = %#v, error = %v", runners, err)
+	}
+	sets, err := client.ListOrganizationRunnerGroupRunnerSets("team ops", "group#1", opts)
+	if err != nil || len(sets.RunnerSets) != 1 {
+		t.Fatalf("sets = %#v, error = %v", sets, err)
+	}
+	namespaces, err := client.ListOrganizationRunnerGroupSharedNamespaces("team ops", "group#1", opts)
+	if err != nil || len(namespaces.SharedNamespaces) != 1 {
+		t.Fatalf("namespaces = %#v, error = %v", namespaces, err)
+	}
+	if request != len(expected) {
+		t.Fatalf("request count = %d, want %d", request, len(expected))
+	}
+}
+
+func TestOrganizationRunnerGroupListsNormalizeMissingCollections(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return response(req, http.StatusOK, `{}`), nil
+	})
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+
+	groups, err := client.ListOrganizationRunnerGroups("team", ListRunnerGroupsOptions{})
+	if err != nil || groups.RunnerGroups == nil {
+		t.Fatalf("groups = %#v, error = %v", groups, err)
+	}
+	runners, err := client.ListOrganizationRunnerGroupRunners("team", "group", ListRunnerGroupsOptions{})
+	if err != nil || runners.Runners == nil {
+		t.Fatalf("runners = %#v, error = %v", runners, err)
+	}
+	sets, err := client.ListOrganizationRunnerGroupRunnerSets("team", "group", ListRunnerGroupsOptions{})
+	if err != nil || sets.RunnerSets == nil {
+		t.Fatalf("sets = %#v, error = %v", sets, err)
+	}
+	namespaces, err := client.ListOrganizationRunnerGroupSharedNamespaces("team", "group", ListRunnerGroupsOptions{})
+	if err != nil || namespaces.SharedNamespaces == nil {
+		t.Fatalf("namespaces = %#v, error = %v", namespaces, err)
+	}
+}
+
 func TestDeleteArtifactRequiresNoContent(t *testing.T) {
 	tests := []struct {
 		name    string

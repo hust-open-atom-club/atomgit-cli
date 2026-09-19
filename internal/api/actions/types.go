@@ -242,6 +242,108 @@ type RunnerListResponse struct {
 	Runners    []Runner `json:"runners"`
 }
 
+// RunnerGroup is the summary returned by the organization runner-group list.
+type RunnerGroup struct {
+	ID              string    `json:"id"`
+	Name            string    `json:"name"`
+	RunnerGroupName string    `json:"runner_group_name"`
+	NamespaceID     string    `json:"namespace_id"`
+	Creator         string    `json:"creator"`
+	CreateTime      Timestamp `json:"create_time"`
+	RunnerCount     int       `json:"runner_count"`
+	NamespaceType   string    `json:"namespace_type"`
+	ShareAll        bool      `json:"share_all"`
+}
+
+type RunnerGroupListResponse struct {
+	TotalCount   int           `json:"total_count"`
+	RunnerGroups []RunnerGroup `json:"runner_groups"`
+}
+
+// RunnerGroupDetail is the documented organization runner-group detail.
+type RunnerGroupDetail struct {
+	RunnerGroupID           string    `json:"runner_group_id"`
+	RunnerGroupName         string    `json:"runner_group_name"`
+	ShareAll                bool      `json:"share_all"`
+	ShareAllPublicRepos     bool      `json:"share_all_public_repos"`
+	ExplicitSharedRepoCount int       `json:"explicit_shared_repo_count"`
+	CreatedAt               Timestamp `json:"created_at"`
+	UpdatedAt               Timestamp `json:"updated_at"`
+}
+
+type OrganizationRunnerLabel struct {
+	Name  string `json:"label_name"`
+	Value string `json:"label_value"`
+	Color string `json:"label_color"`
+}
+
+type OrganizationRunner struct {
+	ID            string                    `json:"id"`
+	RunnerGroupID string                    `json:"runner_group_id"`
+	RunnerName    string                    `json:"runner_name"`
+	Name          string                    `json:"name"`
+	WorkDir       string                    `json:"work_dir"`
+	Labels        []OrganizationRunnerLabel `json:"labels"`
+	Status        string                    `json:"status"`
+	CreateTime    Timestamp                 `json:"create_time"`
+	UpdateTime    Timestamp                 `json:"update_time"`
+	Memory        float64                   `json:"memory"`
+	Disk          float64                   `json:"disk"`
+}
+
+type OrganizationRunnerListResponse struct {
+	TotalCount int                  `json:"total_count"`
+	Runners    []OrganizationRunner `json:"runners"`
+}
+
+type RunnerSet struct {
+	ID                      string                    `json:"id"`
+	RunnerGroupID           string                    `json:"runner_group_id"`
+	Name                    string                    `json:"name"`
+	Status                  string                    `json:"status"`
+	RequiredLabels          []OrganizationRunnerLabel `json:"required_labels"`
+	MinRunnerSize           int                       `json:"min_runner_size"`
+	MaxRunnerSize           int                       `json:"max_runner_size"`
+	LimitCPU                int                       `json:"limit_cpu"`
+	LimitMemory             int                       `json:"limit_memory"`
+	ImageName               string                    `json:"image_name"`
+	UserK8SClusterID        string                    `json:"user_k8s_cluster_id"`
+	UserK8SClusterName      string                    `json:"user_k8s_cluster_name"`
+	UserK8SResourceType     string                    `json:"user_k8s_resource_type"`
+	UserK8SClusterNamespace string                    `json:"user_k8s_cluster_namespace"`
+	UserK8SURL              string                    `json:"user_k8s_url"`
+	CreateTime              Timestamp                 `json:"create_time"`
+	UpdateTime              Timestamp                 `json:"update_time"`
+	UserID                  string                    `json:"user_id"`
+	UserName                string                    `json:"user_name"`
+	UserProjectID           string                    `json:"user_project_id"`
+}
+
+type RunnerSetListResponse struct {
+	TotalCount int         `json:"total_count"`
+	RunnerSets []RunnerSet `json:"runner_sets"`
+}
+
+type SharedNamespace struct {
+	ID                string    `json:"id"`
+	RunnerGroupID     string    `json:"runner_group_id"`
+	FromNamespaceID   string    `json:"from_namespace_id"`
+	ToNamespaceID     string    `json:"to_namespace_id"`
+	Type              string    `json:"type"`
+	CreateTime        Timestamp `json:"create_time"`
+	UpdateTime        Timestamp `json:"update_time"`
+	NamespaceID       string    `json:"namespace_id"`
+	Name              string    `json:"name"`
+	Path              string    `json:"path"`
+	Visibility        string    `json:"visibility"`
+	PathWithNamespace string    `json:"path_with_namespace"`
+}
+
+type SharedNamespaceListResponse struct {
+	TotalCount       int               `json:"total_count"`
+	SharedNamespaces []SharedNamespace `json:"shared_namespaces"`
+}
+
 type WorkflowDispatchPayload struct {
 	Ref    string            `json:"ref"`
 	Inputs map[string]string `json:"inputs,omitempty"`

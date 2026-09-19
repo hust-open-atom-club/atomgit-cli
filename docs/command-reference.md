@@ -94,6 +94,12 @@
 - [ag org list](#ag-org-list) — List organizations for the authenticated user
 - [ag org members](#ag-org-members) — List organization members
 - [ag org repos](#ag-org-repos) — List organization repositories
+- [ag org runner-group](#ag-org-runner-group) — Inspect organization Actions runner groups
+- [ag org runner-group list](#ag-org-runner-group-list) — List organization runner groups
+- [ag org runner-group namespaces](#ag-org-runner-group-namespaces) — List repositories that can use an organization runner group
+- [ag org runner-group runner-sets](#ag-org-runner-group-runner-sets) — List Kubernetes runner sets in an organization runner group
+- [ag org runner-group runners](#ag-org-runner-group-runners) — List host runners in an organization runner group
+- [ag org runner-group view](#ag-org-runner-group-view) — View an organization runner group
 - [ag org view](#ag-org-view) — View an organization
 - [ag pr](#ag-pr) — Manage pull requests
 - [ag pr checkout](#ag-pr-checkout) — Check out a pull request locally
@@ -2064,7 +2070,7 @@ Usage: `ag org`
 
 Manage organizations
 
-List organizations associated with your AtomGit account and inspect organization details, members, and repositories.
+List organizations associated with your AtomGit account and inspect organization details, members, repositories, and Actions runner groups.
 
 ### Flags
 
@@ -2143,6 +2149,124 @@ List organization repositories
 ag org repos my-organization
 ag org repos my-organization --limit 100
 ag org repos my-organization --json
+```
+
+
+## ag org runner-group
+
+Usage: `ag org runner-group`
+
+Inspect organization Actions runner groups
+
+Inspect organization-level AtomGit Actions runner groups and their read-only associations.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+### Example
+
+```bash
+ag org runner-group list my-organization
+ag org runner-group view my-organization group-id
+ag org runner-group runners my-organization group-id --json
+```
+
+
+## ag org runner-group list
+
+Usage: `ag org runner-group list <org> [flags]`
+
+List organization runner groups
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output runner groups as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of runner groups to list | `30` | local |
+
+### Example
+
+```bash
+ag org runner-group list my-organization
+ag org runner-group list my-organization --limit 100
+ag org runner-group list my-organization --json
+```
+
+
+## ag org runner-group namespaces
+
+Usage: `ag org runner-group namespaces <org> <group-id> [flags]`
+
+List repositories that can use an organization runner group
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output shared namespaces as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of shared namespaces to list | `30` | local |
+
+
+## ag org runner-group runner-sets
+
+Usage: `ag org runner-group runner-sets <org> <group-id> [flags]`
+
+List Kubernetes runner sets in an organization runner group
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output runner sets as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of runner sets to list | `30` | local |
+
+
+## ag org runner-group runners
+
+Usage: `ag org runner-group runners <org> <group-id> [flags]`
+
+List host runners in an organization runner group
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output runners as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of runners to list | `30` | local |
+
+
+## ag org runner-group view
+
+Usage: `ag org runner-group view <org> <group-id> [flags]`
+
+View an organization runner group
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output runner group as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+### Example
+
+```bash
+ag org runner-group view my-organization group-id
+ag org runner-group view my-organization group-id --json
 ```
 
 
