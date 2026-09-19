@@ -165,7 +165,7 @@ func newCmdCheckUpdateWithDeps(f *cmdutil.Factory, deps updateDeps) *cobra.Comma
 }
 
 func runUpdate(cmd *cobra.Command, f *cmdutil.Factory, deps updateDeps, check bool) error {
-	current := internalversion.Get().Version
+	current := normalizeVersion(internalversion.Get().Version)
 	if err := validateComparableVersion(current); err != nil {
 		return err
 	}
