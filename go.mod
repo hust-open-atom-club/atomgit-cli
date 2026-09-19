@@ -6,8 +6,8 @@ toolchain go1.26.8
 
 require (
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/mod v0.24.0
-	golang.org/x/sys v0.35.0
+	golang.org/x/mod v0.40.0
+	golang.org/x/sys v0.44.0
 	golang.org/x/term v0.34.0
 )
 
