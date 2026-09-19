@@ -327,7 +327,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(reactions) != 1 || reactions[0].ID != 1 || reactions[0].Content != "+1" {
+		if len(reactions) != 1 || reactions[0].ID != "1" || reactions[0].Content != "+1" {
 			t.Fatalf("reactions = %#v", reactions)
 		}
 	})
@@ -424,7 +424,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 			t.Fatal(err)
 		}
 		r := reactions[0]
-		if r.ID != 42 || r.User.Login != "bob" || r.Content != "heart" {
+		if r.ID != "42" || r.User.Login != "bob" || r.Content != "heart" {
 			t.Fatalf("reaction = %#v", r)
 		}
 	})
@@ -438,7 +438,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(reactions) != 2 || reactions[0].ID != 1 || reactions[1].ID != 2 {
+		if len(reactions) != 2 || reactions[0].ID != "1" || reactions[1].ID != "2" {
 			t.Fatalf("reactions = %#v", reactions)
 		}
 	})

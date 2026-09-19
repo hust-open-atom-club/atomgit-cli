@@ -399,7 +399,7 @@ func TestPRReactionsJSON(t *testing.T) {
 		t.Fatalf("len(items) = %d, want 1", len(items))
 	}
 	r := items[0]
-	if r["id"].(float64) != 1 || r["author"] != "alice" || r["content"] != "+1" || r["createdAt"] != "2024-01-01T00:00:00Z" {
+	if r["id"] != "1" || r["author"] != "alice" || r["content"] != "+1" || r["createdAt"] != "2024-01-01T00:00:00Z" {
 		t.Fatalf("reaction = %#v", r)
 	}
 }

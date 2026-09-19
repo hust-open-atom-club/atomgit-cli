@@ -980,10 +980,37 @@ func (f *PullRequestFile) GetChangeType() string {
 
 // PullRequestReaction represents a read-only user reaction on a pull request.
 type PullRequestReaction struct {
-	ID        int64  `json:"id"`
-	User      User   `json:"user"`
-	Content   string `json:"content"`
-	CreatedAt string `json:"created_at"`
+	ID        FlexibleIdentifier `json:"id"`
+	User      User               `json:"user"`
+	Emoji     string             `json:"emoji"`
+	EmojiName string             `json:"emoji_name"`
+	Content   string             `json:"content"`
+	CreatedAt string             `json:"created_at"`
+}
+
+func (r *PullRequestReaction) UnmarshalJSON(data []byte) error {
+	type wire PullRequestReaction
+	var decoded wire
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	if strings.TrimSpace(string(decoded.ID)) == "" {
+		return fmt.Errorf("invalid pull request reaction record: id must be non-empty")
+	}
+	*r = PullRequestReaction(decoded)
+	return nil
+}
+
+// GetContent preserves legacy content when present and otherwise uses the
+// documented reaction fields. The current endpoint does not return timestamps.
+func (r PullRequestReaction) GetContent() string {
+	if r.Content != "" {
+		return r.Content
+	}
+	if r.EmojiName != "" {
+		return r.EmojiName
+	}
+	return r.Emoji
 }
 
 // UserEventAuthor represents the author of a user activity event. Only fields

@@ -730,6 +730,8 @@ ag pr reactions owner/repo 42 --json
 
 `pr commits`、`pr files` 和 `pr reactions` 都是只读命令，只发送 GET 请求。`pr commits` 支持 `--limit`（默认 30，必须为正整数）控制返回数量。文本模式每行输出一个条目摘要；JSON 模式输出稳定的 lowerCamelCase 数组，无结果时输出 `[]`。
 
+`pr reactions --json` 的 `id` 统一输出为字符串（也兼容服务端返回的数字 ID），并提供 `emoji` 和 `emojiName` 字段。保留 `content` 和 `createdAt`：若响应未提供 `content`，依次使用 `emoji_name`、`emoji`；当前接口不提供时间戳，`createdAt` 为 `""`，文本输出省略时间。文本显示表态名称、表情和操作人。
+
 `pr list` 的 `--author`、`--assignee`、`--review-requested` 和 `--review-needed` 目前只支持 `@me`：通过授权用户接口（`/api/v5/user/pulls`）按登录账号跨所有仓库过滤，分别对应服务端 `scope` 的 `created_by_me`（我创建的）、`assigned_to_me`（分配给我的）、`need_my_approve`（需要我批准的）和 `need_my_review`（需要我评审的）。这四个参数彼此互斥，也不能与显式 `owner/repo` 参数同用；不带这些参数时按仓库列出，行为不变。`--state`、`--limit` 和 `--json` 在两种模式下均可使用。跨仓库模式的文本输出会在每行开头附带 `owner/repo` 前缀（如 `owner/repo #1 标题 [open]`），因为编号只在各自仓库内唯一；`--json` 输出可通过每条记录的 `url` 字段区分仓库，schema 保持不变。
 
 `pr view --json` 在现有字段基础上新增 `assignees`、`approvalReviewers`、`testers`（均为字符串数组，空时为 `[]`）和 `milestone`（对象或 `null`）字段。`pr list --json` 的 schema 保持不变。两个命令的 `merged` 字段会综合 AtomGit 响应中的 `merged`、`state` 和 `merged_at` 判断，避免 API 省略 `merged` 时把已合并 PR 错报为 `false`。
