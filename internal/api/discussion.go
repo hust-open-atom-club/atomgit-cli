@@ -1,10 +1,14 @@
 package api
 
 import (
-	"fmt"
-	"net/url"
+	"net/http"
 	"strconv"
 )
+
+var discussionReadPolicy = RequestPolicy{
+	AllowedStatuses: []int{http.StatusOK},
+	CanRetry:        true,
+}
 
 // DiscussionDetail is a single discussion as returned by the detail endpoint.
 // It carries the listing fields plus the Markdown body and category pins.
@@ -27,17 +31,19 @@ type DiscussionComment struct {
 	ReplyTotal int              `json:"reply_total"`
 }
 
+// ListDiscussions fetches at most limit discussions for a repository.
+func ListDiscussions(client *Client, owner, repo string, limit int) ([]Discussion, error) {
+	path := RepositoryPath(owner, repo, "discuss")
+	return getPaginatedWithPolicy[Discussion](client, limit, discussionReadPolicy, func(page, perPage int) string {
+		return pageQuery(path, page, perPage)
+	})
+}
+
 // GetDiscussion fetches a single discussion by number.
 func GetDiscussion(client *Client, owner, repo string, number int) (DiscussionDetail, error) {
-	path := fmt.Sprintf(
-		"/repos/%s/%s/discuss/%s",
-		url.PathEscape(owner),
-		url.PathEscape(repo),
-		strconv.Itoa(number),
-	)
-
+	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number))
 	var detail DiscussionDetail
-	if err := client.Get(path, &detail); err != nil {
+	if err := client.doJSONRequest(http.MethodGet, path, nil, "", "application/json", discussionReadPolicy, &detail); err != nil {
 		return DiscussionDetail{}, err
 	}
 	return detail, nil
@@ -51,15 +57,9 @@ func ListDiscussionComments(client *Client, owner, repo string, number, total in
 		return []DiscussionComment{}, nil
 	}
 
-	path := fmt.Sprintf(
-		"/repos/%s/%s/discuss/%s/comment",
-		url.PathEscape(owner),
-		url.PathEscape(repo),
-		strconv.Itoa(number),
-	)
-
-	return GetPaginated[DiscussionComment](client, total, func(page, perPage int) string {
-		return fmt.Sprintf("%s?page=%d&per_page=%d", path, page, perPage)
+	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment")
+	return getPaginatedWithPolicy[DiscussionComment](client, total, discussionReadPolicy, func(page, perPage int) string {
+		return pageQuery(path, page, perPage)
 	})
 }
 
@@ -70,15 +70,8 @@ func ListDiscussionReplies(client *Client, owner, repo string, number int, comme
 		return []DiscussionComment{}, nil
 	}
 
-	path := fmt.Sprintf(
-		"/repos/%s/%s/discuss/%s/comment/%s/reply",
-		url.PathEscape(owner),
-		url.PathEscape(repo),
-		strconv.Itoa(number),
-		url.PathEscape(commentID),
-	)
-
-	return GetPaginated[DiscussionComment](client, total, func(page, perPage int) string {
-		return fmt.Sprintf("%s?page=%d&per_page=%d", path, page, perPage)
+	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", commentID, "reply")
+	return getPaginatedWithPolicy[DiscussionComment](client, total, discussionReadPolicy, func(page, perPage int) string {
+		return pageQuery(path, page, perPage)
 	})
 }

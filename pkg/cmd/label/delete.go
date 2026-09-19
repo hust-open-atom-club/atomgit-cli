@@ -2,9 +2,9 @@ package label
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -44,17 +44,12 @@ the confirmation prompt.`,
 				}
 			}
 
-			token, err := f.Config.GetToken()
-			if err != nil {
-				return cmdutil.AuthenticationError(err)
-			}
-			client, err := f.NewAPIClient(token)
+			client, err := f.AuthenticatedAPIClient()
 			if err != nil {
 				return err
 			}
 
-			path := fmt.Sprintf("/repos/%s/%s/labels/%s", repository.Owner, repository.Name, url.PathEscape(name))
-			if err := client.Delete(path); err != nil {
+			if err := api.DeleteLabel(client, repository.Owner, repository.Name, name); err != nil {
 				return fmt.Errorf("failed to delete label: %w", err)
 			}
 

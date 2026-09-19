@@ -61,6 +61,35 @@ func TestAPIContracts(t *testing.T) {
 					v5 := api.NewClientWithHTTPClient("fixture-token", httpClient)
 					v8 := actions.NewClientWithHTTPClient("fixture-token", httpClient)
 					switch f.Name {
+					case "policy-permission":
+						result, err := api.GetPermissionPolicy(v5, "fixture-owner", "fixture-repo")
+						if err != nil || result.MemberManagementMode == nil || *result.MemberManagementMode != 2 {
+							t.Fatalf("permission DTO drift: %v", err)
+						}
+					case "policy-permission-update":
+						mode := 2
+						if err := api.UpdatePermissionPolicy(v5, "fixture-owner", "fixture-repo", api.UpdatePermissionPolicyRequest{Mode: &mode}); err != nil {
+							t.Fatal(err)
+						}
+					case "policy-code-review-update":
+						count := 0
+						if err := api.UpdateCodeReviewPolicy(v5, "fixture-owner", "fixture-repo", api.UpdateCodeReviewPolicyRequest{TestersNumber: &count}); err != nil {
+							t.Fatal(err)
+						}
+					case "policy-pull-request":
+						result, err := api.GetPullRequestPolicy(v5, "fixture-owner", "fixture-repo")
+						if err != nil {
+							t.Fatal(err)
+						}
+						review, err := api.CodeReviewPolicyFrom(result)
+						if err != nil || review.ApprovalRequiredTesters == nil || *review.ApprovalRequiredTesters != 0 || result.MergeMethod == nil || *result.MergeMethod != "merge" || result.OnlyAllowMergeIfPipelineSucceeds == nil || !bool(*result.OnlyAllowMergeIfPipelineSucceeds) {
+							t.Fatalf("policy DTO drift: %v", err)
+						}
+					case "policy-pull-request-update":
+						force := false
+						if err := api.UpdatePullRequestPolicy(v5, "fixture-owner", "fixture-repo", api.UpdatePullRequestPolicyRequest{CanForceMerge: &force, ForbiddenPRRelatedIssueClosed: &force}); err != nil {
+							t.Fatal(err)
+						}
 					case "repository":
 						var repo api.Repository
 						if err := v5.Get("/repos/fixture-owner/fixture-repo", &repo); err != nil {

@@ -1,13 +1,11 @@
 package discussion
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"text/tabwriter"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
-	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -51,25 +49,12 @@ func newCmdDiscussionList(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			token, err := f.Config.GetToken()
-			if err != nil && !errors.Is(err, config.ErrNotAuthenticated) {
-				return err
-			}
-			if err != nil {
-				token = ""
-			}
-
-			client, err := f.NewAPIClient(token)
+			client, err := f.OptionalAPIClient()
 			if err != nil {
 				return err
 			}
 
-			items, err := api.GetPaginated[api.Discussion](client, opts.Limit,
-				func(page, perPage int) string {
-					return fmt.Sprintf("/repos/%s/%s/discuss?page=%d&per_page=%d",
-						repository.Owner, repository.Name, page, perPage)
-				})
-
+			items, err := api.ListDiscussions(client, repository.Owner, repository.Name, opts.Limit)
 			if err != nil {
 				return fmt.Errorf("failed to list discussions for %s: %w", repository, err)
 			}
