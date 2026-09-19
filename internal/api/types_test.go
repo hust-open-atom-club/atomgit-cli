@@ -336,16 +336,44 @@ func TestPullRequestFileDecode(t *testing.T) {
 }
 
 func TestPullRequestReactionDecode(t *testing.T) {
-	raw := `{"id":12345,"user":{"login":"alice","name":"Alice"},"content":"+1","created_at":"2026-01-01T00:00:00Z"}`
+	raw := `{"id":"6aadf74ba99efd72002e8dcd","user":{"login":"alice","name":"Alice"},"emoji":"+1","emoji_name":"like"}`
 	var reaction PullRequestReaction
 	if err := json.Unmarshal([]byte(raw), &reaction); err != nil {
 		t.Fatal(err)
 	}
-	if reaction.ID != "12345" || reaction.User.Login != "alice" {
+	if reaction.ID != "6aadf74ba99efd72002e8dcd" || reaction.User.Login != "alice" {
 		t.Fatalf("reaction = %#v", reaction)
 	}
-	if reaction.Content != "+1" || reaction.CreatedAt == "" {
+	if reaction.Emoji != "+1" || reaction.EmojiName != "like" {
 		t.Fatalf("reaction = %#v", reaction)
+	}
+}
+
+func TestPullRequestOperateLogDecode(t *testing.T) {
+	raw := `{"id":274531,"action":"add_mr_issue_link","content":"Create mr issue link","merge_request_id":70067,"discussion_id":"abc","project":"One/One","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z","user":{"login":"alice","name":"Alice"}}`
+	var entry PullRequestOperateLog
+	if err := json.Unmarshal([]byte(raw), &entry); err != nil {
+		t.Fatal(err)
+	}
+	if entry.ID != 274531 || entry.Action != "add_mr_issue_link" || entry.MergeRequestID != 70067 {
+		t.Fatalf("entry = %#v", entry)
+	}
+	if entry.User.Login != "alice" || entry.CreatedAt == "" {
+		t.Fatalf("entry = %#v", entry)
+	}
+}
+
+func TestPullRequestModifyHistoryDecode(t *testing.T) {
+	raw := `{"id":"abc","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-02T00:00:00Z","deleted":false,"created":true,"content":"initial","user":{"login":"alice"},"updated_user":{"login":"bob"}}`
+	var entry PullRequestModifyHistory
+	if err := json.Unmarshal([]byte(raw), &entry); err != nil {
+		t.Fatal(err)
+	}
+	if entry.ID != "abc" || !entry.Created || entry.Deleted {
+		t.Fatalf("entry = %#v", entry)
+	}
+	if entry.User.Login != "alice" || entry.UpdatedUser.Login != "bob" || entry.Content != "initial" {
+		t.Fatalf("entry = %#v", entry)
 	}
 }
 

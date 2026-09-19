@@ -719,16 +719,20 @@ ag pr checkout owner/repo 42 --force
 ag pr checkout owner/repo 42 --detach
 ag pr checkout owner/repo 42 --recurse-submodules
 
-# 查看 PR 的提交、文件变更和反应
+# 查看 PR 的提交、文件变更、反应、操作日志和修改历史
 ag pr commits owner/repo 42
 ag pr commits owner/repo 42 --limit 50 --json
 ag pr files owner/repo 42
 ag pr files owner/repo 42 --json
 ag pr reactions owner/repo 42
-ag pr reactions owner/repo 42 --json
+ag pr reactions owner/repo 42 --limit 50 --json
+ag pr activity owner/repo 42
+ag pr activity owner/repo 42 --limit 50 --json
+ag pr history owner/repo 42
+ag pr history owner/repo 42 --limit 50 --json
 ```
 
-`pr commits`、`pr files` 和 `pr reactions` 都是只读命令，只发送 GET 请求。`pr commits` 支持 `--limit`（默认 30，必须为正整数）控制返回数量。文本模式每行输出一个条目摘要；JSON 模式输出稳定的 lowerCamelCase 数组，无结果时输出 `[]`。
+`pr commits`、`pr files`、`pr reactions`、`pr activity` 和 `pr history` 都是只读命令，只发送 GET 请求。`pr commits`、`pr reactions`、`pr activity` 和 `pr history` 支持 `--limit`（默认 30，必须为正整数）控制返回数量；其中 `pr commits`、`pr reactions` 和 `pr activity` 会对支持分页的服务端接口逐页拉取，而 `pr history` 对应的 `modify_history` 接口不支持分页，会先取回全部记录再在本地截断到 `--limit`。文本模式每行输出一个条目摘要，无结果时输出一行提示；JSON 模式输出稳定的 lowerCamelCase 数组，无结果时输出 `[]`。
 
 `pr reactions --json` 的 `id` 统一输出为字符串（也兼容服务端返回的数字 ID），并提供 `emoji` 和 `emojiName` 字段。保留 `content` 和 `createdAt`：若响应未提供 `content`，依次使用 `emoji_name`、`emoji`；当前接口不提供时间戳，`createdAt` 为 `""`，文本输出省略时间。文本显示表态名称、表情和操作人。
 

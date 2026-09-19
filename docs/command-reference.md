@@ -102,6 +102,7 @@
 - [ag org runner-group view](#ag-org-runner-group-view) — View an organization runner group
 - [ag org view](#ag-org-view) — View an organization
 - [ag pr](#ag-pr) — Manage pull requests
+- [ag pr activity](#ag-pr-activity) — List the operation log of a pull request
 - [ag pr checkout](#ag-pr-checkout) — Check out a pull request locally
 - [ag pr checks](#ag-pr-checks) — Show CI checks for a pull request's current head commit
 - [ag pr close](#ag-pr-close) — Close a pull request
@@ -116,6 +117,7 @@
 - [ag pr diff](#ag-pr-diff) — Show diff of a pull request
 - [ag pr edit](#ag-pr-edit) — Edit a pull request
 - [ag pr files](#ag-pr-files) — List files changed in a pull request
+- [ag pr history](#ag-pr-history) — List the modification history of a pull request
 - [ag pr issues](#ag-pr-issues) — View linked issues of a pull request
 - [ag pr link-issues](#ag-pr-link-issues) — Link issues to a pull request
 - [ag pr list](#ag-pr-list) — List pull requests
@@ -2310,6 +2312,36 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 
 
+## ag pr activity
+
+Usage: `ag pr activity [<owner>/<repo>] <number> [flags]`
+
+List the operation log of a pull request
+
+List the operation log of a pull request.
+
+The operate_logs endpoint supports pagination; --limit caps how many entries
+are fetched across pages.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output activity as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of activity entries to list | `30` | local |
+
+### Example
+
+```bash
+ag pr activity owner/repo 42
+ag pr activity owner/repo 42 --limit 50 --json
+```
+
+
 ## ag pr checkout
 
 Usage: `ag pr checkout [<owner>/<repo>] <number> [flags]`
@@ -2653,6 +2685,36 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 
 
+## ag pr history
+
+Usage: `ag pr history [<owner>/<repo>] <number> [flags]`
+
+List the modification history of a pull request
+
+List the modification history of a pull request.
+
+The modify_history endpoint does not support pagination: the full response is
+fetched and then truncated to --limit.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output history as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of history entries to list | `30` | local |
+
+### Example
+
+```bash
+ag pr history owner/repo 42
+ag pr history owner/repo 42 --limit 50 --json
+```
+
+
 ## ag pr issues
 
 Usage: `ag pr issues [<owner>/<repo>] <pr_number>`
@@ -2759,6 +2821,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--help` | Show help for command | `false` | inherited |
 | `--json` | Output reactions as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of reactions to list | `30` | local |
+
+### Example
+
+```bash
+ag pr reactions owner/repo 42
+ag pr reactions owner/repo 42 --limit 50 --json
+```
 
 
 ## ag pr reopen
