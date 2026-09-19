@@ -341,7 +341,7 @@ func TestPullRequestReactionDecode(t *testing.T) {
 	if err := json.Unmarshal([]byte(raw), &reaction); err != nil {
 		t.Fatal(err)
 	}
-	if reaction.ID != 12345 || reaction.User.Login != "alice" {
+	if reaction.ID != "12345" || reaction.User.Login != "alice" {
 		t.Fatalf("reaction = %#v", reaction)
 	}
 	if reaction.Content != "+1" || reaction.CreatedAt == "" {

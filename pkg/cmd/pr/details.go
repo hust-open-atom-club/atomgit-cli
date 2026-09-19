@@ -36,8 +36,10 @@ type prFileJSON struct {
 }
 
 type prReactionJSON struct {
-	ID        int64  `json:"id"`
+	ID        string `json:"id"`
 	Author    string `json:"author"`
+	Emoji     string `json:"emoji"`
+	EmojiName string `json:"emojiName"`
 	Content   string `json:"content"`
 	CreatedAt string `json:"createdAt"`
 }
@@ -279,9 +281,11 @@ func newCmdPRReactions(f *cmdutil.Factory) *cobra.Command {
 				result := make([]prReactionJSON, 0, len(reactions))
 				for _, r := range reactions {
 					result = append(result, prReactionJSON{
-						ID:        r.ID,
+						ID:        string(r.ID),
 						Author:    r.User.Login,
-						Content:   r.Content,
+						Emoji:     r.Emoji,
+						EmojiName: r.EmojiName,
+						Content:   r.GetContent(),
 						CreatedAt: r.CreatedAt,
 					})
 				}
@@ -294,7 +298,15 @@ func newCmdPRReactions(f *cmdutil.Factory) *cobra.Command {
 				if t, err := parseTimestamp(r.CreatedAt); err == nil {
 					createdDisplay = t
 				}
-				fmt.Fprintf(out, "%s by %s %s\n", r.Content, r.User.Login, createdDisplay)
+				content := r.GetContent()
+				if r.Emoji != "" && r.Emoji != content {
+					content += " " + r.Emoji
+				}
+				line := fmt.Sprintf("%s by %s", content, r.User.Login)
+				if createdDisplay != "" {
+					line += " " + createdDisplay
+				}
+				fmt.Fprintln(out, line)
 			}
 
 			return nil
