@@ -36,6 +36,12 @@
 - [ag browse](#ag-browse) — Open repositories, issues, pull requests, and more in the browser
 - [ag check-update](#ag-check-update) — Check for a newer AtomGit CLI release
 - [ag commit](#ag-commit) — Manage commits
+- [ag commit comment](#ag-commit-comment) — Manage commit comments
+- [ag commit comment create](#ag-commit-comment-create) — Create a comment on a commit
+- [ag commit comment delete](#ag-commit-comment-delete) — Delete a commit comment
+- [ag commit comment edit](#ag-commit-comment-edit) — Edit a commit comment
+- [ag commit comment list](#ag-commit-comment-list) — List comments on a commit
+- [ag commit comment view](#ag-commit-comment-view) — View a commit comment
 - [ag commit compare](#ag-commit-compare) — Compare two commits, branches, or tags
 - [ag commit diff](#ag-commit-diff) — Show a commit's diff
 - [ag commit list](#ag-commit-list) — List commits
@@ -88,6 +94,12 @@
 - [ag org list](#ag-org-list) — List organizations for the authenticated user
 - [ag org members](#ag-org-members) — List organization members
 - [ag org repos](#ag-org-repos) — List organization repositories
+- [ag org runner-group](#ag-org-runner-group) — Inspect organization Actions runner groups
+- [ag org runner-group list](#ag-org-runner-group-list) — List organization runner groups
+- [ag org runner-group namespaces](#ag-org-runner-group-namespaces) — List repositories that can use an organization runner group
+- [ag org runner-group runner-sets](#ag-org-runner-group-runner-sets) — List Kubernetes runner sets in an organization runner group
+- [ag org runner-group runners](#ag-org-runner-group-runners) — List host runners in an organization runner group
+- [ag org runner-group view](#ag-org-runner-group-view) — View an organization runner group
 - [ag org view](#ag-org-view) — View an organization
 - [ag pr](#ag-pr) — Manage pull requests
 - [ag pr activity](#ag-pr-activity) — List the operation log of a pull request
@@ -825,6 +837,122 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
 | `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+
+## ag commit comment
+
+Usage: `ag commit comment`
+
+Manage commit comments
+
+List, view, create, edit, and delete comments on repository commits.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+
+## ag commit comment create
+
+Usage: `ag commit comment create [<owner>/<repo>] <sha> (--body <text> | --body-file <path-or->) [flags]`
+
+Create a comment on a commit
+
+Create a comment on a commit, identified by SHA (full or short) or branch name.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read body text from file (use - for stdin) | `` | local |
+| `-b, --body` | Comment body text | `` | local |
+
+
+## ag commit comment delete
+
+Usage: `ag commit comment delete [<owner>/<repo>] <comment-id> [flags]`
+
+Delete a commit comment
+
+Delete a commit comment you own. Asks for confirmation unless --yes is supplied.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-y, --yes` | Skip confirmation prompt | `false` | local |
+
+
+## ag commit comment edit
+
+Usage: `ag commit comment edit [<owner>/<repo>] <comment-id> (--body <text> | --body-file <path-or->) [flags]`
+
+Edit a commit comment
+
+Edit the body of a commit comment you own, replacing it with the new text.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read new body text from file (use - for stdin) | `` | local |
+| `-b, --body` | New comment body text | `` | local |
+
+
+## ag commit comment list
+
+Usage: `ag commit comment list [<owner>/<repo>] <ref> [flags]`
+
+List comments on a commit
+
+List comments on a commit, identified by SHA (full or short) or branch name.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output comments as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of comments to list | `30` | local |
+
+
+## ag commit comment view
+
+Usage: `ag commit comment view [<owner>/<repo>] <comment-id> [flags]`
+
+View a commit comment
+
+View a single repository commit comment by ID.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output the comment as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 
 
@@ -1944,7 +2072,7 @@ Usage: `ag org`
 
 Manage organizations
 
-List organizations associated with your AtomGit account and inspect organization details, members, and repositories.
+List organizations associated with your AtomGit account and inspect organization details, members, repositories, and Actions runner groups.
 
 ### Flags
 
@@ -2023,6 +2151,124 @@ List organization repositories
 ag org repos my-organization
 ag org repos my-organization --limit 100
 ag org repos my-organization --json
+```
+
+
+## ag org runner-group
+
+Usage: `ag org runner-group`
+
+Inspect organization Actions runner groups
+
+Inspect organization-level AtomGit Actions runner groups and their read-only associations.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+### Example
+
+```bash
+ag org runner-group list my-organization
+ag org runner-group view my-organization group-id
+ag org runner-group runners my-organization group-id --json
+```
+
+
+## ag org runner-group list
+
+Usage: `ag org runner-group list <org> [flags]`
+
+List organization runner groups
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output runner groups as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of runner groups to list | `30` | local |
+
+### Example
+
+```bash
+ag org runner-group list my-organization
+ag org runner-group list my-organization --limit 100
+ag org runner-group list my-organization --json
+```
+
+
+## ag org runner-group namespaces
+
+Usage: `ag org runner-group namespaces <org> <group-id> [flags]`
+
+List repositories that can use an organization runner group
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output shared namespaces as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of shared namespaces to list | `30` | local |
+
+
+## ag org runner-group runner-sets
+
+Usage: `ag org runner-group runner-sets <org> <group-id> [flags]`
+
+List Kubernetes runner sets in an organization runner group
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output runner sets as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of runner sets to list | `30` | local |
+
+
+## ag org runner-group runners
+
+Usage: `ag org runner-group runners <org> <group-id> [flags]`
+
+List host runners in an organization runner group
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output runners as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of runners to list | `30` | local |
+
+
+## ag org runner-group view
+
+Usage: `ag org runner-group view <org> <group-id> [flags]`
+
+View an organization runner group
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output runner group as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+### Example
+
+```bash
+ag org runner-group view my-organization group-id
+ag org runner-group view my-organization group-id --json
 ```
 
 

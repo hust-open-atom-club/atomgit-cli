@@ -352,9 +352,20 @@ ag org members hust-open-atom-club --limit 100 --json
 # 列出组织仓库及其可见性、默认分支和活跃度信息
 ag org repos hust-open-atom-club
 ag org repos hust-open-atom-club --limit 100 --json
+
+# 列出和查看组织级 Actions Runner Group
+ag org runner-group list hust-open-atom-club
+ag org runner-group view hust-open-atom-club <group-id>
+
+# 查看 Runner Group 关联的主机 Runner、Kubernetes Runner Set 和可用仓库
+ag org runner-group runners hust-open-atom-club <group-id> --limit 100
+ag org runner-group runner-sets hust-open-atom-club <group-id> --json
+ag org runner-group namespaces hust-open-atom-club <group-id> --json
 ```
 
 `view` 输出组织路径、名称、可见性、描述和公开 URL。`members` 与 `repos` 支持分页，并在认证和网络请求前校验 `--limit`；空结果的 JSON 输出为 `[]`。仓库输出还包含描述、默认分支、主要语言、Star、Fork 和更新时间。
+
+`ag org runner-group` 使用 Actions API v8，只读检查组织级 Runner Group；它与 `ag runner list/shared` 查看仓库直接配置或共享的主机 Runner 不同。`list`、`runners`、`runner-sets` 和 `namespaces` 默认最多返回 30 条并要求 `--limit` 为正数；文本输出包含组织和 Group ID，JSON 保留对应官方响应的固定 snake_case 字段。权限不足、Group 不存在或分页响应不完整时命令会明确失败，不会把部分数据当作完整结果。`namespaces` 会先查询 Group 详情，确认其存在且可访问，再读取共享仓库；不存在时返回非零退出码，存在但没有共享仓库时仍正常返回空列表。
 
 ## 组织看板 (kanban)
 
@@ -557,6 +568,33 @@ ag --raw-output commit patch owner/repo <sha>
 
 文本比较输出包含 base、merge base、提交列表和文件统计；文件行使用独立的元数据列标记二进制文件及服务端截断的文件，字段中的制表符、换行和反斜杠会转义。空比较仍会输出零提交、零文件；JSON 模式中的 `commits` 和 `files` 固定为空数组。`diff` 与 `patch` 不做 JSON 解码，默认仍遵循全局终端安全清理；保存为可直接处理的原始 diff/patch 时使用 `ag --raw-output commit diff ...` 或 `ag --raw-output commit patch ...`。接口文档声明的成功状态 `200` 会直接输出正文，其他状态会作为命令错误返回。
 
+### Commit 评论
+
+commit 评论独立于 Issue 评论和 PR 评论，使用专门的 commit 评论接口；`view`、`edit`、`delete` 作用于仓库级评论 ID，传入 Issue/PR 评论的 ID 会被拒绝。评论 ID 按不透明字符串处理：`create` 返回的 ID（官方接口示例为 `12312sadsa` 这类非纯数字字符串）可直接传给 `view`、`edit`、`delete`，命令要求 ID 非空、由安全的路径字符（字母、数字、`-`、`.`、`_`、`~`）组成，并拒绝完整值 `.` 和 `..`，以免被规范化成当前或父路径。
+
+```bash
+# 列出某个 commit（完整或短 SHA、分支名）下的评论（默认 30 条）
+ag commit comment list owner/repo abcdef1
+ag commit comment list owner/repo abcdef1 --limit 100
+ag commit comment list owner/repo abcdef1 --json
+
+# 查看仓库级评论 ID 的详情
+ag commit comment view owner/repo 12345
+ag commit comment view owner/repo 12345 --json
+
+# 在指定 commit 上创建评论，正文支持多行文本
+ag commit comment create owner/repo abcdef1 --body "LGTM"
+ag commit comment create owner/repo abcdef1 --body-file notes.md
+cat notes.md | ag commit comment create owner/repo abcdef1 --body-file -
+
+# 编辑自己的评论（只提交正文字段）
+ag commit comment edit owner/repo 12345 --body "updated text"
+
+# 删除自己的评论，需确认，--yes 跳过
+ag commit comment delete owner/repo 12345
+ag commit comment delete owner/repo 12345 --yes
+```
+
 ## Browse
 
 在默认浏览器中打开仓库页面或指定资源：
@@ -694,7 +732,9 @@ ag pr history owner/repo 42
 ag pr history owner/repo 42 --limit 50 --json
 ```
 
-`pr commits`、`pr files`、`pr reactions`、`pr activity` 和 `pr history` 都是只读命令，只发送 GET 请求。`pr commits`、`pr reactions`、`pr activity` 和 `pr history` 支持 `--limit`（默认 30，必须为正整数）控制返回数量；其中 `pr commits`、`pr reactions` 和 `pr activity` 会对支持分页的服务端接口逐页拉取，而 `pr history` 对应的 `modify_history` 接口不支持分页，会先取回全部记录再在本地截断到 `--limit`。文本模式每行输出一个条目摘要（操作人、动作/修改类型或表态、时间、内容），无结果时输出一行提示；`pr reactions` 文本输出为 `emoji_name emoji by 操作人`（该接口不提供时间）。JSON 模式输出稳定的 lowerCamelCase 数组，无结果时输出 `[]`；`pr reactions --json` 的字段为 `id`（字符串）、`author`、`emoji`、`emojiName`。
+`pr commits`、`pr files`、`pr reactions`、`pr activity` 和 `pr history` 都是只读命令，只发送 GET 请求。`pr commits`、`pr reactions`、`pr activity` 和 `pr history` 支持 `--limit`（默认 30，必须为正整数）控制返回数量；其中 `pr commits`、`pr reactions` 和 `pr activity` 会对支持分页的服务端接口逐页拉取，而 `pr history` 对应的 `modify_history` 接口不支持分页，会先取回全部记录再在本地截断到 `--limit`。文本模式每行输出一个条目摘要，无结果时输出一行提示；JSON 模式输出稳定的 lowerCamelCase 数组，无结果时输出 `[]`。
+
+`pr reactions --json` 的 `id` 统一输出为字符串（也兼容服务端返回的数字 ID），并提供 `emoji` 和 `emojiName` 字段。保留 `content` 和 `createdAt`：若响应未提供 `content`，依次使用 `emoji_name`、`emoji`；当前接口不提供时间戳，`createdAt` 为 `""`，文本输出省略时间。文本显示表态名称、表情和操作人。
 
 `pr list` 的 `--author`、`--assignee`、`--review-requested` 和 `--review-needed` 目前只支持 `@me`：通过授权用户接口（`/api/v5/user/pulls`）按登录账号跨所有仓库过滤，分别对应服务端 `scope` 的 `created_by_me`（我创建的）、`assigned_to_me`（分配给我的）、`need_my_approve`（需要我批准的）和 `need_my_review`（需要我评审的）。这四个参数彼此互斥，也不能与显式 `owner/repo` 参数同用；不带这些参数时按仓库列出，行为不变。`--state`、`--limit` 和 `--json` 在两种模式下均可使用。跨仓库模式的文本输出会在每行开头附带 `owner/repo` 前缀（如 `owner/repo #1 标题 [open]`），因为编号只在各自仓库内唯一；`--json` 输出可通过每条记录的 `url` 字段区分仓库，schema 保持不变。
 

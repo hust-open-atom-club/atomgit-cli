@@ -95,6 +95,20 @@
    PR 作者仍需在提交前运行与改动相符的本地检查，并在 PR 描述中列出结果；合并前
    应确认当前 PR 提交的 CI 检查通过，合并后继续跟踪 `main` 上的验证结果。
 
+   CI 先运行 `Fast quality gate`：Go 1.26.6 执行一次完整的 `go test ./...`，随后
+   Go 1.26.8 执行格式检查、`go vet`、命令参考检查和本机构建。Go 1.26.8 的全包
+   测试语义由后续 `go test -race ./...` 覆盖，不在门禁中重复执行普通测试。只有
+   门禁成功后，race、发布目标交叉编译、平台测试编译和漏洞扫描才会并行启动；npm
+   测试不依赖 Go 门禁。这样失败提交会释放昂贵的 Go Runner，绿色运行仍保留全部
+   覆盖并保持后续 job 并行。
+
+   各关键命令使用 shell `time` 输出耗时；workflow 和 job 总耗时以 Actions 运行
+   详情的开始/结束时间为准。每个 Go job 使用两个显式的 `cache` 步骤，分别记录
+   `~/go/pkg/mod`（模块和下载的 Go 工具链）与 `~/.cache/go-build` 的恢复结果。
+   比较冷、热缓存时，应同时记录两个 cache 步骤的命中状态、门禁耗时和完整 workflow
+   耗时；只有远端日志显示下游 job 命中，才能确认跨 job 复用生效。cache miss 只影响
+   准备时间，不会跳过任何验证步骤。
+
    `Update Nix packages` 是独立的维护 workflow，仍可在 `main`、`test`、
    `nix-update` 分支 push 或手动触发时运行。它会在自身流程中完成 Nix package
    构建与版本元数据验证，因此非 `main` 的 Nix 更新不依赖通用 CI。

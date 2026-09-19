@@ -363,6 +363,33 @@ func (b FlexibleBool) Bool() bool {
 	return bool(b)
 }
 
+// FlexibleIdentifier decodes identifier fields that AtomGit returns as JSON
+// numbers on some endpoints and strings on others, keeping the decoded value
+// stable as a string.
+type FlexibleIdentifier string
+
+func (id *FlexibleIdentifier) UnmarshalJSON(data []byte) error {
+	data = bytes.TrimSpace(data)
+	if len(data) == 0 || bytes.Equal(data, []byte("null")) {
+		*id = ""
+		return nil
+	}
+	if data[0] == '"' {
+		var value string
+		if err := json.Unmarshal(data, &value); err != nil {
+			return fmt.Errorf("decode identifier: %w", err)
+		}
+		*id = FlexibleIdentifier(value)
+		return nil
+	}
+	var number json.Number
+	if err := json.Unmarshal(data, &number); err != nil {
+		return fmt.Errorf("decode identifier: %w", err)
+	}
+	*id = FlexibleIdentifier(number.String())
+	return nil
+}
+
 // Branch represents a git branch
 type Branch struct {
 	Ref                string       `json:"ref"`
@@ -952,13 +979,38 @@ func (f *PullRequestFile) GetChangeType() string {
 }
 
 // PullRequestReaction represents a read-only user reaction on a pull request.
-// The user_reactions endpoint returns a string id plus emoji/emoji_name and
-// does not provide a timestamp or body.
 type PullRequestReaction struct {
-	ID        string `json:"id"`
-	User      User   `json:"user"`
-	Emoji     string `json:"emoji"`
-	EmojiName string `json:"emoji_name"`
+	ID        FlexibleIdentifier `json:"id"`
+	User      User               `json:"user"`
+	Emoji     string             `json:"emoji"`
+	EmojiName string             `json:"emoji_name"`
+	Content   string             `json:"content"`
+	CreatedAt string             `json:"created_at"`
+}
+
+func (r *PullRequestReaction) UnmarshalJSON(data []byte) error {
+	type wire PullRequestReaction
+	var decoded wire
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	if strings.TrimSpace(string(decoded.ID)) == "" {
+		return fmt.Errorf("invalid pull request reaction record: id must be non-empty")
+	}
+	*r = PullRequestReaction(decoded)
+	return nil
+}
+
+// GetContent preserves legacy content when present and otherwise uses the
+// documented reaction fields. The current endpoint does not return timestamps.
+func (r PullRequestReaction) GetContent() string {
+	if r.Content != "" {
+		return r.Content
+	}
+	if r.EmojiName != "" {
+		return r.EmojiName
+	}
+	return r.Emoji
 }
 
 // PullRequestOperateLog represents one read-only entry from a pull request's
@@ -992,19 +1044,6 @@ type PullRequestModifyHistory struct {
 // Validate each record while decoding, before pagination or --limit can discard
 // elements. In particular, a JSON null must not become a zero-valued audit
 // record. This mirrors the IssueActivity/IssueHistory/IssueReaction pattern.
-func (item *PullRequestReaction) UnmarshalJSON(data []byte) error {
-	type wire PullRequestReaction
-	var decoded wire
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		return err
-	}
-	if strings.TrimSpace(decoded.ID) == "" {
-		return fmt.Errorf("invalid pull request reaction record: id must be non-empty")
-	}
-	*item = PullRequestReaction(decoded)
-	return nil
-}
-
 func (item *PullRequestOperateLog) UnmarshalJSON(data []byte) error {
 	type wire PullRequestOperateLog
 	var decoded wire

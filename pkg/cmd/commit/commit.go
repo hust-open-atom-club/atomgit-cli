@@ -13,6 +13,7 @@ import (
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/browser"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/commit/comment"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -29,6 +30,7 @@ func NewCmdCommit(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdCompare(f))
 	cmd.AddCommand(newCmdCommitText(f, "diff"))
 	cmd.AddCommand(newCmdCommitText(f, "patch"))
+	cmd.AddCommand(comment.NewCmdComment(f))
 	cmdutil.AddRepositoryContextHelp(cmd)
 	return cmd
 }
@@ -435,7 +437,7 @@ func commitTextArg(args []string) (string, error) {
 	if len(args) == 0 {
 		return "", errors.New("commit SHA is required")
 	}
-	return validateRef(args[len(args)-1], "commit SHA")
+	return cmdutil.ValidateRef(args[len(args)-1], "commit SHA")
 }
 
 func authenticatedClient(f *cmdutil.Factory) (*api.Client, error) {
@@ -458,35 +460,15 @@ func parseComparison(value string) (string, string, error) {
 	if separator < 0 || strings.Contains(value[separator+3:], "...") {
 		return "", "", errors.New("comparison must use the form <base>...<head>")
 	}
-	base, err := validateRef(value[:separator], "base ref")
+	base, err := cmdutil.ValidateRef(value[:separator], "base ref")
 	if err != nil {
 		return "", "", err
 	}
-	head, err := validateRef(value[separator+3:], "head ref")
+	head, err := cmdutil.ValidateRef(value[separator+3:], "head ref")
 	if err != nil {
 		return "", "", err
 	}
 	return base, head, nil
-}
-
-func validateRef(value, name string) (string, error) {
-	if value == "" {
-		return "", fmt.Errorf("%s cannot be empty", name)
-	}
-	if value == "@" || strings.HasPrefix(value, ".") || strings.HasSuffix(value, ".") || strings.HasPrefix(value, "/") || strings.HasSuffix(value, "/") || strings.Contains(value, "..") || strings.Contains(value, "@{") || strings.Contains(value, "//") {
-		return "", fmt.Errorf("invalid %s %q", name, value)
-	}
-	for _, part := range strings.Split(value, "/") {
-		if strings.HasPrefix(part, ".") || strings.HasSuffix(part, ".lock") {
-			return "", fmt.Errorf("invalid %s %q", name, value)
-		}
-	}
-	for _, r := range value {
-		if r < 0x20 || r == 0x7f || strings.ContainsRune(" ~^:?*[\\", r) {
-			return "", fmt.Errorf("invalid %s %q", name, value)
-		}
-	}
-	return value, nil
 }
 
 func newComparisonJSON(base, head string, repository cmdutil.Repository, host string, comparison *api.CommitComparison) comparisonJSON {

@@ -40,6 +40,8 @@ type prReactionJSON struct {
 	Author    string `json:"author"`
 	Emoji     string `json:"emoji"`
 	EmojiName string `json:"emojiName"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"createdAt"`
 }
 
 type prActivityJSON struct {
@@ -306,10 +308,12 @@ func newCmdPRReactions(f *cmdutil.Factory) *cobra.Command {
 				result := make([]prReactionJSON, 0, len(reactions))
 				for _, r := range reactions {
 					result = append(result, prReactionJSON{
-						ID:        r.ID,
+						ID:        string(r.ID),
 						Author:    r.User.Login,
 						Emoji:     r.Emoji,
 						EmojiName: r.EmojiName,
+						Content:   r.GetContent(),
+						CreatedAt: r.CreatedAt,
 					})
 				}
 				return cmdutil.WriteJSON(cmd.OutOrStdout(), result)
@@ -321,7 +325,19 @@ func newCmdPRReactions(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			for _, r := range reactions {
-				fmt.Fprintf(out, "%s by %s\n", auditCell(r.EmojiName+" "+r.Emoji), auditActor(r.User))
+				createdDisplay := r.CreatedAt
+				if t, err := parseTimestamp(r.CreatedAt); err == nil {
+					createdDisplay = t
+				}
+				content := r.GetContent()
+				if r.Emoji != "" && r.Emoji != content {
+					content += " " + r.Emoji
+				}
+				line := fmt.Sprintf("%s by %s", content, r.User.Login)
+				if createdDisplay != "" {
+					line += " " + createdDisplay
+				}
+				fmt.Fprintln(out, line)
 			}
 
 			return nil

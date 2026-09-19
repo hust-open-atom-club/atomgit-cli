@@ -15,12 +15,18 @@ import (
 )
 
 type orgTestConfig struct {
-	tokenErr error
+	tokenErr   error
+	tokenCalls *int
 }
 
-func (c orgTestConfig) GetToken() (string, error) { return "token", c.tokenErr }
-func (c orgTestConfig) GetUser() (string, error)  { return "alice", nil }
-func (c orgTestConfig) GetHost() string           { return "atomgit.com" }
+func (c orgTestConfig) GetToken() (string, error) {
+	if c.tokenCalls != nil {
+		*c.tokenCalls++
+	}
+	return "token", c.tokenErr
+}
+func (c orgTestConfig) GetUser() (string, error) { return "alice", nil }
+func (c orgTestConfig) GetHost() string          { return "atomgit.com" }
 
 type orgRoundTripFunc func(*http.Request) (*http.Response, error)
 
