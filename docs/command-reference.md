@@ -2072,7 +2072,10 @@ Usage: `ag pr activity [<owner>/<repo>] <number> [flags]`
 
 List the operation log of a pull request
 
-List the operation log of a pull request
+List the operation log of a pull request.
+
+The operate_logs endpoint supports pagination; --limit caps how many entries
+are fetched across pages.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -2084,6 +2087,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--json` | Output activity as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `-L, --limit` | Maximum number of activity entries to list | `30` | local |
+
+### Example
+
+```bash
+ag pr activity owner/repo 42
+ag pr activity owner/repo 42 --limit 50 --json
+```
 
 
 ## ag pr checkout
@@ -2451,6 +2461,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `-L, --limit` | Maximum number of history entries to list | `30` | local |
 
+### Example
+
+```bash
+ag pr history owner/repo 42
+ag pr history owner/repo 42 --limit 50 --json
+```
+
 
 ## ag pr issues
 
@@ -2559,6 +2576,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--json` | Output reactions as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `-L, --limit` | Maximum number of reactions to list | `30` | local |
+
+### Example
+
+```bash
+ag pr reactions owner/repo 42
+ag pr reactions owner/repo 42 --limit 50 --json
+```
 
 
 ## ag pr reopen

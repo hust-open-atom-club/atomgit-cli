@@ -36,19 +36,20 @@ type prFileJSON struct {
 }
 
 type prReactionJSON struct {
-	ID        int64  `json:"id"`
+	ID        string `json:"id"`
 	Author    string `json:"author"`
-	Content   string `json:"content"`
-	CreatedAt string `json:"createdAt"`
+	Emoji     string `json:"emoji"`
+	EmojiName string `json:"emojiName"`
 }
 
 type prActivityJSON struct {
-	ID        int64  `json:"id"`
-	Action    string `json:"action"`
-	Content   string `json:"content"`
-	Author    string `json:"author"`
-	CreatedAt string `json:"createdAt"`
-	UpdatedAt string `json:"updatedAt"`
+	ID         int64  `json:"id"`
+	Action     string `json:"action"`
+	ActionType string `json:"actionType"`
+	Content    string `json:"content"`
+	Author     string `json:"author"`
+	CreatedAt  string `json:"createdAt"`
+	UpdatedAt  string `json:"updatedAt"`
 }
 
 type prHistoryJSON struct {
@@ -268,7 +269,9 @@ func newCmdPRReactions(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reactions [<owner>/<repo>] <number>",
 		Short: "List reactions on a pull request",
-		Args:  cobra.RangeArgs(1, 2),
+		Example: `  ag pr reactions owner/repo 42
+  ag pr reactions owner/repo 42 --limit 50 --json`,
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.limit)
@@ -296,7 +299,7 @@ func newCmdPRReactions(f *cmdutil.Factory) *cobra.Command {
 
 			reactions, err := api.ListPullRequestReactions(client, owner, repo, number, opts.limit)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to list pull request #%s reactions: %w", number, err)
 			}
 
 			if opts.json {
@@ -305,20 +308,20 @@ func newCmdPRReactions(f *cmdutil.Factory) *cobra.Command {
 					result = append(result, prReactionJSON{
 						ID:        r.ID,
 						Author:    r.User.Login,
-						Content:   r.Content,
-						CreatedAt: r.CreatedAt,
+						Emoji:     r.Emoji,
+						EmojiName: r.EmojiName,
 					})
 				}
 				return cmdutil.WriteJSON(cmd.OutOrStdout(), result)
 			}
 
 			out := cmd.OutOrStdout()
+			if len(reactions) == 0 {
+				_, err := fmt.Fprintf(out, "No reactions found for pull request #%s.\n", number)
+				return err
+			}
 			for _, r := range reactions {
-				createdDisplay := r.CreatedAt
-				if t, err := parseTimestamp(r.CreatedAt); err == nil {
-					createdDisplay = t
-				}
-				fmt.Fprintf(out, "%s by %s %s\n", r.Content, r.User.Login, createdDisplay)
+				fmt.Fprintf(out, "%s by %s\n", auditCell(r.EmojiName+" "+r.Emoji), auditActor(r.User))
 			}
 
 			return nil
@@ -340,7 +343,13 @@ func newCmdPRActivity(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "activity [<owner>/<repo>] <number>",
 		Short: "List the operation log of a pull request",
-		Args:  cobra.RangeArgs(1, 2),
+		Long: `List the operation log of a pull request.
+
+The operate_logs endpoint supports pagination; --limit caps how many entries
+are fetched across pages.`,
+		Example: `  ag pr activity owner/repo 42
+  ag pr activity owner/repo 42 --limit 50 --json`,
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.limit)
@@ -368,33 +377,42 @@ func newCmdPRActivity(f *cmdutil.Factory) *cobra.Command {
 
 			logs, err := api.ListPullRequestOperateLogs(client, owner, repo, number, opts.limit)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to list pull request #%s activity: %w", number, err)
 			}
 
 			if opts.json {
 				result := make([]prActivityJSON, 0, len(logs))
 				for _, entry := range logs {
 					result = append(result, prActivityJSON{
-						ID:        entry.ID,
-						Action:    entry.Action,
-						Content:   entry.Content,
-						Author:    userLogin(entry.User),
-						CreatedAt: entry.CreatedAt,
-						UpdatedAt: entry.UpdatedAt,
+						ID:         entry.ID,
+						Action:     entry.Action,
+						ActionType: entry.ActionType,
+						Content:    entry.Content,
+						Author:     entry.User.Login,
+						CreatedAt:  entry.CreatedAt,
+						UpdatedAt:  entry.UpdatedAt,
 					})
 				}
 				return cmdutil.WriteJSON(cmd.OutOrStdout(), result)
 			}
 
 			out := cmd.OutOrStdout()
+			if len(logs) == 0 {
+				_, err := fmt.Fprintf(out, "No activity found for pull request #%s.\n", number)
+				return err
+			}
 			for _, entry := range logs {
-				createdDisplay := displayTimestamp(entry.CreatedAt)
+				action := entry.Action
+				if strings.TrimSpace(action) == "" {
+					action = entry.ActionType
+				}
 				content := singleLine(entry.Content)
+				display := auditCell(displayTimestamp(entry.CreatedAt))
 				if content != "" {
-					fmt.Fprintf(out, "%s by %s %s: %s\n", entry.Action, userLogin(entry.User), createdDisplay, content)
+					fmt.Fprintf(out, "%s by %s %s: %s\n", auditCell(action), auditActor(entry.User), display, content)
 					continue
 				}
-				fmt.Fprintf(out, "%s by %s %s\n", entry.Action, userLogin(entry.User), createdDisplay)
+				fmt.Fprintf(out, "%s by %s %s\n", auditCell(action), auditActor(entry.User), display)
 			}
 
 			return nil
@@ -420,6 +438,8 @@ func newCmdPRHistory(f *cmdutil.Factory) *cobra.Command {
 
 The modify_history endpoint does not support pagination: the full response is
 fetched and then truncated to --limit.`,
+		Example: `  ag pr history owner/repo 42
+  ag pr history owner/repo 42 --limit 50 --json`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.limit <= 0 {
@@ -448,7 +468,7 @@ fetched and then truncated to --limit.`,
 
 			history, err := api.ListPullRequestModifyHistory(client, owner, repo, number, opts.limit)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to list pull request #%s history: %w", number, err)
 			}
 
 			if opts.json {
@@ -459,8 +479,8 @@ fetched and then truncated to --limit.`,
 						Content:   entry.Content,
 						Created:   entry.Created,
 						Deleted:   entry.Deleted,
-						Author:    userLogin(entry.User),
-						UpdatedBy: userLogin(entry.UpdatedUser),
+						Author:    entry.User.Login,
+						UpdatedBy: entry.UpdatedUser.Login,
 						CreatedAt: entry.CreatedAt,
 						UpdatedAt: entry.UpdatedAt,
 					})
@@ -469,6 +489,10 @@ fetched and then truncated to --limit.`,
 			}
 
 			out := cmd.OutOrStdout()
+			if len(history) == 0 {
+				_, err := fmt.Fprintf(out, "No history found for pull request #%s.\n", number)
+				return err
+			}
 			for _, entry := range history {
 				kind := "updated"
 				if entry.Created {
@@ -478,22 +502,25 @@ fetched and then truncated to --limit.`,
 					kind = "deleted"
 				}
 				display := displayTimestamp(entry.CreatedAt)
-				actor := userLogin(entry.User)
+				actor := entry.User
 				if kind != "created" {
 					display = displayTimestamp(entry.UpdatedAt)
+					if display == "" {
+						display = displayTimestamp(entry.CreatedAt)
+					}
 					// Updates and deletions are attributed to the user who
 					// performed them, falling back to the original author when
 					// the server omits updated_user.
-					if updatedBy := userLogin(entry.UpdatedUser); updatedBy != "" {
-						actor = updatedBy
+					if userLogin(entry.UpdatedUser) != "" {
+						actor = entry.UpdatedUser
 					}
 				}
 				content := singleLine(entry.Content)
 				if content != "" {
-					fmt.Fprintf(out, "%s by %s %s: %s\n", kind, actor, display, content)
+					fmt.Fprintf(out, "%s by %s %s: %s\n", kind, auditActor(actor), auditCell(display), content)
 					continue
 				}
-				fmt.Fprintf(out, "%s by %s %s\n", kind, actor, display)
+				fmt.Fprintf(out, "%s by %s %s\n", kind, auditActor(actor), auditCell(display))
 			}
 
 			return nil
@@ -512,6 +539,23 @@ func userLogin(user api.User) string {
 		return login
 	}
 	return strings.TrimSpace(user.Name)
+}
+
+// auditActor renders the best available actor identifier, or "-" when absent.
+func auditActor(user api.User) string {
+	if actor := userLogin(user); actor != "" {
+		return actor
+	}
+	return "-"
+}
+
+// auditCell collapses whitespace and renders an empty value as "-".
+func auditCell(value string) string {
+	value = singleLine(value)
+	if value == "" {
+		return "-"
+	}
+	return value
 }
 
 // singleLine collapses a server-provided message to a single output line so a

@@ -694,7 +694,7 @@ ag pr history owner/repo 42
 ag pr history owner/repo 42 --limit 50 --json
 ```
 
-`pr commits`、`pr files`、`pr reactions`、`pr activity` 和 `pr history` 都是只读命令，只发送 GET 请求。`pr commits`、`pr reactions`、`pr activity` 和 `pr history` 支持 `--limit`（默认 30，必须为正整数）控制返回数量；其中 `pr commits`、`pr reactions` 和 `pr activity` 会对支持分页的服务端接口逐页拉取，而 `pr history` 对应的 `modify_history` 接口不支持分页，会先取回全部记录再在本地截断到 `--limit`。文本模式每行输出一个条目摘要（操作人、动作/修改类型、时间和内容）；JSON 模式输出稳定的 lowerCamelCase 数组，无结果时输出 `[]`。
+`pr commits`、`pr files`、`pr reactions`、`pr activity` 和 `pr history` 都是只读命令，只发送 GET 请求。`pr commits`、`pr reactions`、`pr activity` 和 `pr history` 支持 `--limit`（默认 30，必须为正整数）控制返回数量；其中 `pr commits`、`pr reactions` 和 `pr activity` 会对支持分页的服务端接口逐页拉取，而 `pr history` 对应的 `modify_history` 接口不支持分页，会先取回全部记录再在本地截断到 `--limit`。文本模式每行输出一个条目摘要（操作人、动作/修改类型或表态、时间、内容），无结果时输出一行提示；`pr reactions` 文本输出为 `emoji_name emoji by 操作人`（该接口不提供时间）。JSON 模式输出稳定的 lowerCamelCase 数组，无结果时输出 `[]`；`pr reactions --json` 的字段为 `id`（字符串）、`author`、`emoji`、`emojiName`。
 
 `pr list` 的 `--author`、`--assignee`、`--review-requested` 和 `--review-needed` 目前只支持 `@me`：通过授权用户接口（`/api/v5/user/pulls`）按登录账号跨所有仓库过滤，分别对应服务端 `scope` 的 `created_by_me`（我创建的）、`assigned_to_me`（分配给我的）、`need_my_approve`（需要我批准的）和 `need_my_review`（需要我评审的）。这四个参数彼此互斥，也不能与显式 `owner/repo` 参数同用；不带这些参数时按仓库列出，行为不变。`--state`、`--limit` 和 `--json` 在两种模式下均可使用。跨仓库模式的文本输出会在每行开头附带 `owner/repo` 前缀（如 `owner/repo #1 标题 [open]`），因为编号只在各自仓库内唯一；`--json` 输出可通过每条记录的 `url` 字段区分仓库，schema 保持不变。
 

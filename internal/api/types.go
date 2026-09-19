@@ -952,11 +952,13 @@ func (f *PullRequestFile) GetChangeType() string {
 }
 
 // PullRequestReaction represents a read-only user reaction on a pull request.
+// The user_reactions endpoint returns a string id plus emoji/emoji_name and
+// does not provide a timestamp or body.
 type PullRequestReaction struct {
-	ID        int64  `json:"id"`
+	ID        string `json:"id"`
 	User      User   `json:"user"`
-	Content   string `json:"content"`
-	CreatedAt string `json:"created_at"`
+	Emoji     string `json:"emoji"`
+	EmojiName string `json:"emoji_name"`
 }
 
 // PullRequestOperateLog represents one read-only entry from a pull request's
@@ -964,6 +966,7 @@ type PullRequestReaction struct {
 type PullRequestOperateLog struct {
 	ID             int64  `json:"id"`
 	Action         string `json:"action"`
+	ActionType     string `json:"action_type"`
 	Content        string `json:"content"`
 	MergeRequestID int64  `json:"merge_request_id"`
 	DiscussionID   string `json:"discussion_id"`
@@ -984,6 +987,48 @@ type PullRequestModifyHistory struct {
 	Content     string `json:"content"`
 	User        User   `json:"user"`
 	UpdatedUser User   `json:"updated_user"`
+}
+
+// Validate each record while decoding, before pagination or --limit can discard
+// elements. In particular, a JSON null must not become a zero-valued audit
+// record. This mirrors the IssueActivity/IssueHistory/IssueReaction pattern.
+func (item *PullRequestReaction) UnmarshalJSON(data []byte) error {
+	type wire PullRequestReaction
+	var decoded wire
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	if strings.TrimSpace(decoded.ID) == "" {
+		return fmt.Errorf("invalid pull request reaction record: id must be non-empty")
+	}
+	*item = PullRequestReaction(decoded)
+	return nil
+}
+
+func (item *PullRequestOperateLog) UnmarshalJSON(data []byte) error {
+	type wire PullRequestOperateLog
+	var decoded wire
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	if decoded.ID <= 0 {
+		return fmt.Errorf("invalid pull request operate log record: id must be positive")
+	}
+	*item = PullRequestOperateLog(decoded)
+	return nil
+}
+
+func (item *PullRequestModifyHistory) UnmarshalJSON(data []byte) error {
+	type wire PullRequestModifyHistory
+	var decoded wire
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	if strings.TrimSpace(decoded.ID) == "" {
+		return fmt.Errorf("invalid pull request modify history record: id must be non-empty")
+	}
+	*item = PullRequestModifyHistory(decoded)
+	return nil
 }
 
 // UserEventAuthor represents the author of a user activity event. Only fields

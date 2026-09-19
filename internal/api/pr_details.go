@@ -7,6 +7,14 @@ import (
 	"strconv"
 )
 
+// pullRequestReadPolicy only accepts HTTP 200 for read-only pull request
+// endpoints, matching the exact-success contract used by the other list
+// endpoints in this package.
+var pullRequestReadPolicy = RequestPolicy{
+	AllowedStatuses: []int{http.StatusOK},
+	CanRetry:        true,
+}
+
 func ListPullRequestCommits(client *Client, owner, repo, number string, limit int) ([]PullRequestCommit, error) {
 	if limit <= 0 {
 		return nil, fmt.Errorf("invalid limit: %d (must be positive)", limit)
@@ -80,7 +88,7 @@ func ListPullRequestReactions(client *Client, owner, repo, number string, limit 
 	escapedRepo := url.PathEscape(repo)
 	escapedNumber := url.PathEscape(number)
 
-	return GetPaginated[PullRequestReaction](client, limit, func(page, perPage int) string {
+	return getPaginatedWithPolicy[PullRequestReaction](client, limit, pullRequestReadPolicy, func(page, perPage int) string {
 		return fmt.Sprintf("/repos/%s/%s/pulls/%s/user_reactions?page=%d&per_page=%d",
 			escapedOwner, escapedRepo, escapedNumber, page, perPage)
 	})
@@ -98,7 +106,7 @@ func ListPullRequestOperateLogs(client *Client, owner, repo, number string, limi
 	escapedRepo := url.PathEscape(repo)
 	escapedNumber := url.PathEscape(number)
 
-	return GetPaginated[PullRequestOperateLog](client, limit, func(page, perPage int) string {
+	return getPaginatedWithPolicy[PullRequestOperateLog](client, limit, pullRequestReadPolicy, func(page, perPage int) string {
 		return fmt.Sprintf("/repos/%s/%s/pulls/%s/operate_logs?page=%d&per_page=%d",
 			escapedOwner, escapedRepo, escapedNumber, page, perPage)
 	})

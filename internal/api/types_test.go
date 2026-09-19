@@ -336,15 +336,15 @@ func TestPullRequestFileDecode(t *testing.T) {
 }
 
 func TestPullRequestReactionDecode(t *testing.T) {
-	raw := `{"id":12345,"user":{"login":"alice","name":"Alice"},"content":"+1","created_at":"2026-01-01T00:00:00Z"}`
+	raw := `{"id":"6aadf74ba99efd72002e8dcd","user":{"login":"alice","name":"Alice"},"emoji":"+1","emoji_name":"like"}`
 	var reaction PullRequestReaction
 	if err := json.Unmarshal([]byte(raw), &reaction); err != nil {
 		t.Fatal(err)
 	}
-	if reaction.ID != 12345 || reaction.User.Login != "alice" {
+	if reaction.ID != "6aadf74ba99efd72002e8dcd" || reaction.User.Login != "alice" {
 		t.Fatalf("reaction = %#v", reaction)
 	}
-	if reaction.Content != "+1" || reaction.CreatedAt == "" {
+	if reaction.Emoji != "+1" || reaction.EmojiName != "like" {
 		t.Fatalf("reaction = %#v", reaction)
 	}
 }

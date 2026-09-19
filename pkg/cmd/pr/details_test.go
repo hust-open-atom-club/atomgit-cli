@@ -353,7 +353,7 @@ func TestPRReactionsTextOutput(t *testing.T) {
 		Config: prTestConfig{},
 		HttpClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-				return prResponse(http.StatusOK, `[{"id":1,"user":{"login":"alice"},"content":"+1","created_at":"2024-06-15T10:30:00Z"},{"id":2,"user":{"login":"bob"},"content":"heart","created_at":"2024-06-14T08:00:00Z"}]`), nil
+				return prResponse(http.StatusOK, `[{"id":"r1","user":{"login":"alice"},"emoji":"+1","emoji_name":"like"},{"id":"r2","user":{"login":"bob"},"emoji":"heart","emoji_name":"heart"}]`), nil
 			})}, nil
 		},
 	}
@@ -367,7 +367,7 @@ func TestPRReactionsTextOutput(t *testing.T) {
 	if len(lines) != 2 {
 		t.Fatalf("lines = %d", len(lines))
 	}
-	if !strings.Contains(lines[0], "+1") || !strings.Contains(lines[0], "alice") || !strings.Contains(lines[0], "2024-06-15 10:30:00Z") {
+	if !strings.Contains(lines[0], "like") || !strings.Contains(lines[0], "alice") {
 		t.Errorf("line 0 = %s", lines[0])
 	}
 	if !strings.Contains(lines[1], "heart") || !strings.Contains(lines[1], "bob") {
@@ -380,7 +380,7 @@ func TestPRReactionsJSON(t *testing.T) {
 		Config: prTestConfig{},
 		HttpClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-				return prResponse(http.StatusOK, `[{"id":1,"user":{"login":"alice"},"content":"+1","created_at":"2024-01-01T00:00:00Z"}]`), nil
+				return prResponse(http.StatusOK, `[{"id":"r1","user":{"login":"alice"},"emoji":"+1","emoji_name":"like"}]`), nil
 			})}, nil
 		},
 	}
@@ -399,7 +399,7 @@ func TestPRReactionsJSON(t *testing.T) {
 		t.Fatalf("len(items) = %d, want 1", len(items))
 	}
 	r := items[0]
-	if r["id"].(float64) != 1 || r["author"] != "alice" || r["content"] != "+1" || r["createdAt"] != "2024-01-01T00:00:00Z" {
+	if r["id"] != "r1" || r["author"] != "alice" || r["emoji"] != "+1" || r["emojiName"] != "like" {
 		t.Fatalf("reaction = %#v", r)
 	}
 }
@@ -541,7 +541,7 @@ func TestPRDetailsServerOrderPreserved(t *testing.T) {
 			Config: prTestConfig{},
 			HttpClient: func() (*http.Client, error) {
 				return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-					return prResponse(http.StatusOK, `[{"id":2,"user":{"login":"bob"},"content":"-1","created_at":""},{"id":1,"user":{"login":"alice"},"content":"+1","created_at":""}]`), nil
+					return prResponse(http.StatusOK, `[{"id":"r2","user":{"login":"bob"},"emoji":"-1","emoji_name":"dislike"},{"id":"r1","user":{"login":"alice"},"emoji":"+1","emoji_name":"like"}]`), nil
 				})}, nil
 			},
 		}

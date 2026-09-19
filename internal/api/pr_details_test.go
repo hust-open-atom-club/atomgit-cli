@@ -322,13 +322,13 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 				t.Errorf("method = %s, want GET", r.Method)
 			}
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = io.WriteString(w, `[{"id":1,"user":{"login":"alice"},"content":"+1","created_at":"2024-01-01T00:00:00Z"}]`)
+			_, _ = io.WriteString(w, `[{"id":"r1","user":{"login":"alice"},"emoji":"+1","emoji_name":"like"}]`)
 		})
 		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(reactions) != 1 || reactions[0].ID != 1 || reactions[0].Content != "+1" {
+		if len(reactions) != 1 || reactions[0].ID != "r1" || reactions[0].EmojiName != "like" {
 			t.Fatalf("reactions = %#v", reactions)
 		}
 	})
@@ -418,14 +418,14 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 	t.Run("single reaction with all fields", func(t *testing.T) {
 		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = io.WriteString(w, `[{"id":42,"user":{"login":"bob","name":"Bob"},"content":"heart","created_at":"2024-06-15T10:30:00Z"}]`)
+			_, _ = io.WriteString(w, `[{"id":"r42","user":{"login":"bob","name":"Bob"},"emoji":"heart","emoji_name":"heart"}]`)
 		})
 		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err != nil {
 			t.Fatal(err)
 		}
 		r := reactions[0]
-		if r.ID != 42 || r.User.Login != "bob" || r.Content != "heart" {
+		if r.ID != "r42" || r.User.Login != "bob" || r.EmojiName != "heart" {
 			t.Fatalf("reaction = %#v", r)
 		}
 	})
@@ -433,13 +433,13 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 	t.Run("multiple reactions preserve server order", func(t *testing.T) {
 		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = io.WriteString(w, `[{"id":1,"user":{"login":"a"},"content":"+1","created_at":""},{"id":2,"user":{"login":"b"},"content":"-1","created_at":""}]`)
+			_, _ = io.WriteString(w, `[{"id":"r1","user":{"login":"a"},"emoji":"+1","emoji_name":"like"},{"id":"r2","user":{"login":"b"},"emoji":"-1","emoji_name":"dislike"}]`)
 		})
 		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(reactions) != 2 || reactions[0].ID != 1 || reactions[1].ID != 2 {
+		if len(reactions) != 2 || reactions[0].ID != "r1" || reactions[1].ID != "r2" {
 			t.Fatalf("reactions = %#v", reactions)
 		}
 	})
@@ -842,7 +842,7 @@ func TestPullRequestDetailsResponseVariants(t *testing.T) {
 	t.Run("reactions single item", func(t *testing.T) {
 		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = io.WriteString(w, `[{"id":1,"user":{"login":"a"},"content":"+1","created_at":"2024-01-01T00:00:00Z"}]`)
+			_, _ = io.WriteString(w, `[{"id":"r1","user":{"login":"a"},"emoji":"+1","emoji_name":"like"}]`)
 		})
 		reactions, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
 		if err != nil {
@@ -921,4 +921,195 @@ func TestPullRequestDetailsExactRequestCount(t *testing.T) {
 			t.Fatalf("requests = %d, want 1", count)
 		}
 	})
+}
+
+func TestPullRequestOperateLogsRejectsNullAndInvalidRecords(t *testing.T) {
+	t.Run("null record rejected", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[null]`)
+		})
+		_, err := ListPullRequestOperateLogs(client, "owner", "repo", "42", 30)
+		if err == nil || !strings.Contains(err.Error(), "id must be positive") {
+			t.Fatalf("error = %v, want invalid record error", err)
+		}
+	})
+
+	t.Run("zero id rejected", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[{"id":0,"action":"foo"}]`)
+		})
+		_, err := ListPullRequestOperateLogs(client, "owner", "repo", "42", 30)
+		if err == nil || !strings.Contains(err.Error(), "id must be positive") {
+			t.Fatalf("error = %v, want invalid record error", err)
+		}
+	})
+
+	t.Run("bad record beyond limit still errors", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[{"id":1,"action":"ok"},null]`)
+		})
+		_, err := ListPullRequestOperateLogs(client, "owner", "repo", "42", 1)
+		if err == nil || !strings.Contains(err.Error(), "id must be positive") {
+			t.Fatalf("error = %v, want invalid record error even though bad record is past limit", err)
+		}
+	})
+}
+
+func TestPullRequestModifyHistoryRejectsNullAndInvalidRecords(t *testing.T) {
+	t.Run("null record rejected", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[null]`)
+		})
+		_, err := ListPullRequestModifyHistory(client, "owner", "repo", "42", 30)
+		if err == nil || !strings.Contains(err.Error(), "id must be non-empty") {
+			t.Fatalf("error = %v, want invalid record error", err)
+		}
+	})
+
+	t.Run("empty id rejected", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[{"id":""}]`)
+		})
+		_, err := ListPullRequestModifyHistory(client, "owner", "repo", "42", 30)
+		if err == nil || !strings.Contains(err.Error(), "id must be non-empty") {
+			t.Fatalf("error = %v, want invalid record error", err)
+		}
+	})
+
+	t.Run("whitespace id rejected", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[{"id":"   "}]`)
+		})
+		_, err := ListPullRequestModifyHistory(client, "owner", "repo", "42", 30)
+		if err == nil || !strings.Contains(err.Error(), "id must be non-empty") {
+			t.Fatalf("error = %v, want invalid record error", err)
+		}
+	})
+
+	t.Run("bad record beyond limit still errors", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[{"id":"ok"},{"id":""}]`)
+		})
+		_, err := ListPullRequestModifyHistory(client, "owner", "repo", "42", 1)
+		if err == nil || !strings.Contains(err.Error(), "id must be non-empty") {
+			t.Fatalf("error = %v, want invalid record error even though bad record is past limit", err)
+		}
+	})
+}
+
+func TestPullRequestReactionsRejectsNullAndInvalidRecords(t *testing.T) {
+	t.Run("null record rejected", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[null]`)
+		})
+		_, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
+		if err == nil || !strings.Contains(err.Error(), "id must be non-empty") {
+			t.Fatalf("error = %v, want invalid record error", err)
+		}
+	})
+
+	t.Run("empty id rejected", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[{"id":""}]`)
+		})
+		_, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
+		if err == nil || !strings.Contains(err.Error(), "id must be non-empty") {
+			t.Fatalf("error = %v, want invalid record error", err)
+		}
+	})
+
+	t.Run("bad record beyond limit still errors", func(t *testing.T) {
+		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `[{"id":"ok"},null]`)
+		})
+		_, err := ListPullRequestReactions(client, "owner", "repo", "42", 1)
+		if err == nil || !strings.Contains(err.Error(), "id must be non-empty") {
+			t.Fatalf("error = %v, want invalid record error even though bad record is past limit", err)
+		}
+	})
+}
+
+func TestPullRequestOperateLogsPagination(t *testing.T) {
+	requests := 0
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Query().Get("page") == "1" {
+			rows := make([]string, 100)
+			for i := range rows {
+				rows[i] = fmt.Sprintf(`{"id":%d}`, i+1)
+			}
+			_, _ = io.WriteString(w, "["+strings.Join(rows, ",")+"]")
+			return
+		}
+		_, _ = io.WriteString(w, `[{"id":101}]`)
+	})
+	logs, err := ListPullRequestOperateLogs(client, "owner", "repo", "42", 101)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(logs) != 101 || requests != 2 {
+		t.Fatalf("len=%d requests=%d, want 101 and 2", len(logs), requests)
+	}
+	if logs[100].ID != 101 {
+		t.Fatalf("last log = %#v", logs[100])
+	}
+}
+
+func TestPullRequestReactionsPagination(t *testing.T) {
+	requests := 0
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Query().Get("page") == "1" {
+			rows := make([]string, 100)
+			for i := range rows {
+				rows[i] = fmt.Sprintf(`{"id":"r%d"}`, i+1)
+			}
+			_, _ = io.WriteString(w, "["+strings.Join(rows, ",")+"]")
+			return
+		}
+		_, _ = io.WriteString(w, `[{"id":"r101"}]`)
+	})
+	reactions, err := ListPullRequestReactions(client, "owner", "repo", "42", 101)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reactions) != 101 || requests != 2 {
+		t.Fatalf("len=%d requests=%d, want 101 and 2", len(reactions), requests)
+	}
+	if reactions[100].ID != "r101" {
+		t.Fatalf("last reaction = %#v", reactions[100])
+	}
+}
+
+func TestPullRequestReactionsRejectsInvalidLaterPage(t *testing.T) {
+	calls := 0
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/json")
+		if calls == 2 {
+			_, _ = io.WriteString(w, `[null]`)
+			return
+		}
+		rows := make([]string, 100)
+		for i := range rows {
+			rows[i] = fmt.Sprintf(`{"id":"r%d"}`, i)
+		}
+		_, _ = io.WriteString(w, "["+strings.Join(rows, ",")+"]")
+	})
+	rows, err := ListPullRequestReactions(client, "a", "b", "7", 101)
+	if err == nil || len(rows) != 0 || calls != 2 {
+		t.Fatalf("rows=%d calls=%d error=%v", len(rows), calls, err)
+	}
 }
