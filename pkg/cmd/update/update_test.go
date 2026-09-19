@@ -117,7 +117,7 @@ func TestCompareVersionsRejectsUncomparableCurrentVersion(t *testing.T) {
 }
 
 func TestUpdateCheckDoesNotDetectOrInstall(t *testing.T) {
-	setCurrentVersion(t, "v1.2.3")
+	setCurrentVersion(t, "1.2.3")
 	requestedExecutable := false
 	deps := testDeps()
 	deps.executable = func() (string, error) {
