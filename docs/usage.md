@@ -6,6 +6,7 @@
 
 ## 目录
 
+- [健康检查 (doctor)](#健康检查-doctor)
 - [认证](#认证)
 - [仓库 (repo)](#仓库-repo)
 - [组织 (org)](#组织-org)
@@ -39,6 +40,23 @@
 ag pr --help
 ag pr create --help
 ```
+
+## 健康检查 (doctor)
+
+```bash
+ag doctor
+ag doctor --json
+ag doctor --live
+ag doctor owner/repo --live --json
+```
+
+默认仅检查本地 Git 可用性、别名配置、凭据格式/活动账号、Unix 凭据权限、已知到期时间和仓库上下文，不联网。`--live` 在总计 30 秒的超时内执行只读请求：API v5 连通性和当前用户认证，以及有仓库参数或可推断仓库时的仓库访问、Actions 工作流列表和 discussion 列表。显式仓库优先于 Git 推断。
+
+结果为 `pass`、`warn`、`fail` 或 `skip`，每项包含稳定的检查 ID、说明及必要的下一步建议。JSON 包含 `version`、`platform`、`live`、`checks` 和 `ok`；出现 `fail` 时仍输出完整报告并返回非零退出码，仅有警告或跳过时返回零。未登录属于警告，缺少仓库上下文时跳过仓库相关探测。未启用联网检查不代表令牌已通过服务端认证。 `connectivity` 只表示网络可达，`service` 单独报告 API v5 服务状态：即使未登录，404、429、5xx 等错误也会使检查失败并返回非零退出码；401/403 则跳过服务状态判定，由认证检查报告访问被拒绝（未登录时认证检查也跳过）。
+
+`doctor`（包括通过命令别名调用）不修改凭据权限、不迁移配置、不刷新令牌，也不会自动修复问题。Windows ACL 暂不检查；使用权限不安全的 Unix 凭据时跳过认证探测。HTTP 403 仅表示访问被拒绝，不能据此确定具体 OAuth scope；HTTP 404 也可能是资源不可见。只读探测成功不保证写权限可用。报告不输出令牌、账号名称、原始 Git remote URL、代理地址、HTTP 响应正文或原始底层错误。
+
+已有凭据被服务端以 HTTP 401 拒绝时，运行 `ag auth login --force` 重新认证；普通 `ag auth login` 会因本地已有凭据而跳过登录。
 
 ## 认证
 

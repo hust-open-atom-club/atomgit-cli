@@ -32,6 +32,7 @@
 <!-- coverage:start -->
 | 命令族 | 协议 | API 家族与已实现范围 | 状态 | 责任 | 验证 | 代码/测试证据 | 关联工作与边界 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| doctor | local,v5,v8 | 配置、凭据和可选只读连通性检查 | implemented | project | source,mock | [命令与测试](../pkg/cmd/doctor/) | [#131](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/131)；不含逐请求 debug 跟踪、自动修复或写权限验证 |
 | api | v5 | 通用 v5 请求、JSON、分页；没有 v8 版本选项 | implemented | project | source,mock | [实现与测试](../pkg/cmd/api/) | [#28](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/28)；不能用它代替 v8 专用客户端 |
 | repo | v5 | Repositories：元数据、clone/fork/sync、collaborators、hooks、contents、push_rule、remote_mirrors、transfer、六项 insights、policy 的 permission/code-review/pull-request 查看与编辑 | implemented | project | source,mock | [命令与测试](../pkg/cmd/repo/)、[policy API](../internal/api/repository_policy.go) | [#89](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/89)、[#90](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/90)、[#117](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/117)、[#118](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/118)、[#119](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/119)；仅列明范围，不代表全部仓库 API |
 | branch | v5 | Branch：/repos/{owner}/{repo}/branches 及保护规则；列表、详情、创建、删除、保护设置 | implemented | project | source,mock | [命令与测试](../pkg/cmd/branch/) | [#109](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/109)、[#111](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/111)；仅列明能力 |

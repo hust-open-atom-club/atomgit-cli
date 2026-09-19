@@ -50,6 +50,7 @@
 - [ag discussion](#ag-discussion) — View repository discussions
 - [ag discussion list](#ag-discussion-list) — List repository discussions
 - [ag discussion view](#ag-discussion-view) — View a repository discussion
+- [ag doctor](#ag-doctor) — CLI health check: config, auth, and connectivity
 - [ag issue](#ag-issue) — Manage issues
 - [ag issue activity](#ag-issue-activity) — List operation logs for an issue
 - [ag issue branches](#ag-issue-branches) — List or update related branches for an issue
@@ -1122,6 +1123,34 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ag discussion view owner/repo 1
 ag discussion view owner/repo 1 --comments
 ag discussion view owner/repo 1 --comments --json
+```
+
+
+## ag doctor
+
+Usage: `ag doctor [<owner>/<repo>] [flags]`
+
+CLI health check: config, auth, and connectivity
+
+Check local configuration without modifying it. Use --live for read-only API probes (30 second overall timeout). Missing optional capabilities are skipped. Failures return a nonzero exit status; warnings alone do not.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output a redacted health report as JSON | `false` | local |
+| `--live` | Run read-only connectivity and authentication probes | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+### Example
+
+```bash
+ag doctor
+ag doctor --live
+ag doctor owner/repo --live --json
 ```
 
 
