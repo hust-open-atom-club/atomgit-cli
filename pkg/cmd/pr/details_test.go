@@ -743,11 +743,61 @@ func TestPRHistoryTextOutput(t *testing.T) {
 	if len(lines) != 2 {
 		t.Fatalf("lines = %d: %q", len(lines), output.String())
 	}
-	if !strings.Contains(lines[0], "created") || !strings.Contains(lines[0], "alice") || !strings.Contains(lines[0], "initial") {
+	if !strings.Contains(lines[0], "created by alice") || !strings.Contains(lines[0], "initial") {
 		t.Errorf("line 0 = %s", lines[0])
 	}
-	if !strings.Contains(lines[1], "updated") || !strings.Contains(lines[1], "edited") {
+	if !strings.Contains(lines[1], "updated by bob") || !strings.Contains(lines[1], "edited") {
 		t.Errorf("line 1 = %s", lines[1])
+	}
+}
+
+func TestPRHistoryTextAttribution(t *testing.T) {
+	tests := []struct {
+		name     string
+		body     string
+		wantLine string
+	}{
+		{
+			name:     "updated attributes the updating user",
+			body:     `[{"id":"b","created":false,"updated_at":"2024-06-16T10:30:00Z","content":"edited","user":{"login":"alice"},"updated_user":{"login":"bob"}}]`,
+			wantLine: "updated by bob",
+		},
+		{
+			name:     "deleted attributes the updating user",
+			body:     `[{"id":"c","created":false,"deleted":true,"updated_at":"2024-06-17T10:30:00Z","content":"removed","user":{"login":"alice"},"updated_user":{"login":"carol"}}]`,
+			wantLine: "deleted by carol",
+		},
+		{
+			name:     "missing updated user falls back to the author",
+			body:     `[{"id":"d","created":false,"updated_at":"2024-06-18T10:30:00Z","content":"edited","user":{"login":"alice"}}]`,
+			wantLine: "updated by alice",
+		},
+		{
+			name:     "empty content still shows the actor",
+			body:     `[{"id":"e","created":false,"updated_at":"2024-06-19T10:30:00Z","content":"","user":{"login":"alice"},"updated_user":{"login":"dave"}}]`,
+			wantLine: "updated by dave",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := &cmdutil.Factory{
+				Config: prTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						return prResponse(http.StatusOK, tt.body), nil
+					})}, nil
+				},
+			}
+			cmd := newCmdPRHistory(factory)
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+				t.Fatal(err)
+			}
+			if got := strings.TrimSpace(output.String()); !strings.Contains(got, tt.wantLine) {
+				t.Errorf("output = %q, want substring %q", got, tt.wantLine)
+			}
+		})
 	}
 }
 

@@ -478,15 +478,22 @@ fetched and then truncated to --limit.`,
 					kind = "deleted"
 				}
 				display := displayTimestamp(entry.CreatedAt)
+				actor := userLogin(entry.User)
 				if kind != "created" {
 					display = displayTimestamp(entry.UpdatedAt)
+					// Updates and deletions are attributed to the user who
+					// performed them, falling back to the original author when
+					// the server omits updated_user.
+					if updatedBy := userLogin(entry.UpdatedUser); updatedBy != "" {
+						actor = updatedBy
+					}
 				}
 				content := singleLine(entry.Content)
 				if content != "" {
-					fmt.Fprintf(out, "%s by %s %s: %s\n", kind, userLogin(entry.User), display, content)
+					fmt.Fprintf(out, "%s by %s %s: %s\n", kind, actor, display, content)
 					continue
 				}
-				fmt.Fprintf(out, "%s by %s %s\n", kind, userLogin(entry.User), display)
+				fmt.Fprintf(out, "%s by %s %s\n", kind, actor, display)
 			}
 
 			return nil
