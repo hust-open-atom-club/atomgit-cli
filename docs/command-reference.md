@@ -36,6 +36,12 @@
 - [ag browse](#ag-browse) — Open repositories, issues, pull requests, and more in the browser
 - [ag check-update](#ag-check-update) — Check for a newer AtomGit CLI release
 - [ag commit](#ag-commit) — Manage commits
+- [ag commit comment](#ag-commit-comment) — Manage commit comments
+- [ag commit comment create](#ag-commit-comment-create) — Create a comment on a commit
+- [ag commit comment delete](#ag-commit-comment-delete) — Delete a commit comment
+- [ag commit comment edit](#ag-commit-comment-edit) — Edit a commit comment
+- [ag commit comment list](#ag-commit-comment-list) — List comments on a commit
+- [ag commit comment view](#ag-commit-comment-view) — View a commit comment
 - [ag commit compare](#ag-commit-compare) — Compare two commits, branches, or tags
 - [ag commit diff](#ag-commit-diff) — Show a commit's diff
 - [ag commit list](#ag-commit-list) — List commits
@@ -823,6 +829,122 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
 | `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+
+## ag commit comment
+
+Usage: `ag commit comment`
+
+Manage commit comments
+
+List, view, create, edit, and delete comments on repository commits.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+
+## ag commit comment create
+
+Usage: `ag commit comment create [<owner>/<repo>] <sha> (--body <text> | --body-file <path-or->) [flags]`
+
+Create a comment on a commit
+
+Create a comment on a commit, identified by SHA (full or short) or branch name.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read body text from file (use - for stdin) | `` | local |
+| `-b, --body` | Comment body text | `` | local |
+
+
+## ag commit comment delete
+
+Usage: `ag commit comment delete [<owner>/<repo>] <comment-id> [flags]`
+
+Delete a commit comment
+
+Delete a commit comment you own. Asks for confirmation unless --yes is supplied.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-y, --yes` | Skip confirmation prompt | `false` | local |
+
+
+## ag commit comment edit
+
+Usage: `ag commit comment edit [<owner>/<repo>] <comment-id> (--body <text> | --body-file <path-or->) [flags]`
+
+Edit a commit comment
+
+Edit the body of a commit comment you own, replacing it with the new text.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read new body text from file (use - for stdin) | `` | local |
+| `-b, --body` | New comment body text | `` | local |
+
+
+## ag commit comment list
+
+Usage: `ag commit comment list [<owner>/<repo>] <ref> [flags]`
+
+List comments on a commit
+
+List comments on a commit, identified by SHA (full or short) or branch name.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output comments as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of comments to list | `30` | local |
+
+
+## ag commit comment view
+
+Usage: `ag commit comment view [<owner>/<repo>] <comment-id> [flags]`
+
+View a commit comment
+
+View a single repository commit comment by ID.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--json` | Output the comment as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 
 
