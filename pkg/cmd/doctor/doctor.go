@@ -9,6 +9,7 @@ import (
 	"net"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -201,8 +202,13 @@ func diagnose(f *cmdutil.Factory, args []string, live bool) report {
 		FullName string `json:"full_name"`
 	}
 	err = client.Get(api.RepositoryPath(repo.Owner, repo.Name), &repository)
-	if err == nil && repository.FullName != repo.String() {
-		err = errors.New("unexpected repository response")
+	if err == nil {
+		// AtomGit may canonicalize the owner casing; repository names retain
+		// the exact identity check used by repository transfer validation.
+		owner, name, found := strings.Cut(repository.FullName, "/")
+		if !found || !strings.EqualFold(owner, repo.Owner) || name != repo.Name {
+			err = errors.New("unexpected repository response")
+		}
 	}
 	r.result("repository_access", err)
 	ac, err := copyFactory.NewActionsClient(token)

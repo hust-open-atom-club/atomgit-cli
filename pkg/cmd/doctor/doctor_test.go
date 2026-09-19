@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -181,6 +182,51 @@ func TestLiveReadOnlyAndRedaction(t *testing.T) {
 				t.Fatal("403 cause overstated")
 			}
 		})
+	}
+}
+
+func TestRepositoryCanonicalOwner(t *testing.T) {
+	for _, inferred := range []bool{false, true} {
+		for _, tc := range []struct {
+			name, fullName string
+			valid          bool
+		}{
+			{"canonical owner", "team/demo", true},
+			{"same owner", "TEAM/demo", true},
+			{"different owner", "other/demo", false},
+			{"different repository", "team/other", false},
+			{"repository case differs", "team/DEMO", false},
+			{"empty response", "", false},
+		} {
+			t.Run(fmt.Sprintf("inferred=%t/%s", inferred, tc.name), func(t *testing.T) {
+				credentials(t, validCredentials)
+				f := &cmdutil.Factory{RepositoryResolver: func() (cmdutil.Repository, error) {
+					return cmdutil.Repository{Owner: "TEAM", Name: "demo"}, nil
+				}, HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: transport(func(req *http.Request) (*http.Response, error) {
+						body := `{"login":"alice"}`
+						switch {
+						case strings.HasSuffix(req.URL.Path, "/actions/workflows"):
+							body = `{"total_count":0,"workflows":[]}`
+						case strings.HasSuffix(req.URL.Path, "/discuss"):
+							body = `[]`
+						case strings.HasSuffix(req.URL.Path, "/repos/TEAM/demo"):
+							b, _ := json.Marshal(map[string]string{"full_name": tc.fullName})
+							body = string(b)
+						}
+						return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: req}, nil
+					})}, nil
+				}}
+				args := []string{"--live"}
+				if !inferred {
+					args = append(args, "TEAM/demo")
+				}
+				r, err, out := execute(t, f, args...)
+				if (err == nil) != tc.valid || r.OK != tc.valid || (row(t, r, "repository_access").Status == "pass") != tc.valid {
+					t.Fatalf("valid=%t error=%v: %s", tc.valid, err, out)
+				}
+			})
+		}
 	}
 }
 
