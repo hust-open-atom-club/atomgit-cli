@@ -185,7 +185,7 @@ func TestLiveReadOnlyAndRedaction(t *testing.T) {
 	}
 }
 
-func TestRepositoryCanonicalOwner(t *testing.T) {
+func TestRepositoryCanonicalPath(t *testing.T) {
 	for _, inferred := range []bool{false, true} {
 		for _, tc := range []struct {
 			name, fullName string
@@ -195,7 +195,7 @@ func TestRepositoryCanonicalOwner(t *testing.T) {
 			{"same owner", "TEAM/demo", true},
 			{"different owner", "other/demo", false},
 			{"different repository", "team/other", false},
-			{"repository case differs", "team/DEMO", false},
+			{"repository case differs", "team/DEMO", true},
 			{"empty response", "", false},
 		} {
 			t.Run(fmt.Sprintf("inferred=%t/%s", inferred, tc.name), func(t *testing.T) {

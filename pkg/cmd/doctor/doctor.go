@@ -203,10 +203,9 @@ func diagnose(f *cmdutil.Factory, args []string, live bool) report {
 	}
 	err = client.Get(api.RepositoryPath(repo.Owner, repo.Name), &repository)
 	if err == nil {
-		// AtomGit may canonicalize the owner casing; repository names retain
-		// the exact identity check used by repository transfer validation.
+		// AtomGit may canonicalize both owner and repository casing.
 		owner, name, found := strings.Cut(repository.FullName, "/")
-		if !found || !strings.EqualFold(owner, repo.Owner) || name != repo.Name {
+		if !found || !strings.EqualFold(owner, repo.Owner) || !strings.EqualFold(name, repo.Name) {
 			err = errors.New("unexpected repository response")
 		}
 	}
