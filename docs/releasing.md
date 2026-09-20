@@ -5,6 +5,7 @@
 ## 目录
 
 - [安全修复发布检查清单](#安全修复发布检查清单)
+- [GoReleaser 构建工具](#goreleaser-构建工具)
 - [发布打包](#发布打包)
 - [CI 验证时机](#ci-验证时机)
 - [自动发布 AtomGit Release](#自动发布-atomgit-release)
@@ -60,6 +61,41 @@ Nix 更新使用独立的 `.gitcode/workflows/update-nix.yml`。该 workflow 保
 `main`、`test`、`nix-update` 分支 push 和手动触发入口，并在自身流程中构建、验证
 Nix package；非 `main` 的维护分支不依赖通用 CI。Nix 更新提交进入 `main` 后，仍会
 由通用 CI 对该精确提交运行完整矩阵。
+
+## GoReleaser 构建工具
+
+`.goreleaser-version` 是构建工具版本的唯一声明，目前固定为 **2.18.1 OSS**。
+`.goreleaser.yaml` 中的 `version: 2` 仅表示配置格式。正式打包和 snapshot
+都会先检查可执行文件的 `GitVersion`；缺失、版本不同、预发布版本或无法识别的
+输出均会失败，且不会删除输出目录或开始打包。`GORELEASER` 可指定可执行文件路径
+（包括带空格的路径），但不能绕过版本检查。仅 `AG_VERIFY_ONLY=1` 的 Go 元数据
+注入检查不使用 GoReleaser。
+
+推荐从仓库根目录执行以下安装和检查，适用于 Linux/macOS 的 amd64/arm64 构建主机：
+
+```bash
+sh scripts/install-goreleaser.sh "$HOME/.local/bin"
+sh scripts/check-goreleaser.sh "$HOME/.local/bin/goreleaser"
+make release-snapshot VERSION=v0.7.3 GORELEASER="$HOME/.local/bin/goreleaser"
+```
+
+示例 snapshot 版本需与当前 npm 元数据一致；更新 npm 版本后使用对应版本。
+这些是构建主机限制，不改变 CLI 的七个发布目标。其他主机需自行从同一固定
+上游版本取得并验证工具，然后使用 `GORELEASER` 指定路径。
+
+安装脚本只从官方 `goreleaser/goreleaser` 的固定 tag Release 下载归档，使用
+仓库内 `scripts/goreleaser-checksums.txt` 的 SHA-256 校验后才解压及执行。
+摘要来源为 [GoReleaser v2.18.1 官方不可变 Release](https://github.com/goreleaser/goreleaser/releases/tag/v2.18.1)
+的 [checksums.txt](https://github.com/goreleaser/goreleaser/releases/download/v2.18.1/checksums.txt)。
+信任来源是上游 GitHub 官方仓库的 HTTPS Release 和本仓库对固定摘要的代码评审；
+不会在安装时下载一份可变摘要来替换预期值，也不声称仅检查版本能证明任意
+自备二进制的真实性。摘要不匹配时停止，保持已有安装不变。
+
+升级工具时，在同一个 PR 中更新 `.goreleaser-version` 和四个平台的摘要，核对
+上游 Release/tag、变更说明和官方校验和；不要使用 `latest` 或仅改版本号。
+按[上游验证说明](https://goreleaser.com/install/)核验来源，并运行 `npm test`、
+`make release-snapshot VERSION=<当前 npm 版本加 v 前缀>`，确认七个归档、安装脚本
+与 npm 包布局不变。工具输入的校验不替代项目发布制品的签名、SBOM 和 provenance。
 
 ## 发布打包
 
