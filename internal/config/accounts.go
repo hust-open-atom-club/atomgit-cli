@@ -51,6 +51,10 @@ func loadCredentialStore() (*CredentialStore, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
+	return parseCredentialStore(data)
+}
+
+func parseCredentialStore(data []byte) (*CredentialStore, bool, error) {
 	var envelope struct {
 		Version  int             `json:"version"`
 		Accounts json.RawMessage `json:"accounts"`
@@ -97,7 +101,7 @@ func loadCredentialStore() (*CredentialStore, bool, error) {
 	if err := json.Unmarshal(data, &legacy); err != nil {
 		return nil, false, fmt.Errorf("failed to parse token file: %w", err)
 	}
-	legacy, err = normalizeAccount(legacy)
+	legacy, err := normalizeAccount(legacy)
 	if err != nil {
 		return nil, false, fmt.Errorf("token file has empty access_token or invalid account: %w", err)
 	}

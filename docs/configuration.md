@@ -107,3 +107,7 @@ AtomGit API v5、Actions API v8、OAuth 与 Release 等领域客户端的非成�
 `issue`、`pr`、`tag`、`label`、`release`、`run`、`branch` 命令以及 `repo view`、`repo edit`、`repo fork`、`repo delete` 可以省略 `owner/repo`。省略时，`ag` 会从当前 Git 仓库的 AtomGit remote 推断目标仓库；显式传入的 `owner/repo` 始终优先。
 
 支持 `git@atomgit.com:owner/repo.git`、`ssh://git@atomgit.com/owner/repo.git` 和 `https://atomgit.com/owner/repo.git`。存在多个 remote 时，依次选择 `remote.pushDefault`、当前分支的 upstream remote、AtomGit `origin` 或唯一的 AtomGit remote。GitHub、GitLab 等其他服务的 remote 不会被识别为 AtomGit 仓库；无法唯一确定时，请显式传入 `owner/repo`。
+
+## 只读健康检查
+
+遇到配置损坏、认证失败或网络异常时，先运行 `ag doctor --json`；需要验证服务端时运行 `ag doctor owner/repo --live --json`。详见[健康检查](usage.md#健康检查-doctor)。运行 `doctor`（包括通过命令别名调用）会绕过普通启动时的凭据加载，以便报告原始配置问题，不会自动调整权限或迁移凭据。默认离线，联网探测仅在指定 `--live` 时执行，不上传诊断报告。

@@ -14,14 +14,7 @@ import (
 )
 
 func Main() int {
-	cfg, err := config.NewConfig()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to load config: %s\n", err)
-		return 1
-	}
-
 	factory := &cmdutil.Factory{
-		Config:             cfg,
 		BrowserOpener:      browser.NewSyncOpener(),
 		RepositoryResolver: cmdutil.NewGitRepositoryResolver(""),
 	}
@@ -37,6 +30,17 @@ func Main() int {
 	if err != nil {
 		fmt.Fprintf(rootCmd.ErrOrStderr(), "%s\n", err)
 		return 1
+	}
+	// Resolve aliases first: every route to doctor must preserve the original
+	// credentials, including malformed files and insecure permission bits.
+	selected, _, findErr := rootCmd.Find(expanded)
+	if findErr != nil || selected == nil || selected.Name() != "doctor" {
+		cfg, err := config.NewConfig()
+		if err != nil {
+			fmt.Fprintf(rootCmd.ErrOrStderr(), "failed to load config: %s\n", err)
+			return 1
+		}
+		factory.Config = cfg
 	}
 	rootCmd.SetArgs(expanded)
 
