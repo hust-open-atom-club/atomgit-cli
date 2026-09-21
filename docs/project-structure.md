@@ -84,9 +84,12 @@ atomgit-cli/
 │   ├── check-npm-version.js    # 校验发布版本与 npm 版本
 │   ├── publish-atomgit-release.js # 创建并验证 AtomGit Release
 │   ├── publish-npm-packages.js # 校验并安全发布 npm 制品
-│   └── set-npm-version.js      # 同步 npm 包版本
-├── .gitcode/workflows/        # AtomGit CI、Release 与定时 Nix 更新工作流
-├── test/                       # npm 平台包与发布流程测试
+│   ├── install-nix.sh          # 摘要校验后安装固定版本 Nix（更新工作流用）
+│   ├── publish-nix-update.sh   # 凭据安全的 Nix 更新写回（Bearer 头、有界脱敏）
+│   ├── update-nix-packages.sh  # 从最新 Release 刷新 stable/latest Nix package
+ │   └── set-npm-version.js      # 同步 npm 包版本
+├── .gitcode/workflows/        # AtomGit CI、Release 与自动 Nix 更新工作流
+├── test/                       # npm 平台包、发布流程与 Nix 更新脚本测试
 ├── .goreleaser.yaml            # 跨平台发布打包配置
 ├── flake.nix                   # Nix package 和开发环境
 ├── install.sh                  # Linux/macOS Release 安装脚本
