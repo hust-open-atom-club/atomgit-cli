@@ -38,7 +38,7 @@
     "@hust-open-atom-club/atomgit-cli-win32-x64": "0.7.3"
   },
   "devDependencies": {
-    "adm-zip": "^0.6.0",
+    "adm-zip": "^0.6.1",
     "tar": "^7.5.22"
   }
 }
