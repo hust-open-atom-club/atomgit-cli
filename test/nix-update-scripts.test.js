@@ -19,7 +19,12 @@ function fixture(t) {
 }
 function script(file, body) { fs.writeFileSync(file, '#!/bin/sh\n' + body, { mode: 0o755 }); }
 function run(file, args, env, cwd) {
-  return spawnSync('sh', [file, ...args], { encoding: 'utf8', cwd, env: { ...process.env, ...env } });
+  // An explicitly undefined value unsets the variable even when the host
+  // environment provides it (CI runners export ATOMGIT_REPOSITORY and
+  // ATOMGIT_REF_NAME themselves).
+  const merged = { ...process.env, ...env };
+  for (const key of Object.keys(env)) if (env[key] === undefined) delete merged[key];
+  return spawnSync('sh', [file, ...args], { encoding: 'utf8', cwd, env: merged });
 }
 
 for (const corrupt of [false, true]) {
@@ -136,8 +141,7 @@ test('publish fails closed when the update token is missing', unix, t => {
 
 test('publish requires repository context', unix, t => {
   const { dir, env } = publisherFixture(t);
-  delete env.ATOMGIT_REPOSITORY;
-  const out = run(publisher, [], { ...env, NIX_UPDATE_TOKEN: TOKEN }, dir);
+  const out = run(publisher, [], { ...env, NIX_UPDATE_TOKEN: TOKEN, ATOMGIT_REPOSITORY: undefined }, dir);
   assert.equal(out.status, 1);
   assert.match(out.stderr, /ATOMGIT_REPOSITORY/);
   assert.equal(fs.existsSync(env.CALL_LOG), false);
