@@ -64,7 +64,7 @@ Nix package；非 `main` 的维护分支不依赖通用 CI。Nix 更新提交进
 
 ## GoReleaser 构建工具
 
-`.goreleaser-version` 是构建工具版本的唯一声明，目前固定为 **2.18.1 OSS**。
+`.goreleaser-version` 是构建工具版本的唯一声明，目前固定为 **2.18.2 OSS**。
 `.goreleaser.yaml` 中的 `version: 2` 仅表示配置格式。正式打包和 snapshot
 都会先检查可执行文件的 `GitVersion`；缺失、版本不同、预发布版本或无法识别的
 输出均会失败，且不会删除输出目录或开始打包。`GORELEASER` 可指定可执行文件路径
@@ -85,8 +85,8 @@ make release-snapshot VERSION=v0.7.3 GORELEASER="$HOME/.local/bin/goreleaser"
 
 安装脚本只从官方 `goreleaser/goreleaser` 的固定 tag Release 下载归档，使用
 仓库内 `scripts/goreleaser-checksums.txt` 的 SHA-256 校验后才解压及执行。
-摘要来源为 [GoReleaser v2.18.1 官方不可变 Release](https://github.com/goreleaser/goreleaser/releases/tag/v2.18.1)
-的 [checksums.txt](https://github.com/goreleaser/goreleaser/releases/download/v2.18.1/checksums.txt)。
+摘要来源为 [GoReleaser v2.18.2 官方不可变 Release](https://github.com/goreleaser/goreleaser/releases/tag/v2.18.2)
+的 [checksums.txt](https://github.com/goreleaser/goreleaser/releases/download/v2.18.2/checksums.txt)。
 信任来源是上游 GitHub 官方仓库的 HTTPS Release 和本仓库对固定摘要的代码评审；
 不会在安装时下载一份可变摘要来替换预期值，也不声称仅检查版本能证明任意
 自备二进制的真实性。摘要不匹配时停止，保持已有安装不变。
