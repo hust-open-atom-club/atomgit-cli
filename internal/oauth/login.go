@@ -29,7 +29,7 @@ const (
 	authorizeURL = "https://atomgit.com/oauth/authorize"
 	tokenURL     = "https://atomgit.com/oauth/token"
 	userURL      = "https://atomgit.com/api/v5/user"
-	scopes       = "user_info projects"
+	scopes       = "user_info projects workflow discussion"
 )
 
 type tokenResponse struct {
@@ -215,6 +215,7 @@ func buildAuthorizeURL(clientID, redirectURI, state string) string {
 	v.Set("response_type", "code")
 	v.Set("state", state)
 	v.Set("scope", scopes)
+	v.Set("prompt", "consent")
 	return authorizeURL + "?" + v.Encode()
 }
 

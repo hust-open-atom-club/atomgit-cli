@@ -89,7 +89,8 @@ func TestBuildAuthorizeURL(t *testing.T) {
 		"redirect_uri":  "http://127.0.0.1/callback",
 		"response_type": "code",
 		"state":         "state-value",
-		"scope":         scopes,
+		"scope":         "user_info projects workflow discussion",
+		"prompt":        "consent",
 	}
 	for key, value := range want {
 		if got := parsed.Query().Get(key); got != value {
