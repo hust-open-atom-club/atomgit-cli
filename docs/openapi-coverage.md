@@ -1,6 +1,6 @@
 # OpenAPI 覆盖与责任清单
 
-本清单记录 **CLI 已实现的范围与已知缺口**，不是 AtomGit 全部端点目录，也不是服务端兼容性认证。基线为 2026-09-17 的 `main`（`2498d9c`）；后续修改必须随代码更新对应行。命令参数见[生成的命令参考](command-reference.md)，使用示例见[使用指南](usage.md)，测试机制见[API 契约测试](api-contracts.md)。三者不能互相替代。
+本清单记录 **CLI 已实现的范围与已知缺口**，不是 AtomGit 全部端点目录，也不是服务端兼容性认证。基线为 2026-09-20 的 `main`（`c514720`）；后续修改必须随代码更新对应行。命令参数见[生成的命令参考](command-reference.md)，使用示例见[使用指南](usage.md)，测试机制见[API 契约测试](api-contracts.md)。三者不能互相替代。
 
 ## 状态、责任与证据
 
@@ -36,7 +36,7 @@
 | api | v5 | 通用 v5 请求、JSON、分页；没有 v8 版本选项 | implemented | project | source,mock | [实现与测试](../pkg/cmd/api/) | [#28](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/28)；不能用它代替 v8 专用客户端 |
 | repo | v5 | Repositories：元数据、clone/fork/sync、collaborators、hooks、contents、push_rule、remote_mirrors、transfer、六项 insights、policy 的 permission/code-review/pull-request 查看与编辑 | implemented | project | source,mock | [命令与测试](../pkg/cmd/repo/)、[policy API](../internal/api/repository_policy.go) | [#89](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/89)、[#90](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/90)、[#117](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/117)、[#118](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/118)、[#119](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/119)；仅列明范围，不代表全部仓库 API |
 | branch | v5 | Branch：/repos/{owner}/{repo}/branches 及保护规则；列表、详情、创建、删除、保护设置 | implemented | project | source,mock | [命令与测试](../pkg/cmd/branch/) | [#109](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/109)、[#111](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/111)；仅列明能力 |
-| commit | v5 | Commit：提交列表/详情、compare、diff、patch | partial | project | source,mock | [命令与测试](../pkg/cmd/commit/)、[API](../internal/api/commits.go) | [#84](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/84)、[#91](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/91)；评论尚未合入 |
+| commit | v5 | Commit：提交列表/详情、compare、diff、patch，以及评论列表/详情/创建/编辑/删除 | implemented | project | source,mock | [命令与测试](../pkg/cmd/commit/)、[评论命令与测试](../pkg/cmd/commit/comment/)、[API](../internal/api/commits.go) | [#84](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/84)、[#91](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/91)、[#113](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/113) |
 | issue | v5 | Issues：CRUD、标签、评论、关联 PR、related_branches、activity/history/reactions；包含 /repos/{owner}/issues/{number} 路径 | implemented | project | source,mock | [命令与测试](../pkg/cmd/issue/)、[API](../internal/api/issue_collaboration.go) | [#86](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/86)；活动和历史限制为本地截断，表态按页获取；仅列明范围 |
 | tag | v5 | Tag：仓库 tags 创建/列举/删除与保护规则 | implemented | project | source,mock | [命令与测试](../pkg/cmd/tag/) | [#76](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/76)、[#103](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/103) |
 | label | v5 | Labels：仓库标签列表、创建、编辑、删除 | implemented | project | source,mock | [命令与测试](../pkg/cmd/label/) | [#26](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/26) |
@@ -78,7 +78,7 @@
 
 | API/模块 | 状态 | 责任 | 未交付范围/重新评估条件 | 验证与跟踪 |
 | --- | --- | --- | --- | --- |
-| v5 Commit comments | missing | project | 专用 list/view/create/edit/delete 尚未进入基线；PR 合入后再更新 | source；[#113](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/113)、[PR #276](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/276) |
+| v5 Commit comments | implemented | project | 专用 list/view/create/edit/delete 已合入；支持文件/stdin 正文和 JSON 输出 | source,mock；[命令与测试](../pkg/cmd/commit/comment/)、[#113](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/113)、[PR #276](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/276) |
 | v5 Issue activity/history/reactions | implemented | project | branches 及三项只读查询已实现；activity/history 无文档化分页参数，reactions 支持分页；未做在线验收 | source,mock；[#86](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/86) |
 | v5 PR activity/history/reactions | implemented | project | 三项只读查询已实现：activity、reactions 支持分页，history 无文档化分页参数按本地截断；reactions 字段按真实响应核对（字符串 id、emoji/emoji_name）；未做在线验收 | source,mock；[#93](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/93) |
 | Enterprise | deferred | partner | 企业模块不作为本地 backlog；合作方与项目明确移交后再拆任务，具体版本/端点未逐一核实 | docs（仅官方目录）；[#124](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/124)，无在线证据 |
@@ -94,7 +94,7 @@
 
 | Issue | 基线交付状态 | 代码/PR 证据及剩余边界 |
 | --- | --- | --- |
-| [#113](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/113) | missing | Commit 评论 [PR #276](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/276) 尚未合入 |
+| [#113](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/113) | implemented | [Commit 评论命令与测试](../pkg/cmd/commit/comment/)、[PR #276](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/276)；已实现 list/view/create/edit/delete |
 | [#114](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/114) | implemented | [artifact 命令](../pkg/cmd/run/artifact.go)，[PR #219](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/219)；v8 删除/确认 |
 | [#115](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/115) | implemented | [runner 测试](../pkg/cmd/runner/runner_test.go)，[PR #222](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/222)；只读仓库/共享 runner |
 | [#116](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/116) | implemented | [组织 runner-group 命令与测试](../pkg/cmd/org/runner_group.go)、[v8 客户端](../internal/api/actions/client.go)；只读 list/detail/runners/runner-sets/shared-namespaces，不被 #115 覆盖 |
