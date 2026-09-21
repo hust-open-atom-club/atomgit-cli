@@ -12,9 +12,16 @@
 set -eu
 
 api_base=https://api.atomgit.com/api/v5
-repository=${ATOMGIT_REPOSITORY:?ATOMGIT_REPOSITORY is not set}
-branch=${ATOMGIT_REF_NAME:?ATOMGIT_REF_NAME is not set}
+repository=${ATOMGIT_REPOSITORY:-}
+branch=${ATOMGIT_REF_NAME:-}
 token=${NIX_UPDATE_TOKEN:-}
+
+# Validate context with explicit checks: ${VAR:?} exit codes differ between
+# /bin/sh implementations (dash exits 2, bash exits 1).
+if [ -z "$repository" ]; then
+  echo "ATOMGIT_REPOSITORY is not set." >&2
+  exit 1
+fi
 
 # Only character classes that cannot break out of the JSON string built
 # below are accepted for the branch name.
