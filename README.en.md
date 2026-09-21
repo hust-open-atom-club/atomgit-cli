@@ -114,7 +114,7 @@ If you need to install the latest version from the `proposed` repository, please
 go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 ```
 
-See the [complete installation guide](docs/installation.md) for requirements, upgrades, AtomGit Releases, and source installation.
+For more about installation, upgrades, uninstallation, and shell completion, see the [installation guide](docs/installation.md).
 
 ## Configuration
 

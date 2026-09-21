@@ -16,6 +16,7 @@ AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、WinGet
 - [AtomGit Release 安装](#atomgit-release-安装)
 - [源码安装](#源码安装)
 - [安装验证](#安装验证)
+- [Shell 补全](#shell-补全)
 
 ## npm 安装
 
@@ -605,3 +606,77 @@ go install ./cmd/ag
 ```bash
 ag version
 ```
+
+## Shell 补全
+
+成功安装 AtomGit CLI 之后，可以为常用的 shell 启用补全。
+
+> [!IMPORTANT]
+> Bash、Zsh 和 Fish 使用静态补全文件，不随 CLI 同步更新。
+> 如果补全行为发生变化，请再次根据以下步骤覆盖更新。
+
+### Bash
+
+Bash 补全可通过 `bash-completion` 自动加载。
+以下操作假设已安装并启用 `bash-completion`。
+
+```shell
+# 安装补全文件
+ag completion bash > "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag"
+
+# 移除补全文件
+rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag"
+```
+
+如果使用 Homebrew 管理 `bash-completion`，也可以将补全文件安装到 Homebrew 的补全目录：
+
+```shell
+# 安装补全文件
+ag completion bash > "$(brew --prefix)/etc/bash_completion.d/ag"
+
+# 移除补全文件
+rm -f "$(brew --prefix)/etc/bash_completion.d/ag"
+```
+
+安装完成后，重新启动 Bash 会话使补全配置生效。
+
+### Zsh
+
+Zsh 通过 `fpath` 指定的目录查找补全函数。
+以下操作假设已将 `~/.zfunc` 添加至 Zsh 的 `fpath`，并已通过 `compinit` 初始化补全系统。
+
+```shell
+# 安装补全文件
+ag completion zsh > ~/.zfunc/_ag
+
+# 移除补全文件
+rm -f ~/.zfunc/_ag
+```
+
+安装完成后，重新启动 Zsh 会话，或执行 `autoload -Uz compinit && compinit` 使补全配置生效。
+
+### Fish
+
+Fish 会自动加载用户配置目录中的补全文件。
+
+```shell
+# 安装补全文件
+ag completion fish > "$__fish_config_dir/completions/ag.fish"
+
+# 移除补全文件
+rm -f "$__fish_config_dir/completions/ag.fish"
+```
+
+### PowerShell
+
+PowerShell 在启动时通过 Profile 初始化自动补全。
+
+```powershell
+# 启用补全
+'ag completion powershell | Out-String | Invoke-Expression' | Add-Content -Path $PROFILE
+
+# 禁用补全
+(Get-Content $PROFILE) | Where-Object { $_ -ne 'ag completion powershell | Out-String | Invoke-Expression' } | Set-Content $PROFILE
+```
+
+启用补全后，重新启动 PowerShell 会话，或执行 `. $PROFILE` 使补全配置生效。
