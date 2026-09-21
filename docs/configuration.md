@@ -15,7 +15,7 @@
 - 使用 OAuth 登录（推荐）：运行 `ag auth login`，在浏览器中完成 AtomGit 授权。登录成功后，`ag` 会自动将认证信息写入令牌文件。
 
   > [!IMPORTANT]
-  > 使用 Actions/流水线或项目讨论相关功能时，OAuth 应用需要提供 “Action” 和“项目讨论”的读写权限。运行 `ag auth login --force` 会重新打开授权确认；如果授权页面未提供这两项权限，请使用已具备相应权限的访问令牌通过 `ag auth login --with-token` 登录。
+  > 使用 Actions/流水线或项目讨论相关功能时，OAuth 应用需要提供 “Action” 和“项目讨论”的读写权限。运行 `ag auth login --force` 会重新打开授权确认；如果授权页面未提供这两项权限，请使用已具备相应权限的访问令牌通过 `ag auth login --with-token --force` 登录。
 
 - 使用已有令牌登录（无浏览器环境）：将预先签发的访问令牌（PAT 或 OAuth access_token）通过标准输入传给 `ag auth login --with-token`，CLI 会先调用 AtomGit 用户接口验证令牌并获取用户名，验证通过后才写入令牌文件：
 
