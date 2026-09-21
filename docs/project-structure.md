@@ -43,6 +43,7 @@ atomgit-cli/
 │   │   └── testdata/           # API 测试响应样本
 │   ├── apicontract/            # 离线契约回放、响应结构检查与可选只读 smoke
 │   ├── browser/                # 打开系统浏览器
+│   ├── commandschema/          # Cobra 静态命令描述与补充注解
 │   ├── config/                 # XDG 配置与凭据读写
 │   ├── oauth/                  # OAuth 登录流程
 │   └── version/                # 版本、提交和构建时间元数据
@@ -63,6 +64,7 @@ atomgit-cli/
 │       ├── repo/               # 仓库管理
 │       ├── root/               # 根命令和全局参数
 │       ├── run/                # Actions run、job、日志与 artifact
+│       ├── schema/             # 无凭据、无网络的机器可读命令说明
 │       ├── search/             # 用户、仓库和 Issue 搜索
 │       ├── ssh-key/            # SSH Key 管理
 │       ├── tag/                # Git tag 与保护 tag 规则管理

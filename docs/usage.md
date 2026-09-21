@@ -7,6 +7,7 @@
 ## 目录
 
 - [健康检查 (doctor)](#健康检查-doctor)
+- [机器可读命令说明 (schema)](#机器可读命令说明-schema)
 - [认证](#认证)
 - [仓库 (repo)](#仓库-repo)
 - [组织 (org)](#组织-org)
@@ -40,6 +41,45 @@
 ag pr --help
 ag pr create --help
 ```
+
+## 机器可读命令说明 (schema)
+
+```bash
+ag schema                    # 当前 CLI 的公开命令目录
+ag schema pr create          # 单个命令的参数和能力说明
+ag schema api
+ag schema pr comment create  # 嵌套命令
+```
+
+默认输出 JSON，无需 `--json`。查询不会执行目标命令，不需要登录或网络，
+不读取 token、不迁移或修改凭据；损坏的认证配置也不阻断查询。
+它适用于 Agent/脚本按需确认本机 CLI 的用法，减少 skills 中重复维护的参数表。
+查询路径只接受完整命令名或内置别名；用户配置的动态别名不收录、不解析。
+未知路径或隐藏命令返回非零退出码，stdout 不输出部分结果。
+
+这是**版本化命令描述格式，不是 JSON Schema**，也不是完整的参数验证器：
+
+- 顶层 `formatVersion` 当前为 `1`；`cliVersion` 包含 CLI 的 `version`、`commit`、`buildDate`。
+- 无参数时，`commands` 给出按规范路径排序的目录（包含根命令）；指定路径时，`command` 给出详情。
+  别名查询返回规范路径，不生成重复目录项。公开的弃用入口保留 `deprecated` 提示。
+  隐藏命令及其子树、隐藏 flags 均排除；运行时 Cobra 添加的公开 help/completion 辅助入口会收录。
+- 详情包括 `usage`、描述、示例、子命令和公开 `flags`。flag 的 `type` 为 pflag 类型名，
+  `default` 为声明时的字符串表示（例如布尔值 `"false"`、列表 `"[]"`），不会读取运行时值或解析动态默认值。
+  `noOptDefault` 表示省略参数值时的取值；`inherited` 和 `definedOn` 说明继承关系。
+- `required` 只表达已声明的必填规则，`requiredSource` 区分 `cobra`、显式 `annotation` 和 `none`。
+  `flagGroups` 导出 Cobra 声明的 `mutuallyExclusive`、`requiredTogether`、`atLeastOneRequired` 约束；
+  含隐藏 flag 的组不导出。没有声明不代表业务逻辑没有其他约束。
+- `positionals` 来自命令旁的显式注解，包含 `minCount`、`maxCount`、描述；`maxCount: -1` 表示没有数量上限，
+  `positionals: null` 表示未描述。首批补充 `pr create`、`api`、`pr comment create` 和 `schema`，其余可逐步补充。
+- `capabilities.output` 可描述 `text`、`json` 或原始响应 `raw`；`effects` 可描述 `none`、`read`、`write`、`conditional`。
+  未注解时均为 `undescribed`，不会从命令名称、HTTP 方法或存在 `--json` 推断。
+  API 权限、业务响应结构当前也标记为 `undescribed`。
+- `validation: "partial"` 和 `undescribed` 明确说明覆盖限制；业务校验说明可见 `notes`。
+  schema 不替代实际命令校验、权限检查，也不授予执行写操作的授权。
+
+同一格式版本内允许新增字段及能力描述，消费者应忽略未知字段，并处理 `null`/`undescribed`；
+删除字段、改变字段类型或已有语义时提升 `formatVersion`。命令增删和参数变化随 CLI 版本变化，
+不应把另一版本 CLI 的描述直接用于本机。Agent 宜按任务查询单个命令；旧版明确不支持 `schema` 时再回退到 `--help`。
 
 ## 健康检查 (doctor)
 

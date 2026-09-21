@@ -31,16 +31,9 @@ func Main() int {
 		fmt.Fprintf(rootCmd.ErrOrStderr(), "%s\n", err)
 		return 1
 	}
-	// Resolve aliases first: every route to doctor must preserve the original
-	// credentials, including malformed files and insecure permission bits.
-	selected, _, findErr := rootCmd.Find(expanded)
-	if findErr != nil || selected == nil || selected.Name() != "doctor" {
-		cfg, err := config.NewConfig()
-		if err != nil {
-			fmt.Fprintf(rootCmd.ErrOrStderr(), "failed to load config: %s\n", err)
-			return 1
-		}
-		factory.Config = cfg
+	if err := loadCommandConfig(rootCmd, factory, expanded, config.NewConfig); err != nil {
+		fmt.Fprintf(rootCmd.ErrOrStderr(), "failed to load config: %s\n", err)
+		return 1
 	}
 	rootCmd.SetArgs(expanded)
 
@@ -67,6 +60,21 @@ func Main() int {
 	}
 
 	return 0
+}
+
+func loadCommandConfig(rootCmd *cobra.Command, factory *cmdutil.Factory, expanded []string, load func() (config.Config, error)) error {
+	// Aliases have already been resolved. Doctor inspects original credentials;
+	// schema uses only static metadata. Neither may initialize credentials.
+	selected, _, err := rootCmd.Find(expanded)
+	if err == nil && selected != nil && (selected.Name() == "doctor" || selected.Name() == "schema") {
+		return nil
+	}
+	cfg, err := load()
+	if err != nil {
+		return err
+	}
+	factory.Config = cfg
+	return nil
 }
 
 func isExtensionCommand(rootCmd *cobra.Command, args []string) bool {

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	internalapi "atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/commandschema"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -81,6 +82,11 @@ Response bytes use terminal-safe output unless --raw-output is specified.`,
 	cmd.Flags().StringVar(&opts.input, "input", "", "Read the raw request body from a file or - for stdin")
 	cmd.Flags().StringVarP(&opts.accept, "accept", "H", "application/json", "Set the Accept request header")
 	cmd.Flags().BoolVar(&opts.paginate, "paginate", false, "Request all pages and emit compact JSON pages as NDJSON")
+	commandschema.Annotate(cmd, commandschema.Metadata{
+		Positionals: &commandschema.Positionals{MinCount: 1, MaxCount: 1, Description: "One relative AtomGit API v5 endpoint; absolute URLs and path escapes are rejected."},
+		Output:      "raw", Effects: "conditional",
+		Notes: []string{"Output is the response body; pagination emits JSON pages as NDJSON. Response shape and required permissions depend on the endpoint.", "Non-GET methods may modify remote resources. Field/input combinations and pagination have additional runtime validation."},
+	})
 	return cmd
 }
 
