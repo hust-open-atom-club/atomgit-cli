@@ -197,14 +197,14 @@ release:
 		echo "VERSION is required (example: make release VERSION=vX.Y.Z)"; \
 		exit 1; \
 	}
-	GORELEASER=$(GORELEASER) TAG=$(VERSION) ./scripts/build-release.sh
+	GORELEASER="$(GORELEASER)" TAG=$(VERSION) ./scripts/build-release.sh
 
 release-snapshot:
 	@test -n "$(VERSION)" || { \
 		echo "VERSION is required (example: make release-snapshot VERSION=vX.Y.Z)"; \
 		exit 1; \
 	}
-	AG_RELEASE_SNAPSHOT=1 GORELEASER=$(GORELEASER) TAG=$(VERSION) ./scripts/build-release.sh
+	AG_RELEASE_SNAPSHOT=1 GORELEASER="$(GORELEASER)" TAG=$(VERSION) ./scripts/build-release.sh
 
 publish:
 	@test -n "$(VERSION)" || { \

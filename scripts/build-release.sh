@@ -23,6 +23,11 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 GORELEASER="${GORELEASER:-goreleaser}"
 
+# Fail before toolchain downloads, packaging, or changes to output directories.
+if [ "${AG_VERIFY_ONLY:-}" != "1" ]; then
+  sh "$ROOT/scripts/check-goreleaser.sh" "$GORELEASER"
+fi
+
 PROJECT_GO_MIN_VERSION=$(sed -n 's/^go[[:space:]][[:space:]]*//p' go.mod)
 if [ -z "$PROJECT_GO_MIN_VERSION" ]; then
   echo "错误: go.mod 未声明最低支持的 Go 版本。" >&2
@@ -235,11 +240,6 @@ fi
 
 # 以下仅在完整发布构建时执行。GoReleaser 使用固定的
 # dist/.goreleaser 作为临时目录，完成后再将可发布制品复制到版本目录。
-if ! command -v "$GORELEASER" >/dev/null 2>&1; then
-  echo "错误: 未找到 GoReleaser（命令: $GORELEASER）。" >&2
-  echo "请先安装 GoReleaser：https://goreleaser.com/install/" >&2
-  exit 1
-fi
 
 RELEASE_MODE=release
 if [ "${AG_RELEASE_SNAPSHOT:-}" = "1" ]; then
