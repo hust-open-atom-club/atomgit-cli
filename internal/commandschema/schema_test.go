@@ -173,3 +173,39 @@ func TestInheritedOnlyUsageIsStable(t *testing.T) {
 		t.Fatalf("inherited-only usage changes across queries: first=%q second=%q", first.Command.Usage, second.Command.Usage)
 	}
 }
+
+func TestRootPathDescription(t *testing.T) {
+	root := &cobra.Command{
+		Use: "tool <command>", Short: "Root command",
+		Args: func(*cobra.Command, []string) error { t.Fatal("ran root validator"); return nil },
+		RunE: func(*cobra.Command, []string) error { t.Fatal("ran root command"); return nil },
+	}
+	root.PersistentFlags().Bool("global", false, "Global switch")
+	root.AddCommand(&cobra.Command{Use: "child", Aliases: []string{"c"}})
+	for _, tc := range []struct {
+		name string
+		path []string
+		want string
+	}{
+		{"root", []string{"tool"}, "tool"},
+		{"short", []string{"child"}, "tool child"},
+		{"prefixed", []string{"tool", "child"}, "tool child"},
+		{"prefixed alias", []string{"tool", "c"}, "tool child"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			doc, err := Describe(root, tc.path)
+			if err != nil || doc.Command == nil || doc.Command.Path != tc.want || len(doc.Commands) != 0 {
+				t.Fatalf("Describe(%v) = %+v, %v", tc.path, doc, err)
+			}
+			if tc.name == "root" {
+				if len(doc.Command.Flags) != 1 || doc.Command.Flags[0].Name != "global" || doc.Command.Flags[0].Inherited || len(doc.Command.Subcommands) != 1 {
+					t.Fatalf("root metadata: %+v", doc.Command)
+				}
+			}
+		})
+	}
+	directory, err := Describe(root, nil)
+	if err != nil || directory.Command != nil || len(directory.Commands) != 2 {
+		t.Fatalf("empty path no longer returns catalogue: %+v, %v", directory, err)
+	}
+}

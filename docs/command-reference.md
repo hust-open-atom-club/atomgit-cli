@@ -4665,7 +4665,7 @@ Usage: `ag schema [<command> ...]`
 
 Describe public commands as versioned JSON
 
-List public commands or describe an exact command path without executing it. Uses static command metadata only; no login or network is required. This is a versioned command description format, not JSON Schema. Undescribed behavior must not be inferred.
+List public commands or describe an exact command path without executing it. Paths may include the ag prefix; use 'ag schema ag' for root command details. Uses static command metadata only; no login or network is required. This is a versioned command description format, not JSON Schema. Undescribed behavior must not be inferred.
 
 ### Flags
 
@@ -4678,7 +4678,9 @@ List public commands or describe an exact command path without executing it. Use
 
 ```bash
 ag schema
+ag schema ag
 ag schema pr create
+ag schema ag pr create
 ag schema api
 ag schema pr comment create
 ```

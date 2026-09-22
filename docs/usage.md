@@ -46,7 +46,9 @@ ag pr create --help
 
 ```bash
 ag schema                    # 当前 CLI 的公开命令目录
+ag schema ag                 # 根命令详情
 ag schema pr create          # 单个命令的参数和能力说明
+ag schema ag pr create       # 也可直接使用目录返回的完整路径
 ag schema api
 ag schema pr comment create  # 嵌套命令
 ```
@@ -55,6 +57,8 @@ ag schema pr comment create  # 嵌套命令
 不读取 token、不迁移或修改凭据；损坏的认证配置也不阻断查询。
 它适用于 Agent/脚本按需确认本机 CLI 的用法，减少 skills 中重复维护的参数表。
 查询路径只接受完整命令名或内置别名；用户配置的动态别名不收录、不解析。
+路径可带 `ag` 前缀，目录中的 `commands[].path` 按空格拆分后可直接作为查询参数。
+`ag schema ag` 返回根命令详情；不传路径的 `ag schema` 仍返回命令目录。
 未知路径或隐藏命令返回非零退出码，stdout 不输出部分结果。
 
 这是**版本化命令描述格式，不是 JSON Schema**，也不是完整的参数验证器：

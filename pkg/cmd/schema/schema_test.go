@@ -99,17 +99,21 @@ func TestAllPublicCommandsCanBeDescribed(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, summary := range directory.Commands {
-		if summary.Path == "ag" {
-			continue
-		}
-		path := strings.Fields(summary.Path)[1:]
+		path := strings.Fields(summary.Path)
 		detail, err := commandschema.Describe(cmd, path)
-		if err != nil || detail.Command == nil {
+		if err != nil || detail.Command == nil || detail.Command.Path != summary.Path || len(detail.Commands) != 0 {
 			t.Fatalf("%s: %v", summary.Path, err)
 		}
 		repeated, err := commandschema.Describe(cmd, path)
 		if err != nil || !reflect.DeepEqual(detail, repeated) {
 			t.Fatalf("%s: description changed on repeat query: %v", summary.Path, err)
+		}
+		if len(path) == 1 {
+			continue
+		}
+		short, err := commandschema.Describe(cmd, path[1:])
+		if err != nil || !reflect.DeepEqual(detail, short) {
+			t.Fatalf("%s: prefixed and short paths differ: %v", summary.Path, err)
 		}
 		for _, alias := range summary.Aliases {
 			aliasPath := append([]string{}, path...)
@@ -118,9 +122,13 @@ func TestAllPublicCommandsCanBeDescribed(t *testing.T) {
 			if err != nil || !reflect.DeepEqual(detail, aliasDoc) {
 				t.Fatalf("alias %s: %v", alias, err)
 			}
+			shortAlias, err := commandschema.Describe(cmd, aliasPath[1:])
+			if err != nil || !reflect.DeepEqual(detail, shortAlias) {
+				t.Fatalf("short alias %s: %v", alias, err)
+			}
 		}
 	}
-	for _, path := range [][]string{{"auth", "git-credential"}, {"missing"}} {
+	for _, path := range [][]string{{"auth", "git-credential"}, {"missing"}, {"ag", "auth", "git-credential"}, {"ag", "missing"}, {"ag", "ag"}} {
 		_, err := commandschema.Describe(cmd, path)
 		if err == nil {
 			t.Fatal(fmt.Sprint("accepted hidden/unknown path ", path))

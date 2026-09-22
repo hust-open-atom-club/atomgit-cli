@@ -73,7 +73,9 @@ type Capabilities struct {
 }
 
 // Describe reads metadata only. Exact canonical names and built-in aliases are
-// accepted; no prefix matching, flag parsing, local aliases, or command hooks.
+// accepted, optionally prefixed with the root command name. An empty path lists
+// commands; the root name alone describes the root. No prefix matching, flag
+// parsing, local aliases, or command hooks are used.
 func Describe(root *cobra.Command, path []string) (Document, error) {
 	if root == nil {
 		return Document{}, fmt.Errorf("command tree is unavailable")
@@ -93,6 +95,9 @@ func Describe(root *cobra.Command, path []string) (Document, error) {
 		visit(root)
 		sort.Slice(doc.Commands, func(i, j int) bool { return doc.Commands[i].Path < doc.Commands[j].Path })
 		return doc, nil
+	}
+	if path[0] == root.Name() {
+		path = path[1:]
 	}
 	cmd := root
 	for _, part := range path {

@@ -20,7 +20,7 @@ import (
 )
 
 func TestSchemaDoesNotInitializeConfig(t *testing.T) {
-	for _, args := range [][]string{{"schema"}, {"schema", "pr", "create"}, {"schema", "unknown"}, {"--raw-output", "schema", "api"}, {"doctor"}} {
+	for _, args := range [][]string{{"schema"}, {"schema", "ag"}, {"schema", "ag", "pr", "create"}, {"schema", "pr", "create"}, {"schema", "unknown"}, {"--raw-output", "schema", "api"}, {"doctor"}} {
 		f := &cmdutil.Factory{}
 		cmd, err := root.NewCmdRoot(f)
 		if err != nil {
@@ -92,7 +92,7 @@ func TestSchemaStartupWithIsolatedCredentials(t *testing.T) {
 			// schema calls, including an invalid target path.
 			aliases := filepath.Join(dir, "config.json")
 			aliasContent := []byte(`{"private-alias-secret": broken`)
-			calls := [][]string{{"schema"}, {"schema", "pr", "create"}, {"--raw-output", "schema", "api"}, {"schema", "pr", "comment", "create"}, {"schema", "missing"}}
+			calls := [][]string{{"schema"}, {"schema", "ag"}, {"schema", "ag", "pr", "create"}, {"schema", "pr", "create"}, {"--raw-output", "schema", "api"}, {"schema", "pr", "comment", "create"}, {"schema", "missing"}, {"schema", "ag", "missing"}}
 			if state == "local-alias" {
 				aliasContent = []byte(`{"aliases":{"inspect-schema":"schema","private-alias-secret":"api /user"}}`)
 				calls = append(calls, []string{"schema", "private-alias-secret"}, []string{"inspect-schema", "api"})
