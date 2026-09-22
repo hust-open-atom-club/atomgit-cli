@@ -621,6 +621,9 @@ Bash 补全可通过 `bash-completion` 自动加载。
 以下操作假设已安装并启用 `bash-completion`。
 
 ```shell
+# 创建补全目录
+mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
+
 # 安装补全文件
 ag completion bash > "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag"
 
@@ -631,6 +634,9 @@ rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag"
 如果使用 Homebrew 管理 `bash-completion`，也可以将补全文件安装到 Homebrew 的补全目录：
 
 ```shell
+# 创建补全目录
+mkdir -p "$(brew --prefix)/etc/bash_completion.d"
+
 # 安装补全文件
 ag completion bash > "$(brew --prefix)/etc/bash_completion.d/ag"
 
@@ -646,6 +652,9 @@ Zsh 通过 `fpath` 指定的目录查找补全函数。
 以下操作假设已将 `~/.zfunc` 添加至 Zsh 的 `fpath`，并已通过 `compinit` 初始化补全系统。
 
 ```shell
+# 创建补全目录
+mkdir -p ~/.zfunc
+
 # 安装补全文件
 ag completion zsh > ~/.zfunc/_ag
 
@@ -660,6 +669,9 @@ rm -f ~/.zfunc/_ag
 Fish 会自动加载用户配置目录中的补全文件。
 
 ```shell
+# 创建补全目录
+mkdir -p "$__fish_config_dir/completions"
+
 # 安装补全文件
 ag completion fish > "$__fish_config_dir/completions/ag.fish"
 
