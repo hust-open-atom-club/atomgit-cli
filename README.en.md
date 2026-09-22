@@ -105,7 +105,7 @@ sudo apt update
 sudo apt install atomgit-cli
 ```
 
-If you need to install the latest version from the `proposed` repository, please refer to the relevant instructions in the [Installation Guide](link to installation.md).
+If you need to install the latest version from the `proposed` repository, please refer to the relevant instructions in the [Installation Guide](docs/installation.md).
 
 
 ### Go

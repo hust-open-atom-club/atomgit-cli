@@ -105,7 +105,7 @@ sudo apt update
 sudo apt install atomgit-cli
 ```
 
-如果需要安装 `proposed` 仓库中的最新版本，请参考 [安装指南](链接到 installation.md) 中的相关说明。
+如果需要安装 `proposed` 仓库中的最新版本，请参考 [安装指南](docs/installation.md) 中的相关说明。
 
 
 ### Go
