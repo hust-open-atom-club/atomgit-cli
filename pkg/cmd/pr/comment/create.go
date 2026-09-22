@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/commandschema"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -93,6 +94,11 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "Comment body text")
 	cmd.Flags().StringVarP(&opts.BodyFile, "body-file", "F", "", "Read body text from file")
+	commandschema.Annotate(cmd, commandschema.Metadata{
+		Positionals: &commandschema.Positionals{MinCount: 1, MaxCount: 2, Description: "PR number, optionally preceded by owner/repo. The number is parsed as an integer; omitted repository uses Git context."},
+		Output:      "text", Effects: "write",
+		Notes: []string{"Creates a general PR comment, not an inline review thread. A non-empty body is required after resolving file or interactive input.", "When body-file is supplied it takes precedence over body; these flags are not mutually exclusive."},
+	})
 
 	return cmd
 }

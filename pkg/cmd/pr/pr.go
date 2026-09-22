@@ -10,6 +10,7 @@ import (
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/browser"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/commandschema"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/pr/comment"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
@@ -546,6 +547,11 @@ milestones must already exist in the repository.`,
 	cmd.Flags().StringSliceVar(&opts.Metadata.Labels, "label", nil, "Label name (repeat for multiple labels)")
 	cmd.Flags().StringVar(&opts.Metadata.Milestone, "milestone", "", "Milestone number or exact title")
 	cmd.MarkFlagsMutuallyExclusive("body", "body-file")
+	commandschema.Annotate(cmd, commandschema.Metadata{
+		Positionals:   &commandschema.Positionals{MinCount: 0, MaxCount: 1, Description: "Optional owner/repo; when omitted, resolve repository context from Git."},
+		RequiredFlags: []string{"title"}, Output: "text", Effects: "write",
+		Notes: []string{"Title must be non-empty. An empty base selects the repository default branch at execution time.", "Collaboration metadata and repository/branch values require additional local or server validation."},
+	})
 
 	return cmd
 }

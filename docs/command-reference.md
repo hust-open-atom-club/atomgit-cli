@@ -190,6 +190,7 @@
 - [ag runner](#ag-runner) — Inspect AtomGit Actions host runners
 - [ag runner list](#ag-runner-list) — List host runners configured for a repository
 - [ag runner shared](#ag-runner-shared) — List host runners shared with a repository
+- [ag schema](#ag-schema) — Describe public commands as versioned JSON
 - [ag search](#ag-search) — search atomgit
 - [ag search issues](#ag-search-issues) — search issues
 - [ag search repositories](#ag-search-repositories) — search repositories
@@ -4655,6 +4656,33 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ```bash
 ag runner shared owner/repo
 ag runner shared owner/repo --limit 25 --json
+```
+
+
+## ag schema
+
+Usage: `ag schema [<command> ...]`
+
+Describe public commands as versioned JSON
+
+List public commands or describe an exact command path without executing it. Paths may include the ag prefix; use 'ag schema ag' for root command details. Uses static command metadata only; no login or network is required. This is a versioned command description format, not JSON Schema. Undescribed behavior must not be inferred.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--help` | Show help for command | `false` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+
+### Example
+
+```bash
+ag schema
+ag schema ag
+ag schema pr create
+ag schema ag pr create
+ag schema api
+ag schema pr comment create
 ```
 
 
