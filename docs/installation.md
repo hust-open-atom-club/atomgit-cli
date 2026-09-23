@@ -684,6 +684,11 @@ rm -f "$__fish_config_dir/completions/ag.fish"
 PowerShell 在启动时通过 Profile 初始化自动补全。
 
 ```powershell
+# 创建 Profile
+if (!(Test-Path -Path $PROFILE)) {
+    New-Item -ItemType File -Path $PROFILE -Force | Out-Null
+}
+
 # 启用补全
 'ag completion powershell | Out-String | Invoke-Expression' | Add-Content -Path $PROFILE
 
