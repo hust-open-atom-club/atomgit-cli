@@ -44,7 +44,9 @@
               gnutar
               gzip
               zip
+              curl
               gnused
+              jq
               xdg-utils
               nix-update
             ];
