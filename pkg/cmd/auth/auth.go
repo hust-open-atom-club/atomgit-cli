@@ -40,7 +40,8 @@ func newCmdAuthWithDeps(f *cmdutil.Factory, deps loginDeps) *cobra.Command {
 	cmd.AddCommand(newCmdAuthToken(f))
 	cmd.AddCommand(newCmdAuthGitCredential(f))
 	for _, child := range cmd.Commands() {
-		if child.Name() == "login" {
+		if child.Name() == "login" || child.Name() == "status" {
+			// status inspects credentials without migration or writes.
 			// login migrates legacy credentials itself, only after the new
 			// credentials have been validated, so a failed login never
 			// rewrites the credential store.
@@ -342,42 +343,6 @@ func newCmdAuthRefresh() *cobra.Command {
 			return nil
 		},
 	}
-}
-
-func newCmdAuthStatus(f *cmdutil.Factory) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "status",
-		Short: "View authentication status",
-		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				// GetToken already returns "not authenticated: run `ag auth login`"
-				// for a missing token; returning it unchanged avoids a duplicated
-				// "not authenticated: not authenticated:" prefix.
-				return err
-			}
-
-			user, err := f.Config.GetUser()
-			if err != nil {
-				fmt.Fprintln(cmd.OutOrStdout(), "✗ Token found but user not configured")
-				return nil
-			}
-
-			// Mask token for display
-			maskedToken := token
-			if len(token) > 8 {
-				maskedToken = token[:4] + "****" + token[len(token)-4:]
-			}
-
-			out := cmd.OutOrStdout()
-			fmt.Fprintf(out, "✓ Logged in to atomgit.com as %s\n", user)
-			fmt.Fprintf(out, "  Token: %s\n", maskedToken)
-			return nil
-		},
-	}
-
-	return cmd
 }
 
 func newCmdAuthToken(f *cmdutil.Factory) *cobra.Command {

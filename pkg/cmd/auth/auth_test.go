@@ -95,7 +95,7 @@ func TestNewCmdAuthRegistersSubcommands(t *testing.T) {
 	for _, child := range cmd.Commands() {
 		// login migrates inside RunE after credential validation, not in
 		// PreRunE — see TestAuthLoginDefersMigrationUntilAfterValidation.
-		if child.Name() == "login" {
+		if child.Name() == "login" || child.Name() == "status" {
 			continue
 		}
 		if child.PreRunE == nil {
@@ -640,70 +640,6 @@ func mustPrimaryTokenPath(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return path
-}
-
-func TestAuthStatus(t *testing.T) {
-	tests := []struct {
-		name           string
-		config         testConfig
-		want           []string
-		wantErr        string
-		wantNotContain string
-	}{
-		{
-			name:   "authenticated",
-			config: testConfig{token: "1234567890abcdef", user: "alice"},
-			want:   []string{"Logged in to atomgit.com as alice", "1234****cdef"},
-		},
-		{
-			name:   "short token",
-			config: testConfig{token: "short", user: "alice"},
-			want:   []string{"Token: short"},
-		},
-		{
-			name:    "missing token",
-			config:  testConfig{tokenErr: errors.New("missing token")},
-			wantErr: "missing token",
-		},
-		{
-			// The production GetToken error already carries the
-			// "not authenticated" prefix; auth status must return it unchanged
-			// instead of wrapping it into a duplicated prefix.
-			name:           "missing token production error shape",
-			config:         testConfig{tokenErr: errors.New("not authenticated: run `ag auth login`")},
-			wantErr:        "not authenticated: run `ag auth login`",
-			wantNotContain: "not authenticated: not authenticated",
-		},
-		{
-			name:   "missing user",
-			config: testConfig{token: "token", userErr: errors.New("missing user")},
-			want:   []string{"Token found but user not configured"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cmd := newCmdAuthStatus(&cmdutil.Factory{Config: tt.config})
-			output, err := captureStdout(t, func() error { return cmd.RunE(cmd, nil) })
-			if tt.wantErr != "" {
-				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
-					t.Fatalf("error = %v, want containing %q", err, tt.wantErr)
-				}
-				if tt.wantNotContain != "" && strings.Contains(err.Error(), tt.wantNotContain) {
-					t.Fatalf("error = %v, must not contain %q", err, tt.wantNotContain)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			for _, want := range tt.want {
-				if !strings.Contains(output, want) {
-					t.Fatalf("output %q does not contain %q", output, want)
-				}
-			}
-		})
-	}
 }
 
 func TestAuthToken(t *testing.T) {

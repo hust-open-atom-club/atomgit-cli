@@ -64,9 +64,10 @@ func Main() int {
 
 func loadCommandConfig(rootCmd *cobra.Command, factory *cmdutil.Factory, expanded []string, load func() (config.Config, error)) error {
 	// Aliases have already been resolved. Doctor inspects original credentials;
-	// schema uses only static metadata. Neither may initialize credentials.
+	// schema uses only static metadata. Auth status also inspects the original
+	// credentials and must render structured failures itself.
 	selected, _, err := rootCmd.Find(expanded)
-	if err == nil && selected != nil && (selected.Name() == "doctor" || selected.Name() == "schema") {
+	if err == nil && selected != nil && (selected.Name() == "doctor" || selected.Name() == "schema" || selected.CommandPath() == rootCmd.Name()+" auth status") {
 		return nil
 	}
 	cfg, err := load()
