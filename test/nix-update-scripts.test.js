@@ -55,6 +55,14 @@ for (const corrupt of [false, true]) {
     if (corrupt) fs.appendFileSync(archive, 'corrupt');
 
     script(path.join(dir, 'bin/uname'), '[ "$1" = -s ] && echo Linux || echo x86_64\n');
+    // Hash the downloaded bytes with Node so the Linux installer fixture
+    // does not depend on GNU sha256sum being installed on the test host.
+    const hashHelper = path.join(dir, 'sha256sum.js');
+    fs.writeFileSync(hashHelper,
+      "const fs = require('node:fs');\n" +
+      "const { createHash } = require('node:crypto');\n" +
+      "console.log(createHash('sha256').update(fs.readFileSync(process.argv[2])).digest('hex'));\n");
+    script(path.join(dir, 'bin/sha256sum'), 'exec "$NODE_BINARY" "$HASH_HELPER" "$@"\n');
     script(path.join(dir, 'bin/curl'),
       'while [ "$#" -gt 0 ]; do\n' +
       '  if [ "$1" = -o ]; then cp "$FAKE_ARCHIVE" "$2"; exit 0; fi\n' +
@@ -65,6 +73,8 @@ for (const corrupt of [false, true]) {
       PATH: path.join(dir, 'bin') + path.delimiter + process.env.PATH,
       FAKE_ARCHIVE: archive,
       EXEC_LOG: log,
+      NODE_BINARY: process.execPath,
+      HASH_HELPER: hashHelper,
     });
 
     assert.equal(out.status, corrupt ? 1 : 0, out.stderr);
@@ -174,6 +184,25 @@ test('publish reports bounded redacted diagnostics on API failure', unix, t => {
   assert.ok(!calls.includes(`Bearer ${TOKEN}`), 'authorization inlined instead of header file');
   assert.ok(fs.readFileSync(env.HEADER_LOG, 'utf8').includes(`Authorization: Bearer ${TOKEN}`));
 });
+
+for (const [name, body] of [
+  ['repeated tokens', JSON.stringify({ message: (TOKEN + ' ').repeat(20) })],
+  ['control characters before a token', '\n'.repeat(390) + TOKEN + '\x7f'],
+  ['token at the output boundary', 'x'.repeat(295) + TOKEN],
+]) {
+  test(`publish redacts before truncating: ${name}`, unix, t => {
+    const { dir, env } = publisherFixture(t);
+    const out = run(publisher, [], {
+      ...env, NIX_UPDATE_TOKEN: TOKEN, FAKE_STATUS: '403', FAKE_BODY: body,
+    }, dir);
+    assert.equal(out.status, 1, out.stderr);
+    const sanitized = body.replace(/[\x00-\x1f\x7f]/g, '').split(TOKEN).join('<redacted>').slice(0, 300);
+    const summary = out.stdout.trimEnd().split('\n').at(-1);
+    assert.equal(summary, sanitized);
+    assert.ok(!out.stdout.includes('SPEC_TOKEN') && !out.stderr.includes('SPEC_TOKEN'));
+    assert.equal(callCount(env), 1);
+  });
+}
 
 test('publish fails on transport errors', unix, t => {
   const { dir, env } = publisherFixture(t);

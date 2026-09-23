@@ -55,7 +55,9 @@ summarize_body() {
     printf '%s\n' 'response body is empty'
     return
   fi
-  head -c 400 "$body_file" | tr -d '\000-\037' | redact_token | cut -c1-300
+  # Do not truncate before redaction: a token crossing the input boundary
+  # would become an unmatchable prefix that could be printed in the excerpt.
+  tr -d '\000-\037\177' < "$body_file" | redact_token | cut -c1-300
 }
 
 if git diff --quiet -- nix/stable.nix nix/latest.nix; then
