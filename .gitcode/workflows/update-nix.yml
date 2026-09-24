@@ -29,14 +29,22 @@ jobs:
     # Manual dispatch runs the workflow file from whichever branch was
     # selected, so the repository, full ref, and event type must be
     # re-checked before any step can reach repository secrets or the
-    # write-back token.
-    if: ${{ atomgit.repository == 'hust-open-atom-club/atomgit-cli' && (atomgit.ref == 'refs/heads/main' || atomgit.ref == 'refs/heads/test' || atomgit.ref == 'refs/heads/nix-update') && (atomgit.event_name == 'push' || atomgit.event_name == 'workflow_dispatch') }}
+    # write-back token. The guard is a shell step because the dispatcher
+    # fails the whole run at startup when a job-level "if:" combines
+    # comparisons with && or ||.
     runs-on: [ubuntu-latest, x64, small]
     steps:
       - name: Check out triggering ref
         uses: checkout
         with:
           fetch-depth: 0
+
+      - name: Guard execution context
+        env:
+          GUARD_REPOSITORY: ${{ atomgit.repository }}
+          GUARD_REF: ${{ atomgit.ref }}
+          GUARD_EVENT: ${{ atomgit.event_name }}
+        run: sh scripts/guard-nix-update-context.sh
 
       - name: Install pinned Nix
         run: |
