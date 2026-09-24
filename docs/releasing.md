@@ -115,10 +115,20 @@ make release VERSION="v${VERSION}"
 中的精确版本，再让 GoReleaser 继承相同的 `GOTOOLCHAIN`；如果无法下载、验证或
 执行该工具链，发布会在生成制品前停止。
 
-`make vulncheck` 会使用同一版本构建 `CGO_ENABLED=0` 的实际 `ag` 二进制，并用固定
-版本的 `govulncheck` 以 binary 模式查询 `https://vuln.go.dev`。可达漏洞、工具下载
-失败、数据库不可用或扫描器错误都会使门禁失败；规范数据库中已经撤回的报告不计为
-漏洞。更新最低支持版本时修改 `go.mod` 的 `go` 行，并运行
+`make vulncheck` 会使用同一版本和 `CGO_ENABLED=0` 构建全部七个发布目标，并用固定
+版本的 `govulncheck` 查询 `https://vuln.go.dev`。每个二进制都会执行可达性扫描；任一
+目标发现可达漏洞都会使门禁失败。输出还包含一次 module 清单，以及 Linux、macOS、
+Windows 各一个代表架构的 package 清单，用于区分模块依赖、参与编译的包和实际可达
+符号。当前没有架构专用 Go 文件，因此 package 清单按 OS 去重，binary 门禁仍覆盖所有
+架构。module/package 级发现仅供排查，工具下载失败、数据库不可用、构建失败或扫描器
+错误始终使门禁失败；规范数据库中已经撤回的报告不计为漏洞。
+
+CI 在一个 Runner 中顺序处理七个目标，并复用每个已构建二进制完成工具链校验和扫描，
+避免按平台创建矩阵 job。可信流程也可以先生成同名制品，再运行
+`VULNCHECK_BUILD=0 VULNCHECK_BINARY_DIR=/path/to/binaries make vulncheck`；目录中必须
+包含 `ag-<goos>-<goarch>`，调用方必须保证它们来自当前提交并由发布工具链构建。独立的
+`Scheduled vulnerability scan` 每周一 03:17 UTC 扫描当时的 `main`，也可以手动触发；
+它不会缓存漏洞数据库。更新最低支持版本时修改 `go.mod` 的 `go` 行，并运行
 `make go-min-version test-min-go`；更新正式发布版本时修改 `toolchain` 行，并重新运行 `make go-version`、
 `make vulncheck` 和下文的发布验证。
 
