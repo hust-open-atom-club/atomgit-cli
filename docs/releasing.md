@@ -115,10 +115,20 @@ make release VERSION="v${VERSION}"
 中的精确版本，再让 GoReleaser 继承相同的 `GOTOOLCHAIN`；如果无法下载、验证或
 执行该工具链，发布会在生成制品前停止。
 
-`make vulncheck` 会使用同一版本构建 `CGO_ENABLED=0` 的实际 `ag` 二进制，并用固定
-版本的 `govulncheck` 以 binary 模式查询 `https://vuln.go.dev`。可达漏洞、工具下载
-失败、数据库不可用或扫描器错误都会使门禁失败；规范数据库中已经撤回的报告不计为
-漏洞。更新最低支持版本时修改 `go.mod` 的 `go` 行，并运行
+`make vulncheck` 会使用同一版本和 `CGO_ENABLED=0` 构建全部七个发布目标，并用固定
+版本的 `govulncheck` 查询 `https://vuln.go.dev`。每个二进制都会执行可达性扫描；任一
+目标发现可达漏洞都会使门禁失败。输出还包含一次 module 清单，以及 Linux、macOS、
+Windows 各一个代表架构的 package 清单，用于区分模块依赖、参与编译的包和实际可达
+符号。当前没有架构专用 Go 文件，因此 package 清单按 OS 去重，binary 门禁仍覆盖所有
+架构。module/package 级发现仅供排查，工具下载失败、数据库不可用、构建失败或扫描器
+错误始终使门禁失败；规范数据库中已经撤回的报告不计为漏洞。
+
+CI 在一个 Runner 中顺序处理七个目标，并复用每个已构建二进制完成工具链校验和扫描，
+避免按平台创建矩阵 job。可信流程也可以先生成同名制品，再运行
+`VULNCHECK_BUILD=0 VULNCHECK_BINARY_DIR=/path/to/binaries make vulncheck`；目录中必须
+包含 `ag-<goos>-<goarch>`，调用方必须保证它们来自当前提交并由发布工具链构建。独立的
+`Scheduled vulnerability scan` 每周一 03:17 UTC 扫描当时的 `main`，也可以手动触发；
+它不会缓存漏洞数据库。更新最低支持版本时修改 `go.mod` 的 `go` 行，并运行
 `make go-min-version test-min-go`；更新正式发布版本时修改 `toolchain` 行，并重新运行 `make go-version`、
 `make vulncheck` 和下文的发布验证。
 
@@ -266,30 +276,25 @@ npm run publish:npm -- vX.Y.Z dist/vX.Y.Z/npm --publish
 
 Nix package 使用 `go` 行声明的最低版本约束，并由锁定的 nixpkgs input 提供实际编译器；它不要求与官方 Release 使用的建议工具链补丁版本完全一致。更新 flake inputs 时仍需确认所有支持平台提供的 Go 版本不低于 1.26.6。
 
-`.gitcode/workflows/update-nix.yml` 在 `main`、`test`、`nix-update` 分支 push 时运行，也支持手动触发。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；它通过 `nix-update --build` 和 stable 二进制版本元数据回读完成自身验证，再在内容变化时使用配置的 `NIX_UPDATE_TOKEN` 通过 Contents API 写回当前目标分支。工作流需要 `repository: write`；token 的安全加固与工具链固定由 Issue #123 跟踪。
+`.gitcode/workflows/update-nix.yml` 在 `main`、`test`、`nix-update` 分支 push 时运行，也支持手动触发，并在 job 级 guard 中再次校验仓库全名、完整 ref（`refs/heads/...`）与事件类型：手动触发会按所选分支上的 workflow 文件执行，因此不能只依赖 `on.push.branches` 过滤。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；它通过 `nix-update --build` 和 stable 二进制版本元数据回读完成自身验证，再在内容变化时使用 `NIX_UPDATE_TOKEN` 通过 Contents API 写回当前目标分支（`scripts/update-nix-packages.sh` 与 `scripts/publish-nix-update.sh`）。工作流自身的 `ATOMGIT_TOKEN` 仅需只读（顶层 `permissions` 显式声明 `repository: read` 并关闭其余权限域）。
 
-工作流 runner 优先通过校园网联合镜像站（CERNET）执行 Nix 单用户安装，并禁用安装器默认添加的官方 channel，再从 CERNET 的 `nixpkgs-unstable` channel 安装 `nix-update`；Nix binary cache 按优先级依次尝试 CERNET、清华 TUNA、SJTU、USTC，最后回退到官方 cache。项目 flake 的 nixpkgs inputs 是例外，仍固定使用 NJU Git 镜像；两个 inputs 分别跟踪 `nixos-unstable` 和 `nixpkgs-26.05-darwin`。
+注意 workflow `permissions` 只约束自动令牌，不约束 `NIX_UPDATE_TOKEN` 这类独立 PAT：令牌身份、仓库范围和有效期必须在平台上单独最小化，并在疑似泄露时轮换。平台侧还需为 `main`、`test`、`nix-update` 启用分支保护，限制能推送这些分支和能手动触发 workflow 的成员；能修改特权 workflow 分支的人就能改变令牌的使用方式，这层边界无法仅靠 YAML 保证。
+
+工作流 runner 通过 `scripts/install-nix.sh` 安装固定版本的 Nix（当前 2.34.8）：先从 <https://releases.nixos.org/nix/nix-2.34.8/> 下载版本化 tarball，与脚本内经评审的 SHA-256 比对，通过后才解压并执行内层安装器（`--no-daemon --no-channel-add`）；校验失败时拒绝解压和执行。升级 Nix 版本时，从同一官方目录获取新版本归档及其发布摘要，人工核对后在一个提交中同时更新脚本里的 `version` 与 `expected_sha256`，不要在运行时下载摘要作为期望值。
+
+`nix-update`、`jq`、`curl` 等更新工具不再来自移动 channel、apt 或 runner 镜像：workflow 通过 `nix develop` 在仓库 `flake.lock` 固定的 nixpkgs input 中运行 `scripts/update-nix-packages.sh`，脚本在更新前后校验 `flake.lock` 字节不变，防止评估时输入漂移。Nix binary cache 按优先级依次尝试 CERNET、清华 TUNA、SJTU、USTC，最后回退到官方 cache。项目 flake 的 nixpkgs inputs 仍固定使用 NJU Git 镜像；两个 inputs 分别跟踪 `nixos-unstable` 和 `nixpkgs-26.05-darwin`。
 
 `nix-update --build` 的 Go 模块下载仅使用 `goproxy.cn` Go module proxy。
 
-可在本地复现相同更新；开发环境已包含 `nix-update`：
+写回凭据以 `Authorization: Bearer` 请求头发送（经临时文件传给 curl，不进入命令行参数），绝不进入 URL、仓库内文件或日志；错误输出仅保留 HTTP 状态、curl 退出码和至多 300 个字符、去除控制字符并脱敏令牌的响应摘要。两个脚本的行为由 `test/nix-update-scripts.test.js` 覆盖：无变更、缺失令牌、分支名非法、传输错误、API 失败（有界脱敏）以及双文件成功写回。
+
+可在本地复现相同更新；开发环境已包含全部所需工具：
 
 ```bash
-nix develop
-
-# stable：从 AtomGit 最新正式 Release 更新
-stable_version=$(curl --fail --silent --show-error \
-  https://api.atomgit.com/api/v5/repos/hust-open-atom-club/atomgit-cli/releases/latest \
-  | jq -er '.tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+([+-].*)?$")) | sub("^v"; "")')
-test -n "$stable_version"
-nix-update stable --flake --version "$stable_version" --build
-
-# latest：使用当前 flake revision，只刷新其 vendorHash
-nix-update latest --flake --version=skip --build
-rm -f result result-*
+nix develop --no-update-lock-file . -c bash scripts/update-nix-packages.sh
 ```
 
-`nix-update --build` 会创建 Nix 的 `result` 结果链接；上述本地流程在完成后删除它，仓库也忽略 `result` 和 `result-*`。`nix-update` 会同时维护源码 hash 和 Go `vendorHash`。当前 nixos-unstable 已停止支持 Intel macOS，因此 flake 仅为 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
+脚本会依次完成 stable 版本读取、`nix/stable.nix` 元数据改写与回读校验、两个 package 的 `nix-update --build` 更新、stable 二进制 `version --json` 三字段核对，并删除 `result` 链接。`nix-update --build` 会创建 Nix 的 `result` 结果链接；脚本在完成后删除它，仓库也忽略 `result` 和 `result-*`。`nix-update` 会同时维护源码 hash 和 Go `vendorHash`。当前 nixos-unstable 已停止支持 Intel macOS，因此 flake 仅为 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
 ## 维护 WinGet
 
 WinGet 清单托管在社区仓库 [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs)，包 ID 为 `HUSTOpenAtomClub.AtomGitCLI`。每个版本在 `manifests/h/HUSTOpenAtomClub/AtomGitCLI/<version>/` 下包含三个 YAML 清单文件（主清单、installer 和 locale），其中 installer 清单固定各平台安装包的下载 URL 和 SHA-256。

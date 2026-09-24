@@ -252,7 +252,7 @@ jobs:
       - name: Select release Go toolchain
         run: make go-version
 
-      - name: Build and scan release binary
+      - name: Build and scan all release targets
         run: time make vulncheck
 
   npm-test:

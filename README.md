@@ -114,7 +114,7 @@ sudo apt install atomgit-cli
 go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
 ```
 
-安装要求、升级方式、AtomGit Release 和源码安装请参阅[完整安装指南](docs/installation.md)。
+关于更多安装、升级和卸载方式，以及 Shell 补全等说明，参阅[安装指南](docs/installation.md)。
 
 ## 配置
 

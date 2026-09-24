@@ -74,10 +74,14 @@ func loadCommandConfig(selected *cobra.Command, factory *cmdutil.Factory, load f
 	// Cobra handles help flags and the root --version flag before running
 	// PersistentPreRunE. These commands also do not need credentials when they
 	// run normally. Doctor inspects credentials itself; schema uses static
-	// metadata only.
+	// metadata only. Auth status also inspects the original credentials and
+	// renders structured failures itself.
 	if selected != nil {
 		switch selected.Name() {
 		case "doctor", "help", "schema", "version":
+			return nil
+		}
+		if selected.CommandPath() == selected.Root().Name()+" auth status" {
 			return nil
 		}
 	}

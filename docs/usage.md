@@ -129,8 +129,13 @@ ag auth switch alice --no-git
 # 用 refresh_token 刷新 access_token（需之前登录响应里包含 refresh_token）
 ag auth refresh
 
-# 查看认证状态
+# 查看本地认证状态（不联网、不输出令牌）
 ag auth status
+ag auth status --json
+
+# 只读在线验证当前令牌对应的身份
+ag auth status --verify
+ag auth status --verify --json
 
 # 让 Git HTTPS 操作安全复用 ag 当前活动账号的令牌
 ag auth setup-git
@@ -145,6 +150,37 @@ ag auth logout --all
 ```
 
 `auth status`、`auth token` 和 `auth refresh` 始终使用活动账号。首次登录的账号会自动成为活动账号；后续 `auth login --force` 只新增或更新账号，不会隐式切换，需使用 `auth switch` 显式选择。
+
+`auth status` 默认只确认本地凭据及活动账号配置完整，不证明令牌有效。`--verify` 使用认证后的 v5 `GET /user`，支持取消，并限制在 30 秒内；只接受原接口的直接响应，不跟随重定向。验证成功仅说明该用户接口确认了身份，不代表拥有其他资源或服务的权限。账号比较不区分大小写；身份不一致时报告两侧账号，不自动切换或改写配置。
+
+`--json` 始终输出单个对象，成功和运行时失败使用相同字段：
+
+```json
+{
+  "ok": true,
+  "host": "atomgit.com",
+  "credentialsPresent": true,
+  "localAccount": "alice",
+  "localStatus": "configured",
+  "verification": {
+    "requested": false,
+    "performed": false,
+    "status": "not_requested",
+    "account": null,
+    "httpStatus": null
+  },
+  "message": "Local credentials are configured; online validity has not been verified."
+}
+```
+
+- `ok` 为布尔值；本地状态正常且未请求验证，或请求的验证通过时为 `true`，退出码为 0；其他运行时结果为 `false`，退出码为 1，诊断写入 stderr。
+- `credentialsPresent` 为 `true`（已读到完整的活动凭据）、`false`（没有凭据文件）或 `null`（配置不完整、损坏或无法读取，不能确认）。`localAccount` 为账号字符串，无法确定时为 `null`；`localStatus` 为 `configured`、`missing` 或 `invalid`。
+- `verification.requested` 表示是否传入 `--verify`；`performed` 表示是否已尝试 API 请求，不表示验证成功。无可用本地凭据时跳过请求。
+- `verification.status` 为 `not_requested`、`skipped`、`verified`、`identity_mismatch`、`unauthorized`（401）、`forbidden`（403）、`server_error`（5xx）、`http_error`（其他非预期 HTTP 状态）、`network_error`、`timeout`、`canceled`、`invalid_response` 或 `client_error`。403 和网络错误不等同于令牌过期。
+- `verification.account` 为服务端确认的账号字符串；未取得有效身份时为 `null`。`httpStatus` 在取得有效身份或 HTTP 错误状态时为整数，否则为 `null`。无效 JSON、空身份等成功响应也会导致验证失败。
+- `message` 是面向人的说明，脚本应判断上述状态字段。账号字段如包含已知凭据则显示 `[redacted]`；文本、JSON 及错误输出均不显示 token、token 片段或 refresh token。确需读取 token 时使用 `ag auth token`。
+
+状态查询不登录、刷新、迁移凭据、修正权限或修改活动账号；旧版凭据路径仍可只读查询。新增 JSON 字段时消费者应忽略不认识的字段。
 
 `auth setup-git` 会为 `https://atomgit.com` 写入全局、主机限定的 Git credential helper。之后，Git HTTPS 操作会调用 `ag auth git-credential`，从 `ag auth switch` 选中的活动账号读取用户名和访问令牌；令牌本身不会写入 Git 配置。该设置不影响 SSH remote，也不会为其他主机提供凭据。
 

@@ -141,11 +141,25 @@
    [AtomGit setup 工具支持列表](https://docs.gitcode.com/docs/help/home/org_project/pipeline/syntax-reference/setup-supported-tools/)
    和 [Go 工具链文档](https://go.dev/doc/toolchain)。
 
-   `make vulncheck` 使用 Go 1.26.8 构建实际发布形态的 `ag` 二进制，再用固定版本的
-   `govulncheck` 以 binary 模式扫描，并显式查询规范数据库 `https://vuln.go.dev`。
-   发现可达漏洞、工具下载失败、数据库不可用或扫描器报错都会使检查失败；规范数据库
-   中已经撤回的报告不计为漏洞。参见 [govulncheck 命令文档](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck)
-   和 [Go 漏洞数据库规范](https://go.dev/doc/security/vuln/database)。
+   `make vulncheck` 使用 Go 1.26.8、`CGO_ENABLED=0` 顺序构建 Linux
+   amd64/arm64/loong64、macOS amd64/arm64 和 Windows amd64/arm64 七个实际发布
+   二进制，再用固定版本的 `govulncheck` 对每个二进制执行可达性扫描。任一目标发现
+   可达漏洞都会使门禁失败。扫描还会输出一次 module 清单，以及 Linux、macOS 和
+   Windows 各一个代表架构的 package 清单，便于区分“模块存在”“包被编译”和
+   “符号可达”三种结果；当前仓库没有架构专用 Go 文件，因此 package 扫描无需在同一
+   OS 的每个架构上重复，但 binary 门禁仍覆盖全部七个目标。package 或 module 级发现
+   仅供排查，不会被误报为可达漏洞；工具下载失败、数据库不可用、构建失败或扫描器错误
+   始终使检查失败。规范数据库中已经撤回的报告不计为漏洞。参见
+   [govulncheck 命令文档](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck) 和
+   [Go 漏洞数据库规范](https://go.dev/doc/security/vuln/database)。
+
+   PR 和 push CI 的漏洞任务继续在质量门禁通过后运行，与 race、交叉编译和平台测试
+   编译并行；独立的 `Scheduled vulnerability scan` 每周一 03:17 UTC 扫描当时的
+   `main`，也支持手动触发。定时任务不缓存漏洞数据库，以便每次查询当前数据。为控制
+   Runner 成本，七个目标在一个 Runner 中顺序构建，每个二进制同时用于工具链校验和
+   binary 扫描，不创建七个矩阵 job。若可信的上游 job 已生成同名制品，可通过
+   `VULNCHECK_BUILD=0 VULNCHECK_BINARY_DIR=/path/to/binaries make vulncheck` 复用；目录
+   必须包含 `ag-<goos>-<goarch>`，且调用方负责保证制品来自当前提交和发布工具链。
 
    npm 测试使用假的 registry 和子进程注入，不得发布软件包、读取真实 npm token，
    也不得访问真实 registry。

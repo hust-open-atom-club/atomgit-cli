@@ -12,6 +12,10 @@ RACE_PACKAGES ?= ./...
 RACE_OPTIONS ?= atexit_sleep_ms=0
 RELEASE_TARGETS ?= linux/amd64 linux/arm64 linux/loong64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64
 PLATFORM_TEST_TARGETS ?= darwin/amd64 windows/amd64
+VULNCHECK_TARGETS ?= $(RELEASE_TARGETS)
+VULNCHECK_PACKAGE_TARGETS ?= linux/amd64 darwin/amd64 windows/amd64
+VULNCHECK_BUILD ?= 1
+VULNCHECK_BINARY_DIR ?=
 
 EXE :=
 ifeq ($(strip $(GO_MIN_VERSION)),)
@@ -154,21 +158,15 @@ vet:
 lint: fmt-check vet
 
 vulncheck:
-	@set -eu; \
-	binary="$$(mktemp)"; \
-	trap 'rm -f "$$binary"' 0 HUP INT TERM; \
-	CGO_ENABLED=0 $(GO) build -trimpath -o "$$binary" $(COMMAND); \
-	version_output="$$($(GO) version "$$binary")"; \
-	echo "$$version_output"; \
-	case "$$version_output" in \
-		*": $(GO_TOOLCHAIN)") ;; \
-		*) \
-			echo "Expected vulnerability target built with $(GO_TOOLCHAIN)" >&2; \
-			exit 1; \
-			;; \
-	esac; \
-	$(GO) run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) \
-		-db="$(GOVULNDB)" -mode=binary "$$binary"
+	@GO="$(GO)" \
+		GOVULNCHECK_VERSION="$(GOVULNCHECK_VERSION)" \
+		GOVULNDB="$(GOVULNDB)" \
+		RELEASE_GO_TOOLCHAIN="$(GO_TOOLCHAIN)" \
+		VULNCHECK_TARGETS="$(VULNCHECK_TARGETS)" \
+		VULNCHECK_PACKAGE_TARGETS="$(VULNCHECK_PACKAGE_TARGETS)" \
+		VULNCHECK_BUILD="$(VULNCHECK_BUILD)" \
+		VULNCHECK_BINARY_DIR="$(VULNCHECK_BINARY_DIR)" \
+		./scripts/vulncheck.sh
 
 fmt:
 	$(GO) fmt ./...
@@ -249,7 +247,7 @@ help:
 	@echo "  make test-platform-compile  Compile tests for macOS and Windows targets"
 	@echo "  make lint                   Check formatting and run go vet (no file changes)"
 	@echo "  make cross-build            Compile all seven supported release targets"
-	@echo "  make vulncheck              Build and scan the $(GO_TOOLCHAIN) release binary"
+	@echo "  make vulncheck              Build and scan all $(GO_TOOLCHAIN) release binaries"
 	@echo "  make coverage               Run tests and generate $(COVERAGE_FILE)"
 	@echo "  make docs-reference         Regenerate docs/command-reference.md"
 	@echo "  make docs-reference-check   Check command reference is up to date"
