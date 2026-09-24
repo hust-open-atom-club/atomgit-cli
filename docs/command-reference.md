@@ -20,7 +20,7 @@
 - [ag auth logout](#ag-auth-logout) — Remove the active or a selected stored account
 - [ag auth refresh](#ag-auth-refresh) — Refresh the access token using the stored refresh_token
 - [ag auth setup-git](#ag-auth-setup-git) — Configure Git to use ag as a credential helper
-- [ag auth status](#ag-auth-status) — View authentication status
+- [ag auth status](#ag-auth-status) — View local authentication status or verify identity online
 - [ag auth switch](#ag-auth-switch) — Switch the active account and synchronize Git identity
 - [ag auth token](#ag-auth-token) — Print the authentication token
 - [ag branch](#ag-branch) — Manage remote branches
@@ -486,16 +486,29 @@ ag auth switch; access tokens are not written to Git configuration.
 
 ## ag auth status
 
-Usage: `ag auth status`
+Usage: `ag auth status [flags]`
 
-View authentication status
+View local authentication status or verify identity online
+
+Inspect local credentials without modifying them. Local presence does not prove token validity. Use --verify to check identity with the read-only /user API (30 second timeout); this does not verify access to other resources. No token or token fragment is displayed.
 
 ### Flags
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
 | `--help` | Show help for command | `false` | inherited |
+| `--json` | Output authentication status as JSON, including failures | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--verify` | Verify the active identity online without refreshing or changing credentials | `false` | local |
+
+### Example
+
+```bash
+ag auth status
+ag auth status --json
+ag auth status --verify
+ag auth status --verify --json
+```
 
 
 ## ag auth switch
