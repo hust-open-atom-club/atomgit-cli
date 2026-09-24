@@ -31,9 +31,17 @@ func Main() int {
 		fmt.Fprintf(rootCmd.ErrOrStderr(), "%s\n", err)
 		return 1
 	}
-	if err := loadCommandConfig(rootCmd, factory, expanded, config.NewConfig); err != nil {
-		fmt.Fprintf(rootCmd.ErrOrStderr(), "failed to load config: %s\n", err)
-		return 1
+	previousPersistentPreRunE := rootCmd.PersistentPreRunE
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		if previousPersistentPreRunE != nil {
+			if err := previousPersistentPreRunE(cmd, args); err != nil {
+				return err
+			}
+		}
+		if err := loadCommandConfig(cmd, factory, config.NewConfig); err != nil {
+			return fmt.Errorf("failed to load config: %w", err)
+		}
+		return nil
 	}
 	rootCmd.SetArgs(expanded)
 
@@ -62,12 +70,16 @@ func Main() int {
 	return 0
 }
 
-func loadCommandConfig(rootCmd *cobra.Command, factory *cmdutil.Factory, expanded []string, load func() (config.Config, error)) error {
-	// Aliases have already been resolved. Doctor inspects original credentials;
-	// schema uses only static metadata. Neither may initialize credentials.
-	selected, _, err := rootCmd.Find(expanded)
-	if err == nil && selected != nil && (selected.Name() == "doctor" || selected.Name() == "schema") {
-		return nil
+func loadCommandConfig(selected *cobra.Command, factory *cmdutil.Factory, load func() (config.Config, error)) error {
+	// Cobra handles help flags and the root --version flag before running
+	// PersistentPreRunE. These commands also do not need credentials when they
+	// run normally. Doctor inspects credentials itself; schema uses static
+	// metadata only.
+	if selected != nil {
+		switch selected.Name() {
+		case "doctor", "help", "schema", "version":
+			return nil
+		}
 	}
 	cfg, err := load()
 	if err != nil {
