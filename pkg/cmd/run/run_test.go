@@ -169,7 +169,7 @@ func TestRunListPaginatesFiltersAndHonorsLimit(t *testing.T) {
 		t.Fatalf("output = %s", output)
 	}
 	seen := make(map[string]struct{}, 101)
-	for _, field := range strings.Fields(output) {
+	for field := range strings.FieldsSeq(output) {
 		if !strings.HasPrefix(field, "run-") {
 			continue
 		}

@@ -529,7 +529,7 @@ func parseWebhookEvents(value string, allowNone bool) (map[string]bool, error) {
 		return nil, fmt.Errorf("at least one webhook event is required")
 	}
 	result := make(map[string]bool, len(webhookEventFields))
-	for _, part := range strings.Split(value, ",") {
+	for part := range strings.SplitSeq(value, ",") {
 		name := strings.ReplaceAll(strings.ToLower(strings.TrimSpace(part)), "_", "-")
 		if _, ok := webhookEventFields[name]; !ok {
 			return nil, fmt.Errorf("unsupported webhook event %q (expected push, tag-push, issues, note, or merge-requests)", strings.TrimSpace(part))

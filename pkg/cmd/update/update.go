@@ -399,7 +399,7 @@ func detectHomebrewInstallation(ctx context.Context, deps updateDeps, executable
 		return installation{}, false
 	}
 	installedFormulae := make(map[string]bool)
-	for _, formula := range strings.Fields(result.stdout) {
+	for formula := range strings.FieldsSeq(result.stdout) {
 		installedFormulae[formula] = true
 	}
 	if !installedFormulae[homebrewCoreFormula] {
@@ -854,7 +854,7 @@ func windowsReleaseAssetName(goarch string) (string, error) {
 }
 
 func checksumForAsset(contents []byte, assetName string) (string, error) {
-	for _, line := range strings.Split(string(contents), "\n") {
+	for line := range strings.SplitSeq(string(contents), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) != 2 {
 			continue

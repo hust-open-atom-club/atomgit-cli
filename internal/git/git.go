@@ -191,7 +191,7 @@ func (c *Client) Remotes(ctx context.Context) ([]Remote, error) {
 func parseRemotes(output string) []Remote {
 	var remotes []Remote
 	seen := make(map[string]bool)
-	for _, line := range strings.Split(output, "\n") {
+	for line := range strings.SplitSeq(output, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

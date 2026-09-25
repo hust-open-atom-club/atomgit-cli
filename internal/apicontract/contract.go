@@ -169,7 +169,7 @@ func (f Fixture) URL(owner, repo string, query map[string]string) (string, error
 	if strings.ContainsAny(path, "{}?%#\\") {
 		return "", errors.New("invalid path pattern")
 	}
-	for _, part := range strings.Split(path, "/") {
+	for part := range strings.SplitSeq(path, "/") {
 		if part == "." || part == ".." {
 			return "", errors.New("invalid path segment")
 		}

@@ -334,7 +334,7 @@ func validateProtectedTagName(value string) (string, error) {
 	if pattern != value || strings.HasPrefix(pattern, "/") || strings.HasSuffix(pattern, "/") || strings.Contains(pattern, "//") {
 		return "", fmt.Errorf("invalid tag or wildcard pattern %q", value)
 	}
-	for _, part := range strings.Split(pattern, "/") {
+	for part := range strings.SplitSeq(pattern, "/") {
 		if part == "." || part == ".." {
 			return "", fmt.Errorf("invalid tag or wildcard pattern %q", value)
 		}
