@@ -108,9 +108,9 @@ func TestIssueLabelRejectsInvalidInput(t *testing.T) {
 		{name: "missing labels", args: []string{"alice/demo", "7"}, wantError: "labels are required"},
 		{name: "empty label", args: []string{"alice/demo", "7", "   "}, wantError: "label cannot be empty"},
 		{name: "empty item", args: []string{"alice/demo", "7", "bug, ,feat"}, wantError: "label cannot be empty"},
-		{name: "both operations", args: []string{"alice/demo", "7"}, add: stringPointer("bug"), remove: stringPointer("feat"), wantError: "cannot be used together"},
-		{name: "positional with flag", args: []string{"alice/demo", "7", "bug"}, add: stringPointer("feat"), wantError: "positional labels cannot be used"},
-		{name: "empty add flag", args: []string{"alice/demo", "7"}, add: stringPointer(""), wantError: "label cannot be empty"},
+		{name: "both operations", args: []string{"alice/demo", "7"}, add: new("bug"), remove: new("feat"), wantError: "cannot be used together"},
+		{name: "positional with flag", args: []string{"alice/demo", "7", "bug"}, add: new("feat"), wantError: "positional labels cannot be used"},
+		{name: "empty add flag", args: []string{"alice/demo", "7"}, add: new(""), wantError: "label cannot be empty"},
 	}
 
 	for _, tt := range tests {
@@ -252,8 +252,4 @@ func assertStringSlice(t *testing.T, got, want []string) {
 			t.Fatalf("slice = %#v, want %#v", got, want)
 		}
 	}
-}
-
-func stringPointer(value string) *string {
-	return &value
 }

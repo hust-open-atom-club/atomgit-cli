@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -398,7 +399,7 @@ func detectHomebrewInstallation(ctx context.Context, deps updateDeps, executable
 		return installation{}, false
 	}
 	installedFormulae := make(map[string]bool)
-	for _, formula := range strings.Fields(result.stdout) {
+	for formula := range strings.FieldsSeq(result.stdout) {
 		installedFormulae[formula] = true
 	}
 	if !installedFormulae[homebrewCoreFormula] {
@@ -788,9 +789,9 @@ func repairWindowsNPMLauncher(
 	}
 
 	warnings := make([]string, 0)
-	for _, backup := range backups {
-		if err := os.Remove(backup.backup); err != nil && !errors.Is(err, os.ErrNotExist) {
-			warnings = append(warnings, fmt.Sprintf("could not remove old npm launcher backup %s: %v", backup.backup, err))
+	for _, launcher := range backups {
+		if err := os.Remove(launcher.backup); err != nil && !errors.Is(err, os.ErrNotExist) {
+			warnings = append(warnings, fmt.Sprintf("could not remove old npm launcher backup %s: %v", launcher.backup, err))
 		}
 	}
 	return target, warnings, nil
@@ -832,8 +833,8 @@ func backupExistingLaunchers(prefix string, paths []string) ([]launcherBackup, e
 
 func rollbackLauncherBackups(backups []launcherBackup, cause error) error {
 	rollbackErrors := make([]string, 0)
-	for index := len(backups) - 1; index >= 0; index-- {
-		if err := os.Rename(backups[index].backup, backups[index].original); err != nil {
+	for _, launcher := range slices.Backward(backups) {
+		if err := os.Rename(launcher.backup, launcher.original); err != nil {
 			rollbackErrors = append(rollbackErrors, err.Error())
 		}
 	}
@@ -853,7 +854,7 @@ func windowsReleaseAssetName(goarch string) (string, error) {
 }
 
 func checksumForAsset(contents []byte, assetName string) (string, error) {
-	for _, line := range strings.Split(string(contents), "\n") {
+	for line := range strings.SplitSeq(string(contents), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) != 2 {
 			continue

@@ -122,8 +122,7 @@ func (c *Client) Output(ctx context.Context, args ...string) (string, error) {
 // wrapErr converts an exec error into a *Err if it is an *exec.ExitError.
 // Other errors (context cancelled, binary not found) are returned as-is.
 func (c *Client) wrapErr(err error, stderr string) error {
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 		return &Err{
 			ExitCode: exitErr.ExitCode(),
 			Stderr:   stderr,
@@ -192,7 +191,7 @@ func (c *Client) Remotes(ctx context.Context) ([]Remote, error) {
 func parseRemotes(output string) []Remote {
 	var remotes []Remote
 	seen := make(map[string]bool)
-	for _, line := range strings.Split(output, "\n") {
+	for line := range strings.SplitSeq(output, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

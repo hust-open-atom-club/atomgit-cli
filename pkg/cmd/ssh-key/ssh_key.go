@@ -83,12 +83,12 @@ func runAdd(out io.Writer, f *cmdutil.Factory, opts *AddOptions) error {
 
 	// AtomGit API endpoint for adding SSH keys
 	// POST /api/v5/user/keys
-	body := map[string]interface{}{
+	body := map[string]any{
 		"title": opts.Title,
 		"key":   string(keyBytes),
 	}
 
-	var result map[string]interface{}
+	var result map[string]any
 	if err := client.Post("/user/keys", body, &result); err != nil {
 		return fmt.Errorf("failed to add SSH key: %w", err)
 	}

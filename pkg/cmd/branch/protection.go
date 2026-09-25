@@ -308,7 +308,7 @@ func validateProtectionPattern(value string) (string, error) {
 	if pattern != value || strings.HasPrefix(pattern, "/") || strings.HasSuffix(pattern, "/") || strings.Contains(pattern, "//") {
 		return "", fmt.Errorf("invalid branch or wildcard pattern %q", value)
 	}
-	for _, part := range strings.Split(pattern, "/") {
+	for part := range strings.SplitSeq(pattern, "/") {
 		if part == "." || part == ".." {
 			return "", fmt.Errorf("invalid branch or wildcard pattern %q", value)
 		}
@@ -332,7 +332,7 @@ func validateProtectionPermission(value string) error {
 		return nil
 	}
 	seen := make(map[string]struct{})
-	for _, token := range strings.Split(value, ";") {
+	for token := range strings.SplitSeq(value, ";") {
 		if token == "" || token != strings.TrimSpace(token) {
 			return fmt.Errorf("permissions must be non-empty semicolon-separated values without spaces")
 		}

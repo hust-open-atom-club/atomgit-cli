@@ -110,8 +110,7 @@ func inspectAuthStatus(ctx context.Context, f *cmdutil.Factory, verify bool) aut
 	r.Verification.Performed = true
 	login, err := client.WithContext(ctx).CurrentUserLogin()
 	if err != nil {
-		var httpErr *api.HTTPError
-		if errors.As(err, &httpErr) {
+		if httpErr, ok := errors.AsType[*api.HTTPError](err); ok {
 			r.Verification.HTTPStatus = &httpErr.StatusCode
 		}
 		r.Verification.Status, r.Message = verificationFailure(err)

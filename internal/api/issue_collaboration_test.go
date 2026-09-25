@@ -109,7 +109,7 @@ func TestIssueCollaborationEditAssignee(t *testing.T) {
 	}{
 		{name: "set assignee", assignee: "bob", clearAssignee: false, wantAssignee: "bob"},
 		{name: "clear assignee", assignee: "", clearAssignee: true, wantAssignee: ""},
-		{name: "set assignee with body", body: stringPointer("updated body"), assignee: "bob", wantAssignee: "bob", wantBody: "updated body"},
+		{name: "set assignee with body", body: new("updated body"), assignee: "bob", wantAssignee: "bob", wantBody: "updated body"},
 	}
 
 	for _, tt := range tests {
@@ -158,10 +158,6 @@ func TestIssueCollaborationEditRejectsNon200(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "API error") {
 		t.Fatalf("error = %v, want API error", err)
 	}
-}
-
-func stringPointer(value string) *string {
-	return &value
 }
 
 func TestIssueCollaborationLinkedPRs(t *testing.T) {

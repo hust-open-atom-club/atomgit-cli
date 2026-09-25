@@ -130,13 +130,13 @@ func printDiscussionView(out io.Writer, detail api.DiscussionDetail, threads []c
 	for _, thread := range threads {
 		fmt.Fprintln(out)
 		fmt.Fprintf(out, "* %s\t%s\n", authorLabel(thread.Comment.Author), displayDiscussionValue(thread.Comment.CreatedAt))
-		for _, line := range strings.Split(discussionBody(thread.Comment), "\n") {
+		for line := range strings.SplitSeq(discussionBody(thread.Comment), "\n") {
 			fmt.Fprintf(out, "  %s\n", line)
 		}
 		for _, reply := range thread.Replies {
 			fmt.Fprintln(out)
 			fmt.Fprintf(out, "  * %s\t%s\n", authorLabel(reply.Author), displayDiscussionValue(reply.CreatedAt))
-			for _, line := range strings.Split(discussionBody(reply), "\n") {
+			for line := range strings.SplitSeq(discussionBody(reply), "\n") {
 				fmt.Fprintf(out, "    %s\n", line)
 			}
 		}

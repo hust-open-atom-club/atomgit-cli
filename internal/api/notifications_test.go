@@ -102,15 +102,15 @@ func TestListNotificationsTypeFilterAndPaging(t *testing.T) {
 	// Page 1 must be full (notificationsPerPage items) so the walk continues;
 	// it carries one type match plus filler. Page 2 is short and carries the
 	// second match, which ends the walk.
-	filler := ""
-	for i := 0; i < notificationsPerPage-1; i++ {
+	var filler strings.Builder
+	for i := range notificationsPerPage - 1 {
 		if i > 0 {
-			filler += ","
+			filler.WriteString(",")
 		}
-		filler += `{"id":"filler` + strconv.Itoa(i) + `","type":"issue_open"}`
+		filler.WriteString(`{"id":"filler` + strconv.Itoa(i) + `","type":"issue_open"}`)
 	}
 	pages := map[string]string{
-		"1": notificationPageJSON(notificationsPerPage+2, `{"id":"a","type":"merge_requests_open"}`+","+filler),
+		"1": notificationPageJSON(notificationsPerPage+2, `{"id":"a","type":"merge_requests_open"}`+","+filler.String()),
 		"2": notificationPageJSON(notificationsPerPage+2, `{"id":"b","type":"issue_open"},{"id":"c","type":"merge_requests_open"}`),
 	}
 	var requestedPages []string
@@ -154,7 +154,7 @@ func TestListAllNotificationsFetchesEveryPage(t *testing.T) {
 		start := (page - 1) * notificationsPerPage
 		count := min(notificationsPerPage, total-start)
 		var items strings.Builder
-		for i := 0; i < count; i++ {
+		for i := range count {
 			if i > 0 {
 				items.WriteByte(',')
 			}
@@ -198,19 +198,19 @@ func TestListNotificationsHugeLimitDoesNotPreallocateTheLimit(t *testing.T) {
 }
 
 func TestListNotificationsStopsOnEmptyPageAndTruncatesToLimit(t *testing.T) {
-	fullPage := ""
-	for i := 0; i < notificationsPerPage; i++ {
+	var fullPage strings.Builder
+	for i := range notificationsPerPage {
 		if i > 0 {
-			fullPage += ","
+			fullPage.WriteString(",")
 		}
-		fullPage += `{"id":"x"}`
+		fullPage.WriteString(`{"id":"x"}`)
 	}
 	var requests int
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		requests++
 		w.Header().Set("Content-Type", "application/json")
 		if r.URL.Query().Get("page") == "1" {
-			_, _ = w.Write([]byte(notificationPageJSON(notificationsPerPage+5, fullPage)))
+			_, _ = w.Write([]byte(notificationPageJSON(notificationsPerPage+5, fullPage.String())))
 			return
 		}
 		_, _ = w.Write([]byte(`{"total":0,"list":[]}`))

@@ -77,9 +77,9 @@ func TestRepoWebhookListPaginatesAndRedactsSecrets(t *testing.T) {
 			t.Fatalf("query = %v", req.URL.Query())
 		}
 		if req.URL.Query().Get("page") == "1" {
-			items := make([]map[string]interface{}, 100)
+			items := make([]map[string]any, 100)
 			for index := range items {
-				items[index] = map[string]interface{}{"id": index + 1, "url": "https://example.com/hook", "password": "top-secret", "push_events": true, "active": true}
+				items[index] = map[string]any{"id": index + 1, "url": "https://example.com/hook", "password": "top-secret", "push_events": true, "active": true}
 			}
 			body, err := json.Marshal(items)
 			if err != nil {
@@ -103,7 +103,7 @@ func TestRepoWebhookListPaginatesAndRedactsSecrets(t *testing.T) {
 	if strings.Contains(output.String(), "top-secret") || strings.Contains(output.String(), "never-print") || strings.Contains(output.String(), "password") {
 		t.Fatalf("output leaked a secret field: %s", output.String())
 	}
-	var values []map[string]interface{}
+	var values []map[string]any
 	if err := json.Unmarshal(output.Bytes(), &values); err != nil || len(values) != 101 {
 		t.Fatalf("JSON count = %d, error = %v", len(values), err)
 	}
@@ -146,7 +146,7 @@ func TestRepoWebhookCreateMapsEventsAndEnvironmentSecret(t *testing.T) {
 		if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/hooks" {
 			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 		}
-		var body map[string]interface{}
+		var body map[string]any
 		decodeWebhookBody(t, req, &body)
 		if body["url"] != "https://example.com/hook" || body["password"] != secret || body["encryption_type"] != float64(1) {
 			t.Fatalf("body = %#v", body)
@@ -211,7 +211,7 @@ func TestRepoWebhookEditPreservesRequiredURLAndReplacesEvents(t *testing.T) {
 		if req.Method != http.MethodPatch || req.URL.Path != "/api/v5/repos/alice/demo/hooks/42" {
 			t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 		}
-		var body map[string]interface{}
+		var body map[string]any
 		decodeWebhookBody(t, req, &body)
 		if body["url"] != "https://example.com/current" || body["push_events"] != false || body["issues_events"] != false || body["merge_requests_events"] != false {
 			t.Fatalf("body = %#v", body)
@@ -404,7 +404,7 @@ func webhookResponse(statusCode int, body string) *http.Response {
 	}
 }
 
-func decodeWebhookBody(t *testing.T, req *http.Request, target interface{}) {
+func decodeWebhookBody(t *testing.T, req *http.Request, target any) {
 	t.Helper()
 	defer req.Body.Close()
 	if err := json.NewDecoder(req.Body).Decode(target); err != nil {

@@ -588,7 +588,7 @@ func TestReadDirJSONStableFields(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var result []map[string]interface{}
+	var result []map[string]any
 	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 		t.Fatal(err)
 	}

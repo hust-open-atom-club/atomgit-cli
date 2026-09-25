@@ -264,7 +264,7 @@ func validatePolicyFlag(cmd *cobra.Command, name string) error {
 		}
 	case "assignees", "testers", "approval-approver-ids", "approval-tester-ids":
 		if value != "" {
-			for _, part := range strings.Split(value, ",") {
+			for part := range strings.SplitSeq(value, ",") {
 				if strings.TrimSpace(part) == "" || strings.ContainsAny(part, " \t\r\n") {
 					return fmt.Errorf("--%s must be a comma-separated list without whitespace or empty entries", name)
 				}

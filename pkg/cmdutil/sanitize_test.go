@@ -16,10 +16,7 @@ type partialErrorWriter struct {
 func (w *partialErrorWriter) Write(p []byte) (int, error) {
 	if !w.failed {
 		w.failed = true
-		n := 2
-		if len(p) < n {
-			n = len(p)
-		}
+		n := min(len(p), 2)
 		_, _ = w.buf.Write(p[:n])
 		return n, errTransientWrite
 	}

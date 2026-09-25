@@ -499,7 +499,7 @@ milestones must already exist in the repository.`,
 				head = fmt.Sprintf("%s/%s:%s", headParts[0], repo, headParts[1])
 			}
 
-			body := map[string]interface{}{
+			body := map[string]any{
 				"title": opts.Title,
 				"body":  bodyText,
 				"base":  base,
@@ -604,7 +604,7 @@ current milestone.`,
 			}
 
 			metadataRequested := opts.Metadata.requested(cmd)
-			body := map[string]interface{}{}
+			body := map[string]any{}
 			if opts.Title != "" {
 				body["title"] = opts.Title
 			}

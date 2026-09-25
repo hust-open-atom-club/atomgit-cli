@@ -55,6 +55,7 @@
 
 ```bash
 gofmt -w <修改的.go文件>
+go fix ./...
 go test ./...
 (
   ag_build_dir="$(mktemp -d)"

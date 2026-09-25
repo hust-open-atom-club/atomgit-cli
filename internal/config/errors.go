@@ -35,9 +35,8 @@ type TokenPermissionError struct {
 }
 
 func (e *TokenPermissionError) Error() string {
-	var pathErr *os.PathError
 	err := e.Err
-	if errors.As(err, &pathErr) {
+	if pathErr, ok := errors.AsType[*os.PathError](err); ok {
 		err = pathErr.Err
 	}
 	return fmt.Sprintf("cannot read token file %s: %v\nhint: %s", e.Path, err, e.hint())
@@ -63,8 +62,7 @@ func tokenSecurePermissionError(path string, err error) error {
 
 // permissionError formats a permission-related error with a hint message.
 func permissionError(action, path string, err error, hint string) error {
-	var pathErr *os.PathError
-	if errors.As(err, &pathErr) {
+	if pathErr, ok := errors.AsType[*os.PathError](err); ok {
 		err = pathErr.Err
 	}
 

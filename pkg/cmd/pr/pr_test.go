@@ -112,7 +112,7 @@ func TestPRCreateUsesRequestedOrRepositoryDefaultBase(t *testing.T) {
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/pulls" {
 							t.Fatalf("pull request = %s %s", req.Method, req.URL.Path)
 						}
-						var body map[string]interface{}
+						var body map[string]any
 						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 							t.Fatal(err)
 						}
@@ -159,12 +159,12 @@ func TestPRCreateBodyInput(t *testing.T) {
 		wantBody  string
 		wantError string
 	}{
-		{name: "inline body", body: prStringPointer("inline\nbody"), wantBody: "inline\nbody"},
-		{name: "UTF-8 file with trailing newlines", bodyFile: prStringPointer("file"), wantBody: "标题\n\n正文\n"},
-		{name: "empty file", bodyFile: prStringPointer("empty"), wantBody: ""},
-		{name: "stdin", bodyFile: prStringPointer("-"), stdin: "stdin body\n\n", wantBody: "stdin body\n\n"},
-		{name: "conflicting flags", body: prStringPointer("inline"), bodyFile: prStringPointer("-"), wantError: "mutually exclusive"},
-		{name: "missing file", bodyFile: prStringPointer("missing"), wantError: "failed to read body file"},
+		{name: "inline body", body: new("inline\nbody"), wantBody: "inline\nbody"},
+		{name: "UTF-8 file with trailing newlines", bodyFile: new("file"), wantBody: "标题\n\n正文\n"},
+		{name: "empty file", bodyFile: new("empty"), wantBody: ""},
+		{name: "stdin", bodyFile: new("-"), stdin: "stdin body\n\n", wantBody: "stdin body\n\n"},
+		{name: "conflicting flags", body: new("inline"), bodyFile: new("-"), wantError: "mutually exclusive"},
+		{name: "missing file", bodyFile: new("missing"), wantError: "failed to read body file"},
 	}
 
 	for _, tt := range tests {
@@ -178,7 +178,7 @@ func TestPRCreateBodyInput(t *testing.T) {
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/pulls" {
 							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 						}
-						var body map[string]interface{}
+						var body map[string]any
 						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 							t.Fatal(err)
 						}
@@ -253,13 +253,13 @@ func TestPREditBodyInput(t *testing.T) {
 		wantBody      string
 		wantBodyField bool
 	}{
-		{name: "inline multiline body", body: prStringPointer("first\nsecond\n"), wantBody: "first\nsecond\n", wantBodyField: true},
-		{name: "explicit empty inline body", body: prStringPointer(""), wantBodyField: true},
-		{name: "UTF-8 file with trailing newline", bodyFile: prStringPointer("file"), wantBody: "标题\n\n正文\n", wantBodyField: true},
-		{name: "empty file", bodyFile: prStringPointer("empty"), wantBodyField: true},
-		{name: "stdin", bodyFile: prStringPointer("-"), stdin: "stdin body\n\n", wantBody: "stdin body\n\n", wantBodyField: true},
-		{name: "empty stdin", bodyFile: prStringPointer("-"), wantBodyField: true},
-		{name: "title only omits body", title: prStringPointer("Updated title")},
+		{name: "inline multiline body", body: new("first\nsecond\n"), wantBody: "first\nsecond\n", wantBodyField: true},
+		{name: "explicit empty inline body", body: new(""), wantBodyField: true},
+		{name: "UTF-8 file with trailing newline", bodyFile: new("file"), wantBody: "标题\n\n正文\n", wantBodyField: true},
+		{name: "empty file", bodyFile: new("empty"), wantBodyField: true},
+		{name: "stdin", bodyFile: new("-"), stdin: "stdin body\n\n", wantBody: "stdin body\n\n", wantBodyField: true},
+		{name: "empty stdin", bodyFile: new("-"), wantBodyField: true},
+		{name: "title only omits body", title: new("Updated title")},
 	}
 
 	for _, tt := range tests {
@@ -273,7 +273,7 @@ func TestPREditBodyInput(t *testing.T) {
 						if req.Method != http.MethodPatch || req.URL.Path != "/api/v5/repos/alice/demo/pulls/42" {
 							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 						}
-						var body map[string]interface{}
+						var body map[string]any
 						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 							t.Fatal(err)
 						}
@@ -436,10 +436,6 @@ func TestPREditServerErrorDoesNotPrintSuccess(t *testing.T) {
 	if output.Len() != 0 {
 		t.Fatalf("output = %q, want no success output", output.String())
 	}
-}
-
-func prStringPointer(value string) *string {
-	return &value
 }
 
 func TestPRCreateFallsBackToBrowserURL(t *testing.T) {

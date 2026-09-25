@@ -348,7 +348,7 @@ func TestTagListPaginatesAndHonorsLimit(t *testing.T) {
 						case 1:
 							var tags strings.Builder
 							tags.WriteByte('[')
-							for index := 0; index < 100; index++ {
+							for index := range 100 {
 								if index > 0 {
 									tags.WriteByte(',')
 								}
