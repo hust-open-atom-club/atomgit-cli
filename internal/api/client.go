@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -546,12 +547,7 @@ type RequestPolicy struct {
 }
 
 func statusAllowed(code int, allowed []int) bool {
-	for _, a := range allowed {
-		if a == code {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(allowed, code)
 }
 
 // doJSONRequest performs an HTTP request with caller-selected retry policy

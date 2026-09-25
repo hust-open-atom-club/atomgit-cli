@@ -2,6 +2,7 @@ package run
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -204,10 +205,8 @@ func normalizeRunStatus(value string) (string, error) {
 	if value == "" {
 		return "", nil
 	}
-	for _, allowed := range []string{"COMPLETED", "RUNNING", "FAILED", "CANCELED", "IGNORED", "PAUSED", "SUSPEND"} {
-		if value == allowed {
-			return value, nil
-		}
+	if slices.Contains([]string{"COMPLETED", "RUNNING", "FAILED", "CANCELED", "IGNORED", "PAUSED", "SUSPEND"}, value) {
+		return value, nil
 	}
 	return "", fmt.Errorf("invalid status %q (expected completed, running, failed, canceled, ignored, paused, or suspend)", value)
 }
