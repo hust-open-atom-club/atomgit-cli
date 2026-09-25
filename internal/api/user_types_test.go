@@ -33,7 +33,7 @@ func TestUpdatedUserProfileJSONTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var got map[string]interface{}
+	var got map[string]any
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatal(err)
 	}

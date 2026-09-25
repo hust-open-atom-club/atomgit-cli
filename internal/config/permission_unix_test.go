@@ -192,8 +192,7 @@ func TestValidateAndFixTokenFilePerm(t *testing.T) {
 		if err == nil {
 			t.Fatal("validateAndFixTokenFilePerm() succeeded unexpectedly")
 		}
-		var tokenErr *TokenPermissionError
-		if !errors.As(err, &tokenErr) {
+		if _, ok := errors.AsType[*TokenPermissionError](err); !ok {
 			t.Fatalf("error is %T, want *TokenPermissionError: %v", err, err)
 		}
 	})

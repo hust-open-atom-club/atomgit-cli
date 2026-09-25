@@ -127,14 +127,15 @@ func TestReleaseViewJSON(t *testing.T) {
 }
 
 func TestReleaseViewJSONControlCharacters(t *testing.T) {
-	body := "中文 release notes\n\"quoted\"\\path"
+	var body strings.Builder
+	body.WriteString("中文 release notes\n\"quoted\"\\path")
 	for r := rune(0); r <= 0x9f; r++ {
 		if r < 0x20 || r >= 0x7f {
-			body += string(r)
+			body.WriteString(string(r))
 		}
 	}
-	body += "\u2028\u2029\u202e\u2066"
-	response, err := json.Marshal(api.Release{TagName: "v1", Body: body})
+	body.WriteString("\u2028\u2029\u202e\u2066")
+	response, err := json.Marshal(api.Release{TagName: "v1", Body: body.String()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,8 +152,8 @@ func TestReleaseViewJSONControlCharacters(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &got); err != nil {
 		t.Fatalf("invalid JSON: %v; %q", err, stdout.String())
 	}
-	if got.Body != body {
-		t.Fatalf("body = %q, want %q", got.Body, body)
+	if got.Body != body.String() {
+		t.Fatalf("body = %q, want %q", got.Body, body.String())
 	}
 }
 

@@ -456,15 +456,15 @@ func commandContext(cmd *cobra.Command) context.Context {
 }
 
 func parseComparison(value string) (string, string, error) {
-	separator := strings.Index(value, "...")
-	if separator < 0 || strings.Contains(value[separator+3:], "...") {
+	before, after, ok := strings.Cut(value, "...")
+	if !ok || strings.Contains(after, "...") {
 		return "", "", errors.New("comparison must use the form <base>...<head>")
 	}
-	base, err := cmdutil.ValidateRef(value[:separator], "base ref")
+	base, err := cmdutil.ValidateRef(before, "base ref")
 	if err != nil {
 		return "", "", err
 	}
-	head, err := cmdutil.ValidateRef(value[separator+3:], "head ref")
+	head, err := cmdutil.ValidateRef(after, "head ref")
 	if err != nil {
 		return "", "", err
 	}

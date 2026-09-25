@@ -285,8 +285,8 @@ func TestRunCloneWithCommandAttachesAuthToGit(t *testing.T) {
 
 	env := map[string]string{}
 	for _, kv := range captured.Env {
-		if i := strings.IndexByte(kv, '='); i >= 0 {
-			env[kv[:i]] = kv[i+1:]
+		if before, after, ok := strings.Cut(kv, "="); ok {
+			env[before] = after
 		}
 	}
 	if env["GIT_CONFIG_COUNT"] != "100" {
@@ -393,8 +393,8 @@ func TestWithCloneAuthEnvPreservesInheritedGitConfig(t *testing.T) {
 			got := withCloneAuthEnv(tt.env, creds)
 			envMap := map[string]string{}
 			for _, kv := range got {
-				if i := strings.IndexByte(kv, '='); i >= 0 {
-					envMap[kv[:i]] = kv[i+1:]
+				if before, after, ok := strings.Cut(kv, "="); ok {
+					envMap[before] = after
 				}
 			}
 			for key, want := range tt.wantEnv {

@@ -3,6 +3,7 @@ package milestone
 import (
 	"fmt"
 	"io"
+	"maps"
 	"net/url"
 	"strconv"
 	"strings"
@@ -355,9 +356,7 @@ func milestoneUpdateBody(client *api.Client, repository cmdutil.Repository, numb
 		return nil, fmt.Errorf("milestone #%s is missing API-required title or due date", number)
 	}
 	body := map[string]string{"title": current.Title, "due_on": current.DueOn}
-	for key, value := range changes {
-		body[key] = value
-	}
+	maps.Copy(body, changes)
 	return body, nil
 }
 

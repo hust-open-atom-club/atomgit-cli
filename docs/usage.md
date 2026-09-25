@@ -766,6 +766,8 @@ ag pr view owner/repo 123 --web
 # 修改 PR 标题或正文
 ag pr edit owner/repo 123 --title "Updated title"
 ag pr edit owner/repo 123 --body "Updated description"
+ag pr edit owner/repo 123 --body-file description.md
+cat description.md | ag pr edit owner/repo 123 --body-file -
 
 # 查看 PR diff
 ag pr diff owner/repo 123
@@ -840,7 +842,7 @@ ag pr history owner/repo 42 --limit 50 --json
 
 跨仓库创建 PR 时 `--head` 的写法请参阅[跨仓库 PR 示例](cross_repo_pr_demo.md)。
 
-负责人（assignee）负责后续工作，批准审查人（approval reviewer）负责批准变更，测试人（tester）负责验证变更；三个 AtomGit 角色相互独立。用户账号、标签和里程碑会在修改 PR 前解析，标签和里程碑必须已存在。`pr edit` 只修改显式传入的字段，添加和移除参数可重复使用，也可用逗号一次传入多个值。
+负责人（assignee）负责后续工作，批准审查人（approval reviewer）负责批准变更，测试人（tester）负责验证变更；三个 AtomGit 角色相互独立。用户账号、标签和里程碑会在修改 PR 前解析，标签和里程碑必须已存在。`pr edit` 只修改显式传入的字段；`--body-file -` 从标准输入读取正文，`--body` 与 `--body-file` 互斥，显式传入空正文会清空现有正文。添加和移除参数可重复使用，也可用逗号一次传入多个值。
 
 #### PR 评审
 

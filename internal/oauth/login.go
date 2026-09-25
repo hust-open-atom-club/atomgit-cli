@@ -41,11 +41,11 @@ type tokenResponse struct {
 
 // UserInfo is the AtomGit identity returned by GET /api/v5/user.
 type UserInfo struct {
-	ID        interface{} `json:"id"`
-	Login     string      `json:"login"`
-	Name      string      `json:"name"`
-	Email     string      `json:"email"`
-	AvatarURL string      `json:"avatar_url"`
+	ID        any    `json:"id"`
+	Login     string `json:"login"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	AvatarURL string `json:"avatar_url"`
 }
 
 func clientID() string {

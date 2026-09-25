@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -34,10 +35,8 @@ func validateChoice(name, value string, choices []string) error {
 	if value == "" {
 		return nil
 	}
-	for _, choice := range choices {
-		if value == choice {
-			return nil
-		}
+	if slices.Contains(choices, value) {
+		return nil
 	}
 	return fmt.Errorf("invalid %s: %q (must be one of %s)", name, value, strings.Join(choices, ", "))
 }

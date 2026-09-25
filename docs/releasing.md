@@ -4,18 +4,28 @@
 
 ## 目录
 
-- [安全修复发布检查清单](#安全修复发布检查清单)
-- [GoReleaser 构建工具](#goreleaser-构建工具)
-- [发布打包](#发布打包)
-- [CI 验证时机](#ci-验证时机)
-- [自动发布 AtomGit Release](#自动发布-atomgit-release)
-- [发布到 npm registry](#发布到-npm-registry)
-- [维护 Homebrew tap](#维护-homebrew-tap)
-- [维护 Nix package](#维护-nix-package)
-- [维护 WinGet](#维护-winget)
-- [维护 Scoop](#维护-scoop)
-- [维护 OpenKylin package](#维护-openkylin-package)
-- [维护 AUR package](#维护-aur-package)
+- [发布指南](#发布指南)
+  - [目录](#目录)
+  - [安全修复发布检查清单](#安全修复发布检查清单)
+  - [CI 验证时机](#ci-验证时机)
+  - [GoReleaser 构建工具](#goreleaser-构建工具)
+  - [发布打包](#发布打包)
+  - [自动发布 AtomGit Release](#自动发布-atomgit-release)
+  - [发布到 npm registry](#发布到-npm-registry)
+    - [AtomGit Actions：暂存后人工审批](#atomgit-actions暂存后人工审批)
+    - [Trusted Publishing](#trusted-publishing)
+  - [维护 Homebrew tap](#维护-homebrew-tap)
+  - [维护 Nix package](#维护-nix-package)
+  - [维护 WinGet](#维护-winget)
+  - [维护 Scoop](#维护-scoop)
+  - [维护 OpenKylin package](#维护-openkylin-package)
+    - [仓库结构](#仓库结构)
+    - [打包步骤](#打包步骤)
+    - [CI 与发布流程](#ci-与发布流程)
+  - [维护 AUR package](#维护-aur-package)
+    - [稳定版（atomgit-cli / atomgit-cli-bin）](#稳定版atomgit-cli--atomgit-cli-bin)
+    - [开发版（atomgit-cli-git）](#开发版atomgit-cli-git)
+    - [校验](#校验)
 
 ## 安全修复发布检查清单
 
@@ -41,7 +51,7 @@ push。PR 运行检出最新 head 提交，合并后的运行检出进入 `main`
 发布并优先修复或回退。
 
 `Fast quality gate` 先使用 Go 1.26.6 运行一次完整的 `go test ./...`，再切换到
-Go 1.26.8 执行格式检查、`go vet`、命令参考检查和本机构建。发布工具链下的完整
+Go 1.26.8 执行格式检查、`go vet`、`go fix -diff ./...`、命令参考检查和本机构建。发布工具链下的完整
 package 集合由 `go test -race ./...` 验证，因此门禁不再重复运行普通 `go test`。
 race、交叉编译、平台测试编译和漏洞扫描显式依赖门禁成功，并在门禁之后相互并行；
 npm 测试保持独立。各 Go job 通过显式 `cache` 步骤分别缓存 `~/go/pkg/mod`（模块和

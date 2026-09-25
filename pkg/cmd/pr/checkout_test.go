@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -936,11 +937,8 @@ func TestRunCheckout_Force_ReuseBranch(t *testing.T) {
 	foundForce := false
 	for _, call := range *calls {
 		if call.Args[1] == "checkout" {
-			for _, arg := range call.Args[2:] {
-				if arg == "--force" {
-					foundForce = true
-					break
-				}
+			if slices.Contains(call.Args[2:], "--force") {
+				foundForce = true
 			}
 		}
 	}

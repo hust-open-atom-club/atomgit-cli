@@ -93,9 +93,9 @@ func TestMilestoneListPaginatesAndFilters(t *testing.T) {
 		} else if page != "1" {
 			t.Fatalf("page = %s", page)
 		}
-		items := make([]map[string]interface{}, count)
+		items := make([]map[string]any, count)
 		for index := range items {
-			items[index] = map[string]interface{}{"number": index + 1, "title": "Iteration", "state": "active", "due_on": "2026-08-31"}
+			items[index] = map[string]any{"number": index + 1, "title": "Iteration", "state": "active", "due_on": "2026-08-31"}
 		}
 		body, err := json.Marshal(items)
 		if err != nil {
@@ -145,7 +145,7 @@ func TestMilestoneListJSONAndEmptyText(t *testing.T) {
 				t.Fatalf("output = %q, want containing %q", output.String(), test.want)
 			}
 			if test.jsonOutput {
-				var values []map[string]interface{}
+				var values []map[string]any
 				if err := json.Unmarshal(output.Bytes(), &values); err != nil || len(values) != 1 || values[0]["dueOn"] != "2026-08-31" {
 					t.Fatalf("JSON = %#v, error = %v", values, err)
 				}
@@ -430,7 +430,7 @@ func milestoneResponse(statusCode int, body string) *http.Response {
 	}
 }
 
-func decodeMilestoneBody(t *testing.T, req *http.Request, target interface{}) {
+func decodeMilestoneBody(t *testing.T, req *http.Request, target any) {
 	t.Helper()
 	defer req.Body.Close()
 	if err := json.NewDecoder(req.Body).Decode(target); err != nil {

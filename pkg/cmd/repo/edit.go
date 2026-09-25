@@ -115,8 +115,8 @@ module switches, merge policies, or other unsupported GitHub CLI settings.`,
 	return cmd
 }
 
-func buildRepoEditRequest(cmd *cobra.Command, opts *EditOptions) (map[string]interface{}, bool, error) {
-	request := make(map[string]interface{})
+func buildRepoEditRequest(cmd *cobra.Command, opts *EditOptions) (map[string]any, bool, error) {
+	request := make(map[string]any)
 	consequential := false
 
 	if cmd.Flags().Changed("name") {
@@ -200,7 +200,7 @@ func validateRepositoryEditName(name string) error {
 	return nil
 }
 
-func confirmRepoEdit(in io.Reader, out io.Writer, owner, repo string, request map[string]interface{}) (bool, error) {
+func confirmRepoEdit(in io.Reader, out io.Writer, owner, repo string, request map[string]any) (bool, error) {
 	var changes []string
 	if name, ok := request["name"].(string); ok {
 		changes = append(changes, fmt.Sprintf("name to %q", name))

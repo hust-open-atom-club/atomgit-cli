@@ -84,12 +84,12 @@ func TestIssueCreateBodyInput(t *testing.T) {
 		wantBody  string
 		wantError string
 	}{
-		{name: "inline body", body: issueStringPointer("inline\nbody"), wantBody: "inline\nbody"},
-		{name: "UTF-8 file with trailing newlines", bodyFile: issueStringPointer("file"), wantBody: "标题\n\n正文\n"},
-		{name: "empty file", bodyFile: issueStringPointer("empty"), wantBody: ""},
-		{name: "stdin", bodyFile: issueStringPointer("-"), stdin: "stdin body\n\n", wantBody: "stdin body\n\n"},
-		{name: "conflicting flags", body: issueStringPointer("inline"), bodyFile: issueStringPointer("-"), wantError: "mutually exclusive"},
-		{name: "missing file", bodyFile: issueStringPointer("missing"), wantError: "failed to read body file"},
+		{name: "inline body", body: new("inline\nbody"), wantBody: "inline\nbody"},
+		{name: "UTF-8 file with trailing newlines", bodyFile: new("file"), wantBody: "标题\n\n正文\n"},
+		{name: "empty file", bodyFile: new("empty"), wantBody: ""},
+		{name: "stdin", bodyFile: new("-"), stdin: "stdin body\n\n", wantBody: "stdin body\n\n"},
+		{name: "conflicting flags", body: new("inline"), bodyFile: new("-"), wantError: "mutually exclusive"},
+		{name: "missing file", bodyFile: new("missing"), wantError: "failed to read body file"},
 	}
 
 	for _, tt := range tests {
@@ -103,7 +103,7 @@ func TestIssueCreateBodyInput(t *testing.T) {
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/issues" {
 							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 						}
-						var body map[string]interface{}
+						var body map[string]any
 						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 							t.Fatal(err)
 						}
@@ -158,10 +158,6 @@ func TestIssueCreateBodyInput(t *testing.T) {
 			}
 		})
 	}
-}
-
-func issueStringPointer(value string) *string {
-	return &value
 }
 
 func TestIssueListInfersRepositoryAndHonorsLimit(t *testing.T) {
@@ -601,7 +597,7 @@ func TestIssueCreateAssignee(t *testing.T) {
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/issues" {
 							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 						}
-						var body map[string]interface{}
+						var body map[string]any
 						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 							t.Fatal(err)
 						}

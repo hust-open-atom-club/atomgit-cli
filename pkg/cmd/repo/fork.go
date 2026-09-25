@@ -152,7 +152,7 @@ func runFork(out io.Writer, f *cmdutil.Factory, opts *ForkOptions, repoArg strin
 		return cmdutil.AuthenticationError(err)
 	}
 
-	body := map[string]interface{}{}
+	body := map[string]any{}
 	if opts.Name != "" {
 		body["name"] = opts.Name
 	}
@@ -199,7 +199,7 @@ func runFork(out io.Writer, f *cmdutil.Factory, opts *ForkOptions, repoArg strin
 
 func setAndVerifyForkDescription(client *api.Client, owner, repo, description string) error {
 	path := fmt.Sprintf("/repos/%s/%s", owner, repo)
-	body := map[string]interface{}{
+	body := map[string]any{
 		"name":        repo,
 		"description": description,
 	}

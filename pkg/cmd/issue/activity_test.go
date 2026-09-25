@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"reflect"
 	"strings"
@@ -188,9 +189,7 @@ func TestIssueInspectionLimits(t *testing.T) {
 					}
 					for i := 0; i < count; i++ {
 						item := map[string]any{}
-						for k, v := range original[0] {
-							item[k] = v
-						}
+						maps.Copy(item, original[0])
 						id := (calls-1)*100 + i + 1
 						if tc.name == "activity" {
 							item["id"] = id

@@ -140,8 +140,7 @@ func TestClientRunExecError(t *testing.T) {
 		t.Fatal("Run() expected error, got nil")
 	}
 
-	var gitErr *Err
-	if errors.As(err, &gitErr) {
+	if _, ok := errors.AsType[*Err](err); ok {
 		t.Fatal("expected non-*Err error, got *Err")
 	}
 }

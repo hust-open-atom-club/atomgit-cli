@@ -64,8 +64,8 @@ func validateContentPath(path string, allowRoot bool) error {
 	if strings.Contains(path, "//") {
 		return errors.New("path must not contain repeated separators")
 	}
-	segments := strings.Split(path, "/")
-	for _, s := range segments {
+	segments := strings.SplitSeq(path, "/")
+	for s := range segments {
 		if s == "." || s == ".." {
 			return errors.New("path must not contain '.' or '..' segments")
 		}

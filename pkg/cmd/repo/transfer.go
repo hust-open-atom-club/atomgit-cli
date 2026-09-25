@@ -209,8 +209,7 @@ func resolveTransferDestination(client *api.Client, destination string) (string,
 }
 
 func handleTransferRequestError(out io.Writer, client *api.Client, repository cmdutil.Repository, sourceID int64, destination, name, httpErrorContext string, transferErr error) error {
-	var httpErr *api.HTTPError
-	if errors.As(transferErr, &httpErr) {
+	if _, ok := errors.AsType[*api.HTTPError](transferErr); ok {
 		return fmt.Errorf("%s: %w", httpErrorContext, transferErr)
 	}
 

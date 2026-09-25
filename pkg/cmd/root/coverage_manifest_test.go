@@ -56,7 +56,7 @@ func validateCoverageManifest(document string, families []string, repository str
 		want[name] = true
 	}
 	seen := make(map[string]bool)
-	for _, line := range strings.Split(document[start:end], "\n") {
+	for line := range strings.SplitSeq(document[start:end], "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "### ") {
 			continue
@@ -97,7 +97,7 @@ func validateCoverageManifest(document string, families []string, repository str
 			{4, "project,partner"},
 			{5, "source,mock,local,docs,live"},
 		} {
-			for _, value := range strings.Split(cells[field.index], ",") {
+			for value := range strings.SplitSeq(cells[field.index], ",") {
 				if !strings.Contains(","+field.allowed+",", ","+value+",") || value == "" {
 					return fmt.Errorf("invalid coverage field for %s: %q", name, cells[field.index])
 				}

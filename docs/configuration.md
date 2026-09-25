@@ -99,6 +99,8 @@ ag auth setup-git
 
 大多数命令需要已登录账号；缺少凭据或凭据文件无法读取时，会返回规范的 `not authenticated` 错误并提示运行 `ag auth login`。
 
+帮助和版本入口不需要读取凭据：`ag --help`、`ag help <command>`、子命令的 `-h`/`--help`、`ag --version`、`ag version` 和 `ag version --json` 在凭据缺失、损坏或无法读取时仍可使用。
+
 部分公开只读命令（例如 `ag discussion list` 和 `ag discussion view`）在尚未登录时会以匿名方式请求。凭据文件损坏、权限错误或其他存储故障**不会**降级为匿名访问。
 
 ## 输出安全

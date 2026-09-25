@@ -385,7 +385,7 @@ func (c *Client) GetStepLog(owner, repo, runID, jobID string, request StepLogReq
 	return result, nil
 }
 
-func (c *Client) postJSON(operation, path string, payload, result interface{}) error {
+func (c *Client) postJSON(operation, path string, payload, result any) error {
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("%s: marshal payload: %w", operation, err)
@@ -412,7 +412,7 @@ func (c *Client) postJSON(operation, path string, payload, result interface{}) e
 	return nil
 }
 
-func (c *Client) getJSON(operation, path string, result interface{}) error {
+func (c *Client) getJSON(operation, path string, result any) error {
 	resp, err := c.client.DoRequestRawWithAccept(http.MethodGet, path, "application/json")
 	if err != nil {
 		return fmt.Errorf("%s: %w", operation, err)
