@@ -61,7 +61,7 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	cmd.SetVersionTemplate(`{{.Version}}`)
 	cmd.Flags().Bool("version", false, "Show version information")
 
-	cmd.PersistentFlags().Bool("help", false, "Show help for command")
+	cmd.PersistentFlags().BoolP("help", "h", false, "Show help for command")
 
 	// Sanitize by default even when output is piped: a downstream program may
 	// forward bytes to a terminal. Machine consumers can explicitly opt into

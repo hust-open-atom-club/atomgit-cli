@@ -87,8 +87,12 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 	if cmd.Use != "ag <command> <subcommand> [flags]" {
 		t.Fatalf("Use = %q", cmd.Use)
 	}
-	if cmd.PersistentFlags().Lookup("help") == nil {
+	helpFlag := cmd.PersistentFlags().Lookup("help")
+	if helpFlag == nil {
 		t.Fatal("persistent help flag was not registered")
+	}
+	if helpFlag.Shorthand != "h" {
+		t.Fatalf("help shorthand = %q, want h", helpFlag.Shorthand)
 	}
 	versionFlag := cmd.Flags().Lookup("version")
 	if versionFlag == nil {

@@ -51,7 +51,11 @@ func TestAuthStatusDoesNotInitializeConfig(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = loadCommandConfig(cmd, f, args, func() (config.Config, error) { t.Fatal("status initialized mutable config"); return nil, nil })
+		selected, _, err := cmd.Find(args)
+		if err != nil {
+			t.Fatalf("Find(%v): %v", args, err)
+		}
+		err = loadCommandConfig(selected, f, func() (config.Config, error) { t.Fatal("status initialized mutable config"); return nil, nil })
 		if err != nil || f.Config != nil {
 			t.Fatalf("%v: %v", args, err)
 		}
