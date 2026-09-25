@@ -237,6 +237,207 @@ func TestPRCreateBodyInput(t *testing.T) {
 	}
 }
 
+type prFailingReader struct{}
+
+func (prFailingReader) Read([]byte) (int, error) {
+	return 0, fmt.Errorf("synthetic stdin read failure")
+}
+
+func TestPREditBodyInput(t *testing.T) {
+	tests := []struct {
+		name          string
+		title         *string
+		body          *string
+		bodyFile      *string
+		stdin         string
+		wantBody      string
+		wantBodyField bool
+	}{
+		{name: "inline multiline body", body: new("first\nsecond\n"), wantBody: "first\nsecond\n", wantBodyField: true},
+		{name: "explicit empty inline body", body: new(""), wantBodyField: true},
+		{name: "UTF-8 file with trailing newline", bodyFile: new("file"), wantBody: "标题\n\n正文\n", wantBodyField: true},
+		{name: "empty file", bodyFile: new("empty"), wantBodyField: true},
+		{name: "stdin", bodyFile: new("-"), stdin: "stdin body\n\n", wantBody: "stdin body\n\n", wantBodyField: true},
+		{name: "empty stdin", bodyFile: new("-"), wantBodyField: true},
+		{name: "title only omits body", title: new("Updated title")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requests := 0
+			factory := &cmdutil.Factory{
+				Config: prTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						requests++
+						if req.Method != http.MethodPatch || req.URL.Path != "/api/v5/repos/alice/demo/pulls/42" {
+							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
+						}
+						var body map[string]any
+						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+							t.Fatal(err)
+						}
+						gotBody, hasBody := body["body"]
+						if hasBody != tt.wantBodyField {
+							t.Fatalf("body field present = %t, want %t; request body = %#v", hasBody, tt.wantBodyField, body)
+						}
+						if hasBody && gotBody != tt.wantBody {
+							t.Fatalf("body = %q, want %q", gotBody, tt.wantBody)
+						}
+						if tt.title != nil && body["title"] != *tt.title {
+							t.Fatalf("title = %q, want %q", body["title"], *tt.title)
+						}
+						return prResponse(http.StatusOK, `{"number":"42","web_url":"https://atomgit.com/alice/demo/merge_requests/42"}`), nil
+					})}, nil
+				},
+			}
+
+			cmd := newCmdPREdit(factory)
+			if tt.title != nil {
+				if err := cmd.Flags().Set("title", *tt.title); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tt.body != nil {
+				if err := cmd.Flags().Set("body", *tt.body); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tt.bodyFile != nil {
+				path := *tt.bodyFile
+				switch path {
+				case "file":
+					path = filepath.Join(t.TempDir(), "body.md")
+					if err := os.WriteFile(path, []byte(tt.wantBody), 0o600); err != nil {
+						t.Fatal(err)
+					}
+				case "empty":
+					path = filepath.Join(t.TempDir(), "empty.md")
+					if err := os.WriteFile(path, nil, 0o600); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if err := cmd.Flags().Set("body-file", path); err != nil {
+					t.Fatal(err)
+				}
+			}
+			cmd.SetIn(strings.NewReader(tt.stdin))
+			cmd.SetOut(io.Discard)
+
+			if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
+				t.Fatal(err)
+			}
+			if requests != 1 {
+				t.Fatalf("requests = %d, want 1", requests)
+			}
+		})
+	}
+}
+
+func TestPREditBodyInputErrorsDoNotSendRequests(t *testing.T) {
+	tests := []struct {
+		name      string
+		configure func(*testing.T, *cobra.Command)
+		stdin     io.Reader
+		wantError string
+	}{
+		{
+			name: "conflicting flags",
+			configure: func(t *testing.T, cmd *cobra.Command) {
+				t.Helper()
+				if err := cmd.Flags().Set("body", "inline"); err != nil {
+					t.Fatal(err)
+				}
+				if err := cmd.Flags().Set("body-file", "-"); err != nil {
+					t.Fatal(err)
+				}
+			},
+			stdin:     strings.NewReader("stdin"),
+			wantError: "mutually exclusive",
+		},
+		{
+			name: "missing file",
+			configure: func(t *testing.T, cmd *cobra.Command) {
+				t.Helper()
+				if err := cmd.Flags().Set("body-file", filepath.Join(t.TempDir(), "missing.md")); err != nil {
+					t.Fatal(err)
+				}
+			},
+			wantError: "failed to read body file",
+		},
+		{
+			name: "stdin read failure",
+			configure: func(t *testing.T, cmd *cobra.Command) {
+				t.Helper()
+				if err := cmd.Flags().Set("body-file", "-"); err != nil {
+					t.Fatal(err)
+				}
+			},
+			stdin:     prFailingReader{},
+			wantError: "failed to read body file",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requests := 0
+			factory := &cmdutil.Factory{
+				Config: prTestConfig{},
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
+						requests++
+						return prResponse(http.StatusOK, `{}`), nil
+					})}, nil
+				},
+			}
+			cmd := newCmdPREdit(factory)
+			tt.configure(t, cmd)
+			if tt.stdin != nil {
+				cmd.SetIn(tt.stdin)
+			}
+			cmd.SetOut(io.Discard)
+
+			err := cmd.RunE(cmd, []string{"alice/demo", "42"})
+			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+				t.Fatalf("error = %v, want containing %q", err, tt.wantError)
+			}
+			if requests != 0 {
+				t.Fatalf("requests = %d, want 0", requests)
+			}
+		})
+	}
+}
+
+func TestPREditServerErrorDoesNotPrintSuccess(t *testing.T) {
+	requests := 0
+	factory := &cmdutil.Factory{
+		Config: prTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
+				requests++
+				return prResponse(http.StatusUnprocessableEntity, `{"message":"body rejected"}`), nil
+			})}, nil
+		},
+	}
+	cmd := newCmdPREdit(factory)
+	if err := cmd.Flags().Set("body", "updated"); err != nil {
+		t.Fatal(err)
+	}
+	var output strings.Builder
+	cmd.SetOut(&output)
+
+	err := cmd.RunE(cmd, []string{"alice/demo", "42"})
+	if err == nil || !strings.Contains(err.Error(), "422 Unprocessable Entity") {
+		t.Fatalf("error = %v, want server rejection", err)
+	}
+	if requests != 1 {
+		t.Fatalf("requests = %d, want 1", requests)
+	}
+	if output.Len() != 0 {
+		t.Fatalf("output = %q, want no success output", output.String())
+	}
+}
+
 func TestPRCreateFallsBackToBrowserURL(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},

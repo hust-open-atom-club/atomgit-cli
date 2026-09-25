@@ -2705,8 +2705,18 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--remove-label` | Label name to remove (repeat for multiple labels) | `[]` | local |
 | `--remove-reviewer` | Approval reviewer login to remove (repeat for multiple users) | `[]` | local |
 | `--remove-tester` | Tester login to remove (repeat for multiple users) | `[]` | local |
+| `-F, --body-file` | Read new PR body from file (use - for stdin) | `` | local |
 | `-b, --body` | New PR body | `` | local |
 | `-t, --title` | New PR title | `` | local |
+
+### Example
+
+```bash
+ag pr edit owner/repo 123 --title "Updated title"
+ag pr edit owner/repo 123 --body "Updated description"
+ag pr edit owner/repo 123 --body-file description.md
+ag pr edit owner/repo 123 --body-file -
+```
 
 
 ## ag pr files
