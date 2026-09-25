@@ -221,12 +221,10 @@ func diagnose(f *cmdutil.Factory, args []string, live bool) report {
 }
 
 func statusCode(err error) int {
-	var v5 *api.HTTPError
-	var v8 *actions.HTTPError
-	if errors.As(err, &v5) {
+	if v5, ok := errors.AsType[*api.HTTPError](err); ok {
 		return v5.StatusCode
 	}
-	if errors.As(err, &v8) {
+	if v8, ok := errors.AsType[*actions.HTTPError](err); ok {
 		return v8.StatusCode
 	}
 	return 0
