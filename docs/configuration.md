@@ -105,6 +105,8 @@ ag auth setup-git
 
 `ag` 默认会将终端控制字符转换为可见转义文本，包括输出经管道转发时，以防止仓库、Issue、PR 或 Git 服务端返回的内容注入终端控制序列。确实需要为机器处理保留原始字节时，可显式使用全局参数 `--raw-output`，例如 `ag --raw-output pr diff owner/repo 123`；请勿将未经检查的原始输出直接转发到终端。
 
+`release view --json` 等通过共享 JSON 输出器生成的结构化输出会使用合法 JSON 转义保留控制字符（包括 DEL 的 `\u007f`），标准 JSON 解析器可还原字段内容，无需为了读取这些字段开启 `--raw-output`。
+
 AtomGit API v5、Actions API v8、OAuth 与 Release 等领域客户端的非成功响应统一经过同一安全边界：错误正文最多保留 4 KiB，超出部分会显示为 `...`；明确省略敏感响应正文的端点仅输出清洗后的状态。错误上下文会转义终端控制字符和 Unicode 方向控制字符，并脱敏 Bearer 值及常见的 token、secret、password、authorization 字段。该安全边界独立于终端 writer，因此 `--raw-output` 不会关闭 API 错误脱敏。
 
 ## 当前仓库推断

@@ -95,6 +95,9 @@ func TestNewCmdReleaseRegistersCommands(t *testing.T) {
 	if err != nil || view == nil {
 		t.Fatal("release view not found")
 	}
+	if view.Flags().Lookup("json") == nil {
+		t.Fatal("release view --json flag was not registered")
+	}
 	for _, child := range []*cobra.Command{list, view} {
 		if !strings.Contains(child.Long, cmdutil.RepositoryContextHelp) {
 			t.Errorf("%s Long missing repository context help: %q", child.Name(), child.Long)

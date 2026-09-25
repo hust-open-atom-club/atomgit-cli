@@ -10,12 +10,16 @@ import (
 )
 
 func newCmdReleaseView(f *cmdutil.Factory) *cobra.Command {
+	var jsonOutput bool
+
 	cmd := &cobra.Command{
-		Use:     "view [<owner>/<repo>] <tag>",
-		Short:   "View a release by tag",
-		Long:    `Show details of a single release identified by its tag.`,
-		Example: `  ag release view owner/repo v1.0.0`,
-		Args:    cobra.RangeArgs(1, 2),
+		Use:   "view [<owner>/<repo>] <tag>",
+		Short: "View a release by tag",
+		Long: `Show details of a single release identified by its tag.
+Use --json to output one JSON object with release metadata, body, and assets.`,
+		Example: `  ag release view owner/repo v1.0.0
+  ag release view owner/repo v1.0.0 --json`,
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
@@ -42,6 +46,9 @@ func newCmdReleaseView(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			out := cmd.OutOrStdout()
+			if jsonOutput {
+				return cmdutil.WriteJSON(out, releaseDetailsJSON(release))
+			}
 			fmt.Fprintf(out, "Name: %s\n", release.Name)
 			fmt.Fprintf(out, "Tag: %s\n", release.TagName)
 			fmt.Fprintf(out, "Target: %s\n", release.TargetCommitish)
@@ -61,7 +68,38 @@ func newCmdReleaseView(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output release details as JSON")
 	return cmd
+}
+
+type releaseViewJSON struct {
+	releaseJSON
+	Body   string             `json:"body"`
+	Assets []releaseAssetJSON `json:"assets"`
+}
+
+type releaseAssetJSON struct {
+	ID                 int64  `json:"id"`
+	Name               string `json:"name"`
+	Type               string `json:"type"`
+	BrowserDownloadURL string `json:"browserDownloadUrl"`
+}
+
+func releaseDetailsJSON(release api.Release) releaseViewJSON {
+	assets := make([]releaseAssetJSON, len(release.Assets))
+	for i, asset := range release.Assets {
+		assets[i] = releaseAssetJSON{
+			ID:                 asset.ID,
+			Name:               asset.Name,
+			Type:               asset.Type,
+			BrowserDownloadURL: asset.BrowserDownloadURL,
+		}
+	}
+	return releaseViewJSON{
+		releaseJSON: releaseSummaryJSON(release),
+		Body:        release.Body,
+		Assets:      assets,
+	}
 }
 
 // releaseAuthorDisplay renders the author line; login is the canonical handle

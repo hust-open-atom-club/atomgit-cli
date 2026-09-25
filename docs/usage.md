@@ -1066,7 +1066,7 @@ ag tag protection delete owner/repo "v*" --yes
 
 ## 资源命令的 JSON 输出
 
-`repo list/view`、`issue list/view`、`pr list/view`、`tag list`、`tag protection list/view`、`branch list`、`label list`、`release list`、`run list` 和 `commit list/view/compare` 支持布尔参数 `--json`。list 命令输出完整 JSON 数组，view 与 compare 命令输出完整 JSON 对象；没有结果时 list 输出 `[]`。默认文本输出保持不变。
+`repo list/view`、`issue list/view`、`pr list/view`、`tag list`、`tag protection list/view`、`branch list`、`label list`、`release list/view`、`run list` 和 `commit list/view/compare` 支持布尔参数 `--json`。list 命令输出完整 JSON 数组，view 与 compare 命令输出完整 JSON 对象；没有结果时 list 输出 `[]`。默认文本输出保持不变。
 
 JSON 字段使用 lowerCamelCase，并由 CLI 显式定义，不会因为 AtomGit API 增加字段而自动改变。Issue 和 PR 的 `number` 始终是字符串，标签输出为名称数组，PR 的 `head` 和 `base` 输出分支名称。可选的服务端字段缺失时仍输出对应的零值，以保持固定结构。
 
@@ -1252,6 +1252,7 @@ ag release list owner/repo --json
 # 按 tag 查看 Release 详情（附件列表、作者、时间、状态等）
 ag release view v1.0.0
 ag release view owner/repo v1.0.0
+ag release view owner/repo v1.0.0 --json
 
 # 创建 Release；--target 指向提交 SHA，--prerelease 标记预发布
 ag release create v1.0.0 --body "首批正式发布"
@@ -1274,6 +1275,32 @@ ag release upload owner/repo v1.0.0 ./new.tar.gz --overwrite
 ag release download v1.0.0 app.tar.gz -o ./dist/app.tar.gz
 ag release download owner/repo v1.0.0 app.tar.gz --output ./existing.tar.gz --overwrite
 ```
+
+`ag release view --json` 将与文本模式相同的一次查询结果输出为单个 JSON 对象，以换行结尾，不混入文本标签。查询失败时返回非零退出码，不输出成功对象。未指定 `--json` 时保留原有文本输出。
+
+详情 JSON 的前八个字段与 `ag release list --json` 的每个列表项保持一致：
+
+| 字段 | 类型 | 含义 |
+| --- | --- | --- |
+| `tag` | string | Release 的 tag |
+| `name` | string | Release 名称 |
+| `status` | string | `prerelease`、`latest` 或 `release`；预发布优先，其次为最新发布，其余状态归为 `release` |
+| `draft` | boolean | API 返回的草稿标志 |
+| `prerelease` | boolean | API 返回的预发布标志；服务端状态为预发布时，即使此标志为 `false`，`status` 仍为 `prerelease` |
+| `targetCommitish` | string | Release 的目标提交或分支 |
+| `createdAt` | string | API 返回的创建时间字符串 |
+| `author` | string | 作者的登录名，不回退到显示名称 |
+| `body` | string | 完整 Release 正文，换行、引号和控制字符通过 JSON 转义保留 |
+| `assets` | array | API 返回的附件和源码归档，每项包含下表中的字段 |
+
+| 附件字段 | 类型 | 含义 |
+| --- | --- | --- |
+| `id` | number | API 返回的附件 ID |
+| `name` | string | 附件名称 |
+| `type` | string | 附件类型，例如 `attach` 或 `source` |
+| `browserDownloadUrl` | string | 附件下载 URL |
+
+以上字段均固定保留，不因空值省略。缺失或为 `null` 的字符串输出 `""`，布尔值输出 `false`，附件 ID 输出 `0`；缺少作者登录名时 `author` 为 `""`；无附件（包括 API 未返回或返回 `null`）时 `assets` 为 `[]`，不会输出 `null`。`status` 始终按上述规则计算。JSON 仅包含这些 CLI 字段，不透传完整 API 响应。
 
 `ag release create` 必须通过 `--body` 或 `--body-file` 提供非空说明，这是 AtomGit 创建 Release API 的必填字段。`ag release edit` 只改变用户明确指定的内容（`--name`、`--body` 或 `--body-file`、`--latest`、`--prerelease`），未指定的 name/body 会从当前 Release 回读并保持不变；状态仅在显式 `--latest` 或 `--prerelease` 时改变。`--body` 与 `--body-file` 互斥。`--latest` 将该 Release 标记为仓库最新发布。
 

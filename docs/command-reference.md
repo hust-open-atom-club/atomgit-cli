@@ -3147,11 +3147,12 @@ ag release upload owner/repo v1.0.0 ./existing.tar.gz --skip-existing
 
 ## ag release view
 
-Usage: `ag release view [<owner>/<repo>] <tag>`
+Usage: `ag release view [<owner>/<repo>] <tag> [flags]`
 
 View a release by tag
 
 Show details of a single release identified by its tag.
+Use --json to output one JSON object with release metadata, body, and assets.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -3160,12 +3161,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
 | `--help` | Show help for command | `false` | inherited |
+| `--json` | Output release details as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 
 ### Example
 
 ```bash
 ag release view owner/repo v1.0.0
+ag release view owner/repo v1.0.0 --json
 ```
 
 
