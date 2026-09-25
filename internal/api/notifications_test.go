@@ -103,7 +103,7 @@ func TestListNotificationsTypeFilterAndPaging(t *testing.T) {
 	// it carries one type match plus filler. Page 2 is short and carries the
 	// second match, which ends the walk.
 	filler := ""
-	for i := 0; i < notificationsPerPage-1; i++ {
+	for i := range notificationsPerPage - 1 {
 		if i > 0 {
 			filler += ","
 		}
@@ -154,7 +154,7 @@ func TestListAllNotificationsFetchesEveryPage(t *testing.T) {
 		start := (page - 1) * notificationsPerPage
 		count := min(notificationsPerPage, total-start)
 		var items strings.Builder
-		for i := 0; i < count; i++ {
+		for i := range count {
 			if i > 0 {
 				items.WriteByte(',')
 			}
@@ -199,7 +199,7 @@ func TestListNotificationsHugeLimitDoesNotPreallocateTheLimit(t *testing.T) {
 
 func TestListNotificationsStopsOnEmptyPageAndTruncatesToLimit(t *testing.T) {
 	fullPage := ""
-	for i := 0; i < notificationsPerPage; i++ {
+	for i := range notificationsPerPage {
 		if i > 0 {
 			fullPage += ","
 		}

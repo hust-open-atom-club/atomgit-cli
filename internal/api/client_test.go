@@ -1085,7 +1085,7 @@ func TestAPIErrorRedactsCredentialInMultiplyEmbeddedJSONMessages(t *testing.T) {
 func TestSanitizeErrorTextRedactsCredentialAtEmbeddedJSONDepthLimit(t *testing.T) {
 	const secret = "depth-limit-json-secret-123"
 	nested := `{"access_token":"` + secret + `"}`
-	for i := 0; i < maxEmbeddedJSONDepth; i++ {
+	for range maxEmbeddedJSONDepth {
 		encoded, err := json.Marshal(map[string]string{"message": "wrapped " + nested})
 		if err != nil {
 			t.Fatal(err)
