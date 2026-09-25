@@ -181,11 +181,11 @@ func TestClientContextCancelsStalledJSONBody(t *testing.T) {
 }
 
 func TestClientRetryBackoffObservesCancellation(t *testing.T) {
-	var calls int32
+	var calls atomic.Int32
 	firstAttempt := make(chan struct{})
 	client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
 		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
-			if atomic.AddInt32(&calls, 1) == 1 {
+			if calls.Add(1) == 1 {
 				close(firstAttempt)
 			}
 			return nil, errors.New("temporary network failure")
@@ -210,7 +210,7 @@ func TestClientRetryBackoffObservesCancellation(t *testing.T) {
 	case <-time.After(150 * time.Millisecond):
 		t.Fatal("retry backoff delayed cancellation")
 	}
-	if got := atomic.LoadInt32(&calls); got != 1 {
+	if got := calls.Load(); got != 1 {
 		t.Fatalf("request calls = %d, want 1", got)
 	}
 }
@@ -843,11 +843,11 @@ func TestDoJSONRequestRejectsEmptyAllowedStatuses(t *testing.T) {
 
 func TestDoJSONRequestRetryPolicy(t *testing.T) {
 	t.Run("CanRetry false does not retry on network error", func(t *testing.T) {
-		var calls int32
+		var calls atomic.Int32
 		originalErr := errors.New("network failure")
 		client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
 			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				atomic.AddInt32(&calls, 1)
+				calls.Add(1)
 				return nil, originalErr
 			}),
 		})
@@ -864,16 +864,16 @@ func TestDoJSONRequestRetryPolicy(t *testing.T) {
 		if !errors.Is(err, originalErr) {
 			t.Fatalf("error does not preserve cause: %v", err)
 		}
-		if n := atomic.LoadInt32(&calls); n != 1 {
+		if n := calls.Load(); n != 1 {
 			t.Fatalf("calls = %d, want 1 (no retry)", n)
 		}
 	})
 
 	t.Run("CanRetry true retries once on network error", func(t *testing.T) {
-		var calls int32
+		var calls atomic.Int32
 		client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
 			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				n := atomic.AddInt32(&calls, 1)
+				n := calls.Add(1)
 				if n == 1 {
 					return nil, errors.New("network failure")
 				}
@@ -891,7 +891,7 @@ func TestDoJSONRequestRetryPolicy(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if n := atomic.LoadInt32(&calls); n != 2 {
+		if n := calls.Load(); n != 2 {
 			t.Fatalf("calls = %d, want 2 (1 fail + 1 retry)", n)
 		}
 	})
