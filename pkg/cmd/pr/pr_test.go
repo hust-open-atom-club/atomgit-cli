@@ -159,12 +159,12 @@ func TestPRCreateBodyInput(t *testing.T) {
 		wantBody  string
 		wantError string
 	}{
-		{name: "inline body", body: prStringPointer("inline\nbody"), wantBody: "inline\nbody"},
-		{name: "UTF-8 file with trailing newlines", bodyFile: prStringPointer("file"), wantBody: "标题\n\n正文\n"},
-		{name: "empty file", bodyFile: prStringPointer("empty"), wantBody: ""},
-		{name: "stdin", bodyFile: prStringPointer("-"), stdin: "stdin body\n\n", wantBody: "stdin body\n\n"},
-		{name: "conflicting flags", body: prStringPointer("inline"), bodyFile: prStringPointer("-"), wantError: "mutually exclusive"},
-		{name: "missing file", bodyFile: prStringPointer("missing"), wantError: "failed to read body file"},
+		{name: "inline body", body: new("inline\nbody"), wantBody: "inline\nbody"},
+		{name: "UTF-8 file with trailing newlines", bodyFile: new("file"), wantBody: "标题\n\n正文\n"},
+		{name: "empty file", bodyFile: new("empty"), wantBody: ""},
+		{name: "stdin", bodyFile: new("-"), stdin: "stdin body\n\n", wantBody: "stdin body\n\n"},
+		{name: "conflicting flags", body: new("inline"), bodyFile: new("-"), wantError: "mutually exclusive"},
+		{name: "missing file", bodyFile: new("missing"), wantError: "failed to read body file"},
 	}
 
 	for _, tt := range tests {
@@ -235,10 +235,6 @@ func TestPRCreateBodyInput(t *testing.T) {
 			}
 		})
 	}
-}
-
-func prStringPointer(value string) *string {
-	return &value
 }
 
 func TestPRCreateFallsBackToBrowserURL(t *testing.T) {

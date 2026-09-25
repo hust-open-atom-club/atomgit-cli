@@ -52,16 +52,16 @@ func TestStatusLocalAndReadOnly(t *testing.T) {
 		name, data, status string
 		present            *bool
 	}{
-		{"missing", "", "missing", boolPointer(false)},
-		{"short token", `{"access_token":"xyz789","user":"alice","refresh_token":"private-refresh"}`, "configured", boolPointer(true)},
-		{"long token", `{"access_token":"1234567890abcdef","user":"alice"}`, "configured", boolPointer(true)},
-		{"secret in account", `{"access_token":"xyz789","user":"private-refresh","refresh_token":"private-refresh"}`, "configured", boolPointer(true)},
+		{"missing", "", "missing", new(false)},
+		{"short token", `{"access_token":"xyz789","user":"alice","refresh_token":"private-refresh"}`, "configured", new(true)},
+		{"long token", `{"access_token":"1234567890abcdef","user":"alice"}`, "configured", new(true)},
+		{"secret in account", `{"access_token":"xyz789","user":"private-refresh","refresh_token":"private-refresh"}`, "configured", new(true)},
 		{"missing user", `{"access_token":"private-access"}`, "invalid", nil},
 		{"empty token", `{"access_token":"","user":"alice"}`, "invalid", nil},
 		{"whitespace token", `{"access_token":"   ","user":"alice"}`, "invalid", nil},
 		{"broken", `{"private-access":`, "invalid", nil},
 		{"invalid active", `{"version":2,"active":"private-access","accounts":[{"user":"alice","access_token":"private-access"}]}`, "invalid", nil},
-		{"multiple accounts", `{"version":2,"active":"bob","accounts":[{"user":"alice","access_token":"private-access"},{"user":"bob","access_token":"bob-secret","refresh_token":"private-refresh"}]}`, "configured", boolPointer(true)},
+		{"multiple accounts", `{"version":2,"active":"bob","accounts":[{"user":"alice","access_token":"private-access"},{"user":"bob","access_token":"bob-secret","refresh_token":"private-refresh"}]}`, "configured", new(true)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := statusCredentials(t, tc.data)
@@ -118,8 +118,6 @@ func TestStatusLocalAndReadOnly(t *testing.T) {
 		})
 	}
 }
-
-func boolPointer(v bool) *bool { return &v }
 
 func TestStatusOnlineResults(t *testing.T) {
 	for _, tc := range []struct {
