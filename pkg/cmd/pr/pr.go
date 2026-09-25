@@ -560,6 +560,7 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
 		Title    string
 		Body     string
+		BodyFile string
 		Metadata prEditMetadataOptions
 	}
 
@@ -571,6 +572,10 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 Assignees, approval reviewers, and testers are distinct AtomGit roles.
 Unspecified metadata is left unchanged; use --milestone none to clear the
 current milestone.`,
+		Example: `  ag pr edit owner/repo 123 --title "Updated title"
+  ag pr edit owner/repo 123 --body "Updated description"
+  ag pr edit owner/repo 123 --body-file description.md
+  ag pr edit owner/repo 123 --body-file -`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
@@ -583,22 +588,44 @@ current milestone.`,
 				return err
 			}
 
+			bodyChanged := cmd.Flags().Changed("body")
+			bodyFileChanged := cmd.Flags().Changed("body-file")
+			bodyRequested := bodyChanged || bodyFileChanged
+			var bodyText string
+			if bodyChanged && bodyFileChanged {
+				_, err = cmdutil.ReadBody(opts.Body, opts.BodyFile, bodyChanged, bodyFileChanged, cmd.InOrStdin())
+				return err
+			}
+			if bodyRequested && opts.BodyFile != "-" {
+				bodyText, err = cmdutil.ReadBody(opts.Body, opts.BodyFile, bodyChanged, bodyFileChanged, cmd.InOrStdin())
+				if err != nil {
+					return err
+				}
+			}
+
 			metadataRequested := opts.Metadata.requested(cmd)
 			body := map[string]interface{}{}
 			if opts.Title != "" {
 				body["title"] = opts.Title
 			}
-			if opts.Body != "" {
-				body["body"] = opts.Body
-			}
 
-			if len(body) == 0 && !metadataRequested {
+			if len(body) == 0 && !bodyRequested && !metadataRequested {
 				return fmt.Errorf("at least one PR field or collaboration metadata flag must be provided")
 			}
 
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
+			}
+
+			if bodyRequested && opts.BodyFile == "-" {
+				bodyText, err = cmdutil.ReadBody(opts.Body, opts.BodyFile, bodyChanged, bodyFileChanged, cmd.InOrStdin())
+				if err != nil {
+					return err
+				}
+			}
+			if bodyRequested {
+				body["body"] = bodyText
 			}
 
 			client, err := f.NewAPIClient(token)
@@ -637,6 +664,7 @@ current milestone.`,
 
 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "New PR title")
 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "New PR body")
+	cmd.Flags().StringVarP(&opts.BodyFile, "body-file", "F", "", "Read new PR body from file (use - for stdin)")
 	cmd.Flags().StringSliceVar(&opts.Metadata.AddAssignees, "add-assignee", nil, "Assignee login to add (repeat for multiple users)")
 	cmd.Flags().StringSliceVar(&opts.Metadata.RemoveAssignees, "remove-assignee", nil, "Assignee login to remove (repeat for multiple users)")
 	cmd.Flags().StringSliceVar(&opts.Metadata.AddReviewers, "add-reviewer", nil, "Approval reviewer login to add (repeat for multiple users)")
@@ -646,6 +674,7 @@ current milestone.`,
 	cmd.Flags().StringSliceVar(&opts.Metadata.AddLabels, "add-label", nil, "Label name to add (repeat for multiple labels)")
 	cmd.Flags().StringSliceVar(&opts.Metadata.RemoveLabels, "remove-label", nil, "Label name to remove (repeat for multiple labels)")
 	cmd.Flags().StringVar(&opts.Metadata.Milestone, "milestone", "", "Milestone number, exact title, or 'none' to clear")
+	cmd.MarkFlagsMutuallyExclusive("body", "body-file")
 
 	return cmd
 }
