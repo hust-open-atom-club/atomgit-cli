@@ -82,9 +82,9 @@ func TestRepoCollaboratorListPaginatesAndShowsPermissionSources(t *testing.T) {
 			t.Fatalf("query = %v", req.URL.Query())
 		}
 		if req.URL.Query().Get("page") == "1" {
-			items := make([]map[string]interface{}, 100)
+			items := make([]map[string]any, 100)
 			for index := range items {
-				items[index] = map[string]interface{}{
+				items[index] = map[string]any{
 					"username": fmt.Sprintf("user-%d", index), "permission": "push",
 					"type": "ProjectMember", "join_way": "normal", "source_name": "demo",
 				}
@@ -135,7 +135,7 @@ func TestRepoCollaboratorListJSON(t *testing.T) {
 	if err := cmd.RunE(cmd, []string{"alice/demo"}); err != nil {
 		t.Fatal(err)
 	}
-	var values []map[string]interface{}
+	var values []map[string]any
 	if err := json.Unmarshal(output.Bytes(), &values); err != nil {
 		t.Fatal(err)
 	}
@@ -458,7 +458,7 @@ func collaboratorResponse(statusCode int, body string) *http.Response {
 	}
 }
 
-func decodeCollaboratorBody(t *testing.T, req *http.Request, target interface{}) {
+func decodeCollaboratorBody(t *testing.T, req *http.Request, target any) {
 	t.Helper()
 	defer req.Body.Close()
 	if err := json.NewDecoder(req.Body).Decode(target); err != nil {

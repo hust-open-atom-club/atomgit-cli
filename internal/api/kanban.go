@@ -31,7 +31,7 @@ type kanbanListResponse struct {
 // KanbanItem is an issue or pull request associated with a board.
 type KanbanItem struct {
 	ID         int64             `json:"id"`
-	Number     interface{}       `json:"number"`
+	Number     any               `json:"number"`
 	Title      string            `json:"title"`
 	SourceType string            `json:"source_type"`
 	Status     string            `json:"status"`

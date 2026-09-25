@@ -46,19 +46,19 @@ func TestRepoEditBuildsExactPartialRequests(t *testing.T) {
 		args     []string
 		flags    map[string]string
 		input    string
-		wantBody map[string]interface{}
+		wantBody map[string]any
 	}{
 		{
 			name:     "description only",
 			args:     []string{"alice/demo"},
 			flags:    map[string]string{"description": "updated"},
-			wantBody: map[string]interface{}{"description": "updated"},
+			wantBody: map[string]any{"description": "updated"},
 		},
 		{
 			name:     "clear description",
 			args:     []string{"alice/demo"},
 			flags:    map[string]string{"description": ""},
-			wantBody: map[string]interface{}{"description": ""},
+			wantBody: map[string]any{"description": ""},
 		},
 		{
 			name:  "all fields",
@@ -70,7 +70,7 @@ func TestRepoEditBuildsExactPartialRequests(t *testing.T) {
 				"default-branch": "trunk",
 				"visibility":     "private",
 			},
-			wantBody: map[string]interface{}{
+			wantBody: map[string]any{
 				"name":           "updated",
 				"description":    "new description",
 				"default_branch": "trunk",
@@ -81,13 +81,13 @@ func TestRepoEditBuildsExactPartialRequests(t *testing.T) {
 			name:     "public alias",
 			args:     []string{"alice/demo"},
 			flags:    map[string]string{"public": "true", "yes": "true"},
-			wantBody: map[string]interface{}{"private": false},
+			wantBody: map[string]any{"private": false},
 		},
 		{
 			name:     "private alias",
 			args:     []string{"alice/demo"},
 			flags:    map[string]string{"private": "true", "yes": "true"},
-			wantBody: map[string]interface{}{"private": true},
+			wantBody: map[string]any{"private": true},
 		},
 	}
 
@@ -102,7 +102,7 @@ func TestRepoEditBuildsExactPartialRequests(t *testing.T) {
 				if got := req.Header.Get("Content-Type"); got != "application/json" {
 					t.Fatalf("Content-Type = %q", got)
 				}
-				var body map[string]interface{}
+				var body map[string]any
 				if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 					t.Fatal(err)
 				}

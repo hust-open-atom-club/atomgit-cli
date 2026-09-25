@@ -274,7 +274,7 @@ func (c *Client) doRequestWithPolicyContext(
 	}
 }
 
-func (c *Client) Get(path string, result interface{}) error {
+func (c *Client) Get(path string, result any) error {
 	resp, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return fmt.Errorf("API request GET %s: %w", path, err)
@@ -288,7 +288,7 @@ func (c *Client) Get(path string, result interface{}) error {
 	return decodeJSONResponse(http.MethodGet, path, resp.Body, result)
 }
 
-func (c *Client) Post(path string, body, result interface{}) error {
+func (c *Client) Post(path string, body, result any) error {
 	var bodyReader io.Reader
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
@@ -315,7 +315,7 @@ func (c *Client) Post(path string, body, result interface{}) error {
 }
 
 // PostForm sends an application/x-www-form-urlencoded POST request.
-func (c *Client) PostForm(path string, fields url.Values, result interface{}) error {
+func (c *Client) PostForm(path string, fields url.Values, result any) error {
 	body := strings.NewReader(fields.Encode())
 	resp, err := c.doRequestWithContentType(http.MethodPost, path, body, "application/x-www-form-urlencoded")
 	if err != nil {
@@ -336,7 +336,7 @@ func (c *Client) PostForm(path string, fields url.Values, result interface{}) er
 // PutForm sends an application/x-www-form-urlencoded PUT request. Some
 // endpoints (for example marking notifications read) only accept form-encoded
 // bodies and reject the JSON encoding used by Put.
-func (c *Client) PutForm(path string, fields url.Values, result interface{}) error {
+func (c *Client) PutForm(path string, fields url.Values, result any) error {
 	body := strings.NewReader(fields.Encode())
 	resp, err := c.doRequestWithContentType(http.MethodPut, path, body, "application/x-www-form-urlencoded")
 	if err != nil {
@@ -354,7 +354,7 @@ func (c *Client) PutForm(path string, fields url.Values, result interface{}) err
 	return decodeJSONResponse(http.MethodPut, path, resp.Body, result)
 }
 
-func (c *Client) Put(path string, body, result interface{}) error {
+func (c *Client) Put(path string, body, result any) error {
 	var bodyReader io.Reader
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
@@ -380,7 +380,7 @@ func (c *Client) Put(path string, body, result interface{}) error {
 	return nil
 }
 
-func (c *Client) Patch(path string, body, result interface{}) error {
+func (c *Client) Patch(path string, body, result any) error {
 	var bodyReader io.Reader
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
@@ -409,7 +409,7 @@ func (c *Client) Patch(path string, body, result interface{}) error {
 }
 
 // PatchForm sends a multipart/form-data PATCH request.
-func (c *Client) PatchForm(path string, fields map[string]string, result interface{}) error {
+func (c *Client) PatchForm(path string, fields map[string]string, result any) error {
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 	for key, value := range fields {
@@ -451,7 +451,7 @@ func (c *Client) Delete(path string) error {
 	return nil
 }
 
-func (c *Client) DeleteWithBody(path string, body interface{}) error {
+func (c *Client) DeleteWithBody(path string, body any) error {
 	var bodyReader io.Reader
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
@@ -514,7 +514,7 @@ func (c *Client) DoRequestRawStreamingWithAccept(method, path, accept string) (*
 	)
 }
 
-func decodeJSONResponse(method, path string, body io.Reader, result interface{}) error {
+func decodeJSONResponse(method, path string, body io.Reader, result any) error {
 	if err := json.NewDecoder(body).Decode(result); err != nil {
 		return fmt.Errorf("API request %s %s: decode response: %w", method, path, err)
 	}
@@ -559,13 +559,13 @@ func statusAllowed(code int, allowed []int) bool {
 // Domain integrations use this primitive instead of the legacy helpers so
 // they can request only their contracted 200 or 201 status and disable retry
 // for state-sensitive operations such as related-branch PUT.
-func (c *Client) doJSONRequest(method, path string, body io.Reader, contentType, accept string, policy RequestPolicy, result interface{}) error {
+func (c *Client) doJSONRequest(method, path string, body io.Reader, contentType, accept string, policy RequestPolicy, result any) error {
 	return c.doJSONRequestContext(c.requestContext(), c.httpClient, method, path, body, contentType, accept, policy, result)
 }
 
 // doJSONRequestContext is doJSONRequest with caller-controlled cancellation
 // and an explicit HTTP client.
-func (c *Client) doJSONRequestContext(ctx context.Context, httpClient *http.Client, method, path string, body io.Reader, contentType, accept string, policy RequestPolicy, result interface{}) error {
+func (c *Client) doJSONRequestContext(ctx context.Context, httpClient *http.Client, method, path string, body io.Reader, contentType, accept string, policy RequestPolicy, result any) error {
 	if len(policy.AllowedStatuses) == 0 {
 		return fmt.Errorf("API request %s %s: allowed statuses cannot be empty", method, path)
 	}

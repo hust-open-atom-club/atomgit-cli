@@ -77,36 +77,36 @@ type RepositorySyncResponse struct {
 
 // PullRequest represents an AtomGit pull request
 type PullRequest struct {
-	ID                int64       `json:"id"`
-	Number            interface{} `json:"number"`
-	Title             string      `json:"title"`
-	Body              string      `json:"body"`
-	State             string      `json:"state"`
-	HTMLURL           string      `json:"html_url"`
-	User              User        `json:"user"`
-	Head              Branch      `json:"head"`
-	Base              Branch      `json:"base"`
-	Assignees         []User      `json:"assignees"`
-	ApprovalReviewers []User      `json:"approval_reviewers"`
-	Testers           []User      `json:"testers"`
-	Labels            []Label     `json:"labels"`
-	Milestone         *Milestone  `json:"milestone"`
-	CreatedAt         string      `json:"created_at"`
-	UpdatedAt         string      `json:"updated_at"`
-	Merged            bool        `json:"merged"`
-	MergedAt          string      `json:"merged_at"`
-	Mergeable         bool        `json:"mergeable"`
+	ID                int64      `json:"id"`
+	Number            any        `json:"number"`
+	Title             string     `json:"title"`
+	Body              string     `json:"body"`
+	State             string     `json:"state"`
+	HTMLURL           string     `json:"html_url"`
+	User              User       `json:"user"`
+	Head              Branch     `json:"head"`
+	Base              Branch     `json:"base"`
+	Assignees         []User     `json:"assignees"`
+	ApprovalReviewers []User     `json:"approval_reviewers"`
+	Testers           []User     `json:"testers"`
+	Labels            []Label    `json:"labels"`
+	Milestone         *Milestone `json:"milestone"`
+	CreatedAt         string     `json:"created_at"`
+	UpdatedAt         string     `json:"updated_at"`
+	Merged            bool       `json:"merged"`
+	MergedAt          string     `json:"merged_at"`
+	Mergeable         bool       `json:"mergeable"`
 }
 
 // PullRequestWriteResponse represents the compact response returned by pull
 // request write endpoints. AtomGit uses web_url in create responses while
 // other endpoints may use html_url or return an empty body.
 type PullRequestWriteResponse struct {
-	ID      interface{} `json:"id"`
-	Number  interface{} `json:"number"`
-	IID     interface{} `json:"iid"`
-	HTMLURL string      `json:"html_url"`
-	WebURL  string      `json:"web_url"`
+	ID      any    `json:"id"`
+	Number  any    `json:"number"`
+	IID     any    `json:"iid"`
+	HTMLURL string `json:"html_url"`
+	WebURL  string `json:"web_url"`
 }
 
 // GetNumber returns the PR number from either supported response field.
@@ -150,16 +150,16 @@ func (pr *PullRequest) IsMerged() bool {
 
 // Issue represents an AtomGit issue
 type Issue struct {
-	ID        int64       `json:"id"`
-	Number    interface{} `json:"number"`
-	Title     string      `json:"title"`
-	Body      string      `json:"body"`
-	State     string      `json:"state"`
-	HTMLURL   string      `json:"html_url"`
-	User      User        `json:"user"`
-	Labels    []Label     `json:"labels"`
-	CreatedAt string      `json:"created_at"`
-	UpdatedAt string      `json:"updated_at"`
+	ID        int64   `json:"id"`
+	Number    any     `json:"number"`
+	Title     string  `json:"title"`
+	Body      string  `json:"body"`
+	State     string  `json:"state"`
+	HTMLURL   string  `json:"html_url"`
+	User      User    `json:"user"`
+	Labels    []Label `json:"labels"`
+	CreatedAt string  `json:"created_at"`
+	UpdatedAt string  `json:"updated_at"`
 }
 
 // GetNumber returns the Issue number as a string
@@ -167,7 +167,7 @@ func (i *Issue) GetNumber() string {
 	return formatIdentifier(i.Number)
 }
 
-func formatIdentifier(value interface{}) string {
+func formatIdentifier(value any) string {
 	switch v := value.(type) {
 	case nil:
 		return ""
@@ -495,18 +495,18 @@ type Label struct {
 
 // Milestone represents an AtomGit repository milestone.
 type Milestone struct {
-	Number       interface{} `json:"number"`
-	Title        string      `json:"title"`
-	Description  string      `json:"description"`
-	State        string      `json:"state"`
-	DueOn        string      `json:"due_on"`
-	OpenIssues   int         `json:"open_issues"`
-	ClosedIssues int         `json:"closed_issues"`
-	RepositoryID int64       `json:"repository_id"`
-	URL          string      `json:"url"`
-	HTMLURL      string      `json:"html_url"`
-	CreatedAt    string      `json:"created_at"`
-	UpdatedAt    string      `json:"updated_at"`
+	Number       any    `json:"number"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	State        string `json:"state"`
+	DueOn        string `json:"due_on"`
+	OpenIssues   int    `json:"open_issues"`
+	ClosedIssues int    `json:"closed_issues"`
+	RepositoryID int64  `json:"repository_id"`
+	URL          string `json:"url"`
+	HTMLURL      string `json:"html_url"`
+	CreatedAt    string `json:"created_at"`
+	UpdatedAt    string `json:"updated_at"`
 }
 
 // GetNumber returns the milestone number as a string.
@@ -559,14 +559,14 @@ type DiffPosition struct {
 
 // CreateCommentResponse represents the response from creating a comment
 type CreateCommentResponse struct {
-	ID        interface{} `json:"id"`
-	NoteID    interface{} `json:"note_id"`
-	Body      string      `json:"body"`
-	User      User        `json:"user"`
-	CreatedAt string      `json:"created_at"`
-	UpdatedAt string      `json:"updated_at"`
-	HTMLURL   string      `json:"html_url"`
-	WebURL    string      `json:"web_url"`
+	ID        any    `json:"id"`
+	NoteID    any    `json:"note_id"`
+	Body      string `json:"body"`
+	User      User   `json:"user"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+	HTMLURL   string `json:"html_url"`
+	WebURL    string `json:"web_url"`
 }
 
 // GetID returns the created comment identifier from either response shape.
@@ -856,17 +856,17 @@ func (c *RepositoryContent) UnmarshalJSON(data []byte) error {
 
 // IssueLinkedPullRequest represents a pull request linked to an issue.
 type IssueLinkedPullRequest struct {
-	ID        int64       `json:"id"`
-	Number    interface{} `json:"number"`
-	Title     string      `json:"title"`
-	Body      string      `json:"body"`
-	State     string      `json:"state"`
-	HTMLURL   string      `json:"html_url"`
-	URL       string      `json:"url"`
-	Head      *Branch     `json:"head"`
-	Base      *Branch     `json:"base"`
-	CreatedAt string      `json:"created_at"`
-	UpdatedAt string      `json:"updated_at"`
+	ID        int64   `json:"id"`
+	Number    any     `json:"number"`
+	Title     string  `json:"title"`
+	Body      string  `json:"body"`
+	State     string  `json:"state"`
+	HTMLURL   string  `json:"html_url"`
+	URL       string  `json:"url"`
+	Head      *Branch `json:"head"`
+	Base      *Branch `json:"base"`
+	CreatedAt string  `json:"created_at"`
+	UpdatedAt string  `json:"updated_at"`
 }
 
 // GetNumber returns the linked pull request number as a string.

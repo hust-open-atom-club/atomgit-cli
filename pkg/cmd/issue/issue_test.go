@@ -103,7 +103,7 @@ func TestIssueCreateBodyInput(t *testing.T) {
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/issues" {
 							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 						}
-						var body map[string]interface{}
+						var body map[string]any
 						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 							t.Fatal(err)
 						}
@@ -601,7 +601,7 @@ func TestIssueCreateAssignee(t *testing.T) {
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/issues" {
 							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 						}
-						var body map[string]interface{}
+						var body map[string]any
 						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 							t.Fatal(err)
 						}

@@ -193,7 +193,7 @@ func newCmdRepoWebhookCreate(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			body := map[string]interface{}{"url": targetURL}
+			body := map[string]any{"url": targetURL}
 			applyWebhookEvents(body, eventValues)
 			if secretProvided {
 				body["password"] = secretValue
@@ -240,7 +240,7 @@ func newCmdRepoWebhookEdit(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			body := make(map[string]interface{})
+			body := make(map[string]any)
 			if cmd.Flags().Changed("url") {
 				targetURL, err = validateWebhookURL(targetURL)
 				if err != nil {
@@ -476,7 +476,7 @@ func listWebhooks(client *api.Client, repository cmdutil.Repository, limit int) 
 	return items, nil
 }
 
-func mutateWebhook(client *api.Client, method, path string, body map[string]interface{}, result *api.Webhook) error {
+func mutateWebhook(client *api.Client, method, path string, body map[string]any, result *api.Webhook) error {
 	encoded, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("encode webhook request: %w", err)
@@ -539,7 +539,7 @@ func parseWebhookEvents(value string, allowNone bool) (map[string]bool, error) {
 	return result, nil
 }
 
-func applyWebhookEvents(body map[string]interface{}, selected map[string]bool) {
+func applyWebhookEvents(body map[string]any, selected map[string]bool) {
 	for name, field := range webhookEventFields {
 		body[field] = selected[name]
 	}

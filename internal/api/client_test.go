@@ -372,15 +372,15 @@ func TestMethodsEncodeBodies(t *testing.T) {
 		name       string
 		method     string
 		statusCode int
-		call       func(*Client, interface{}) error
+		call       func(*Client, any) error
 	}{
-		{name: "post", method: http.MethodPost, statusCode: http.StatusCreated, call: func(c *Client, result interface{}) error {
+		{name: "post", method: http.MethodPost, statusCode: http.StatusCreated, call: func(c *Client, result any) error {
 			return c.Post("/resource", map[string]string{"value": "post"}, result)
 		}},
-		{name: "put", method: http.MethodPut, statusCode: http.StatusOK, call: func(c *Client, result interface{}) error {
+		{name: "put", method: http.MethodPut, statusCode: http.StatusOK, call: func(c *Client, result any) error {
 			return c.Put("/resource", map[string]string{"value": "put"}, result)
 		}},
-		{name: "patch", method: http.MethodPatch, statusCode: http.StatusOK, call: func(c *Client, result interface{}) error {
+		{name: "patch", method: http.MethodPatch, statusCode: http.StatusOK, call: func(c *Client, result any) error {
 			return c.Patch("/resource", map[string]string{"value": "patch"}, result)
 		}},
 	}
@@ -655,7 +655,7 @@ func TestMethodsReturnAPIError(t *testing.T) {
 }
 
 func TestMethodsRejectUnencodableBody(t *testing.T) {
-	badBody := map[string]interface{}{"channel": make(chan int)}
+	badBody := map[string]any{"channel": make(chan int)}
 	client := NewClient("token")
 
 	for name, call := range map[string]func() error{

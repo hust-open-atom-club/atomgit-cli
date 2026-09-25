@@ -112,7 +112,7 @@ func TestPRCreateUsesRequestedOrRepositoryDefaultBase(t *testing.T) {
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/pulls" {
 							t.Fatalf("pull request = %s %s", req.Method, req.URL.Path)
 						}
-						var body map[string]interface{}
+						var body map[string]any
 						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 							t.Fatal(err)
 						}
@@ -178,7 +178,7 @@ func TestPRCreateBodyInput(t *testing.T) {
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/pulls" {
 							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 						}
-						var body map[string]interface{}
+						var body map[string]any
 						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 							t.Fatal(err)
 						}

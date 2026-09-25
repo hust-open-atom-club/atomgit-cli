@@ -25,7 +25,7 @@ func TestPRCreateCollaborationMetadataMappingAndOrder(t *testing.T) {
 		case req.URL.Path == "/api/v5/repos/alice/demo/milestones":
 			return prResponse(http.StatusOK, `[{"number":"7","title":"v1.0"}]`), nil
 		case req.Method == http.MethodPost && req.URL.Path == "/api/v5/repos/alice/demo/pulls":
-			var body map[string]interface{}
+			var body map[string]any
 			decodePRRequest(t, req, &body)
 			assertJSONValue(t, body, "assignees", "ann")
 			assertJSONValue(t, body, "testers", "tess")
@@ -36,7 +36,7 @@ func TestPRCreateCollaborationMetadataMappingAndOrder(t *testing.T) {
 			}
 			return prResponse(http.StatusCreated, `{"number":42,"web_url":"https://atomgit.com/alice/demo/pulls/42"}`), nil
 		case req.Method == http.MethodPost && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/reviewers":
-			var body map[string]interface{}
+			var body map[string]any
 			decodePRRequest(t, req, &body)
 			assertJSONValue(t, body, "reviewers", "ruth")
 			assertJSONValue(t, body, "add", true)
@@ -221,7 +221,7 @@ func collaborationTestFactory(t *testing.T, roundTrip prRoundTripFunc) *cmdutil.
 	}
 }
 
-func decodePRRequest(t *testing.T, req *http.Request, target interface{}) {
+func decodePRRequest(t *testing.T, req *http.Request, target any) {
 	t.Helper()
 	if req.Body == nil {
 		return
@@ -232,7 +232,7 @@ func decodePRRequest(t *testing.T, req *http.Request, target interface{}) {
 	}
 }
 
-func assertJSONValue(t *testing.T, body map[string]interface{}, key string, want interface{}) {
+func assertJSONValue(t *testing.T, body map[string]any, key string, want any) {
 	t.Helper()
 	if got := body[key]; got != want {
 		t.Fatalf("body[%q] = %#v, want %#v", key, got, want)
@@ -241,7 +241,7 @@ func assertJSONValue(t *testing.T, body map[string]interface{}, key string, want
 
 func assertEditMutationBody(t *testing.T, req *http.Request) {
 	t.Helper()
-	var body interface{}
+	var body any
 	decodePRRequest(t, req, &body)
 	path := req.URL.Path
 	switch {
@@ -261,7 +261,7 @@ func assertEditMutationBody(t *testing.T, req *http.Request) {
 	case strings.HasSuffix(path, "/testers"):
 		assertBodyMapValue(t, body, "testers", map[bool]string{true: "tom", false: "tess"}[req.Method == http.MethodPost])
 	case strings.HasSuffix(path, "/labels"):
-		values, ok := body.([]interface{})
+		values, ok := body.([]any)
 		if !ok || len(values) != 1 || values[0] != "Ready" {
 			t.Fatalf("label add body = %#v", body)
 		}
@@ -272,9 +272,9 @@ func assertEditMutationBody(t *testing.T, req *http.Request) {
 	}
 }
 
-func assertBodyMapValue(t *testing.T, body interface{}, key string, want interface{}) {
+func assertBodyMapValue(t *testing.T, body any, key string, want any) {
 	t.Helper()
-	values, ok := body.(map[string]interface{})
+	values, ok := body.(map[string]any)
 	if !ok {
 		t.Fatalf("body = %#v, want object", body)
 	}

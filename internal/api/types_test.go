@@ -21,11 +21,11 @@ func TestUpdateRepositoryPushRuleRequestJSONPreservesExplicitZeroValues(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	var got map[string]interface{}
+	var got map[string]any
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]interface{}{
+	want := map[string]any{
 		"reject_not_signed_by_gpg": false,
 		"commit_message_regex":     "",
 		"max_file_size":            float64(0),
@@ -38,7 +38,7 @@ func TestUpdateRepositoryPushRuleRequestJSONPreservesExplicitZeroValues(t *testi
 func TestNumberFormatting(t *testing.T) {
 	tests := []struct {
 		name  string
-		value interface{}
+		value any
 		want  string
 	}{
 		{name: "string", value: "12", want: "12"},
@@ -438,11 +438,11 @@ func TestProtectedTagJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var got map[string]interface{}
+	var got map[string]any
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]interface{}{"name": "v1.0.0", "create_access_level": float64(0)}
+	want := map[string]any{"name": "v1.0.0", "create_access_level": float64(0)}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("JSON = %#v, want %#v", got, want)
 	}
@@ -451,7 +451,7 @@ func TestProtectedTagJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var omittedBody map[string]interface{}
+	var omittedBody map[string]any
 	if err := json.Unmarshal(omitted, &omittedBody); err != nil {
 		t.Fatal(err)
 	}

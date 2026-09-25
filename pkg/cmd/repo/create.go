@@ -109,7 +109,7 @@ func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory,
 	}
 
 	// Build request body
-	body := map[string]interface{}{
+	body := map[string]any{
 		"name":        repoName,
 		"description": opts.Description,
 		"private":     visibility == "private",

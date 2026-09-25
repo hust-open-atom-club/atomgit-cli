@@ -95,11 +95,11 @@ func TestRepoPushRuleViewTextAndJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var got map[string]interface{}
+	var got map[string]any
 	if err := json.Unmarshal([]byte(jsonOutput), &got); err != nil {
 		t.Fatalf("invalid JSON %q: %v", jsonOutput, err)
 	}
-	want := map[string]interface{}{
+	want := map[string]any{
 		"repository":               "alice/demo",
 		"reject_not_signed_by_gpg": true,
 		"commit_message_regex":     "^(feat|fix): ",
@@ -116,22 +116,22 @@ func TestRepoPushRuleEditSendsExactPartialRequests(t *testing.T) {
 	tests := []struct {
 		name     string
 		flags    map[string]string
-		wantBody map[string]interface{}
+		wantBody map[string]any
 	}{
 		{
 			name:     "explicit false",
 			flags:    map[string]string{"reject-not-signed-by-gpg": "false", "yes": "true"},
-			wantBody: map[string]interface{}{"reject_not_signed_by_gpg": false},
+			wantBody: map[string]any{"reject_not_signed_by_gpg": false},
 		},
 		{
 			name:     "explicit empty regex",
 			flags:    map[string]string{"commit-message-regex": "", "yes": "true"},
-			wantBody: map[string]interface{}{"commit_message_regex": ""},
+			wantBody: map[string]any{"commit_message_regex": ""},
 		},
 		{
 			name:     "explicit zero",
 			flags:    map[string]string{"max-file-size": "0", "yes": "true"},
-			wantBody: map[string]interface{}{"max_file_size": float64(0)},
+			wantBody: map[string]any{"max_file_size": float64(0)},
 		},
 		{
 			name: "all documented fields",
@@ -144,7 +144,7 @@ func TestRepoPushRuleEditSendsExactPartialRequests(t *testing.T) {
 				"yes":                      "true",
 				"json":                     "true",
 			},
-			wantBody: map[string]interface{}{
+			wantBody: map[string]any{
 				"reject_not_signed_by_gpg": true,
 				"commit_message_regex":     "^PROJ-[0-9]+ ",
 				"max_file_size":            float64(50),
@@ -165,7 +165,7 @@ func TestRepoPushRuleEditSendsExactPartialRequests(t *testing.T) {
 				if contentType := req.Header.Get("Content-Type"); contentType != "application/json" {
 					t.Fatalf("Content-Type = %q", contentType)
 				}
-				var body map[string]interface{}
+				var body map[string]any
 				if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 					t.Fatal(err)
 				}

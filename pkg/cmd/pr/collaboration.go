@@ -89,7 +89,7 @@ func resolvePRCreateMetadata(client *api.Client, owner, repo string, opts prCrea
 	return result, nil
 }
 
-func (metadata resolvedPRCreateMetadata) addToCreateBody(body map[string]interface{}) {
+func (metadata resolvedPRCreateMetadata) addToCreateBody(body map[string]any) {
 	if len(metadata.Assignees) > 0 {
 		body["assignees"] = strings.Join(metadata.Assignees, ",")
 	}
@@ -109,7 +109,7 @@ func applyPRCreateMetadata(client *api.Client, owner, repo, number string, metad
 		return nil
 	}
 	path := fmt.Sprintf("/repos/%s/%s/pulls/%s/reviewers", owner, repo, number)
-	return client.Post(path, map[string]interface{}{"reviewers": strings.Join(metadata.Reviewers, ","), "add": true}, nil)
+	return client.Post(path, map[string]any{"reviewers": strings.Join(metadata.Reviewers, ","), "add": true}, nil)
 }
 
 func resolvePREditMetadata(client *api.Client, owner, repo, number string, opts prEditMetadataOptions, cmd *cobra.Command) (resolvedPREditMetadata, error) {
@@ -244,7 +244,7 @@ func applyRoleChanges(client *api.Client, path, field string, add, remove []stri
 		}
 	}
 	if len(add) > 0 {
-		if err := client.Post(path, map[string]interface{}{field: strings.Join(add, ","), "add": true}, nil); err != nil {
+		if err := client.Post(path, map[string]any{field: strings.Join(add, ","), "add": true}, nil); err != nil {
 			return err
 		}
 	}
