@@ -92,8 +92,8 @@ func TestPRCreateReportsCreatedPRWhenReviewerUpdateFails(t *testing.T) {
 func TestPREditCollaborationMetadataOrderAndBodies(t *testing.T) {
 	var mutations []string
 	factory := collaborationTestFactory(t, func(req *http.Request) (*http.Response, error) {
-		if strings.HasPrefix(req.URL.Path, "/api/v5/users/") {
-			login := strings.TrimPrefix(req.URL.Path, "/api/v5/users/")
+		if after, ok := strings.CutPrefix(req.URL.Path, "/api/v5/users/"); ok {
+			login := after
 			return prResponse(http.StatusOK, fmt.Sprintf(`{"login":%q}`, login)), nil
 		}
 		switch {
