@@ -44,7 +44,7 @@ PRERELEASE ?=
 
 .DEFAULT_GOAL := build
 
-.PHONY: all go-min-version go-version build cross-build install uninstall test test-min-go test-race test-contract test-contract-live test-platform-compile vet lint vulncheck fmt fmt-check docs-reference docs-reference-check coverage release release-snapshot publish clean help
+.PHONY: all go-min-version go-version build cross-build install uninstall test test-min-go test-race test-contract test-contract-live test-platform-compile vet fix-check lint vulncheck fmt fmt-check docs-reference docs-reference-check coverage release release-snapshot publish clean help
 
 all: lint test build
 
@@ -155,7 +155,10 @@ test-platform-compile:
 vet:
 	$(GO) vet ./...
 
-lint: fmt-check vet
+fix-check:
+	$(GO) fix -diff ./...
+
+lint: fmt-check vet fix-check
 
 vulncheck:
 	@GO="$(GO)" \
@@ -245,7 +248,8 @@ help:
 	@echo "  make test-contract-live     Opt in to dedicated-account GET-only smoke checks"
 	@echo "  make test-race              Run race detection for $(RACE_PACKAGES)"
 	@echo "  make test-platform-compile  Compile tests for macOS and Windows targets"
-	@echo "  make lint                   Check formatting and run go vet (no file changes)"
+	@echo "  make fix-check              Check for unapplied go fix suggestions"
+	@echo "  make lint                   Check formatting, go vet, and go fix suggestions"
 	@echo "  make cross-build            Compile all seven supported release targets"
 	@echo "  make vulncheck              Build and scan all $(GO_TOOLCHAIN) release binaries"
 	@echo "  make coverage               Run tests and generate $(COVERAGE_FILE)"
