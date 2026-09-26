@@ -286,7 +286,7 @@ npm run publish:npm -- vX.Y.Z dist/vX.Y.Z/npm --publish
 
 Nix package 使用 `go` 行声明的最低版本约束，并由锁定的 nixpkgs input 提供实际编译器；它不要求与官方 Release 使用的建议工具链补丁版本完全一致。更新 flake inputs 时仍需确认所有支持平台提供的 Go 版本不低于 1.26.6。
 
-`.gitcode/workflows/update-nix.yml` 在 `main`、`test`、`nix-update` 分支 push 时运行，也支持手动触发，并在 job 级 guard 中再次校验仓库全名、完整 ref（`refs/heads/...`）与事件类型：手动触发会按所选分支上的 workflow 文件执行，因此不能只依赖 `on.push.branches` 过滤。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；它通过 `nix-update --build` 和 stable 二进制版本元数据回读完成自身验证，再在内容变化时使用 `NIX_UPDATE_TOKEN` 通过 Contents API 写回当前目标分支（`scripts/update-nix-packages.sh` 与 `scripts/publish-nix-update.sh`）。工作流自身的 `ATOMGIT_TOKEN` 仅需只读（顶层 `permissions` 显式声明 `repository: read` 并关闭其余权限域）。
+`.gitcode/workflows/update-nix.yml` 在 `main`、`test`、`nix-update` 分支 push 时运行，也支持手动触发，并在 checkout 后的第一个 step 中通过 `scripts/guard-nix-update-context.sh` 再次校验仓库全名、完整 ref（`refs/heads/...`）与事件类型：手动触发会按所选分支上的 workflow 文件执行，因此不能只依赖 `on.push.branches` 过滤。该校验不放在 job 级 `if:` 中，因为 AtomGit 派发器目前无法在启动时求值含 `&&`/`||` 的复合条件，整个运行会在任何 step 开始前以“网络繁忙”错误失败；上下文值经步骤级 `env:` 表达式（`${{ atomgit.repository }}`、`${{ atomgit.ref }}`、`${{ atomgit.event_name }}`）注入 guard 脚本，因为 runner 实际注入的 `ATOMGIT_*` 环境变量值与文档声明不符。事件白名单兼容 AtomGit push 运行实际传入的 `Push`，同时保留 `push` 与 `workflow_dispatch`；其他事件或空值仍会被拒绝。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；它通过 `nix-update --build` 和 stable 二进制版本元数据回读完成自身验证，再在内容变化时使用 `NIX_UPDATE_TOKEN` 通过 Contents API 写回当前目标分支（`scripts/update-nix-packages.sh` 与 `scripts/publish-nix-update.sh`）。工作流自身的 `ATOMGIT_TOKEN` 仅需只读（顶层 `permissions` 显式声明 `repository: read` 并关闭其余权限域）。
 
 注意 workflow `permissions` 只约束自动令牌，不约束 `NIX_UPDATE_TOKEN` 这类独立 PAT：令牌身份、仓库范围和有效期必须在平台上单独最小化，并在疑似泄露时轮换。平台侧还需为 `main`、`test`、`nix-update` 启用分支保护，限制能推送这些分支和能手动触发 workflow 的成员；能修改特权 workflow 分支的人就能改变令牌的使用方式，这层边界无法仅靠 YAML 保证。
 
@@ -296,7 +296,7 @@ Nix package 使用 `go` 行声明的最低版本约束，并由锁定的 nixpkgs
 
 `nix-update --build` 的 Go 模块下载仅使用 `goproxy.cn` Go module proxy。
 
-写回凭据以 `Authorization: Bearer` 请求头发送（经临时文件传给 curl，不进入命令行参数），绝不进入 URL、仓库内文件或日志；错误输出仅保留 HTTP 状态、curl 退出码和至多 300 个字符、去除控制字符并脱敏令牌的响应摘要。两个脚本的行为由 `test/nix-update-scripts.test.js` 覆盖：无变更、缺失令牌、分支名非法、传输错误、API 失败（有界脱敏）以及双文件成功写回。
+写回凭据以 `Authorization: Bearer` 请求头发送（经临时文件传给 curl，不进入命令行参数），绝不进入 URL、仓库内文件或日志；错误输出仅保留 HTTP 状态、curl 退出码和至多 300 个字符、去除控制字符并脱敏令牌的响应摘要。各脚本的行为由 `test/nix-update-scripts.test.js` 覆盖：上下文拒绝、无变更、缺失令牌、分支名非法、传输错误、API 失败（有界脱敏）、安装器摘要校验以及双文件成功写回。
 
 可在本地复现相同更新；开发环境已包含全部所需工具：
 

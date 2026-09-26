@@ -237,3 +237,38 @@ test('publish sends both files with bearer headers and no credential traces', un
     assert.equal(payloads[i].sha, sha.stdout.trim());
   }
 });
+
+const guard = path.join(root, 'scripts/guard-nix-update-context.sh');
+const GUARD_ENV = {
+  GUARD_REPOSITORY: 'hust-open-atom-club/atomgit-cli',
+  GUARD_REF: 'refs/heads/main',
+  GUARD_EVENT: 'push',
+};
+
+test('context guard accepts the intended repository, ref, and event', unix, () => {
+  for (const ref of ['refs/heads/main', 'refs/heads/test', 'refs/heads/nix-update']) {
+    for (const event of ['push', 'Push', 'workflow_dispatch']) {
+      const out = run(guard, [], { ...GUARD_ENV, GUARD_REF: ref, GUARD_EVENT: event });
+      assert.equal(out.status, 0, out.stderr);
+    }
+  }
+});
+
+test('context guard refuses other repositories, refs, and events', unix, () => {
+  const cases = [
+    [{ ...GUARD_ENV, GUARD_REPOSITORY: 'someone/atomgit-cli' }, /repository 'someone\/atomgit-cli'/],
+    [{ ...GUARD_ENV, GUARD_REPOSITORY: undefined }, /repository ''/],
+    [{ ...GUARD_ENV, GUARD_REF: 'refs/heads/feature' }, /ref 'refs\/heads\/feature'/],
+    [{ ...GUARD_ENV, GUARD_REF: 'refs/tags/v1.0.0' }, /ref 'refs\/tags\/v1\.0\.0'/],
+    [{ ...GUARD_ENV, GUARD_REF: undefined }, /ref ''/],
+    [{ ...GUARD_ENV, GUARD_EVENT: 'schedule' }, /event 'schedule'/],
+    [{ ...GUARD_ENV, GUARD_EVENT: 'mr' }, /event 'mr'/],
+    [{ ...GUARD_ENV, GUARD_EVENT: 'Push ' }, /event 'Push '/],
+    [{ ...GUARD_ENV, GUARD_EVENT: undefined }, /event ''/],
+  ];
+  for (const [env, pattern] of cases) {
+    const out = run(guard, [], env);
+    assert.equal(out.status, 1, `expected refusal for ${JSON.stringify(env)}`);
+    assert.match(out.stderr, pattern);
+  }
+});
