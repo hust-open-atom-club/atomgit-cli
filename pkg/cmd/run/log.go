@@ -20,7 +20,7 @@ func writeJobLogOutput(out io.Writer, source io.Reader) error {
 	defer os.Remove(temporaryName)
 
 	if _, err := io.Copy(temporary, source); err != nil {
-		_ = temporary.Close()
+		temporary.Close() //nolint:errcheck // io.Copy already failed; closing the temporary file is best-effort cleanup before removal.
 		return fmt.Errorf("write temporary job log: %w", err)
 	}
 	if err := temporary.Close(); err != nil {
@@ -29,7 +29,7 @@ func writeJobLogOutput(out io.Writer, source io.Reader) error {
 
 	archive, err := zip.OpenReader(temporaryName)
 	if err == nil {
-		defer archive.Close()
+		defer archive.Close() //nolint:errcheck // The ZIP archive is read-only; log entry read errors are handled separately and Close only releases resources.
 		return writeZipJobLogs(out, archive.File)
 	}
 	if !errors.Is(err, zip.ErrFormat) {
@@ -40,7 +40,7 @@ func writeJobLogOutput(out io.Writer, source io.Reader) error {
 	if err != nil {
 		return fmt.Errorf("open temporary job log: %w", err)
 	}
-	defer plain.Close()
+	defer plain.Close() //nolint:errcheck // The temporary log is reopened read-only; io.Copy handles read/write errors and Close only releases resources.
 	if _, err := io.Copy(out, plain); err != nil {
 		return fmt.Errorf("write job log: %w", err)
 	}

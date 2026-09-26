@@ -226,7 +226,7 @@ func decodePRRequest(t *testing.T, req *http.Request, target any) {
 	if req.Body == nil {
 		return
 	}
-	defer req.Body.Close()
+	defer req.Body.Close() //nolint:errcheck // Request body is decoded separately; Close only releases test request resources.
 	if err := json.NewDecoder(req.Body).Decode(target); err != nil && err != io.EOF {
 		t.Fatal(err)
 	}

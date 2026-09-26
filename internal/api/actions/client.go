@@ -250,7 +250,7 @@ func (c *Client) DeleteArtifact(owner, repo, artifactID string) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", operation, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases the response resources; request and status errors are handled separately.
 
 	if resp.StatusCode != http.StatusNoContent {
 		return responseError(operation, resp)
@@ -395,7 +395,7 @@ func (c *Client) postJSON(operation, path string, payload, result any) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", operation, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusAccepted {
 		return responseError(operation, resp)
@@ -417,7 +417,7 @@ func (c *Client) getJSON(operation, path string, result any) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", operation, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusOK {
 		return responseError(operation, resp)
@@ -435,7 +435,7 @@ func (c *Client) download(operation, path string) (*http.Response, error) {
 	}
 	if resp.StatusCode != http.StatusOK {
 		err := responseError(operation, resp)
-		resp.Body.Close()
+		resp.Body.Close() //nolint:errcheck // Closing only releases error response resources; responseError preserves the primary API error.
 		return nil, err
 	}
 	return resp, nil

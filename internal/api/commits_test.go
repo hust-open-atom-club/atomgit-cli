@@ -122,7 +122,7 @@ func TestGetCommitText(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer body.Close()
+			defer body.Close() //nolint:errcheck // Test reads the streamed commit body separately; Close only releases test resources.
 			got, err := io.ReadAll(body)
 			if err != nil {
 				t.Fatal(err)
@@ -171,7 +171,7 @@ func TestGetCommitTextDoesNotUseWholeRequestTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetCommitText: %v", err)
 	}
-	defer body.Close()
+	defer body.Close() //nolint:errcheck // Test reads the streamed commit body separately; Close only releases test resources.
 	got, err := io.ReadAll(body)
 	if err != nil {
 		t.Fatal(err)

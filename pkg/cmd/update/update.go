@@ -911,7 +911,7 @@ func downloadUpdateAsset(ctx context.Context, rawURL string, limit int64) ([]byt
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer response.Body.Close() //nolint:errcheck // Status and update asset read errors are handled separately; Close only releases response resources.
 	if response.StatusCode/100 != 2 {
 		return nil, fmt.Errorf("download update asset: %w", api.NewHTTPError(response))
 	}

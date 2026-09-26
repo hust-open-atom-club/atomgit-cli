@@ -807,7 +807,7 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer resp.Body.Close()
+			defer resp.Body.Close() //nolint:errcheck // Status and streamed output copy errors are handled separately; Close only releases response resources.
 
 			if resp.StatusCode != http.StatusOK {
 				return api.NewHTTPError(resp)

@@ -85,7 +85,7 @@ func runReleaseUpload(cmd *cobra.Command, f *cmdutil.Factory, opts uploadOptions
 	if err != nil {
 		return fmt.Errorf("failed to open upload file: %w", err)
 	}
-	defer handle.Close()
+	defer handle.Close() //nolint:errcheck // Upload errors are returned separately; Close only releases the read-only upload source.
 
 	token, err := f.Config.GetToken()
 	if err != nil {

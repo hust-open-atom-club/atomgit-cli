@@ -460,7 +460,7 @@ func collaboratorResponse(statusCode int, body string) *http.Response {
 
 func decodeCollaboratorBody(t *testing.T, req *http.Request, target any) {
 	t.Helper()
-	defer req.Body.Close()
+	defer req.Body.Close() //nolint:errcheck // Request body is decoded separately; Close only releases test request resources.
 	if err := json.NewDecoder(req.Body).Decode(target); err != nil {
 		t.Fatal(err)
 	}

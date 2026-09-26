@@ -301,15 +301,15 @@ func saveCredentialStore(store *CredentialStore) error {
 	temporaryPath := temporary.Name()
 	defer os.Remove(temporaryPath)
 	if err := temporary.Chmod(0o600); err != nil {
-		temporary.Close()
+		temporary.Close() //nolint:errcheck // Chmod failed; closing the temporary file is best-effort cleanup while the permission error remains primary.
 		return fmt.Errorf("secure temporary credential file: %w", err)
 	}
 	if _, err := temporary.Write(data); err != nil {
-		temporary.Close()
+		temporary.Close() //nolint:errcheck // Write failed; closing the temporary file is best-effort cleanup while the write error remains primary.
 		return fmt.Errorf("write temporary credential file: %w", err)
 	}
 	if err := temporary.Sync(); err != nil {
-		temporary.Close()
+		temporary.Close() //nolint:errcheck // Sync failed; closing the temporary file is best-effort cleanup while the sync error remains primary.
 		return fmt.Errorf("sync temporary credential file: %w", err)
 	}
 	if err := temporary.Close(); err != nil {

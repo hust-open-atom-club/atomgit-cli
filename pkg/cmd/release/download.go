@@ -113,7 +113,7 @@ func runReleaseDownload(cmd *cobra.Command, f *cmdutil.Factory, opts downloadOpt
 	if err != nil {
 		return fmt.Errorf("failed to download attachment: %w", err)
 	}
-	defer body.Close()
+	defer body.Close() //nolint:errcheck // Download write errors are handled separately; Close only releases the streamed response.
 
 	if _, err := cmdutil.WriteDownload(output, body, opts.Overwrite); err != nil {
 		return fmt.Errorf("failed to write download: %w", err)
