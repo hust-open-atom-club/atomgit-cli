@@ -642,7 +642,7 @@ func updateViaHomebrewCore(cmd *cobra.Command, deps updateDeps, installed instal
 	}
 	executable := filepath.Join(prefix, "bin", homebrewExecutableName)
 	if err := verifyInstalledVersion(cmd.Context(), deps, executable, latest); err != nil {
-		return fmt.Errorf(
+		return fmt.Errorf( //nolint:staticcheck // Homebrew is a product name and is intentionally capitalized in this user-facing error.
 			"Homebrew Core update completed but verification failed (the Formula may not provide %s yet): %w",
 			latest,
 			err,
