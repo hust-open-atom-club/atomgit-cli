@@ -92,16 +92,20 @@ type releaseJSON struct {
 func releasesJSON(releases []api.Release) []releaseJSON {
 	result := make([]releaseJSON, len(releases))
 	for i, release := range releases {
-		result[i] = releaseJSON{
-			TagName:         release.TagName,
-			Name:            release.Name,
-			Status:          releaseStatus(release),
-			Draft:           release.Draft,
-			Prerelease:      release.Prerelease,
-			TargetCommitish: release.TargetCommitish,
-			CreatedAt:       release.CreatedAt,
-			Author:          release.Author.Login,
-		}
+		result[i] = releaseSummaryJSON(release)
 	}
 	return result
+}
+
+func releaseSummaryJSON(release api.Release) releaseJSON {
+	return releaseJSON{
+		TagName:         release.TagName,
+		Name:            release.Name,
+		Status:          releaseStatus(release),
+		Draft:           release.Draft,
+		Prerelease:      release.Prerelease,
+		TargetCommitish: release.TargetCommitish,
+		CreatedAt:       release.CreatedAt,
+		Author:          release.Author.Login,
+	}
 }
