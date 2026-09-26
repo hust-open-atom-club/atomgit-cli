@@ -69,7 +69,7 @@ func TestUploadReleaseAssetRejectsNilBody(t *testing.T) {
 
 func TestUploadReleaseAssetRejectsNilContext(t *testing.T) {
 	upload := ReleaseUploadURL{URL: "https://store.example.com/upload"}
-	err := UploadReleaseAsset(nil, newUploadClient(t, nil), upload, bytes.NewReader([]byte("payload")))
+	err := UploadReleaseAsset(nil, newUploadClient(t, nil), upload, bytes.NewReader([]byte("payload"))) //nolint:staticcheck // nil context is intentional: this test verifies input validation.
 	if err == nil || !strings.Contains(err.Error(), "context") {
 		t.Fatalf("error = %v, want context error", err)
 	}
