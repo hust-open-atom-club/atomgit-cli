@@ -133,11 +133,12 @@ func TestSchemaStartupWithIsolatedCredentials(t *testing.T) {
 				token = filepath.Join(home, ".atomgit_personal_token.json")
 				content = []byte(`{"access_token":"file-secret-must-not-appear","user":"user-secret-must-not-appear"}`)
 			}
-			if state == "corrupt" || state == "legacy" || state == "local-alias" {
+			switch state {
+			case "corrupt", "legacy", "local-alias":
 				if err := os.WriteFile(token, content, 0o644); err != nil {
 					t.Fatal(err)
 				}
-			} else if state == "directory" {
+			case "directory":
 				if err := os.Mkdir(token, 0o700); err != nil {
 					t.Fatal(err)
 				}

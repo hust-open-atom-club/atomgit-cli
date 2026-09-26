@@ -182,10 +182,10 @@ func TestDiscussionViewCommentsAndNestedReplies(t *testing.T) {
 	var replyPath string
 	factory := discussionFactory(discussionTestConfig{token: "token"}, func(req *http.Request) (*http.Response, error) {
 		requests++
-		switch {
-		case req.URL.Path == "/api/v5/repos/owner/repo/discuss/7":
+		switch req.URL.Path {
+		case "/api/v5/repos/owner/repo/discuss/7":
 			return discussionResponse(http.StatusOK, viewDetailFixture), nil
-		case req.URL.Path == "/api/v5/repos/owner/repo/discuss/7/comment":
+		case "/api/v5/repos/owner/repo/discuss/7/comment":
 			return discussionResponse(http.StatusOK, viewCommentsFixture), nil
 		default:
 			replyPath = req.URL.Path
@@ -319,10 +319,10 @@ func TestDiscussionViewPaginatesCommentsAndReplies(t *testing.T) {
 
 func TestDiscussionViewJSONIncludesComments(t *testing.T) {
 	factory := discussionFactory(discussionTestConfig{token: "token"}, func(req *http.Request) (*http.Response, error) {
-		switch {
-		case req.URL.Path == "/api/v5/repos/owner/repo/discuss/7":
+		switch req.URL.Path {
+		case "/api/v5/repos/owner/repo/discuss/7":
 			return discussionResponse(http.StatusOK, viewDetailFixture), nil
-		case req.URL.Path == "/api/v5/repos/owner/repo/discuss/7/comment":
+		case "/api/v5/repos/owner/repo/discuss/7/comment":
 			return discussionResponse(http.StatusOK, viewCommentsFixture), nil
 		default:
 			return discussionResponse(http.StatusOK, viewRepliesFixture), nil
