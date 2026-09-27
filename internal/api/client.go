@@ -265,7 +265,11 @@ func (c *Client) doRequestWithPolicyContext(
 	}
 	if rateLimitEligible {
 		requestCtx, cancel = context.WithTimeout(ctx, policy.budget)
-		retryDeadline = policy.now().Add(policy.budget)
+		retryBudget := policy.budget
+		if parentDeadline, ok := ctx.Deadline(); ok {
+			retryBudget = min(retryBudget, max(time.Until(parentDeadline), 0))
+		}
+		retryDeadline = policy.now().Add(retryBudget)
 		maxAttempts = max(maxAttempts, policy.maxAttempts)
 	}
 

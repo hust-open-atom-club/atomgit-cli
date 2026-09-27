@@ -112,7 +112,11 @@ func parseRetryAfter(value string, now time.Time) (time.Duration, bool) {
 	if value == "" {
 		return 0, false
 	}
-	if seconds, err := strconv.ParseUint(value, 10, 64); err == nil {
+	if isDecimalRetryAfter(value) {
+		seconds, err := strconv.ParseUint(value, 10, 64)
+		if err != nil {
+			return time.Duration(math.MaxInt64), true
+		}
 		maxSeconds := uint64(math.MaxInt64 / int64(time.Second))
 		if seconds > maxSeconds {
 			return time.Duration(math.MaxInt64), true
@@ -129,6 +133,15 @@ func parseRetryAfter(value string, now time.Time) (time.Duration, bool) {
 		return 0, false
 	}
 	return delay, true
+}
+
+func isDecimalRetryAfter(value string) bool {
+	for _, character := range value {
+		if character < '0' || character > '9' {
+			return false
+		}
+	}
+	return value != ""
 }
 
 func (p rateLimitRetryPolicy) fallbackDelay(retry int) time.Duration {

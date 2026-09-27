@@ -101,6 +101,33 @@ func TestRateLimitRetryAfterVariants(t *testing.T) {
 }
 
 func TestRateLimitRetryStopsAtBudgetAndAttemptBounds(t *testing.T) {
+	t.Run("parent context deadline limits budget", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		calls := 0
+		client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				calls++
+				resp := runRawResponse(req, http.StatusTooManyRequests, `{"message":"slow down"}`)
+				resp.Header.Set("Retry-After", "3")
+				return resp, nil
+			}),
+		}).WithContext(ctx)
+		client.rateLimitPolicy = rateLimitRetryPolicy{
+			budget:      10 * time.Second,
+			maxAttempts: 3,
+			now:         time.Now,
+			wait:        func(context.Context, time.Duration) error { t.Fatal("unexpected wait"); return nil },
+			jitter:      func(time.Duration) time.Duration { return 0 },
+		}
+
+		err := client.Get("/resource", &map[string]any{})
+		var httpErr *HTTPError
+		if !errors.As(err, &httpErr) || httpErr.StatusCode != http.StatusTooManyRequests || httpErr.RetryAfter != "3" || calls != 1 {
+			t.Fatalf("error = %v, calls = %d, want one terminal 429 preserving Retry-After", err, calls)
+		}
+	})
+
 	t.Run("consecutive responses exhaust budget", func(t *testing.T) {
 		calls := 0
 		waits := 0
@@ -131,29 +158,34 @@ func TestRateLimitRetryStopsAtBudgetAndAttemptBounds(t *testing.T) {
 		}
 	})
 
-	t.Run("server delay exceeds remaining budget", func(t *testing.T) {
-		calls := 0
-		client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
-			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				calls++
-				resp := runRawResponse(req, http.StatusTooManyRequests, `{"message":"slow down"}`)
-				resp.Header.Set("Retry-After", strconv.FormatUint(^uint64(0), 10))
-				return resp, nil
-			}),
-		})
-		client.rateLimitPolicy = rateLimitRetryPolicy{
-			budget:      time.Second,
-			maxAttempts: 3,
-			now:         time.Now,
-			wait:        func(context.Context, time.Duration) error { t.Fatal("unexpected wait"); return nil },
-			jitter:      func(time.Duration) time.Duration { return 0 },
-		}
+	for _, retryAfter := range []string{
+		strconv.FormatUint(^uint64(0), 10),
+		"18446744073709551616",
+	} {
+		t.Run("server delay exceeds remaining budget "+retryAfter, func(t *testing.T) {
+			calls := 0
+			client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
+				Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+					calls++
+					resp := runRawResponse(req, http.StatusTooManyRequests, `{"message":"slow down"}`)
+					resp.Header.Set("Retry-After", retryAfter)
+					return resp, nil
+				}),
+			})
+			client.rateLimitPolicy = rateLimitRetryPolicy{
+				budget:      time.Second,
+				maxAttempts: 3,
+				now:         time.Now,
+				wait:        func(context.Context, time.Duration) error { t.Fatal("unexpected wait"); return nil },
+				jitter:      func(time.Duration) time.Duration { return 0 },
+			}
 
-		err := client.Get("/resource", &map[string]any{})
-		if !IsHTTPStatus(err, http.StatusTooManyRequests) || calls != 1 {
-			t.Fatalf("error = %v, calls = %d, want one terminal 429", err, calls)
-		}
-	})
+			err := client.Get("/resource", &map[string]any{})
+			if !IsHTTPStatus(err, http.StatusTooManyRequests) || calls != 1 {
+				t.Fatalf("error = %v, calls = %d, want one terminal 429", err, calls)
+			}
+		})
+	}
 
 	t.Run("consecutive responses exhaust attempts", func(t *testing.T) {
 		calls := 0
