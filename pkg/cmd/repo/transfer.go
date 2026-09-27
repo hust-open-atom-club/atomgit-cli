@@ -163,7 +163,6 @@ func runRepositoryTransfer(cmd *cobra.Command, client *api.Client, repository cm
 			return err
 		}
 		response, err := api.TransferOrganizationRepository(client, repository.Owner, repository.Name, destination, password)
-		password = ""
 		if err != nil {
 			return handleTransferRequestError(out, client, repository, source.ID, destination, repository.Name, fmt.Sprintf("failed to transfer organization repository %s to %s", repository, destination), err)
 		}

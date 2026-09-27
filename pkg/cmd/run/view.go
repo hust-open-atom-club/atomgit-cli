@@ -265,7 +265,7 @@ func writeJobLog(out io.Writer, client *actions.Client, owner, repo, runID, jobI
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Job log read errors are handled separately; Close only releases the streamed response.
 	return writeJobLogOutput(out, resp.Body)
 }
 
@@ -278,7 +278,7 @@ func downloadJobLog(cmd *cobra.Command, client *actions.Client, owner, repo, run
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Download write errors are handled separately; Close only releases the streamed response.
 
 	path, err := writeDownload(destination, resp.Body, overwrite)
 	if err != nil {
@@ -308,7 +308,7 @@ func downloadArtifact(cmd *cobra.Command, client *actions.Client, owner, repo, r
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Download write errors are handled separately; Close only releases the streamed response.
 	path, err := writeDownload(destination, resp.Body, overwrite)
 	if err != nil {
 		return fmt.Errorf("download artifact: %w", err)

@@ -69,7 +69,7 @@ func TestUploadReleaseAssetRejectsNilBody(t *testing.T) {
 
 func TestUploadReleaseAssetRejectsNilContext(t *testing.T) {
 	upload := ReleaseUploadURL{URL: "https://store.example.com/upload"}
-	err := UploadReleaseAsset(nil, newUploadClient(t, nil), upload, bytes.NewReader([]byte("payload")))
+	err := UploadReleaseAsset(nil, newUploadClient(t, nil), upload, bytes.NewReader([]byte("payload"))) //nolint:staticcheck // nil context is intentional: this test verifies input validation.
 	if err == nil || !strings.Contains(err.Error(), "context") {
 		t.Fatalf("error = %v, want context error", err)
 	}
@@ -404,7 +404,7 @@ func TestUploadReleaseAssetRetriesRealFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck // Test opens the upload source read-only; Close only releases test resources.
 
 	upload := ReleaseUploadURL{
 		URL:     "https://store.example.com/upload?policy=abc",
@@ -581,7 +581,7 @@ func TestDownloadReleaseAttachmentSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DownloadReleaseAttachment: %v", err)
 	}
-	defer rc.Close()
+	defer rc.Close() //nolint:errcheck // Test reads the streamed attachment separately; Close only releases test resources.
 
 	got, err := io.ReadAll(rc)
 	if err != nil {
@@ -621,7 +621,7 @@ func TestDownloadReleaseAttachmentDoesNotUseMetadataTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DownloadReleaseAttachment: %v", err)
 	}
-	defer body.Close()
+	defer body.Close() //nolint:errcheck // Test reads the streamed attachment separately; Close only releases test resources.
 	got, err := io.ReadAll(body)
 	if err != nil {
 		t.Fatalf("read download: %v", err)
@@ -668,7 +668,7 @@ func TestDownloadReleaseAttachmentSanitizesHTTPError(t *testing.T) {
 
 	body, err := DownloadReleaseAttachment(context.Background(), client, "owner", "repo", "v1.0", "asset.bin")
 	if body != nil {
-		body.Close()
+		body.Close() //nolint:errcheck // Unexpected response body is test cleanup; the assertion below reports the failure.
 		t.Fatalf("body = %v, want nil", body)
 	}
 	assertSanitizedReleaseError(t, err, secret)

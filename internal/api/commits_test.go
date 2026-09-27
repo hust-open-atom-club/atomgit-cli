@@ -122,7 +122,7 @@ func TestGetCommitText(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer body.Close()
+			defer body.Close() //nolint:errcheck // Test reads the streamed commit body separately; Close only releases test resources.
 			got, err := io.ReadAll(body)
 			if err != nil {
 				t.Fatal(err)
@@ -171,7 +171,7 @@ func TestGetCommitTextDoesNotUseWholeRequestTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetCommitText: %v", err)
 	}
-	defer body.Close()
+	defer body.Close() //nolint:errcheck // Test reads the streamed commit body separately; Close only releases test resources.
 	got, err := io.ReadAll(body)
 	if err != nil {
 		t.Fatal(err)
@@ -183,10 +183,10 @@ func TestGetCommitTextDoesNotUseWholeRequestTimeout(t *testing.T) {
 
 func TestCommitAPIsRejectNilContext(t *testing.T) {
 	client := NewClient("token")
-	if _, err := CompareCommits(nil, client, "alice", "demo", "main", "feature"); err == nil || !strings.Contains(err.Error(), "context is nil") {
+	if _, err := CompareCommits(nil, client, "alice", "demo", "main", "feature"); err == nil || !strings.Contains(err.Error(), "context is nil") { //nolint:staticcheck // nil context is intentional: this test verifies input validation.
 		t.Fatalf("CompareCommits error = %v", err)
 	}
-	if _, err := GetCommitText(nil, client, "alice", "demo", "abc", "diff"); err == nil || !strings.Contains(err.Error(), "context is nil") {
+	if _, err := GetCommitText(nil, client, "alice", "demo", "abc", "diff"); err == nil || !strings.Contains(err.Error(), "context is nil") { //nolint:staticcheck // nil context is intentional: this test verifies input validation.
 		t.Fatalf("GetCommitText error = %v", err)
 	}
 }

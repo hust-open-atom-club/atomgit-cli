@@ -214,7 +214,7 @@ func TestRepoMirrorListRejectsInvalidLimitBeforeAuthentication(t *testing.T) {
 func TestRepoMirrorResolverErrorPrecedesAuthentication(t *testing.T) {
 	resolverErr := errors.New("repository context unavailable")
 	cfg := &repoRecordingConfig{}
-	cfg.repoCommandConfig.tokenErr = errors.New("authentication reached")
+	cfg.tokenErr = errors.New("authentication reached")
 	factory := &cmdutil.Factory{Config: cfg, RepositoryResolver: func() (cmdutil.Repository, error) {
 		return cmdutil.Repository{}, resolverErr
 	}}

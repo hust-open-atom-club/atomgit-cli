@@ -337,7 +337,7 @@ func validateProtectionPermission(value string) error {
 			return fmt.Errorf("permissions must be non-empty semicolon-separated values without spaces")
 		}
 		for _, r := range token {
-			if !(unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' || r == '-' || r == '.') {
+			if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' && r != '-' && r != '.' {
 				return fmt.Errorf("unsupported role or username %q", token)
 			}
 		}

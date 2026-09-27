@@ -642,7 +642,7 @@ func updateViaHomebrewCore(cmd *cobra.Command, deps updateDeps, installed instal
 	}
 	executable := filepath.Join(prefix, "bin", homebrewExecutableName)
 	if err := verifyInstalledVersion(cmd.Context(), deps, executable, latest); err != nil {
-		return fmt.Errorf(
+		return fmt.Errorf( //nolint:staticcheck // Homebrew is a product name and is intentionally capitalized in this user-facing error.
 			"Homebrew Core update completed but verification failed (the Formula may not provide %s yet): %w",
 			latest,
 			err,
@@ -911,7 +911,7 @@ func downloadUpdateAsset(ctx context.Context, rawURL string, limit int64) ([]byt
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer response.Body.Close() //nolint:errcheck // Status and update asset read errors are handled separately; Close only releases response resources.
 	if response.StatusCode/100 != 2 {
 		return nil, fmt.Errorf("download update asset: %w", api.NewHTTPError(response))
 	}

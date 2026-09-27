@@ -422,13 +422,3 @@ func existingValues(requested, current []string) []string {
 	}
 	return result
 }
-
-func removeValues(values, removals []string) []string {
-	result := make([]string, 0, len(values))
-	for _, value := range values {
-		if !containsFold(removals, value) {
-			result = append(result, value)
-		}
-	}
-	return result
-}

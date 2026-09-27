@@ -28,12 +28,12 @@ func InspectCredentials() (*StoredCredentials, os.FileMode, error) {
 		}
 		opened, err := f.Stat()
 		if err != nil || !os.SameFile(info, opened) {
-			f.Close()
+			f.Close() //nolint:errcheck // File identity validation failed; closing is best-effort cleanup while ErrTokenFileChanged remains primary.
 			return nil, info.Mode(), ErrTokenFileChanged
 		}
 		const maxSize = 1 << 20
 		data, err := io.ReadAll(io.LimitReader(f, maxSize+1))
-		f.Close()
+		f.Close() //nolint:errcheck // Credential contents were read separately; Close only releases the read-only file.
 		if err != nil {
 			return nil, info.Mode(), err
 		}

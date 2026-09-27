@@ -27,7 +27,7 @@ func (c *Client) CurrentUserLogin() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("verify current user: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and response read errors are handled separately.
 	if resp.StatusCode != http.StatusOK {
 		// Status alone determines the verification failure. Reading an unused
 		// error body could stall or replace a known 401/403/5xx with a timeout.

@@ -346,7 +346,7 @@ func getCollaborator(client *api.Client, repository cmdutil.Repository, username
 	if err != nil {
 		return api.Collaborator{}, false, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Status and JSON decode errors are handled separately; Close only releases response resources.
 	if resp.StatusCode == http.StatusNotFound {
 		return api.Collaborator{}, false, nil
 	}

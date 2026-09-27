@@ -237,7 +237,7 @@ func exchangeCode(ctx context.Context, id, secret, redir, code string) (*tokenRe
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status, body read, and JSON decode errors are handled separately.
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, tokenEndpointError(resp)
 	}
@@ -284,7 +284,7 @@ func RefreshAccessToken(ctx context.Context, refreshToken string) (*RefreshedTok
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status, body read, and JSON decode errors are handled separately.
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, tokenEndpointError(resp)
 	}
@@ -330,7 +330,7 @@ func FetchUserWithURL(ctx context.Context, url, accessToken string) (*UserInfo, 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status, body read, and JSON decode errors are handled separately.
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("user endpoint: %w", internalapi.NewHTTPError(resp))
 	}

@@ -65,13 +65,13 @@ func TestPRCreateCollaborationMetadataMappingAndOrder(t *testing.T) {
 func TestPRCreateReportsCreatedPRWhenReviewerUpdateFails(t *testing.T) {
 	created := 0
 	factory := collaborationTestFactory(t, func(req *http.Request) (*http.Response, error) {
-		switch {
-		case req.URL.Path == "/api/v5/users/ruth":
+		switch req.URL.Path {
+		case "/api/v5/users/ruth":
 			return prResponse(http.StatusOK, `{"login":"ruth"}`), nil
-		case req.URL.Path == "/api/v5/repos/alice/demo/pulls":
+		case "/api/v5/repos/alice/demo/pulls":
 			created++
 			return prResponse(http.StatusCreated, `{"number":42,"web_url":"https://atomgit.com/alice/demo/pulls/42"}`), nil
-		case req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/reviewers":
+		case "/api/v5/repos/alice/demo/pulls/42/reviewers":
 			return prResponse(http.StatusForbidden, `{"message":"forbidden"}`), nil
 		default:
 			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.RequestURI())
@@ -140,16 +140,16 @@ func TestPREditCollaborationMetadataIsIdempotent(t *testing.T) {
 			mutations++
 			return prResponse(http.StatusNoContent, ""), nil
 		}
-		switch {
-		case req.URL.Path == "/api/v5/users/ann":
+		switch req.URL.Path {
+		case "/api/v5/users/ann":
 			return prResponse(http.StatusOK, `{"login":"ann"}`), nil
-		case req.URL.Path == "/api/v5/repos/alice/demo/labels":
+		case "/api/v5/repos/alice/demo/labels":
 			return prResponse(http.StatusOK, `[{"name":"Bug"}]`), nil
-		case req.URL.Path == "/api/v5/repos/alice/demo/pulls/42":
+		case "/api/v5/repos/alice/demo/pulls/42":
 			return prResponse(http.StatusOK, `{"number":42,"assignees":[{"login":"ann"}],"labels":[{"name":"Bug"}],"milestone":{"number":"2"}}`), nil
-		case req.URL.Path == "/api/v5/repos/alice/demo/pulls/42/labels":
+		case "/api/v5/repos/alice/demo/pulls/42/labels":
 			return prResponse(http.StatusOK, `[{"name":"Bug"}]`), nil
-		case req.URL.Path == "/api/v5/repos/alice/demo/milestones":
+		case "/api/v5/repos/alice/demo/milestones":
 			return prResponse(http.StatusOK, `[{"number":"2","title":"next"}]`), nil
 		default:
 			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.RequestURI())
@@ -226,7 +226,7 @@ func decodePRRequest(t *testing.T, req *http.Request, target any) {
 	if req.Body == nil {
 		return
 	}
-	defer req.Body.Close()
+	defer req.Body.Close() //nolint:errcheck // Request body is decoded separately; Close only releases test request resources.
 	if err := json.NewDecoder(req.Body).Decode(target); err != nil && err != io.EOF {
 		t.Fatal(err)
 	}

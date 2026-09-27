@@ -39,7 +39,7 @@ func Probe(ctx context.Context, transport http.RoundTripper, f Fixture, owner, r
 	if err != nil {
 		return errors.New("contract request failed (transport, TLS or timeout)")
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; response read and validation errors are handled separately.
 	body, err := io.ReadAll(io.LimitReader(resp.Body, MaxBodyBytes+1))
 	if err != nil {
 		return errors.New("cannot read contract response")
