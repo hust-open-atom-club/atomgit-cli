@@ -68,6 +68,9 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	// byte-for-byte output with --raw-output.
 	safeOut := cmdutil.NewSanitizingWriter(stdout)
 	safeErr := cmdutil.NewSanitizingWriter(stderr)
+	if f != nil {
+		f.ErrorWriter = safeErr
+	}
 	cmd.SetOut(safeOut)
 	cmd.SetErr(safeErr)
 	var rawOutput bool

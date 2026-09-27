@@ -49,6 +49,33 @@ func TestAPIDefaultGETStreamsAllSuccessfulResponses(t *testing.T) {
 	}
 }
 
+func TestAPIRateLimitWarningUsesStderr(t *testing.T) {
+	calls := 0
+	fixture := newAPITestFixture("secret", func(req *http.Request) (*http.Response, error) {
+		calls++
+		if calls == 1 {
+			resp := apiTestResponse(req, http.StatusTooManyRequests, `{"message":"slow down"}`)
+			resp.Header.Set("Retry-After", "0")
+			return resp, nil
+		}
+		return apiTestResponse(req, http.StatusOK, `{"ok":true}`), nil
+	})
+	cmd := NewCmdAPI(fixture.factory)
+	cmd.SetOut(fixture.stdout)
+	cmd.SetErr(fixture.stderr)
+	cmd.SetArgs([]string{"/user"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 2 || fixture.stdout.String() != `{"ok":true}` {
+		t.Fatalf("calls = %d, stdout = %q", calls, fixture.stdout.String())
+	}
+	if !strings.Contains(fixture.stderr.String(), "Rate limited by AtomGit") {
+		t.Fatalf("stderr = %q", fixture.stderr.String())
+	}
+}
+
 func TestAPIErrorsAreBoundedAndRedacted(t *testing.T) {
 	const password = "api-password-123"
 	fixture := newAPITestFixture("secret", func(req *http.Request) (*http.Response, error) {

@@ -55,7 +55,7 @@ func GetCommitText(ctx context.Context, client *Client, owner, repo, sha, format
 
 	path := fmt.Sprintf("/repos/%s/%s/commit/%s/%s",
 		url.PathEscape(owner), url.PathEscape(repo), url.PathEscape(sha), format)
-	resp, err := client.doRequestWithPolicyContext(ctx, streamingHTTPClient(client), http.MethodGet, path, nil, "", "text/plain, */*", true)
+	resp, err := client.doRequestWithPolicyContext(ctx, streamingHTTPClient(client), http.MethodGet, path, nil, "", "text/plain, */*", true, false)
 	if err != nil {
 		return nil, fmt.Errorf("get commit %s: API request GET %s: %w", format, path, err)
 	}

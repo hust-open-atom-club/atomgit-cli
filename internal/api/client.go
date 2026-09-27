@@ -23,10 +23,12 @@ const (
 )
 
 type Client struct {
-	baseURL    string
-	token      string
-	httpClient *http.Client
-	ctx        context.Context
+	baseURL         string
+	token           string
+	httpClient      *http.Client
+	ctx             context.Context
+	retryWriter     io.Writer
+	rateLimitPolicy rateLimitRetryPolicy
 }
 
 const defaultMetadataTimeout = 30 * time.Second
@@ -87,10 +89,11 @@ func NewClientWithBaseURL(token, baseURL string, httpClient *http.Client) *Clien
 		}
 	}
 	return &Client{
-		baseURL:    strings.TrimRight(baseURL, "/"),
-		token:      token,
-		httpClient: httpClient,
-		ctx:        context.Background(),
+		baseURL:         strings.TrimRight(baseURL, "/"),
+		token:           token,
+		httpClient:      httpClient,
+		ctx:             context.Background(),
+		rateLimitPolicy: defaultRateLimitPolicy(),
 	}
 }
 
@@ -105,6 +108,17 @@ func (c *Client) WithContext(ctx context.Context) *Client {
 	}
 	clone := *c
 	clone.ctx = ctx
+	return &clone
+}
+
+// WithRetryWriter returns a shallow copy that reports rate-limit waits to w.
+// A nil writer keeps retries silent, which is useful for library consumers.
+func (c *Client) WithRetryWriter(w io.Writer) *Client {
+	if c == nil {
+		return nil
+	}
+	clone := *c
+	clone.retryWriter = w
 	return &clone
 }
 
@@ -204,11 +218,13 @@ func (c *Client) doRequestWithPolicy(
 		contentType,
 		accept,
 		canRetry,
+		true,
 	)
 }
 
 // doRequestWithPolicyContext is doRequestWithPolicy with caller-controlled
-// cancellation for streaming operations.
+// cancellation. allowRateLimitRetry must remain false for streaming responses
+// whose bodies cannot be safely replayed.
 func (c *Client) doRequestWithPolicyContext(
 	ctx context.Context,
 	httpClient *http.Client,
@@ -216,6 +232,7 @@ func (c *Client) doRequestWithPolicyContext(
 	body io.Reader,
 	contentType, accept string,
 	canRetry bool,
+	allowRateLimitRetry bool,
 ) (*http.Response, error) {
 	if ctx == nil {
 		return nil, fmt.Errorf("request context is nil")
@@ -237,17 +254,32 @@ func (c *Client) doRequestWithPolicyContext(
 	}
 
 	requestURL := c.baseURL + path
-	const retryDelay = 200 * time.Millisecond
+	rateLimitEligible := allowRateLimitRetry && canRetry && (method == http.MethodGet || method == http.MethodHead)
+	requestCtx := ctx
+	var cancel context.CancelFunc
+	policy := c.rateLimitPolicy.withDefaults()
+	retryDeadline := time.Time{}
+	maxAttempts := 1
+	if canRetry {
+		maxAttempts = 2
+	}
+	if rateLimitEligible {
+		requestCtx, cancel = context.WithTimeout(ctx, policy.budget)
+		retryDeadline = policy.now().Add(policy.budget)
+		maxAttempts = max(maxAttempts, policy.maxAttempts)
+	}
 
-	for attempt := 1; ; attempt++ {
+	networkRetried := false
+	rateLimitRetries := 0
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		var bodyReader io.Reader
 		if bodyBytes != nil {
 			bodyReader = bytes.NewReader(bodyBytes)
 		}
 
-		req, err := http.NewRequestWithContext(ctx, method, requestURL, bodyReader)
+		req, err := http.NewRequestWithContext(requestCtx, method, requestURL, bodyReader)
 		if err != nil {
-			return nil, err
+			return finishRateLimitedRequest(nil, err, cancel)
 		}
 
 		if c.token != "" {
@@ -262,17 +294,39 @@ func (c *Client) doRequestWithPolicyContext(
 		}
 
 		resp, err := httpClient.Do(req)
-		// 首次失败 + 幂等方法 + 网络错误 → 短睡后重试一次
-		if err != nil && canRetry && attempt == 1 && ctx.Err() == nil {
-			select {
-			case <-time.After(retryDelay):
-			case <-ctx.Done():
-				return nil, ctx.Err()
+		if err != nil && canRetry && !networkRetried && attempt < maxAttempts && requestCtx.Err() == nil {
+			networkRetried = true
+			if err := waitForRetry(requestCtx, networkRetryDelay); err != nil {
+				return finishRateLimitedRequest(nil, err, cancel)
 			}
 			continue
 		}
-		return resp, err
+		if err != nil {
+			return finishRateLimitedRequest(resp, err, cancel)
+		}
+		if !rateLimitEligible || resp.StatusCode != http.StatusTooManyRequests || attempt >= maxAttempts {
+			return finishRateLimitedRequest(resp, nil, cancel)
+		}
+
+		delay, valid := parseRetryAfter(resp.Header.Get("Retry-After"), policy.now())
+		if !valid {
+			delay = policy.fallbackDelay(rateLimitRetries)
+		}
+		remaining := retryDeadline.Sub(policy.now())
+		if remaining <= 0 || delay >= remaining {
+			return finishRateLimitedRequest(resp, nil, cancel)
+		}
+
+		closeRetryResponse(resp)
+		if c.retryWriter != nil {
+			fmt.Fprintf(c.retryWriter, "Rate limited by AtomGit; retrying in %s (attempt %d/%d).\n", delay, attempt+1, maxAttempts)
+		}
+		if err := policy.wait(requestCtx, delay); err != nil {
+			return finishRateLimitedRequest(nil, err, cancel)
+		}
+		rateLimitRetries++
 	}
+	return finishRateLimitedRequest(nil, fmt.Errorf("request retry attempts exhausted"), cancel)
 }
 
 func (c *Client) Get(path string, result any) error {
@@ -512,6 +566,7 @@ func (c *Client) DoRequestRawStreamingWithAccept(method, path, accept string) (*
 		"",
 		accept,
 		isIdempotent(method),
+		false,
 	)
 }
 
@@ -540,7 +595,8 @@ func NewHTTPError(resp *http.Response) error {
 // RequestPolicy configures how a single API request is dispatched.
 // AllowedStatuses is the exact set of HTTP status codes treated as success;
 // any other status produces a bounded, redacted API error. CanRetry controls
-// whether the request is retried once on a network error.
+// whether the request may retry. Network failures are retried once; metadata
+// GET/HEAD requests may also use the bounded HTTP 429 policy.
 type RequestPolicy struct {
 	AllowedStatuses []int
 	CanRetry        bool
@@ -566,7 +622,7 @@ func (c *Client) doJSONRequestContext(ctx context.Context, httpClient *http.Clie
 		return fmt.Errorf("API request %s %s: allowed statuses cannot be empty", method, path)
 	}
 
-	resp, err := c.doRequestWithPolicyContext(ctx, metadataHTTPClient(httpClient), method, path, body, contentType, accept, policy.CanRetry)
+	resp, err := c.doRequestWithPolicyContext(ctx, metadataHTTPClient(httpClient), method, path, body, contentType, accept, policy.CanRetry, true)
 	if err != nil {
 		return fmt.Errorf("API request %s %s: %w", method, path, err)
 	}

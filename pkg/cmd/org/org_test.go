@@ -237,7 +237,7 @@ func TestOrgListReportsResponseErrors(t *testing.T) {
 			requests := 0
 			factory := orgFactory(orgTestConfig{}, func(*http.Request) (*http.Response, error) {
 				requests++
-				if requests == 2 {
+				if requests == 2 && tt.secondCode != 0 {
 					return orgResponse(tt.secondCode, `{}`), nil
 				}
 				body := tt.firstBody

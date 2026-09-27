@@ -151,6 +151,17 @@ func (c *Client) WithContext(ctx context.Context) *Client {
 	return &clone
 }
 
+// WithRetryWriter returns a shallow copy that reports metadata rate-limit
+// waits to w. Streaming downloads are never retried for HTTP 429 responses.
+func (c *Client) WithRetryWriter(w io.Writer) *Client {
+	if c == nil {
+		return nil
+	}
+	clone := *c
+	clone.client = c.client.WithRetryWriter(w)
+	return &clone
+}
+
 func (c *Client) ListRuns(owner, repo string, opts ListRunsOptions) (RunListResponse, error) {
 	query := url.Values{}
 	setString(query, "event", opts.Event)
