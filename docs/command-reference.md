@@ -2827,7 +2827,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--review-requested` | Filter by requested approver: @me for PRs that need your approval across all your repositories | `` | local |
 | `-L, --limit` | Maximum number of PRs to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
-| `-s, --state` | Filter by state: open, closed, all | `open` | local |
+| `-s, --state` | Filter by state: open, closed, locked, merged, all | `open` | local |
 
 
 ## ag pr merge
