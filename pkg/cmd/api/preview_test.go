@@ -77,7 +77,7 @@ func TestDryRunMatchesPreparedRequestsWithoutDependencies(t *testing.T) {
 			if preview.Pagination.Enabled != tc.opts.paginate {
 				t.Fatalf("pagination = %+v", preview.Pagination)
 			}
-			if realRequest.pagination != nil && (*preview.Pagination.FirstPage != realRequest.pagination.page || *preview.Pagination.PerPage != realRequest.pagination.perPage || preview.Pagination.Strategy != "total_page-or-short-array") {
+			if realRequest.pagination != nil && (preview.Pagination.FirstPage == nil || preview.Pagination.PerPage == nil || *preview.Pagination.FirstPage != previewRedacted || *preview.Pagination.PerPage != previewRedacted || preview.Pagination.Strategy != "total_page-or-short-array") {
 				t.Fatalf("pagination differs: %+v", preview.Pagination)
 			}
 			if !strings.HasSuffix(fixture.stdout.String(), "\n") {
@@ -133,6 +133,46 @@ func TestDryRunStableShape(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("preview = %s", out.String())
+	}
+}
+
+func TestDryRunRedactsPaginationValues(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+	}{
+		{name: "query", args: []string{"/user?page=123456789&per_page=654321"}},
+		{name: "fields", args: []string{"/user", "-f", "page=123456789", "-f", "per_page=654321"}},
+		{name: "mixed", args: []string{"/user?page=123456789", "-f", "per_page=654321"}},
+		{name: "defaults", args: []string{"/user"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fixture := newAPITestFixture("private-token", nil)
+			cmd := NewCmdAPI(fixture.factory)
+			// Bypass the sanitizing writer, as with --raw-output.
+			cmd.SetOut(fixture.stdout)
+			cmd.SetErr(fixture.stderr)
+			cmd.SetArgs(append(tc.args, "--paginate", "--dry-run"))
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if fixture.config.tokenReads != 0 || fixture.clientReads != 0 || fixture.requests != 0 || fixture.stderr.Len() != 0 {
+				t.Fatal("dry run accessed dependencies or emitted diagnostics")
+			}
+			for _, sentinel := range []string{"123456789", "654321"} {
+				assertNoTokenLeak(t, sentinel, fixture.stdout.String())
+			}
+			var preview struct {
+				Pagination map[string]any `json:"pagination"`
+			}
+			if err := json.Unmarshal(fixture.stdout.Bytes(), &preview); err != nil {
+				t.Fatal(err)
+			}
+			want := map[string]any{"enabled": true, "firstPage": "[redacted]", "perPage": "[redacted]", "strategy": "total_page-or-short-array"}
+			if !reflect.DeepEqual(preview.Pagination, want) {
+				t.Fatalf("pagination = %+v, want %+v", preview.Pagination, want)
+			}
+		})
 	}
 }
 

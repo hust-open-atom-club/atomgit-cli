@@ -111,6 +111,7 @@ func TestAPIDryRunStartupDoesNotReadOrMutateCredentials(t *testing.T) {
 				{"api", "/repos/private-owner/private-repo/issues?code=x!", "--dry-run"},
 				{"--raw-output", "api", "--dry-run", "/user", "--method", "PATCH", "--input", input},
 				{"api", "/user?token=private-token%zz", "--dry-run"},
+				{"api", "/user?page=123456789&per_page=654321", "--paginate", "--dry-run", "--raw-output"},
 			}
 			if state == "alias" {
 				calls = append(calls, []string{"preview-api", "/user"})
@@ -130,7 +131,7 @@ func TestAPIDryRunStartupDoesNotReadOrMutateCredentials(t *testing.T) {
 						t.Fatalf("dry run: %v %q %q", err, stdout, stderr)
 					}
 				}
-				for _, secret := range []string{"private-", "x!"} {
+				for _, secret := range []string{"private-", "x!", "123456789", "654321"} {
 					if strings.Contains(stdout+stderr, secret) {
 						t.Fatalf("secret leaked: %q %q", stdout, stderr)
 					}

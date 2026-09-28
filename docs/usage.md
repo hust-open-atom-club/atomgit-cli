@@ -1268,13 +1268,13 @@ ag api /repos/owner/repo/issues --paginate --dry-run
 | `body` | `source` 为 `none` / `fields` / `file` / `stdin`；`contentType` 是实际 HTTP 类型（未设置时为 `""`），`byteLength` 为请求体字节数 |
 | `body.type` / `body.count` | 无请求体为 `absent`，非 JSON 为 `opaque`，否则为 JSON 类型（object/array/string/number/boolean/null）；count 为顶层对象字段数或数组元素数，其他类型为 `0` |
 | `body.fields` / `body.truncated` | 顶层对象最多 50 项字段的名称与 JSON 类型，按原始名称排序，超出时 truncated 为 `true`；其他类型 fields 为 `[]`，不展开嵌套内容 |
-| `pagination` | 固定含 `enabled`、`firstPage`、`perPage`、`strategy`；未启用时分别为 `false`、`null`、`null`、`"none"` |
+| `pagination` | 固定含 `enabled`、`firstPage`、`perPage`、`strategy`；启用时两个数值字段均为字符串 `"[redacted]"`，包括默认值；未启用时分别为 `false`、`null`、`null`、`"none"` |
 
 脱敏采用固定名称白名单，仅保留常见路由词和字段名（例如 `repos`、`issues`、`title`、`token`），其余名称与路径片段均为 `[redacted]`。因此 `/repos/owner/repo/issues/42` 显示为 `/repos/[redacted]/[redacted]/issues/[redacted]`。所有字段值、查询值、正文标量、嵌套内容、输入文件路径及认证信息都不展示；不根据某个字段“看起来安全”而输出其值。请求体字节数与结构数量仍可见。请求准备错误也会省略可能带有输入内容的底层详情。全局 `--raw-output` 不会关闭这些脱敏规则。
 
 选项解析会在第一个错误处停止，可能尚未读到 `--dry-run`；因此 `ag api` 在预览和真实模式下均省略非法选项的原始名称和值，并提示查看 `ag api --help`。
 
-`--paginate --dry-run` 只预览首个请求，保留最终 `firstPage` / `perPage`，`strategy` 为 `total_page-or-short-array`，表示实际执行时依据服务端 `total_page` 或数组短页停止。预览没有远端总页数或后续请求结果；所有原有分页和输入互斥限制继续生效。
+`--paginate --dry-run` 只预览首个请求，将 `firstPage` / `perPage` 统一脱敏为 `"[redacted]"`，不展示通过 URL 查询参数或 `--field` 提供的原始数值。`strategy` 为 `total_page-or-short-array`，表示实际执行时依据服务端 `total_page` 或数组短页停止。实际请求仍使用准备阶段校验后的分页数值；预览没有远端总页数或后续请求结果，所有原有分页和输入互斥限制继续生效。
 
 ## Release
 

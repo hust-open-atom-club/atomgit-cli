@@ -53,10 +53,10 @@ type previewField struct {
 }
 
 type previewPagination struct {
-	Enabled   bool   `json:"enabled"`
-	FirstPage *int   `json:"firstPage"`
-	PerPage   *int   `json:"perPage"`
-	Strategy  string `json:"strategy"`
+	Enabled   bool    `json:"enabled"`
+	FirstPage *string `json:"firstPage"`
+	PerPage   *string `json:"perPage"`
+	Strategy  string  `json:"strategy"`
 }
 
 // preparationError preserves real-mode diagnostics and error identity, but
@@ -97,9 +97,12 @@ func writePreview(out io.Writer, request preparedRequest) error {
 	for _, key := range keys {
 		preview.Query = append(preview.Query, previewQuery{Name: previewName(key), Type: "string", Count: len(query[key])})
 	}
-	if state := request.pagination; state != nil {
+	if request.pagination != nil {
+		// Pagination values are request inputs too. Keep the strategy visible,
+		// but never copy numeric inputs into an otherwise redacted preview.
+		redacted := previewRedacted
 		preview.Pagination = previewPagination{
-			Enabled: true, FirstPage: &state.page, PerPage: &state.perPage,
+			Enabled: true, FirstPage: &redacted, PerPage: &redacted,
 			Strategy: "total_page-or-short-array",
 		}
 	}
