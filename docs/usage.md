@@ -840,6 +840,8 @@ ag pr history owner/repo 42 --limit 50 --json
 
 `pr view --json` 在现有字段基础上新增 `assignees`、`approvalReviewers`、`testers`（均为字符串数组，空时为 `[]`）和 `milestone`（对象或 `null`）字段。`pr list --json` 的 schema 保持不变。两个命令的 `merged` 字段会综合 AtomGit 响应中的 `merged`、`state` 和 `merged_at` 判断，避免 API 省略 `merged` 时把已合并 PR 错报为 `false`。
 
+`pr list --state`（含短选项 `-s`）提供静态补全：在启用了 Shell 补全的终端中按 Tab，会列出 PR 列表实际支持的状态候选 `open`、`closed`、`locked`、`merged`、`all`，并按已输入的前缀过滤；无匹配候选时不会退化为文件补全。补全使用本地静态候选，不需要登录，也不会发送网络请求。
+
 跨仓库创建 PR 时 `--head` 的写法请参阅[跨仓库 PR 示例](cross_repo_pr_demo.md)。
 
 负责人（assignee）负责后续工作，批准审查人（approval reviewer）负责批准变更，测试人（tester）负责验证变更；三个 AtomGit 角色相互独立。用户账号、标签和里程碑会在修改 PR 前解析，标签和里程碑必须已存在。`pr edit` 只修改显式传入的字段；`--body-file -` 从标准输入读取正文，`--body` 与 `--body-file` 互斥，显式传入空正文会清空现有正文。添加和移除参数可重复使用，也可用逗号一次传入多个值。
@@ -952,6 +954,8 @@ ag issue reopen owner/repo 42
 `--assignee` 接受一个非空用户登录名。`--assignee` 和 `--remove-assignee` 互斥。创建 Issue 时设置负责人是纯新增操作，不需要确认；修改已有 Issue 的负责人（设置或清除）默认需要确认，确认提示输出到 stderr 以免混入正常命令输出，`--yes` 可跳过确认。
 
 `issue list` 的 `--author`、`--assignee` 和 `--involved` 目前只支持 `@me`：通过授权用户接口（`/api/v5/user/issues`）按登录账号跨所有仓库过滤，分别对应服务端 `filter` 的 `created`（我创建的）、`assigned`（分配给我的）和 `all`（创建或分配给我的）。这三个参数彼此互斥，也不能与显式 `owner/repo` 参数同用；不带这些参数时按仓库列出，行为不变。`--state`、`--limit` 和 `--json` 在两种模式下均可使用。跨仓库模式的文本输出会在每行开头附带 `owner/repo` 前缀（如 `owner/repo #1 标题 [open]`），因为编号只在各自仓库内唯一；`--json` 输出可通过每条记录的 `url` 字段区分仓库，schema 保持不变。
+
+`issue list --state`（含短选项 `-s`）的静态补全行为与 `pr list --state` 一致，候选为 Issue 列表实际支持的状态 `open`、`closed`、`all`，两者枚举不同，各自独立维护。
 
 ### Issue 关联 PR 与分支
 

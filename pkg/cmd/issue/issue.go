@@ -196,6 +196,11 @@ func resolveIssueListFilter(author, assignee, involved string) (string, error) {
 	}
 }
 
+// issueListStates are the states the AtomGit issue list endpoints accept. The
+// PR list endpoints accept a wider set, so each command keeps its own
+// completion candidates instead of sharing one enum.
+var issueListStates = []string{"open", "closed", "all"}
+
 func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
 		State    string
@@ -279,6 +284,7 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().StringVar(&opts.Author, "author", "", "Filter by author: @me for issues you created across all your repositories")
 	cmd.Flags().StringVar(&opts.Assignee, "assignee", "", "Filter by assignee: @me for issues assigned to you across all your repositories")
 	cmd.Flags().StringVar(&opts.Involved, "involved", "", "Filter by involvement: @me for issues you created or are assigned to across all your repositories")
+	cmdutil.RegisterValueCompletion(cmd, "state", issueListStates)
 
 	return cmd
 }
