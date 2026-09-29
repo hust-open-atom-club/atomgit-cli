@@ -13,6 +13,12 @@ linters:
     - nolintlint
     - revive
 
+  settings:
+    nolintlint:
+      require-specific: true
+      require-explanation: true
+      allow-unused: false
+
   exclusions:
     warn-unused: true
 
