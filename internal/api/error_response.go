@@ -31,6 +31,7 @@ var (
 	// Credential-like response keys include common token, secret, password,
 	// and authorization variants such as access_token, apiToken, and
 	// client_secret.
+	//nolint:gosec // G101: Matches credential field names for redaction; contains no credential values.
 	credentialFieldPattern = `[A-Za-z0-9_.-]*(?:token|secret|password|passwd|authorization)[A-Za-z0-9_.-]*`
 	credentialFieldNameRE  = regexp.MustCompile(`(?i)^` + credentialFieldPattern + `$`)
 

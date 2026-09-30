@@ -39,9 +39,11 @@ func main() {
 		return
 	}
 
+	//nolint:gosec // G301: Public command documentation directories must be traversable by readers.
 	if err := os.MkdirAll(filepath.Dir(*output), 0o755); err != nil {
 		fatalf("create output directory: %v", err)
 	}
+	//nolint:gosec // G306: Generated command documentation contains no secrets and is publicly readable.
 	if err := os.WriteFile(*output, generated.Bytes(), 0o644); err != nil {
 		fatalf("write %s: %v", *output, err)
 	}

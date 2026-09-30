@@ -27,9 +27,10 @@ const (
 	defaultRedirectPort = "8765"
 
 	authorizeURL = "https://atomgit.com/oauth/authorize"
-	tokenURL     = "https://atomgit.com/oauth/token"
-	userURL      = "https://atomgit.com/api/v5/user"
-	scopes       = "user_info projects workflow discussion"
+	//nolint:gosec // G101: Public OAuth token endpoint URL, not a credential.
+	tokenURL = "https://atomgit.com/oauth/token"
+	userURL  = "https://atomgit.com/api/v5/user"
+	scopes   = "user_info projects workflow discussion"
 )
 
 type tokenResponse struct {

@@ -734,6 +734,7 @@ func repairWindowsNPMLauncher(
 		return "", nil, fmt.Errorf("extract %s: %w", assetName, err)
 	}
 
+	//nolint:gosec // G301: Windows ACLs are not controlled by Unix mode bits.
 	if err := os.MkdirAll(prefix, 0o755); err != nil {
 		return "", nil, fmt.Errorf("create npm prefix %s: %w", prefix, err)
 	}
