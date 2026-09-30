@@ -436,6 +436,44 @@ func TestUpdateViaNPMReportsInstallFailureWithUsableLauncher(t *testing.T) {
 	}
 }
 
+func TestUpdateViaNPMPreservesInstallAndVerificationErrors(t *testing.T) {
+	prefix := t.TempDir()
+	installErr := errors.New("npm install failed")
+	verificationErr := errors.New("command entry could not be verified")
+	deps := testDeps()
+	deps.goos = "linux"
+	deps.goarch = "amd64"
+	deps.capture = func(_ context.Context, name string, args ...string) (commandResult, error) {
+		switch {
+		case name == "npm" && len(args) > 0 && args[0] == "view":
+			return commandResult{stdout: `"1.3.0"`}, nil
+		case name == "npm" && reflect.DeepEqual(args, []string{"prefix", "-g"}):
+			return commandResult{stdout: prefix}, nil
+		case name == npmLauncherPath(prefix, "linux"):
+			return commandResult{}, verificationErr
+		default:
+			return commandResult{}, fmt.Errorf("unexpected command %s %v", name, args)
+		}
+	}
+	deps.run = func(context.Context, io.Reader, io.Writer, io.Writer, string, ...string) error {
+		return installErr
+	}
+	cmd := &cobra.Command{}
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := updateViaNPM(cmd, deps, "v1.3.0")
+	if err == nil {
+		t.Fatal("updateViaNPM() error = nil, want install and verification failures")
+	}
+	if !errors.Is(err, installErr) {
+		t.Errorf("error %q does not wrap npm install failure", err)
+	}
+	if !errors.Is(err, verificationErr) {
+		t.Errorf("error %q does not wrap command-entry verification failure", err)
+	}
+}
+
 func TestUpdateViaNPMRepairsBrokenWindowsLauncher(t *testing.T) {
 	prefix := t.TempDir()
 	for _, name := range []string{"ag", "ag.cmd", "ag.ps1"} {

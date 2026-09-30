@@ -93,7 +93,7 @@ func newCmdAuthSwitch(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				if rollback != nil {
 					if rollbackErr := rollback(); rollbackErr != nil {
-						return fmt.Errorf("switch account: %v; additionally failed to restore Git identity: %w", err, rollbackErr)
+						return fmt.Errorf("switch account: %w; additionally failed to restore Git identity: %w", err, rollbackErr)
 					}
 				}
 				return err

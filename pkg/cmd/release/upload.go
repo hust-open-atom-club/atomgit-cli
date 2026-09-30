@@ -149,7 +149,7 @@ func runReleaseUpload(cmd *cobra.Command, f *cmdutil.Factory, opts uploadOptions
 	if deleteErr := api.DeleteReleaseAttachment(client, repository.Owner, repository.Name, tag, asset.ID); deleteErr != nil {
 		deleted, reconcileErr := reconcileAttachmentDeletion(client, repository, tag, asset)
 		if reconcileErr != nil {
-			return fmt.Errorf("failed to delete existing attachment %q before overwrite: %w; could not reconcile the release state: %v",
+			return fmt.Errorf("failed to delete existing attachment %q before overwrite: %w; could not reconcile the release state: %w",
 				remoteName, deleteErr, reconcileErr)
 		}
 		if !deleted {

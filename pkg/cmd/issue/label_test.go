@@ -3,6 +3,7 @@ package issue
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -226,6 +227,17 @@ func TestIssueLabelReportsAPIErrors(t *testing.T) {
 		err := cmd.RunE(cmd, []string{"alice/demo", "7"})
 		if err == nil || !strings.Contains(err.Error(), "failed to restore previously removed labels") || !strings.Contains(err.Error(), "rollback failed") {
 			t.Fatalf("error = %v", err)
+		}
+		var wrapped interface{ Unwrap() []error }
+		if !errors.As(err, &wrapped) {
+			t.Fatalf("error %T does not preserve both rollback and label-removal failures", err)
+		}
+		causes := wrapped.Unwrap()
+		if len(causes) != 2 {
+			t.Fatalf("wrapped causes = %d, want 2", len(causes))
+		}
+		if !strings.Contains(causes[0].Error(), "label not found") || !strings.Contains(causes[1].Error(), "rollback failed") {
+			t.Fatalf("wrapped causes = %q and %q, want label-removal and rollback failures", causes[0], causes[1])
 		}
 		if requests != 3 {
 			t.Fatalf("requests = %d, want 3", requests)

@@ -82,7 +82,7 @@ func installDownload(
 			if os.IsExist(err) {
 				return fmt.Errorf("destination %s already exists; use --overwrite to replace it", destination)
 			}
-			return fmt.Errorf("install download at %s without replacing it after hard-link failure (%v): %w", destination, linkErr, err)
+			return fmt.Errorf("install download at %s without replacing it after hard-link failure (%w): %w", destination, linkErr, err)
 		}
 		return nil
 	}

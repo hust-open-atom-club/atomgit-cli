@@ -555,7 +555,7 @@ func updateViaNPM(cmd *cobra.Command, deps updateDeps, latest string) error {
 		}
 		if deps.goos != "windows" {
 			return fmt.Errorf(
-				"update AtomGit CLI via npm: %w; the npm command entry is no longer usable (%v); reinstall with: npm install -g %s@%s --registry=%s",
+				"update AtomGit CLI via npm: %w; the npm command entry is no longer usable (%w); reinstall with: npm install -g %s@%s --registry=%s",
 				installErr,
 				verification.err,
 				npmPackage,
@@ -588,7 +588,7 @@ func updateViaNPM(cmd *cobra.Command, deps updateDeps, latest string) error {
 		executable, cleanupWarnings, err := repairWindowsNPMLauncher(cmd.Context(), deps, prefix, latest)
 		if err != nil {
 			if installErr != nil {
-				return fmt.Errorf("npm update failed (%v) and command-entry repair failed: %w", installErr, err)
+				return fmt.Errorf("npm update failed (%w) and command-entry repair failed: %w", installErr, err)
 			}
 			return fmt.Errorf("npm update did not produce a working command entry and repair failed: %w", err)
 		}
@@ -776,7 +776,7 @@ func repairWindowsNPMLauncher(
 	}
 	rollback := func(cause error) (string, []string, error) {
 		if err := os.Remove(target); err != nil && !errors.Is(err, os.ErrNotExist) {
-			cause = fmt.Errorf("%w; remove failed repaired command %s: %v", cause, target, err)
+			cause = fmt.Errorf("%w; remove failed repaired command %s: %w", cause, target, err)
 		}
 		return "", nil, rollbackLauncherBackups(backups, cause)
 	}
