@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -124,7 +125,7 @@ func validateCoverageManifest(document string, families []string, repository str
 			}
 			continue // External availability is deliberately not an offline test.
 		}
-		if parsed.Host != "" || filepath.IsAbs(parsed.Path) || parsed.Path == "" {
+		if parsed.Host != "" || path.IsAbs(parsed.Path) || parsed.Path == "" {
 			return fmt.Errorf("coverage link must be repository-relative: %q", target)
 		}
 		path := filepath.Join(repository, "docs", filepath.FromSlash(parsed.Path))
@@ -141,11 +142,13 @@ func validateCoverageManifest(document string, families []string, repository str
 
 func TestOpenAPICoverageValidation(t *testing.T) {
 	repository := t.TempDir()
-	if err := os.Mkdir(filepath.Join(repository, "docs"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(repository, "docs", "tmp"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(repository, "docs", "evidence.md"), []byte("evidence"), 0o644); err != nil {
-		t.Fatal(err)
+	for _, name := range []string{"evidence.md", "docs/evidence.md", "docs/tmp/evidence.md"} {
+		if err := os.WriteFile(filepath.Join(repository, filepath.FromSlash(name)), []byte("evidence"), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	row := "| version | local | version metadata | implemented | project | source,local | [evidence](evidence.md) | local-only |\n"
 	valid := coverageStart + "\n" + row + coverageEnd
@@ -156,6 +159,7 @@ func TestOpenAPICoverageValidation(t *testing.T) {
 		want     string
 	}{
 		{"valid", valid, []string{"version"}, ""},
+		{"parent relative link", strings.Replace(valid, "(evidence.md)", "(../evidence.md)", 1), []string{"version"}, ""},
 		{"missing marker", row, []string{"version"}, "marker"},
 		{"reversed markers", coverageEnd + row + coverageStart, []string{"version"}, "reversed"},
 		{"duplicate marker", valid + coverageEnd, []string{"version"}, "marker"},
@@ -174,8 +178,11 @@ func TestOpenAPICoverageValidation(t *testing.T) {
 		{"broken link", strings.Replace(valid, "(evidence.md)", "(missing.md)", 1), []string{"version"}, "broken coverage link"},
 		{"escaping link", strings.Replace(valid, "(evidence.md)", "(../../outside.md)", 1), []string{"version"}, "escapes repository"},
 		{"absolute link", strings.Replace(valid, "(evidence.md)", "(/tmp/evidence.md)", 1), []string{"version"}, "repository-relative"},
+		{"missing absolute link", strings.Replace(valid, "(evidence.md)", "(/tmp/missing.md)", 1), []string{"version"}, "repository-relative"},
+		{"encoded absolute link", strings.Replace(valid, "(evidence.md)", "(%2Ftmp/evidence.md)", 1), []string{"version"}, "repository-relative"},
 		{"unexpected line", strings.Replace(valid, row, "bad row\n", 1), []string{"version"}, "malformed"},
 		{"external URL", strings.Replace(valid, "(evidence.md)", "(https://example.test/evidence)", 1), []string{"version"}, ""},
+		{"external HTTP URL", strings.Replace(valid, "(evidence.md)", "(http://example.test/evidence)", 1), []string{"version"}, ""},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validateCoverageManifest(tt.document, tt.families, repository)
