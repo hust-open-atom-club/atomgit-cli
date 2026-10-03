@@ -168,7 +168,7 @@ func runCheckout(ctx context.Context, gitClient *git.Client, apiClient *api.Clie
 			cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			if rmErr := gitClient.RemoteRemove(cleanupCtx, cleanupRemote); rmErr != nil {
-				err = fmt.Errorf("%w (additionally, failed to clean up temporary remote %s: %v)", err, cleanupRemote, rmErr)
+				err = fmt.Errorf("%w (additionally, failed to clean up temporary remote %s: %w)", err, cleanupRemote, rmErr)
 			}
 		}
 	}()

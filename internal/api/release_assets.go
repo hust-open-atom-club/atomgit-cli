@@ -136,7 +136,7 @@ func UploadReleaseAsset(ctx context.Context, client *Client, upload ReleaseUploa
 		responseErr := NewHTTPError(resp)
 		resp.Body.Close() //nolint:errcheck // HTTP error details were read before close; the sanitized upload error remains primary.
 		if closeErr := requestBody.waitForClose(requestBodyCloseTimeout); closeErr != nil {
-			return fmt.Errorf("upload failed: %v; wait for request body to close: %w", responseErr, closeErr)
+			return fmt.Errorf("upload failed: %w; wait for request body to close: %w", responseErr, closeErr)
 		}
 		return fmt.Errorf("upload failed: %w", responseErr)
 	}

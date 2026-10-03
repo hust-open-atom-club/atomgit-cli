@@ -214,11 +214,11 @@ func handleTransferRequestError(out io.Writer, client *api.Client, repository cm
 
 	transferred, readBackErr := readBackTransferredRepository(client, destination, name)
 	if readBackErr != nil {
-		return fmt.Errorf("transfer request for %s may have completed, but its final state is unknown: the transfer result could not be read (%v), and destination read-back for %s/%s failed: %w", repository, transferErr, destination, name, readBackErr)
+		return fmt.Errorf("transfer request for %s may have completed, but its final state is unknown: the transfer result could not be read (%w), and destination read-back for %s/%s failed: %w", repository, transferErr, destination, name, readBackErr)
 	}
 	fullName, repositoryURL, verifyErr := verifiedTransferredIdentity(transferred, sourceID, destination, name)
 	if verifyErr != nil {
-		return fmt.Errorf("transfer request for %s may have completed, but its final state is unknown: the transfer result could not be read (%v), and destination read-back was ambiguous: %w", repository, transferErr, verifyErr)
+		return fmt.Errorf("transfer request for %s may have completed, but its final state is unknown: the transfer result could not be read (%w), and destination read-back was ambiguous: %w", repository, transferErr, verifyErr)
 	}
 	reportTransferredRepository(out, fullName, repositoryURL, true)
 	return nil

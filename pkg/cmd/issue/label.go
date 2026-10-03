@@ -150,8 +150,8 @@ func removeIssueLabels(client *api.Client, labelsPath string, labels []string) e
 
 			if rollbackErr := client.Post(labelsPath, removed, nil); rollbackErr != nil {
 				return fmt.Errorf(
-					"failed to remove label %q after removing %s; failed to restore previously removed labels: %v: %w",
-					label, strings.Join(removed, ", "), rollbackErr, err,
+					"failed to remove label %q after removing %s: %w; failed to restore previously removed labels: %w",
+					label, strings.Join(removed, ", "), err, rollbackErr,
 				)
 			}
 			return fmt.Errorf(
