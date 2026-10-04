@@ -113,6 +113,8 @@ ag auth setup-git
 
 AtomGit API v5、Actions API v8、OAuth 与 Release 等领域客户端的非成功响应统一经过同一安全边界：错误正文最多保留 4 KiB，超出部分会显示为 `...`；明确省略敏感响应正文的端点仅输出清洗后的状态。错误上下文会转义终端控制字符和 Unicode 方向控制字符，并脱敏 Bearer 值及常见的 token、secret、password、authorization 字段。该安全边界独立于终端 writer，因此 `--raw-output` 不会关闭 API 错误脱敏。
 
+`ag api --dry-run` 在启动阶段跳过凭据加载，不读取 token 文件，也不会迁移旧凭据或修正权限。它仅进行本地请求准备；指定 `--input` 时仍会读取该输入。直接调用不依赖别名配置，使用命令别名时仅按现有机制读取别名配置。预览默认隐藏所有请求值及未知名称，`--raw-output` 不会关闭脱敏；字段与边界见[API 请求预览](usage.md#api-请求预览)。
+
 ## 当前仓库推断
 
 `issue`、`pr`、`tag`、`label`、`release`、`run`、`branch` 命令以及 `repo view`、`repo edit`、`repo fork`、`repo delete` 可以省略 `owner/repo`。省略时，`ag` 会从当前 Git 仓库的 AtomGit remote 推断目标仓库；显式传入的 `owner/repo` 始终优先。

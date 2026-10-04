@@ -1239,6 +1239,11 @@ printf '%s' '{"title":"stdin"}' | ag api /repos/owner/repo/issues --method POST 
 
 # 逐页请求；每个完整 JSON 页面压缩为一行 NDJSON
 ag api /repos/owner/repo/issues --paginate
+
+# 仅本地预览，不发送请求，不需要登录
+ag api /repos/owner/repo/issues --method POST --field title=example --dry-run
+ag api /repos/owner/repo/issues/42 --method PATCH --input update.json --dry-run
+ag api /repos/owner/repo/issues --paginate --dry-run
 ```
 
 端点必须是 API v5 下的相对路径；绝对 URL、`//host/path`、片段和越过 API 基址的路径会在读取凭据前被拒绝。认证信息仅通过 `Authorization` 请求头发送。同源重定向可保留认证；scheme、主机或有效端口变化后，当前及后续跳转均不会再携带认证信息。
@@ -1248,6 +1253,34 @@ ag api /repos/owner/repo/issues --paginate
 `--paginate` 仅支持无原始输入的 GET。默认从 `page=1&per_page=100` 开始；已有的正整数值会被保留。服务端提供一致的 `total_page` 响应头时据此停止；否则仅数组响应可通过空页或短页停止。后续页面失败时，已完成的 NDJSON 行会保留，失败页面不会产生部分输出。
 
 成功响应（包括空响应和二进制响应）会直接写到标准输出，不增加标签或换行。终端控制字符默认仍会转换为可见转义；机器处理确需原始字节时使用 `ag --raw-output api ...`，不要将未经检查的原始输出直接转发到终端。
+
+### API 请求预览
+
+`--dry-run` 复用真实模式的请求准备与校验，成功时只输出一个 JSON 对象和结尾换行；失败返回非零且不输出成功对象。它不读取令牌、不初始化或修改凭据，也不发起网络请求、刷新令牌或检查更新。未登录、凭据文件损坏时仍可使用；显式指定的 `--input` 文件或 stdin 会被读取，但不会写回。
+
+预览中的 `dryRun: true`、`executed: false` 表示**仅完成本地准备，尚未执行请求**。预览不验证远端权限、资源存在性或服务端业务规则，也不授权后续写操作；实际执行需另行移除 `--dry-run`。`--dry-run=false` 保留原有真实请求行为。
+
+预览 JSON 的字段固定保留：
+
+| 字段 | 含义 |
+| --- | --- |
+| `schemaVersion` | 当前预览结构版本，固定为 `1` |
+| `dryRun` / `executed` | 固定为 `true` / `false` |
+| `method` | 最终 HTTP 方法，已转为大写 |
+| `apiVersion` / `host` / `basePath` | 从实际请求基址取得；当前为 `v5` / `api.atomgit.com` / `/api/v5` |
+| `path` | 规范化后的相对路径，不含查询字符串；未知片段以 `[redacted]` 替代 |
+| `query` | 查询参数数组，按原始名称排序；每项含 `name`、`type: "string"`、`count`（同名值数量），不含值；无参数时为 `[]` |
+| `accept` | 默认 `application/json` 原样展示；自定义值为 `[redacted]` |
+| `body` | `source` 为 `none` / `fields` / `file` / `stdin`；`contentType` 是实际 HTTP 类型（未设置时为 `""`），`byteLength` 为请求体字节数 |
+| `body.type` / `body.count` | 无请求体为 `absent`，非 JSON 为 `opaque`，否则为 JSON 类型（object/array/string/number/boolean/null）；count 为顶层对象字段数或数组元素数，其他类型为 `0` |
+| `body.fields` / `body.truncated` | 顶层对象最多 50 项字段的名称与 JSON 类型，按原始名称排序，超出时 truncated 为 `true`；其他类型 fields 为 `[]`，不展开嵌套内容 |
+| `pagination` | 固定含 `enabled`、`firstPage`、`perPage`、`strategy`；启用时两个数值字段均为字符串 `"[redacted]"`，包括默认值；未启用时分别为 `false`、`null`、`null`、`"none"` |
+
+脱敏采用固定名称白名单，仅保留常见路由词和字段名（例如 `repos`、`issues`、`title`、`token`），其余名称与路径片段均为 `[redacted]`。因此 `/repos/owner/repo/issues/42` 显示为 `/repos/[redacted]/[redacted]/issues/[redacted]`。所有字段值、查询值、正文标量、嵌套内容、输入文件路径及认证信息都不展示；不根据某个字段“看起来安全”而输出其值。请求体字节数与结构数量仍可见。请求准备错误也会省略可能带有输入内容的底层详情。全局 `--raw-output` 不会关闭这些脱敏规则。
+
+选项解析会在第一个错误处停止，可能尚未读到 `--dry-run`；因此 `ag api` 在预览和真实模式下均省略非法选项的原始名称和值，并提示查看 `ag api --help`。
+
+`--paginate --dry-run` 只预览首个请求，将 `firstPage` / `perPage` 统一脱敏为 `"[redacted]"`，不展示通过 URL 查询参数或 `--field` 提供的原始数值。`strategy` 为 `total_page-or-short-array`，表示实际执行时依据服务端 `total_page` 或数组短页停止。实际请求仍使用准备阶段校验后的分页数值；预览没有远端总页数或后续请求结果，所有原有分页和输入互斥限制继续生效。
 
 ## Release
 
