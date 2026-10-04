@@ -274,7 +274,7 @@ func RemoveAccount(selector string) (string, bool, error) {
 	return key, false, saveCredentialStore(store)
 }
 
-func saveCredentialStore(store *CredentialStore) error {
+func saveCredentialStore(store *CredentialStore) (resultErr error) {
 	if store == nil || len(store.Accounts) == 0 {
 		return fmt.Errorf("credential store has no accounts")
 	}
@@ -299,7 +299,7 @@ func saveCredentialStore(store *CredentialStore) error {
 		return fmt.Errorf("create temporary credential file: %w", err)
 	}
 	temporaryPath := temporary.Name()
-	defer os.Remove(temporaryPath)
+	defer func() { removeTemporaryConfig(temporaryPath, &resultErr) }()
 	if err := temporary.Chmod(0o600); err != nil {
 		temporary.Close() //nolint:errcheck // Chmod failed; closing the temporary file is best-effort cleanup while the permission error remains primary.
 		return fmt.Errorf("secure temporary credential file: %w", err)
@@ -321,5 +321,6 @@ func saveCredentialStore(store *CredentialStore) error {
 		}
 		return fmt.Errorf("replace credential file: %w", err)
 	}
+	temporaryPath = "" // The rename transferred ownership to the destination.
 	return nil
 }

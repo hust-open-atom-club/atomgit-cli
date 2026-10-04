@@ -1,6 +1,7 @@
 package cmdutil
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -12,8 +13,9 @@ import (
 // nothing instead of a directory listing. Use it only for enums that need no
 // network or configuration access, so completion stays correct without
 // authentication.
+// Registration errors indicate an invalid command definition and panic.
 func RegisterValueCompletion(cmd *cobra.Command, flag string, candidates []string) {
-	cmd.RegisterFlagCompletionFunc(flag, func(_ *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	err := cmd.RegisterFlagCompletionFunc(flag, func(_ *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		matches := make([]string, 0, len(candidates))
 		for _, candidate := range candidates {
 			if strings.HasPrefix(candidate, toComplete) {
@@ -22,4 +24,7 @@ func RegisterValueCompletion(cmd *cobra.Command, flag string, candidates []strin
 		}
 		return matches, cobra.ShellCompDirectiveNoFileComp
 	})
+	if err != nil {
+		panic(fmt.Errorf("register value completion for command %q flag %q: %w", cmd.Name(), flag, err))
+	}
 }
