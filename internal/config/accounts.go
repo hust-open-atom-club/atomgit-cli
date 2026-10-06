@@ -132,8 +132,8 @@ func (s *CredentialStore) ActiveAccount() (*StoredCredentials, error) {
 	}
 	for index := range s.Accounts {
 		if s.Accounts[index].Key() == s.Active {
-			copy := s.Accounts[index]
-			return &copy, nil
+			accountCopy := s.Accounts[index]
+			return &accountCopy, nil
 		}
 	}
 	return nil, fmt.Errorf("active account %q was not found", s.Active)
@@ -147,8 +147,8 @@ func (s *CredentialStore) ResolveAccount(selector string) (*StoredCredentials, e
 	}
 	for _, account := range s.Accounts {
 		if account.Key() == selector {
-			copy := account
-			return &copy, nil
+			accountCopy := account
+			return &accountCopy, nil
 		}
 	}
 	return nil, fmt.Errorf("account %q was not found", selector)
