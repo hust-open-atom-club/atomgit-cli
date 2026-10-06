@@ -71,7 +71,7 @@ func TestListReleasesPaging(t *testing.T) {
 
 func TestListReleasesStopsAtShortPage(t *testing.T) {
 	requests := 0
-	client := newReleaseTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newReleaseTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		requests++
 		writeJSON(t, w, []Release{singleRelease("v0.1"), singleRelease("v0.2")})
 	})
@@ -189,7 +189,7 @@ func TestCreateReleaseAcceptsBothSuccessCodes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := newReleaseTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			client := newReleaseTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.status)
 				writeJSON(t, w, singleRelease("v2.0.0"))
 			})
@@ -263,7 +263,7 @@ func TestReleaseMetadataErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := newReleaseTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			client := newReleaseTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.status)
 				_, _ = io.WriteString(w, tt.body)
 			})

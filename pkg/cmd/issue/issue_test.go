@@ -327,7 +327,7 @@ func TestIssueReopenFailsWhenStateRemainsClosedAfterUpdate(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
 		HttpClient: func() (*http.Client, error) {
-			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				call++
 				switch call {
 				case 1:
@@ -506,7 +506,7 @@ func TestIssueCloseFailsWhenStateRemainsOpen(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
 		HttpClient: func() (*http.Client, error) {
-			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				requests++
 				switch requests {
 				case 1:
@@ -684,7 +684,7 @@ func TestIssueCloseReopenRejectInvalidNumberBeforeAuth(t *testing.T) {
 			var requests int
 			factory.HttpClient = func() (*http.Client, error) {
 				requests++
-				return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 					return issueResponse(200, `{}`), nil
 				})}, nil
 			}

@@ -36,7 +36,7 @@ email addresses, or rename the account login.`,
   ag user edit --description "" --location "Wuhan"
   ag user edit --website "https://example.com" --json`,
 		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			request, err := buildUserEditRequest(cmd, opts)
 			if err != nil {
 				return err

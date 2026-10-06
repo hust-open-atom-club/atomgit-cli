@@ -197,7 +197,7 @@ func TestRepoTransferRejectsMissingSourceIDBeforeMutation(t *testing.T) {
 
 func TestRepoTransferInfersRepositoryAndYesSkipsPrompt(t *testing.T) {
 	requests := 0
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		requests++
 		switch requests {
 		case 1:
@@ -235,7 +235,7 @@ func TestRepoTransferReportsContextualAPIErrorsWithoutSecrets(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			requests := 0
-			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				requests++
 				if test.failSource {
 					return forkResponse(test.status, `{"message":"denied","password":"do-not-print"}`), nil

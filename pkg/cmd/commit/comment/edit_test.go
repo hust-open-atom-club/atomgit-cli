@@ -118,7 +118,7 @@ func TestEditValidatesBodyBeforeNetwork(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := &testConfig{}
-			transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
 				return nil, errNoRequests
 			})
 			cmd := newCmdEdit(newFactory(t, cfg, transport))

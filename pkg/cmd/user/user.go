@@ -35,7 +35,7 @@ func newCmdUserEmails(f *cmdutil.Factory) *cobra.Command {
 		Example: `  ag user emails
   ag user emails --json`,
 		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return cmdutil.AuthenticationError(err)

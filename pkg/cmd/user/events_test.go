@@ -204,7 +204,7 @@ func TestUserEventsMultipleCursorsAndYearQuery(t *testing.T) {
 
 func TestUserEventsLimitStopsAfterSatisfied(t *testing.T) {
 	requests := 0
-	factory := namespaceTestFactory(t, func(w http.ResponseWriter, req *http.Request) {
+	factory := namespaceTestFactory(t, func(w http.ResponseWriter, _ *http.Request) {
 		requests++
 		w.Header().Set("Content-Type", "application/json")
 		switch requests {

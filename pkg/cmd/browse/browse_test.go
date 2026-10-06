@@ -126,7 +126,7 @@ func TestBrowseNonexistentNumber(t *testing.T) {
 	f := &cmdutil.Factory{
 		Config: browseTestConfig{},
 		HttpClient: func() (*http.Client, error) {
-			return &http.Client{Transport: browseRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Client{Transport: browseRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
 			})}, nil
 		},
@@ -256,7 +256,7 @@ func TestBrowseDefaultBranchFailureReturnsErrorWithoutOpeningBrowser(t *testing.
 			f := &cmdutil.Factory{
 				Config:     browseTestConfig{},
 				HttpClient: mockRepoHTTPClientWithResponse(status, "unavailable"),
-				BrowserOpener: func(rawURL string) error {
+				BrowserOpener: func(string) error {
 					opened = true
 					return nil
 				},
@@ -280,7 +280,7 @@ func TestBrowseEmptyDefaultBranchReturnsError(t *testing.T) {
 	f := &cmdutil.Factory{
 		Config:     browseTestConfig{},
 		HttpClient: mockRepoHTTPClient(""),
-		BrowserOpener: func(rawURL string) error {
+		BrowserOpener: func(string) error {
 			opened = true
 			return nil
 		},
@@ -306,7 +306,7 @@ func TestBrowseDefaultBranchNetworkFailureReturnsError(t *testing.T) {
 				return nil, errors.New("network unavailable")
 			})}, nil
 		},
-		BrowserOpener: func(rawURL string) error {
+		BrowserOpener: func(string) error {
 			opened = true
 			return nil
 		},
@@ -504,7 +504,7 @@ func TestBrowseNoBrowser(t *testing.T) {
 	openerCalled := false
 	f := &cmdutil.Factory{
 		Config: browseTestConfig{},
-		BrowserOpener: func(rawURL string) error {
+		BrowserOpener: func(string) error {
 			openerCalled = true
 			return nil
 		},

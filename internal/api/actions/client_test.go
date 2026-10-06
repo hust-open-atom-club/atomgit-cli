@@ -358,7 +358,7 @@ func TestDeleteArtifactRequiresNoContent(t *testing.T) {
 
 func TestDeleteArtifactReportsTransportError(t *testing.T) {
 	transportErr := errors.New("connection refused")
-	client := NewClientWithHTTPClient("secret", &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 		return nil, transportErr
 	})})
 

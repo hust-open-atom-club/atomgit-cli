@@ -39,7 +39,7 @@ func newCmdAuthStatus(f *cmdutil.Factory) *cobra.Command {
 		Long:    "Inspect local credentials without modifying them. Local presence does not prove token validity. Use --verify to check identity with the read-only /user API (30 second timeout); this does not verify access to other resources. No token or token fragment is displayed.",
 		Example: "  ag auth status\n  ag auth status --json\n  ag auth status --verify\n  ag auth status --verify --json",
 		Args:    cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			r := inspectAuthStatus(cmd.Context(), f, verify)
 			if asJSON {
 				if err := cmdutil.WriteJSON(cmd.OutOrStdout(), r); err != nil {

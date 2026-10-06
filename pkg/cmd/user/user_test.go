@@ -108,7 +108,7 @@ func TestUserEmailsTextOutput(t *testing.T) {
 }
 
 func TestUserEmailsEmptyOutput(t *testing.T) {
-	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := userRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return userResponse(http.StatusOK, `[]`), nil
 	})
 	cmd := newCmdUserEmails(userFactory(userTestConfig{}, transport))
@@ -123,7 +123,7 @@ func TestUserEmailsEmptyOutput(t *testing.T) {
 }
 
 func TestUserEmailsJSON(t *testing.T) {
-	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := userRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return userResponse(http.StatusOK, `[{"email":"alice@example.com","state":"confirmed"}]`), nil
 	})
 	cmd := newCmdUserEmails(userFactory(userTestConfig{}, transport))
@@ -145,7 +145,7 @@ func TestUserEmailsJSON(t *testing.T) {
 }
 
 func TestUserEmailsJSONEmptyOutput(t *testing.T) {
-	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := userRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return userResponse(http.StatusOK, `null`), nil
 	})
 	cmd := newCmdUserEmails(userFactory(userTestConfig{}, transport))
@@ -163,7 +163,7 @@ func TestUserEmailsJSONEmptyOutput(t *testing.T) {
 }
 
 func TestUserEmailsSanitizesTextOutput(t *testing.T) {
-	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := userRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return userResponse(http.StatusOK, `[{"email":"alice@example.com\u001b[31m","state":"confirmed\nstate"}]`), nil
 	})
 	cmd := newCmdUserEmails(userFactory(userTestConfig{}, transport))
@@ -374,7 +374,7 @@ func TestUserViewJSON(t *testing.T) {
 }
 
 func TestUserViewWeb(t *testing.T) {
-	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := userRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return userResponse(http.StatusOK, `{"login":"alice","html_url":"https://atomgit.com/alice"}`), nil
 	})
 	opened := ""
@@ -401,11 +401,11 @@ func TestUserViewWeb(t *testing.T) {
 }
 
 func TestUserViewWebBrowserError(t *testing.T) {
-	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := userRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return userResponse(http.StatusOK, `{"login":"alice","html_url":"https://atomgit.com/alice"}`), nil
 	})
 	factory := userFactory(userTestConfig{}, transport)
-	factory.BrowserOpener = func(rawURL string) error {
+	factory.BrowserOpener = func(string) error {
 		return errors.New("no browser")
 	}
 	cmd := newCmdUserView(factory)
@@ -419,7 +419,7 @@ func TestUserViewWebBrowserError(t *testing.T) {
 }
 
 func TestUserViewAPIError(t *testing.T) {
-	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := userRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return userResponse(http.StatusNotFound, `{}`), nil
 	})
 	cmd := newCmdUserView(userFactory(userTestConfig{}, transport))
@@ -430,7 +430,7 @@ func TestUserViewAPIError(t *testing.T) {
 }
 
 func TestUserViewMissingLoginInResponse(t *testing.T) {
-	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := userRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return userResponse(http.StatusOK, `{}`), nil
 	})
 	cmd := newCmdUserView(userFactory(userTestConfig{}, transport))

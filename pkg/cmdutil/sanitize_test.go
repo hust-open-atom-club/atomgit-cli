@@ -94,7 +94,7 @@ func TestEscapeTSVField(t *testing.T) {
 	}
 }
 
-func TestSanitizeTerminal_NoPanic(t *testing.T) {
+func TestSanitizeTerminal_NoPanic(*testing.T) {
 	for _, input := range []string{
 		"\x00\x00\x00",
 		"\x1b\x1b\x1b",

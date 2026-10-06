@@ -271,7 +271,7 @@ func TestListReposUserEndpointRequestsTypePersonal(t *testing.T) {
 }
 
 func TestListReposOwnerNotFound(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusNotFound, `{}`), nil
 	})
 	client := api.NewClientWithHTTPClient("token", &http.Client{Transport: transport})

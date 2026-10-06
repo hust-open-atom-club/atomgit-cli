@@ -504,7 +504,7 @@ func TestCommitViewRejectsBlankSHA(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: &commitTestConfig{},
 				HttpClient: func() (*http.Client, error) {
-					return &http.Client{Transport: commitRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+					return &http.Client{Transport: commitRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						requests++
 						return commitResponse(http.StatusOK, `{}`), nil
 					})}, nil

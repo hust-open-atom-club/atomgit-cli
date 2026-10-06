@@ -469,7 +469,7 @@ func TestDiscussionViewNon2xxErrors(t *testing.T) {
 		{
 			name:  "comment failure",
 			flags: map[string]string{"comments": "true"},
-			handler: func(req *http.Request, calls int) (*http.Response, error) {
+			handler: func(_ *http.Request, calls int) (*http.Response, error) {
 				if calls == 1 {
 					return discussionResponse(http.StatusOK, viewDetailFixture), nil
 				}
@@ -480,7 +480,7 @@ func TestDiscussionViewNon2xxErrors(t *testing.T) {
 		{
 			name:  "reply failure",
 			flags: map[string]string{"comments": "true"},
-			handler: func(req *http.Request, calls int) (*http.Response, error) {
+			handler: func(_ *http.Request, calls int) (*http.Response, error) {
 				switch calls {
 				case 1:
 					return discussionResponse(http.StatusOK, viewDetailFixture), nil

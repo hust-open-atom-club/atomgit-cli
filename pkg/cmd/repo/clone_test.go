@@ -265,7 +265,7 @@ func TestResolveCloneAuth(t *testing.T) {
 
 func TestRunCloneWithCommandAttachesAuthToGit(t *testing.T) {
 	var captured *exec.Cmd
-	command := func(_ string, args ...string) *exec.Cmd {
+	command := func(string, ...string) *exec.Cmd {
 		cmd := exec.Command(os.Args[0], "-test.run=TestCloneCommandHelper")
 		cmd.Env = append(os.Environ(),
 			"AG_CLONE_HELPER=success",
@@ -428,7 +428,7 @@ func TestRunCloneWithoutAuthKeepsGitEnvironment(t *testing.T) {
 	}
 }
 
-func TestCloneCommandHelper(t *testing.T) {
+func TestCloneCommandHelper(*testing.T) {
 	switch os.Getenv("AG_CLONE_HELPER") {
 	case "success":
 		os.Exit(0)

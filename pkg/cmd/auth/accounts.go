@@ -17,7 +17,7 @@ func newCmdAuthList() *cobra.Command {
 		Use:   "list",
 		Short: "List saved AtomGit accounts",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			accounts, active, err := config.ListAccounts()
 			if errors.Is(err, config.ErrTokenNotFound) {
 				if jsonOutput {

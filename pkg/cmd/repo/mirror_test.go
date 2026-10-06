@@ -63,7 +63,7 @@ func TestRepoMirrorListTextAndCredentialRedaction(t *testing.T) {
 }
 
 func TestRepoMirrorListEmptyTextAndJSON(t *testing.T) {
-	factory := repoFactory(repoCommandConfig{token: "token"}, forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	factory := repoFactory(repoCommandConfig{token: "token"}, forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `[]`), nil
 	}))
 
@@ -144,7 +144,7 @@ func TestRepoMirrorViewJSONPreservesReturnedZeroValuesAndOmitsAbsentFields(t *te
 }
 
 func TestRepoMirrorViewTextRendersFailedState(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `{
   "update_status": "failed",
   "mirroring_enabled": true,
@@ -240,7 +240,7 @@ func TestRepoMirrorAPIErrorsAreContextualAndRedacted(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				body := fmt.Sprintf(`{"message":"cannot reach https://user:secret@example.com/repo.git?token=hidden status %d"}`, test.statusCode)
 				return forkResponse(test.statusCode, body), nil
 			})
