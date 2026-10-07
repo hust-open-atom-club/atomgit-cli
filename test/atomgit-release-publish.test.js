@@ -35,14 +35,14 @@ async function createFixture(t, tag = "v1.2.3") {
     if (name.endsWith(".zip")) {
       const zip = new AdmZip();
       zip.addFile("LICENSE", Buffer.from("license"));
-      zip.addFile("ag.exe", Buffer.from(`binary-${index}`));
+      zip.addFile("ag-cli.exe", Buffer.from(`binary-${index}`));
       zip.writeZip(path.join(directory, name));
     } else {
       const source = path.join(root, `source-${index}`);
       await mkdir(source);
       await writeFile(path.join(source, "LICENSE"), "license");
-      await writeFile(path.join(source, "ag"), `binary-${index}`);
-      await tar.c({ cwd: source, file: path.join(directory, name), gzip: true }, ["LICENSE", "ag"]);
+      await writeFile(path.join(source, "ag-cli"), `binary-${index}`);
+      await tar.c({ cwd: source, file: path.join(directory, name), gzip: true }, ["LICENSE", "ag-cli"]);
     }
   }
   for (const [index, name] of ARCHIVES.entries()) await createArchive(releaseDir, name, index);
@@ -129,7 +129,7 @@ function fakeAtomGit(plan, options, behavior = {}) {
       contents.set(artifact.name, await readFile(artifact.filePath));
       return response("uploaded");
     }
-    throw new Error(`unexpected ag command: ${args.join(" ")}; raw=${runOptions.raw}`);
+    throw new Error(`unexpected ag-cli command: ${args.join(" ")}; raw=${runOptions.raw}`);
   }
   async function seed(names) {
     release = {

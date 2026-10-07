@@ -1,5 +1,5 @@
 // Package apicontract provides offline fixtures and bounded response validation
-// for API contract tests. It is not used by the ag runtime.
+// for API contract tests. It is not used by the ag-cli runtime.
 package apicontract
 
 import (

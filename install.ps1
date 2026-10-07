@@ -1,11 +1,11 @@
-# AtomGit CLI (ag) - Windows installer
+# AtomGit CLI (ag-cli) - Windows installer
 # Repository: https://atomgit.com/hust-open-atom-club/atomgit-cli
 #
 # Usage (PowerShell):
 #   irm https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.ps1 | iex
 #   $env:AG_VERSION = "vX.Y.Z"; .\install.ps1
 #
-# After installation, run `ag auth login` to authenticate with OAuth.
+# After installation, run `ag-cli auth login` to authenticate with OAuth.
 # Default token file: %USERPROFILE%\.config\ag-cli\token.json
 #
 # If execution policy blocks the script, run:
@@ -72,9 +72,9 @@ try {
     New-Item -ItemType Directory -Path $extract | Out-Null
     Expand-Archive -Path (Join-Path $tmp $asset) -DestinationPath $extract -Force
 
-    $exe = Join-Path $extract "ag.exe"
+    $exe = Join-Path $extract "ag-cli.exe"
     if (-not (Test-Path -LiteralPath $exe)) {
-        Die "ag.exe was not found in the archive"
+        Die "ag-cli.exe was not found in the archive"
     }
 
     $dest = Get-InstallDir
@@ -82,7 +82,7 @@ try {
         New-Item -ItemType Directory -Path $dest -Force | Out-Null
     }
 
-    $target = Join-Path $dest "ag.exe"
+    $target = Join-Path $dest "ag-cli.exe"
     Copy-Item -LiteralPath $exe -Destination $target -Force
     Write-Host "Installing to $target"
 
@@ -92,11 +92,11 @@ try {
         [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
         $env:Path += ";$dest"
         Write-Host "Added directory to the current user PATH: $dest"
-        Write-Host "Reopen the terminal if ag is not available in this window."
+        Write-Host "Reopen the terminal if ag-cli is not available in this window."
     }
 
     & $target --help | Out-Null
-    Write-Host "ag installed: $target"
+    Write-Host "ag-cli installed: $target"
 }
 finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue

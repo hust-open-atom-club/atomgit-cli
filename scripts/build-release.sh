@@ -1,7 +1,7 @@
 #!/bin/sh
 # 使用 GoReleaser 生成预编译包到 dist/<版本>/：
-#   - Linux/macOS: ag_<os>_<arch>.tar.gz（包内可执行文件名为 ag）
-#   - Windows:     ag_windows_<arch>.zip（包内为 ag.exe）
+#   - Linux/macOS: ag_<os>_<arch>.tar.gz（包内可执行文件名为 ag-cli）
+#   - Windows:     ag_windows_<arch>.zip（包内为 ag-cli.exe）
 #   - npm:         七个平台二进制子包和一个主启动包，以及独立的 npm/checksums.txt
 #   - SHA-256:     checksums.txt 仅覆盖七个归档和两个安装脚本
 #
@@ -178,7 +178,7 @@ verify_injection() {
   verify_arch=$(go env GOHOSTARCH)
   echo "==> 校验版本注入: 构建 ${verify_os}/${verify_arch} 测试二进制 ..."
   GOOS="$verify_os" GOARCH="$verify_arch" CGO_ENABLED=0 \
-    go build -trimpath -ldflags="${LINK_FLAGS}" -o "$tmpbin" ./cmd/ag
+    go build -trimpath -ldflags="${LINK_FLAGS}" -o "$tmpbin" ./cmd/ag-cli
 
   # 文本输出 — 至少包含 TAG
   out=$("$tmpbin" version 2>&1)

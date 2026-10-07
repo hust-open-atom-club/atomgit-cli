@@ -32,7 +32,7 @@ type userEventWithDate struct {
 }
 
 // eventJSON is the stable, documented JSON schema emitted by
-// `ag user events --json`. Fields are always present so automation can
+// `ag-cli user events --json`. Fields are always present so automation can
 // distinguish a real zero/empty value from a missing field.
 type eventJSON struct {
 	Date             string `json:"date"`
@@ -60,10 +60,10 @@ func newCmdUserEvents(f *cmdutil.Factory) *cobra.Command {
 		Use:   "events [<username>]",
 		Short: "List personal activity events for a user",
 		Long:  "List personal activity events for a user. Without an explicit username, the authenticated user is used.",
-		Example: `  ag user events
-  ag user events alice
-  ag user events alice --year 2026 --limit 50
-  ag user events alice --json`,
+		Example: `  ag-cli user events
+  ag-cli user events alice
+  ag-cli user events alice --year 2026 --limit 50
+  ag-cli user events alice --json`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUserEvents(cmd.OutOrStdout(), f, opts, args)

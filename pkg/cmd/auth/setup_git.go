@@ -24,10 +24,10 @@ func newCmdAuthSetupGit(f *cmdutil.Factory) *cobra.Command {
 func newCmdAuthSetupGitWithExecutable(f *cmdutil.Factory, executable func() (string, error)) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "setup-git",
-		Short: "Configure Git to use ag as a credential helper",
+		Short: "Configure Git to use ag-cli as a credential helper",
 		Long: `Configure Git to use AtomGit CLI as the HTTPS credential helper for
 atomgit.com. Git requests credentials from the active account selected by
-ag auth switch; access tokens are not written to Git configuration.`,
+ag-cli auth switch; access tokens are not written to Git configuration.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if f == nil || f.Config == nil {
@@ -38,16 +38,16 @@ ag auth switch; access tokens are not written to Git configuration.`,
 			}
 			path, err := executable()
 			if err != nil {
-				return fmt.Errorf("resolve ag executable: %w", err)
+				return fmt.Errorf("resolve ag-cli executable: %w", err)
 			}
 			if strings.TrimSpace(path) == "" {
-				return fmt.Errorf("resolve ag executable: path is empty")
+				return fmt.Errorf("resolve ag-cli executable: path is empty")
 			}
 
 			run := gitConfigRunner(f)
 			key := "credential.https://" + atomGitCredentialHost + ".helper"
 			// An empty host-specific helper severs Git's inherited helper chain,
-			// ensuring credentials for AtomGit come from ag rather than a generic
+			// ensuring credentials for AtomGit come from ag-cli rather than a generic
 			// credential manager configured for every host.
 			if _, err := run("config", "--global", "--replace-all", key, ""); err != nil {
 				return fmt.Errorf("reset Git credential helper for %s: %w", atomGitCredentialHost, err)
@@ -57,7 +57,7 @@ ag auth switch; access tokens are not written to Git configuration.`,
 				return fmt.Errorf("configure Git credential helper for %s: %w", atomGitCredentialHost, err)
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "Configured Git to use ag as a credential helper for %s.\n", atomGitCredentialHost)
+			fmt.Fprintf(cmd.OutOrStdout(), "Configured Git to use ag-cli as a credential helper for %s.\n", atomGitCredentialHost)
 			return nil
 		},
 	}
@@ -80,12 +80,12 @@ func newCmdAuthGitCredential(f *cmdutil.Factory) *cobra.Command {
 func runGitCredentialHelper(f *cmdutil.Factory, operation string, in io.Reader, out io.Writer) error {
 	switch operation {
 	case "store", "erase":
-		// ag's credential store remains the source of truth. Git must not log
+		// ag-cli's credential store remains the source of truth. Git must not log
 		// the user out or persist another copy of the token.
 		return nil
 	case "get":
 	default:
-		return fmt.Errorf("ag auth git-credential: %q operation not supported", operation)
+		return fmt.Errorf("ag-cli auth git-credential: %q operation not supported", operation)
 	}
 
 	wants, err := readGitCredentialRequest(in)

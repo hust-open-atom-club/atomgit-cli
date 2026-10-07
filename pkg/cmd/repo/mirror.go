@@ -51,9 +51,9 @@ func newCmdRepoMirrorList(f *cmdutil.Factory) *cobra.Command {
 		Use:   "list [<owner>/<repo>]",
 		Short: "List configured push remote mirrors",
 		Long:  "List configured push remote mirrors. Destinations and returned messages are sanitized before text or JSON output.",
-		Example: `  ag repo mirror list owner/repo
-  ag repo mirror list owner/repo --limit 100 --json
-  ag repo mirror list`,
+		Example: `  ag-cli repo mirror list owner/repo
+  ag-cli repo mirror list owner/repo --limit 100 --json
+  ag-cli repo mirror list`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.Limit <= 0 {
@@ -103,7 +103,7 @@ func newCmdRepoMirrorView(f *cmdutil.Factory) *cobra.Command {
 		Use:     "view [<owner>/<repo>]",
 		Short:   "View repository remote mirror state",
 		Long:    "View repository remote mirror state. Destinations and returned errors are sanitized before text or JSON output.",
-		Example: "  ag repo mirror view owner/repo\n  ag repo mirror view --json",
+		Example: "  ag-cli repo mirror view owner/repo\n  ag-cli repo mirror view --json",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)

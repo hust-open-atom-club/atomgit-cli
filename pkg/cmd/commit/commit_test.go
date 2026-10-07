@@ -34,7 +34,7 @@ func (*commitTestConfig) GetHost() string          { return "atomgit.com" }
 type commitAuthErrorConfig struct{}
 
 func (commitAuthErrorConfig) GetToken() (string, error) {
-	return "", errors.New("not authenticated: run `ag auth login`")
+	return "", errors.New("not authenticated: run `ag-cli auth login`")
 }
 func (commitAuthErrorConfig) GetUser() (string, error) { return "alice", nil }
 func (commitAuthErrorConfig) GetHost() string          { return "atomgit.com" }
@@ -256,7 +256,7 @@ func TestCommitListRejectsInvalidLimit(t *testing.T) {
 func TestCommitListReturnsCanonicalAuthenticationError(t *testing.T) {
 	cmd := newCmdCommitList(&cmdutil.Factory{Config: commitAuthErrorConfig{}})
 	err := cmd.RunE(cmd, []string{"alice/demo"})
-	if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
+	if err == nil || err.Error() != "not authenticated: run `ag-cli auth login`" {
 		t.Fatalf("error = %v", err)
 	}
 }
@@ -548,7 +548,7 @@ func TestCommitViewErrorResponse(t *testing.T) {
 func TestCommitViewReturnsCanonicalAuthenticationError(t *testing.T) {
 	cmd := newCmdCommitView(&cmdutil.Factory{Config: commitAuthErrorConfig{}})
 	err := cmd.RunE(cmd, []string{"alice/demo", "deadbeef"})
-	if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
+	if err == nil || err.Error() != "not authenticated: run `ag-cli auth login`" {
 		t.Fatalf("error = %v", err)
 	}
 }
@@ -889,9 +889,9 @@ func TestCompareTextOutputEscapesFields(t *testing.T) {
 }
 
 func TestAuthenticatedClientAvoidsDuplicatePrefix(t *testing.T) {
-	config := &commitTestConfig{tokenErr: errors.New("not authenticated: run `ag auth login`")}
+	config := &commitTestConfig{tokenErr: errors.New("not authenticated: run `ag-cli auth login`")}
 	_, err := authenticatedClient(factory(config, nil))
-	if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
+	if err == nil || err.Error() != "not authenticated: run `ag-cli auth login`" {
 		t.Fatalf("error = %v", err)
 	}
 }

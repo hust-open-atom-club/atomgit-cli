@@ -4,6 +4,7 @@ AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、WinGet
 
 ## 目录
 
+- [从 ag 迁移到 ag-cli](#从-ag-迁移到-ag-cli)
 - [npm 安装](#npm-安装)
 - [Homebrew 安装](#homebrew-安装)
 - [WinGet 安装](#winget-安装)
@@ -18,6 +19,16 @@ AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、WinGet
 - [安装验证](#安装验证)
 - [Shell 补全](#shell-补全)
 
+## 从 ag 迁移到 ag-cli
+
+新版本将可执行文件从 `ag` 改为 `ag-cli`（Windows 为 `ag-cli.exe`），不提供旧命令的兼容入口。下列安装和使用示例针对改名后的版本；在正式发布和对应包管理器更新前，已发布的旧版本仍使用 `ag`，旧 Release 归档中的文件也仍是 `ag` / `ag.exe`。
+
+- 配置目录（默认 `~/.config/ag-cli`）、凭据、旧版 token 路径、命令别名及 `AG_*` 环境变量均保持不变，无需重新登录或迁移配置。
+- npm 包名、Homebrew Formula、WinGet ID 等包标识不变。首次跨越改名版本时，请直接使用包管理器升级，例如 `npm install -g @hust-open-atom-club/atomgit-cli` 或 `brew upgrade atomgit-cli`；不要通过旧 `ag update` 迁移，它仍按旧命令名称校验安装结果。
+- Release 归档名仍为 `ag_<os>_<arch>.tar.gz` / `ag_windows_<arch>.zip`，其中的新二进制为 `ag-cli` / `ag-cli.exe`。手动安装时只安装新文件；安装脚本不会删除已有的 `ag`，它可能属于其他工具（例如 The Silver Searcher）。
+- 将脚本、CI 和日常命令中的调用改为 `ag-cli`，重新生成对应 Shell 补全。曾配置 Git credential helper 的用户应运行 `ag-cli auth setup-git`，更新其中记录的可执行文件路径；安装过程不会自动修改 Git 配置。
+- Homebrew、WinGet、Scoop、nixpkgs、AUR 及发行版包的二进制路径、补全文件和元数据需由对应维护人员同步。尚未更新的渠道继续使用旧命令。
+
 ## npm 安装
 
 npm 安装需要 Node.js 18 或更高版本。执行：
@@ -26,9 +37,9 @@ npm 安装需要 Node.js 18 或更高版本。执行：
 npm install -g @hust-open-atom-club/atomgit-cli
 ```
 
-npm 主包通过 `optionalDependencies` 声明七个平台二进制包。npm 根据当前操作系统和 CPU 架构只安装匹配的包，整个过程不使用 `postinstall`，运行 `ag` 时也不会额外联网下载或写入包目录。
+npm 主包通过 `optionalDependencies` 声明七个平台二进制包。npm 根据当前操作系统和 CPU 架构只安装匹配的包，整个过程不使用 `postinstall`，运行 `ag-cli` 时也不会额外联网下载或写入包目录。
 
-请勿使用 `--omit=optional` 安装；该选项会跳过平台二进制包，使 `ag` 无法启动。
+请勿使用 `--omit=optional` 安装；该选项会跳过平台二进制包，使 `ag-cli` 无法启动。
 
 | 操作系统 | 支持的处理器架构 |
 | --- | --- |
@@ -36,13 +47,13 @@ npm 主包通过 `optionalDependencies` 声明七个平台二进制包。npm 根
 | Linux | x64 / amd64、arm64 / aarch64、loong64 / loongarch64 |
 | Windows | x64 / amd64、arm64 |
 
-升级全局 npm 安装的 AtomGit CLI，可直接让 `ag` 识别当前二进制来源并调用 npm：
+升级全局 npm 安装的 AtomGit CLI，可直接让 `ag-cli` 识别当前二进制来源并调用 npm：
 
 ```bash
-ag update
+ag-cli update
 ```
 
-发现新版本后，命令会让用户选择 `Update via npm` 或仅本次 `Skip`；直接回车或标准输入 EOF 时默认更新。选择更新时会先确认目标版本已经发布到官方 npm registry，更新后再执行 npm 生成的 `ag` 命令入口核对版本，而不只检查平台包中的二进制。Windows 上如果 npm 因正在运行的 `ag.exe` 被锁定而破坏入口，或者 npm 报告成功但入口仍是旧版本，命令会下载 AtomGit Release 中校验和匹配的 Windows 二进制修复该入口。修复后的入口不再由 npm 管理；以后可重新执行下面的 npm 安装命令恢复 npm 管理。
+发现新版本后，命令会让用户选择 `Update via npm` 或仅本次 `Skip`；直接回车或标准输入 EOF 时默认更新。选择更新时会先确认目标版本已经发布到官方 npm registry，更新后再执行 npm 生成的 `ag-cli` 命令入口核对版本，而不只检查平台包中的二进制。Windows 上如果 npm 因正在运行的 `ag-cli.exe` 被锁定而破坏入口，或者 npm 报告成功但入口仍是旧版本，命令会下载 AtomGit Release 中校验和匹配的 Windows 二进制修复该入口。修复后的入口不再由 npm 管理；以后可重新执行下面的 npm 安装命令恢复 npm 管理。
 
 也可以手动升级：
 
@@ -68,10 +79,10 @@ Homebrew Core 中的 `atomgit-cli` 跟随项目正式发布的稳定版本，适
 brew install atomgit-cli
 ```
 
-升级 Homebrew Core 版本，可直接让 `ag` 识别 Formula 来源、调用 Homebrew 并验证新版本：
+升级 Homebrew Core 版本，可直接让 `ag-cli` 识别 Formula 来源、调用 Homebrew 并验证新版本：
 
 ```bash
-ag update
+ag-cli update
 ```
 
 发现新版本后可选择 `Update via Homebrew Core` 或仅本次 `Skip`；直接回车或标准输入 EOF 时默认更新。
@@ -100,7 +111,7 @@ brew tap hust-open-atom-club/tap
 brew install hust-open-atom-club/tap/atomgit-cli
 ```
 
-升级项目 Tap 版本仍使用完整 Formula 名称；当前 `ag update` 不处理项目 Tap，也不会将其当成 Homebrew Core：
+升级项目 Tap 版本仍使用完整 Formula 名称；当前 `ag-cli update` 不处理项目 Tap，也不会将其当成 Homebrew Core：
 
 ```bash
 brew update
@@ -186,7 +197,7 @@ scoop uninstall atomgit-cli
 
 ## Nix / NixOS 安装
 
-AtomGit CLI 已进入 `nixos-unstable`，nixpkgs 包名为 `atomgit-cli`，安装后提供 `ag` 命令。
+AtomGit CLI 已进入 `nixos-unstable`，nixpkgs 包名为 `atomgit-cli`。外部包更新到改名后的版本前，安装后仍提供旧 `ag` 命令。
 
 如果你的 Nix registry 或 flake input 已指向 `nixos-unstable`，可以直接安装：
 
@@ -278,12 +289,12 @@ Home Manager 中同样可以将 `unstable.atomgit-cli` 加入 `home.packages`。
 - `stable`：从固定版本的 AtomGit Release 源码归档构建。
 - `latest`：从当前 flake revision 的源码构建。
 
-默认 package 和兼容名称 `ag` 均指向 `stable`。安装稳定版：
+默认 package 和兼容名称 `ag`、`ag-cli` 均指向 `stable`。当前 stable 固定为 v0.7.3，仍提供旧 `ag` 命令；`latest` 从当前源码构建并提供 `ag-cli`。安装稳定版：
 
 由于 nixos-unstable 已停止支持 Intel macOS，flake 对 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
 
 ```bash
-nix profile install git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag
+nix profile install git+https://atomgit.com/hust-open-atom-club/atomgit-cli#ag-cli
 ```
 
 跟随仓库 revision 安装 latest：
@@ -315,17 +326,17 @@ nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#latest -- versio
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
-      ag = atomgit-cli.packages.${pkgs.stdenv.hostPlatform.system}.stable;
+      ag-cli = atomgit-cli.packages.${pkgs.stdenv.hostPlatform.system}.stable;
     in
     {
       # Home Manager 模块
       homeManagerModules.default = {
-        home.packages = [ ag ];
+        home.packages = [ ag-cli ];
       };
 
       # NixOS 模块
       nixosModules.default = {
-        environment.systemPackages = [ ag ];
+        environment.systemPackages = [ ag-cli ];
       };
     };
 }
@@ -344,7 +355,7 @@ yay -S atomgit-cli
 yay -S atomgit-cli-git
 ```
 
-三个包共用 `provides=('ag')` 并互相声明 `conflicts`，同时安装会冲突；支持的架构覆盖 `x86_64`、`aarch64` 和 `loong64`。
+三个包当前共用 `provides=('ag')` 并互相声明 `conflicts`，同时安装会冲突；支持的架构覆盖 `x86_64`、`aarch64` 和 `loong64`。命令改名及包元数据调整由对应维护人员同步。
 
 升级随 AUR 助手的常规更新一起完成，例如 `yay -Syu`。卸载使用 `yay -R atomgit-cli-bin`（替换为实际安装的包名）。
 
@@ -353,20 +364,20 @@ yay -S atomgit-cli-git
 Go 安装将自动下载源码包并进行编译，需要 Go 1.26.6 或更高版本：
 
 ```bash
-go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
+go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag-cli@latest
 ```
 
-该方法将从 Go 模块代理下载该项目及其依赖的源码包，并在本机构建出二进制文件。项目正式支持并测试 macOS、Linux 和 Windows；其他 Go 目标平台可能能够编译，但不保证完整兼容。`ag auth login` 的浏览器 OAuth 流程仅支持上述三个操作系统，其他平台需要在功能可用的前提下手动配置 PAT。
+该方法将从 Go 模块代理下载该项目及其依赖的源码包，并在本机构建出二进制文件。项目正式支持并测试 macOS、Linux 和 Windows；其他 Go 目标平台可能能够编译，但不保证完整兼容。`ag-cli auth login` 的浏览器 OAuth 流程仅支持上述三个操作系统，其他平台需要在功能可用的前提下手动配置 PAT。
 
 升级通过 Go 安装的 AtomGit CLI 时，重新执行相同命令即可：
 
 ```bash
-go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
+go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag-cli@latest
 ```
 
-**注意：** Go 模块代理提供的源码包不包含 `.git` 目录，因此这种安装方式构建的二进制只能可靠获得模块版本。执行 `ag version` 时，文本输出会省略无法获得的 commit 和构建时间；`ag version --json` 中对应字段为 `unknown`。这是预期行为，不影响 CLI 功能。如需同时包含版本、commit 和构建时间，请改用其他安装方法（如 npm、Homebrew），或通过 AtomGit Release 安装预编译版本。
+**注意：** Go 模块代理提供的源码包不包含 `.git` 目录，因此这种安装方式构建的二进制只能可靠获得模块版本。执行 `ag-cli version` 时，文本输出会省略无法获得的 commit 和构建时间；`ag-cli version --json` 中对应字段为 `unknown`。这是预期行为，不影响 CLI 功能。如需同时包含版本、commit 和构建时间，请改用其他安装方法（如 npm、Homebrew），或通过 AtomGit Release 安装预编译版本。
 
-Go 本身不记录通过 `go install` 安装的软件包。卸载时，删除 `GOBIN` 中的 `ag` 或 `ag.exe`；未设置 `GOBIN` 时，对应文件位于 `$(go env GOPATH)/bin`。
+Go 本身不记录通过 `go install` 安装的软件包。卸载时，删除 `GOBIN` 中的 `ag-cli` 或 `ag-cli.exe`；未设置 `GOBIN` 时，对应文件位于 `$(go env GOPATH)/bin`。
 
 ## OpenKylin 安装
 
@@ -457,7 +468,7 @@ sudo dnf copr remove cubelitblade/atomgit-cli
 
 ### 自动安装
 
-安装脚本会识别当前操作系统（支持 Linux、Windows 和 macOS）与处理器架构（Linux 支持 amd64、arm64 和 loong64，macOS 与 Windows 支持 amd64 和 arm64），下载匹配的预编译文件并安装 `ag`。
+安装脚本会识别当前操作系统（支持 Linux、Windows 和 macOS）与处理器架构（Linux 支持 amd64、arm64 和 loong64，macOS 与 Windows 支持 amd64 和 arm64），下载匹配的预编译文件并安装 `ag-cli`。
 
 #### macOS 和 Linux
 
@@ -467,7 +478,7 @@ sudo dnf copr remove cubelitblade/atomgit-cli
 curl -fsSL "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.sh" | sh
 ```
 
-脚本默认将 `ag` 安装到 `/usr/local/bin`；该目录不可写时，会改用 `~/.local/bin`。如果安装目录不在 `PATH` 中，脚本会输出相应的配置提示。
+脚本默认将 `ag-cli` 安装到 `/usr/local/bin`；该目录不可写时，会改用 `~/.local/bin`。如果安装目录不在 `PATH` 中，脚本会输出相应的配置提示。
 
 #### Windows
 
@@ -511,7 +522,7 @@ macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应
 
 #### macOS 和 Linux
 
-1. 解压下载的 `.tar.gz` 文件，得到可执行文件 `ag`。例如：
+1. 解压下载的 `.tar.gz` 文件，得到可执行文件 `ag-cli`。例如：
 
    ```bash
    tar -xzf ag_darwin_arm64.tar.gz
@@ -519,11 +530,11 @@ macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应
 
    请根据实际下载的文件名调整命令。
 
-2. 将 `ag` 安装到已加入 `PATH` 的目录，并赋予执行权限。例如：
+2. 将 `ag-cli` 安装到已加入 `PATH` 的目录，并赋予执行权限。例如：
 
    ```bash
    mkdir -p "$HOME/.local/bin"
-   install -m 0755 ag "$HOME/.local/bin/ag"
+   install -m 0755 ag-cli "$HOME/.local/bin/ag-cli"
    ```
 
 3. 如果 `~/.local/bin` 尚未加入 `PATH`，将下面一行添加到 shell 配置文件（例如 `~/.zshrc` 或 `~/.bashrc`），然后重新打开终端：
@@ -534,8 +545,8 @@ macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应
 
 #### Windows
 
-1. 解压下载的 `.zip` 文件，得到 `ag.exe`。
-2. 将 `ag.exe` 放入固定目录，例如 `C:\Users\<用户名>\.local\bin`。
+1. 解压下载的 `.zip` 文件，得到 `ag-cli.exe`。
+2. 将 `ag-cli.exe` 放入固定目录，例如 `C:\Users\<用户名>\.local\bin`。
 3. 打开系统“环境变量”，编辑当前用户的 `Path`，添加上述目录。
 4. 新开 PowerShell 或命令提示符。
 
@@ -569,7 +580,7 @@ git checkout vX.Y.Z
 
 ### macOS 和 Linux
 
-构建到 `bin/ag`：
+构建到 `bin/ag-cli`：
 
 ```bash
 make build
@@ -583,18 +594,18 @@ make install
 
 ### Windows
 
-在 PowerShell 中构建 `ag.exe`：
+在 PowerShell 中构建 `ag-cli.exe`：
 
 ```powershell
-go build -trimpath -o ag.exe ./cmd/ag
+go build -trimpath -o ag-cli.exe ./cmd/ag-cli
 ```
 
-将生成的 `ag.exe` 放入已加入用户 `Path` 的目录。
+将生成的 `ag-cli.exe` 放入已加入用户 `Path` 的目录。
 
 也可以在 PowerShell 中执行：
 
 ```powershell
-go install ./cmd/ag
+go install ./cmd/ag-cli
 ```
 
 可执行文件会安装到 `GOBIN` 指定的目录；未设置 `GOBIN` 时，默认目录为 `go env GOPATH` 所显示目录下的 `bin` 子目录。请确保该目录已加入 `PATH`。
@@ -635,19 +646,19 @@ cd atomgit-cli
 gmake build
 ```
 
-构建产物位于 `bin/ag`中。
+构建产物位于 `bin/ag-cli`中。
 
 ```bash
-go build -trimpath -o ag ./cmd/ag
+go build -trimpath -o ag-cli ./cmd/ag-cli
 ```
 
-将生成的 `ag` 安装到 `PATH` 中的目录，例如 `/usr/local/bin` 或 `~/.local/bin`：
+将生成的 `ag-cli` 安装到 `PATH` 中的目录，例如 `/usr/local/bin` 或 `~/.local/bin`：
 
 ```bash
-install -m 0755 ag /usr/local/bin/ag
+install -m 0755 ag-cli /usr/local/bin/ag-cli
 # 或
 mkdir -p "$HOME/.local/bin"
-install -m 0755 ag "$HOME/.local/bin/ag"
+install -m 0755 ag-cli "$HOME/.local/bin/ag-cli"
 ```
 
 如果使用 `~/.local/bin`，请确保该目录已加入 `PATH`。
@@ -663,7 +674,7 @@ install -m 0755 ag "$HOME/.local/bin/ag"
 完成安装或构建后，新开一个终端并执行：
 
 ```bash
-ag version
+ag-cli version
 ```
 
 ## Shell 补全
@@ -684,10 +695,10 @@ Bash 补全可通过 `bash-completion` 自动加载。
 mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
 
 # 安装补全文件
-ag completion bash > "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag"
+ag-cli completion bash > "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag-cli"
 
 # 移除补全文件
-rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag"
+rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag-cli"
 ```
 
 如果使用 Homebrew 管理 `bash-completion`，也可以将补全文件安装到 Homebrew 的补全目录：
@@ -697,10 +708,10 @@ rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag"
 mkdir -p "$(brew --prefix)/etc/bash_completion.d"
 
 # 安装补全文件
-ag completion bash > "$(brew --prefix)/etc/bash_completion.d/ag"
+ag-cli completion bash > "$(brew --prefix)/etc/bash_completion.d/ag-cli"
 
 # 移除补全文件
-rm -f "$(brew --prefix)/etc/bash_completion.d/ag"
+rm -f "$(brew --prefix)/etc/bash_completion.d/ag-cli"
 ```
 
 安装完成后，重新启动 Bash 会话使补全配置生效。
@@ -715,10 +726,10 @@ Zsh 通过 `fpath` 指定的目录查找补全函数。
 mkdir -p ~/.zfunc
 
 # 安装补全文件
-ag completion zsh > ~/.zfunc/_ag
+ag-cli completion zsh > ~/.zfunc/_ag-cli
 
 # 移除补全文件
-rm -f ~/.zfunc/_ag
+rm -f ~/.zfunc/_ag-cli
 ```
 
 安装完成后，重新启动 Zsh 会话，或执行 `autoload -Uz compinit && compinit` 使补全配置生效。
@@ -732,10 +743,10 @@ Fish 会自动加载用户配置目录中的补全文件。
 mkdir -p "$__fish_config_dir/completions"
 
 # 安装补全文件
-ag completion fish > "$__fish_config_dir/completions/ag.fish"
+ag-cli completion fish > "$__fish_config_dir/completions/ag-cli.fish"
 
 # 移除补全文件
-rm -f "$__fish_config_dir/completions/ag.fish"
+rm -f "$__fish_config_dir/completions/ag-cli.fish"
 ```
 
 ### PowerShell
@@ -749,10 +760,10 @@ if (!(Test-Path -Path $PROFILE)) {
 }
 
 # 启用补全
-'ag completion powershell | Out-String | Invoke-Expression' | Add-Content -Path $PROFILE
+'ag-cli completion powershell | Out-String | Invoke-Expression' | Add-Content -Path $PROFILE
 
 # 禁用补全
-(Get-Content $PROFILE) | Where-Object { $_ -ne 'ag completion powershell | Out-String | Invoke-Expression' } | Set-Content $PROFILE
+(Get-Content $PROFILE) | Where-Object { $_ -ne 'ag-cli completion powershell | Out-String | Invoke-Expression' } | Set-Content $PROFILE
 ```
 
 启用补全后，重新启动 PowerShell 会话，或执行 `. $PROFILE` 使补全配置生效。

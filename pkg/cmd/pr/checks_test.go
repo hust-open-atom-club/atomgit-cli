@@ -26,7 +26,7 @@ func TestPRChecksCommandRegistration(t *testing.T) {
 			t.Fatalf("checks flag %q was not registered", flag)
 		}
 	}
-	if !strings.Contains(checks.Example, "ag pr checks") || !strings.Contains(checks.Long, "required-check") {
+	if !strings.Contains(checks.Example, "ag-cli pr checks") || !strings.Contains(checks.Long, "required-check") {
 		t.Fatalf("checks help is incomplete: %s\n%s", checks.Long, checks.Example)
 	}
 }

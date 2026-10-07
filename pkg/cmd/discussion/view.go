@@ -32,9 +32,9 @@ func newCmdDiscussionView(f *cmdutil.Factory) *cobra.Command {
 With --comments the comment thread is fetched as well; comments that have
 replies include their nested replies in server order. Hidden, deleted, and
 empty bodies are shown as explicit placeholders instead of blank text.`,
-		Example: `  ag discussion view owner/repo 1
-  ag discussion view owner/repo 1 --comments
-  ag discussion view owner/repo 1 --comments --json`,
+		Example: `  ag-cli discussion view owner/repo 1
+  ag-cli discussion view owner/repo 1 --comments
+  ag-cli discussion view owner/repo 1 --comments --json`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)

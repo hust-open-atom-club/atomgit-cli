@@ -72,7 +72,7 @@ func TestNewCmdTagRegistersSubcommands(t *testing.T) {
 			t.Fatalf("list --%s flag was not registered", flag)
 		}
 	}
-	if !strings.Contains(list.Example, "ag tag list") {
+	if !strings.Contains(list.Example, "ag-cli tag list") {
 		t.Fatalf("list example = %q", list.Example)
 	}
 

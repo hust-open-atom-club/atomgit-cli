@@ -33,7 +33,7 @@ func newCmdTagList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
 		Short:   "List tags",
-		Example: `  ag tag list owner/repo --limit 50`,
+		Example: `  ag-cli tag list owner/repo --limit 50`,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if limit <= 0 {
@@ -181,8 +181,8 @@ func newCmdTagDelete(f *cmdutil.Factory) *cobra.Command {
 
 By default, you will be prompted to confirm the deletion. Use --yes to skip
 the confirmation prompt.`,
-		Example: `  ag tag delete owner/repo v1.0.0
-  ag tag delete owner/repo v1.0.0 --yes`,
+		Example: `  ag-cli tag delete owner/repo v1.0.0
+  ag-cli tag delete owner/repo v1.0.0 --yes`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)

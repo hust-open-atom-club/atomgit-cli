@@ -234,7 +234,7 @@ func TestResolveCloneAuth(t *testing.T) {
 		{name: "unauthenticated clone stays anonymous", cloneURL: "https://atomgit.com/owner/repo.git"},
 		{
 			name:     "missing token stays anonymous",
-			tokenErr: errors.New("not authenticated: run `ag auth login`"),
+			tokenErr: errors.New("not authenticated: run `ag-cli auth login`"),
 			user:     "alice",
 			cloneURL: "https://atomgit.com/owner/repo.git",
 		},

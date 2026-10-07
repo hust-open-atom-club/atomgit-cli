@@ -16,10 +16,10 @@ func NewCmdWorkflow(f *cmdutil.Factory) *cobra.Command {
 		Use:   "workflow",
 		Short: "Manage AtomGit Actions workflows",
 		Long:  `List, validate, and run AtomGit Actions workflows.`,
-		Example: `  ag workflow list owner/repo
-  ag workflow validate --file .gitcode/workflows/ci.yml
-  ag workflow run owner/repo 12345 --ref main
-  ag workflow run owner/repo ci.yml -f env=production`,
+		Example: `  ag-cli workflow list owner/repo
+  ag-cli workflow validate --file .gitcode/workflows/ci.yml
+  ag-cli workflow run owner/repo 12345 --ref main
+  ag-cli workflow run owner/repo ci.yml -f env=production`,
 	}
 
 	cmd.AddCommand(newCmdList(f))

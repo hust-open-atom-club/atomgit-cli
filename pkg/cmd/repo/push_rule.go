@@ -55,7 +55,7 @@ func newCmdRepoPushRuleView(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "view [<owner>/<repo>]",
 		Short:   "View repository push rules",
-		Example: "  ag repo push-rule view owner/repo\n  ag repo push-rule view --json",
+		Example: "  ag-cli repo push-rule view owner/repo\n  ag-cli repo push-rule view --json",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
@@ -95,9 +95,9 @@ func newCmdRepoPushRuleEdit(f *cmdutil.Factory) *cobra.Command {
 Only flags explicitly provided are sent to AtomGit; omitted settings remain
 unchanged. Explicit false, empty-string, and zero values are preserved. All
 updates require confirmation unless --yes is supplied.`,
-		Example: `  ag repo push-rule edit owner/repo --deny-force-push --yes
-  ag repo push-rule edit --commit-message-regex '^(feat|fix): '
-  ag repo push-rule edit owner/repo --reject-not-signed-by-gpg=false --max-file-size 0`,
+		Example: `  ag-cli repo push-rule edit owner/repo --deny-force-push --yes
+  ag-cli repo push-rule edit --commit-message-regex '^(feat|fix): '
+  ag-cli repo push-rule edit owner/repo --reject-not-signed-by-gpg=false --max-file-size 0`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			request, err := buildPushRuleEditRequest(cmd, opts)

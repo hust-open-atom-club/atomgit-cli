@@ -61,10 +61,10 @@ func TestNewCmdReleaseRegistersCommands(t *testing.T) {
 	if !strings.Contains(cmd.Long, "make publish") || !strings.Contains(cmd.Long, "automated release pipeline") {
 		t.Fatalf("release Long does not reference the automated pipeline: %q", cmd.Long)
 	}
-	wantExample := `  ag release list owner/repo
-  ag release view owner/repo v1.0.0
-  ag release create owner/repo v1.0.0 --name "Version 1.0.0" --body "Release notes"
-  ag release upload owner/repo v1.0.0 ./dist/app.tar.gz`
+	wantExample := `  ag-cli release list owner/repo
+  ag-cli release view owner/repo v1.0.0
+  ag-cli release create owner/repo v1.0.0 --name "Version 1.0.0" --body "Release notes"
+  ag-cli release upload owner/repo v1.0.0 ./dist/app.tar.gz`
 	if cmd.Example != wantExample {
 		t.Fatalf("release Example = %q, want %q", cmd.Example, wantExample)
 	}
@@ -253,7 +253,7 @@ func TestReleaseViewInferRepoAndEscapeTag(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: releaseTestConfig{},
 		RepositoryResolver: func() (cmdutil.Repository, error) {
-			return cmdutil.Repository{Owner: "atomclub", Name: "ag"}, nil
+			return cmdutil.Repository{Owner: "atomclub", Name: "ag-cli"}, nil
 		},
 		HttpClient: func() (*http.Client, error) {
 			return &http.Client{Transport: releaseRoundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -274,7 +274,7 @@ func TestReleaseViewInferRepoAndEscapeTag(t *testing.T) {
 	if err := cmd.RunE(cmd, []string{"v1/rc"}); err != nil {
 		t.Fatal(err)
 	}
-	const wantPath = "/api/v5/repos/atomclub/ag/releases/tags/v1%2Frc"
+	const wantPath = "/api/v5/repos/atomclub/ag-cli/releases/tags/v1%2Frc"
 	if gotPath != wantPath {
 		t.Fatalf("path = %q, want %q", gotPath, wantPath)
 	}
@@ -301,7 +301,7 @@ func TestReleaseViewOutputsAllFields(t *testing.T) {
 	cmd := newCmdReleaseView(factory)
 	var out bytes.Buffer
 	cmd.SetOut(&out)
-	if err := cmd.RunE(cmd, []string{"atomclub/ag", "v2.0.0"}); err != nil {
+	if err := cmd.RunE(cmd, []string{"atomclub/ag-cli", "v2.0.0"}); err != nil {
 		t.Fatal(err)
 	}
 	got := out.String()
@@ -341,7 +341,7 @@ func TestReleaseViewShowsNoneForEmptyAssets(t *testing.T) {
 	cmd := newCmdReleaseView(factory)
 	var out bytes.Buffer
 	cmd.SetOut(&out)
-	if err := cmd.RunE(cmd, []string{"atomclub/ag", "v0.1.0"}); err != nil {
+	if err := cmd.RunE(cmd, []string{"atomclub/ag-cli", "v0.1.0"}); err != nil {
 		t.Fatal(err)
 	}
 	got := out.String()
@@ -363,7 +363,7 @@ func TestReleaseViewReturnsErrorOn404(t *testing.T) {
 		},
 	}
 	cmd := newCmdReleaseView(factory)
-	err := cmd.RunE(cmd, []string{"atomclub/ag", "missing-tag"})
+	err := cmd.RunE(cmd, []string{"atomclub/ag-cli", "missing-tag"})
 	if err == nil {
 		t.Fatal("expected error for 404, got nil")
 	}

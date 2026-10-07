@@ -1,12 +1,12 @@
 version: 2
 
-project_name: ag
+project_name: ag-cli
 dist: dist/.goreleaser
 
 builds:
-  - id: ag
-    main: ./cmd/ag
-    binary: ag
+  - id: ag-cli
+    main: ./cmd/ag-cli
+    binary: ag-cli
     env:
       - CGO_ENABLED=0
     goos:
@@ -32,9 +32,9 @@ builds:
       - -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.BuildDate={{ .Env.AG_BUILD_DATE }}
 
 archives:
-  - id: ag
+  - id: ag-cli
     ids:
-      - ag
+      - ag-cli
     formats:
       - tar.gz
     format_overrides:

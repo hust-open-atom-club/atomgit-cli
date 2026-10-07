@@ -429,11 +429,11 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 Assignees own follow-up work, approval reviewers approve the change, and
 testers verify it. These AtomGit roles are managed independently. Labels and
 milestones must already exist in the repository.`,
-		Example: `  ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature
-  ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature --draft
-  ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature
-  ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature
-  ag pr create owner/repo --title "Fix bug" --head feature --prune-branch`,
+		Example: `  ag-cli pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature
+  ag-cli pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature --draft
+  ag-cli pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature
+  ag-cli pr create owner/repo --title "Fix bug" --body-file - --base main --head feature
+  ag-cli pr create owner/repo --title "Fix bug" --head feature --prune-branch`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.Title == "" {
@@ -578,10 +578,10 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 Assignees, approval reviewers, and testers are distinct AtomGit roles.
 Unspecified metadata is left unchanged; use --milestone none to clear the
 current milestone.`,
-		Example: `  ag pr edit owner/repo 123 --title "Updated title"
-  ag pr edit owner/repo 123 --body "Updated description"
-  ag pr edit owner/repo 123 --body-file description.md
-  ag pr edit owner/repo 123 --body-file -`,
+		Example: `  ag-cli pr edit owner/repo 123 --title "Updated title"
+  ag-cli pr edit owner/repo 123 --body "Updated description"
+  ag-cli pr edit owner/repo 123 --body-file description.md
+  ag-cli pr edit owner/repo 123 --body-file -`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
@@ -842,7 +842,7 @@ func newCmdPRMerge(f *cmdutil.Factory) *cobra.Command {
 		Short: "Merge a pull request",
 		Long: `Merge a pull request.
 
-By default, ag creates a merge commit. Use --rebase to rebase the commits onto the base branch.
+By default, ag-cli creates a merge commit. Use --rebase to rebase the commits onto the base branch.
 `,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {

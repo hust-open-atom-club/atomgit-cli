@@ -15,8 +15,8 @@ func newCmdOrgView(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "view <org>",
 		Short: "View an organization",
-		Example: `  ag org view my-organization
-  ag org view my-organization --json`,
+		Example: `  ag-cli org view my-organization
+  ag-cli org view my-organization --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			organization, err := parseOrganization(args[0])
@@ -65,9 +65,9 @@ func newCmdOrgMembers(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "members <org>",
 		Short: "List organization members",
-		Example: `  ag org members my-organization
-  ag org members my-organization --limit 100
-  ag org members my-organization --json`,
+		Example: `  ag-cli org members my-organization
+  ag-cli org members my-organization --limit 100
+  ag-cli org members my-organization --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			organization, err := parseOrganization(args[0])
@@ -121,9 +121,9 @@ func newCmdOrgRepos(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "repos <org>",
 		Short: "List organization repositories",
-		Example: `  ag org repos my-organization
-  ag org repos my-organization --limit 100
-  ag org repos my-organization --json`,
+		Example: `  ag-cli org repos my-organization
+  ag-cli org repos my-organization --limit 100
+  ag-cli org repos my-organization --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			organization, err := parseOrganization(args[0])

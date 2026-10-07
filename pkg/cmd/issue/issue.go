@@ -420,10 +420,10 @@ func newCmdIssueCreate(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [<owner>/<repo>]",
 		Short: "Create an issue",
-		Example: `  ag issue create owner/repo --title "Bug report" --body "Description"
-  ag issue create owner/repo --title "Bug report" --assignee alice
-  ag issue create owner/repo --title "Bug report" --body-file description.md
-  ag issue create owner/repo --title "Bug report" --body-file -`,
+		Example: `  ag-cli issue create owner/repo --title "Bug report" --body "Description"
+  ag-cli issue create owner/repo --title "Bug report" --assignee alice
+  ag-cli issue create owner/repo --title "Bug report" --body-file description.md
+  ag-cli issue create owner/repo --title "Bug report" --body-file -`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.Title == "" {

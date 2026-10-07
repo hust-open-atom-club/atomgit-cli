@@ -12,7 +12,7 @@
 
 1. **Bug 报告**：请提供以下信息
    - 使用的操作系统和架构
-   - `ag version` 输出及安装方式
+   - `ag-cli version` 输出及安装方式
    - Go 版本（仅源码构建时，运行 `go version`）
    - 复现步骤
    - 期望行为 vs 实际行为
@@ -70,7 +70,7 @@
    (
      ag_build_dir="$(mktemp -d)"
      trap 'rm -rf "$ag_build_dir"' EXIT
-     go build -o "$ag_build_dir/ag" ./cmd/ag
+     go build -o "$ag_build_dir/ag-cli" ./cmd/ag-cli
    )
 
    # 运行 CI 使用的 Linux 竞态检测
@@ -176,7 +176,7 @@
    git push -u origin HEAD
    ```
 
-   请只暂存本次贡献相关的文件，不要提交 `dist/`、本地 `ag` 二进制、覆盖率文件、IDE 文件或任何凭据。
+   请只暂存本次贡献相关的文件，不要提交 `dist/`、本地 `ag-cli` 二进制、覆盖率文件、IDE 文件或任何凭据。
 
    提交信息格式：
    - `feat:` 新功能
@@ -212,7 +212,7 @@
 
 ```text
 atomgit-cli/
-├── cmd/ag/                 # 可执行程序入口
+├── cmd/ag-cli/                 # 可执行程序入口
 ├── internal/               # API、配置、认证和版本等内部实现
 │   ├── agcmd/              # 根命令执行与退出码处理
 │   ├── api/                # AtomGit API v5 客户端
@@ -283,7 +283,7 @@ fixture 必须注明合成或脱敏采集来源。使用专用测试仓库采集
 详细格式、采集与审查步骤见 [API 契约测试](docs/api-contracts.md)。
 
 在线检查仅通过 `make test-contract-live` 显式启用，必须提供单独的测试账号 token 和测试仓库。
-它只发送 GET，不读取 `ag auth` 配置，不打印或保存响应正文，也不自动覆盖 fixture。
+它只发送 GET，不读取 `ag-cli auth` 配置，不打印或保存响应正文，也不自动覆盖 fixture。
 
 ### 代码风格
 

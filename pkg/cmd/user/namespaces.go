@@ -40,9 +40,9 @@ func newCmdUserNamespaces(f *cmdutil.Factory) *cobra.Command {
 		Use:   "namespaces",
 		Short: "List namespaces for the authenticated user",
 		Long:  "List user and group namespaces visible to the authenticated user. The default mode is intrant.",
-		Example: `  ag user namespaces
-  ag user namespaces --mode project --limit 100
-  ag user namespaces --mode all --json`,
+		Example: `  ag-cli user namespaces
+  ag-cli user namespaces --mode project --limit 100
+  ag-cli user namespaces --mode all --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runUserNamespaces(cmd.OutOrStdout(), f, opts)

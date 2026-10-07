@@ -41,7 +41,7 @@ func TestNewCmdLabelRegistersCommands(t *testing.T) {
 				t.Fatalf("%s --%s flag was not registered", name, flag)
 			}
 		}
-		if !strings.Contains(child.Example, "ag label "+name) {
+		if !strings.Contains(child.Example, "ag-cli label "+name) {
 			t.Fatalf("%s example = %q", name, child.Example)
 		}
 		if child.Flags().Lookup("description") != nil {

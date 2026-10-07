@@ -26,13 +26,13 @@ func newCmdRunView(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "view [<owner>/<repo>] <run-id>",
 		Short: "View a workflow run, jobs, logs, and artifacts",
-		Example: `  ag run view owner/repo 12345
-  ag run view 12345
-  ag run view owner/repo 12345 --job job-id
-  ag run view owner/repo 12345 --job job-id --log
-  ag run view owner/repo 12345 --job job-id --log-file job-logs.zip
-  ag run view owner/repo 12345 --artifact artifact-id
-  ag run view owner/repo 12345 --artifact artifact-id --artifact-file build.zip --overwrite`,
+		Example: `  ag-cli run view owner/repo 12345
+  ag-cli run view 12345
+  ag-cli run view owner/repo 12345 --job job-id
+  ag-cli run view owner/repo 12345 --job job-id --log
+  ag-cli run view owner/repo 12345 --job job-id --log-file job-logs.zip
+  ag-cli run view owner/repo 12345 --artifact artifact-id
+  ag-cli run view owner/repo 12345 --artifact artifact-id --artifact-file build.zip --overwrite`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)

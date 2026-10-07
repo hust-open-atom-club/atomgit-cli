@@ -121,7 +121,7 @@ func TestNewCmdDiscussionViewRegistersFlagsAndHelp(t *testing.T) {
 	if err := cmd.Help(); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"view [<owner>/<repo>] <number>", "--comments", "--json", "ag discussion view owner/repo 1"} {
+	for _, want := range []string{"view [<owner>/<repo>] <number>", "--comments", "--json", "ag-cli discussion view owner/repo 1"} {
 		if !strings.Contains(help.String(), want) {
 			t.Errorf("help missing %q:\n%s", want, help.String())
 		}

@@ -38,9 +38,9 @@ func newCmdPRChecks(f *cmdutil.Factory) *cobra.Command {
 		Use:   "checks [<owner>/<repo>] <number>",
 		Short: "Show CI checks for a pull request's current head commit",
 		Long:  "Show AtomGit Actions runs for a pull request's current head commit. This command does not infer or report required-check semantics.",
-		Example: `  ag pr checks owner/repo 42
-  ag pr checks 42 --watch
-  ag pr checks owner/repo 42 --watch --interval 5s`,
+		Example: `  ag-cli pr checks owner/repo 42
+  ag-cli pr checks 42 --watch
+  ag-cli pr checks owner/repo 42 --watch --interval 5s`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runPRChecks(cmd, f, opts, args)

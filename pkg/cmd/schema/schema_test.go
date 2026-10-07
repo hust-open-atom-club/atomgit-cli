@@ -72,7 +72,7 @@ func TestRegisteredCommands(t *testing.T) {
 					t.Fatalf("argument count metadata drift at %d", n)
 				}
 			}
-			if detail.Path == "ag pr create" {
+			if detail.Path == "ag-cli pr create" {
 				title := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == "title" })
 				if title < 0 || !detail.Flags[title].Required || detail.Flags[title].RequiredSource != "annotation" {
 					t.Fatal("missing manual required-title annotation")
@@ -82,7 +82,7 @@ func TestRegisteredCommands(t *testing.T) {
 				}
 			}
 			global := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == "raw-output" })
-			if global < 0 || !detail.Flags[global].Inherited || detail.Flags[global].DefinedOn != "ag" {
+			if global < 0 || !detail.Flags[global].Inherited || detail.Flags[global].DefinedOn != "ag-cli" {
 				t.Fatal("missing inherited flags")
 			}
 		})
@@ -128,7 +128,7 @@ func TestAllPublicCommandsCanBeDescribed(t *testing.T) {
 			}
 		}
 	}
-	for _, path := range [][]string{{"auth", "git-credential"}, {"missing"}, {"ag", "auth", "git-credential"}, {"ag", "missing"}, {"ag", "ag"}} {
+	for _, path := range [][]string{{"auth", "git-credential"}, {"missing"}, {"ag-cli", "auth", "git-credential"}, {"ag-cli", "missing"}, {"ag-cli", "ag-cli"}} {
 		_, err := commandschema.Describe(cmd, path)
 		if err == nil {
 			t.Fatal(fmt.Sprint("accepted hidden/unknown path ", path))

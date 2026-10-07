@@ -45,7 +45,7 @@ func newCmdProtectionList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
 		Short:   "List protected branch rules",
-		Example: "  ag branch protection list owner/repo --limit 50",
+		Example: "  ag-cli branch protection list owner/repo --limit 50",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if limit <= 0 {
@@ -121,10 +121,10 @@ operation to everyone. Existing rules preserve any permission whose flag is
 omitted; new rules require both --push and --merge. Updating an existing rule
 requires confirmation unless --yes is supplied. AtomGit requires every role or
 user allowed to push to also be explicitly allowed to merge.`,
-		Example: `  ag branch protection set owner/repo main --push admin --merge admin
-  ag branch protection set owner/repo main --push maintainer --merge maintainer
-  ag branch protection set owner/repo "release/*" --push "develop;alice" --merge "develop;alice"
-  ag branch protection set owner/repo main --push "" --yes`,
+		Example: `  ag-cli branch protection set owner/repo main --push admin --merge admin
+  ag-cli branch protection set owner/repo main --push maintainer --merge maintainer
+  ag-cli branch protection set owner/repo "release/*" --push "develop;alice" --merge "develop;alice"
+  ag-cli branch protection set owner/repo main --push "" --yes`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := resolveRepositoryArgs(f, args, 1)

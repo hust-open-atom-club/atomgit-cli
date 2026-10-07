@@ -22,7 +22,7 @@ func TestAuthSetupGitConfiguresHostScopedHelper(t *testing.T) {
 		},
 	}
 	cmd := newCmdAuthSetupGitWithExecutable(factory, func() (string, error) {
-		return "/Applications/AtomGit CLI/ag", nil
+		return "/Applications/AtomGit CLI/ag-cli", nil
 	})
 	var out bytes.Buffer
 	cmd.SetOut(&out)
@@ -32,12 +32,12 @@ func TestAuthSetupGitConfiguresHostScopedHelper(t *testing.T) {
 	}
 	wantCalls := [][]string{
 		{"config", "--global", "--replace-all", "credential.https://atomgit.com.helper", ""},
-		{"config", "--global", "--add", "credential.https://atomgit.com.helper", "!'/Applications/AtomGit CLI/ag' auth git-credential"},
+		{"config", "--global", "--add", "credential.https://atomgit.com.helper", "!'/Applications/AtomGit CLI/ag-cli' auth git-credential"},
 	}
 	if !reflect.DeepEqual(calls, wantCalls) {
 		t.Fatalf("git config calls = %#v, want %#v", calls, wantCalls)
 	}
-	if got := out.String(); got != "Configured Git to use ag as a credential helper for atomgit.com.\n" {
+	if got := out.String(); got != "Configured Git to use ag-cli as a credential helper for atomgit.com.\n" {
 		t.Fatalf("output = %q", got)
 	}
 }
@@ -45,18 +45,18 @@ func TestAuthSetupGitConfiguresHostScopedHelper(t *testing.T) {
 func TestAuthSetupGitRequiresAuthentication(t *testing.T) {
 	called := false
 	factory := &cmdutil.Factory{
-		Config: testConfig{tokenErr: errors.New("not authenticated: run `ag auth login`")},
+		Config: testConfig{tokenErr: errors.New("not authenticated: run `ag-cli auth login`")},
 		GitConfig: func(...string) (string, error) {
 			called = true
 			return "", nil
 		},
 	}
 	cmd := newCmdAuthSetupGitWithExecutable(factory, func() (string, error) {
-		return "/usr/local/bin/ag", nil
+		return "/usr/local/bin/ag-cli", nil
 	})
 
 	err := cmd.RunE(cmd, nil)
-	if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
+	if err == nil || err.Error() != "not authenticated: run `ag-cli auth login`" {
 		t.Fatalf("error = %v", err)
 	}
 	if called {
@@ -74,7 +74,7 @@ func TestAuthSetupGitStopsAfterConfigurationFailure(t *testing.T) {
 		},
 	}
 	cmd := newCmdAuthSetupGitWithExecutable(factory, func() (string, error) {
-		return "/usr/local/bin/ag", nil
+		return "/usr/local/bin/ag-cli", nil
 	})
 
 	err := cmd.RunE(cmd, nil)
@@ -91,7 +91,7 @@ func TestAuthSetupGitWritesExpectedGlobalConfig(t *testing.T) {
 	t.Setenv("GIT_CONFIG_GLOBAL", configFile)
 	factory := &cmdutil.Factory{Config: testConfig{token: "secret", user: "alice"}}
 	cmd := newCmdAuthSetupGitWithExecutable(factory, func() (string, error) {
-		return "/opt/AtomGit CLI/ag", nil
+		return "/opt/AtomGit CLI/ag-cli", nil
 	})
 	cmd.SetOut(&bytes.Buffer{})
 
@@ -105,7 +105,7 @@ func TestAuthSetupGitWritesExpectedGlobalConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := string(output), "\n!'/opt/AtomGit CLI/ag' auth git-credential\n"; got != want {
+	if got, want := string(output), "\n!'/opt/AtomGit CLI/ag-cli' auth git-credential\n"; got != want {
 		t.Fatalf("helper config = %q, want %q", got, want)
 	}
 }
@@ -205,14 +205,14 @@ func TestGitCredentialHelperDoesNotExposeMalformedURLCredentials(t *testing.T) {
 
 func TestShellQuote(t *testing.T) {
 	tests := map[string]string{
-		"/usr/local/bin/ag":         "'/usr/local/bin/ag'",
-		"/opt/AtomGit CLI/ag":       "'/opt/AtomGit CLI/ag'",
-		"/tmp/AtomGit's CLI/ag":     "'/tmp/AtomGit'\\''s CLI/ag'",
-		"/tmp/ag;touch/tmp/pwned":   "'/tmp/ag;touch/tmp/pwned'",
-		"/tmp/ag&touch/tmp/pwned":   "'/tmp/ag&touch/tmp/pwned'",
-		"/tmp/ag|touch/tmp/pwned":   "'/tmp/ag|touch/tmp/pwned'",
-		"/tmp/ag>(touch/tmp/pwned)": "'/tmp/ag>(touch/tmp/pwned)'",
-		`C:\\Program Files\\ag.exe`: `'C:\\Program Files\\ag.exe'`,
+		"/usr/local/bin/ag-cli":         "'/usr/local/bin/ag-cli'",
+		"/opt/AtomGit CLI/ag-cli":       "'/opt/AtomGit CLI/ag-cli'",
+		"/tmp/AtomGit's CLI/ag-cli":     "'/tmp/AtomGit'\\''s CLI/ag-cli'",
+		"/tmp/ag-cli;touch/tmp/pwned":   "'/tmp/ag-cli;touch/tmp/pwned'",
+		"/tmp/ag-cli&touch/tmp/pwned":   "'/tmp/ag-cli&touch/tmp/pwned'",
+		"/tmp/ag-cli|touch/tmp/pwned":   "'/tmp/ag-cli|touch/tmp/pwned'",
+		"/tmp/ag-cli>(touch/tmp/pwned)": "'/tmp/ag-cli>(touch/tmp/pwned)'",
+		`C:\\Program Files\\ag-cli.exe`: `'C:\\Program Files\\ag-cli.exe'`,
 	}
 	for input, want := range tests {
 		if got := shellQuote(input); got != want {

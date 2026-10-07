@@ -31,7 +31,7 @@ func newCmdLabelList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
 		Short:   "List repository labels",
-		Example: `  ag label list owner/repo --limit 50`,
+		Example: `  ag-cli label list owner/repo --limit 50`,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if limit <= 0 {

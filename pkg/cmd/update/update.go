@@ -35,7 +35,7 @@ const (
 	npmRegistry            = "https://registry.npmjs.org/"
 	releaseDownloadBaseURL = "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download"
 	homebrewCoreFormula    = "atomgit-cli"
-	homebrewExecutableName = "ag"
+	homebrewExecutableName = "ag-cli"
 	maxChecksumBytes       = 1 << 20
 	maxWindowsArchiveBytes = 128 << 20
 	maxWindowsBinaryBytes  = 128 << 20
@@ -148,7 +148,7 @@ func newCmdUpdateWithDeps(f *cmdutil.Factory, deps updateDeps) *cobra.Command {
 }
 
 // NewCmdCheckUpdate preserves the legacy read-only command while users migrate
-// to "ag update --check".
+// to "ag-cli update --check".
 func NewCmdCheckUpdate(f *cmdutil.Factory) *cobra.Command {
 	return newCmdCheckUpdateWithDeps(f, defaultUpdateDeps())
 }
@@ -157,7 +157,7 @@ func newCmdCheckUpdateWithDeps(f *cmdutil.Factory, deps updateDeps) *cobra.Comma
 	return &cobra.Command{
 		Use:        "check-update",
 		Short:      "Check for a newer AtomGit CLI release",
-		Deprecated: `use "ag update --check" instead`,
+		Deprecated: `use "ag-cli update --check" instead`,
 		Args:       cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runUpdate(cmd, f, deps, true)
@@ -363,7 +363,7 @@ func normalizeVersion(value string) string {
 func detectInstallation(ctx context.Context, deps updateDeps) (installation, error) {
 	executable, err := deps.executable()
 	if err != nil {
-		return installation{}, fmt.Errorf("resolve running ag executable: %w", err)
+		return installation{}, fmt.Errorf("resolve running ag-cli executable: %w", err)
 	}
 	executable = canonicalPath(executable, deps.evalSymlinks)
 
@@ -887,7 +887,7 @@ func extractWindowsBinary(archive []byte) ([]byte, error) {
 			continue
 		}
 		if entry.UncompressedSize64 > maxWindowsBinaryBytes {
-			return nil, fmt.Errorf("ag.exe is larger than %d bytes", maxWindowsBinaryBytes)
+			return nil, fmt.Errorf("ag-cli.exe is larger than %d bytes", maxWindowsBinaryBytes)
 		}
 		file, err := entry.Open()
 		if err != nil {
@@ -902,11 +902,11 @@ func extractWindowsBinary(archive []byte) ([]byte, error) {
 			return nil, closeErr
 		}
 		if len(binary) == 0 || int64(len(binary)) > maxWindowsBinaryBytes {
-			return nil, fmt.Errorf("ag.exe has invalid size %d", len(binary))
+			return nil, fmt.Errorf("ag-cli.exe has invalid size %d", len(binary))
 		}
 		return binary, nil
 	}
-	return nil, errors.New("ag.exe was not found in the Windows release archive")
+	return nil, errors.New("ag-cli.exe was not found in the Windows release archive")
 }
 
 func downloadUpdateAsset(ctx context.Context, rawURL string, limit int64) ([]byte, error) {
@@ -942,9 +942,9 @@ func npmExecutablePath(root, goos, goarch string) (string, error) {
 	if goos == "windows" {
 		platform = "win32"
 	}
-	executable := "ag"
+	executable := "ag-cli"
 	if goos == "windows" {
-		executable = "ag.exe"
+		executable = "ag-cli.exe"
 	}
 	packageName := fmt.Sprintf("atomgit-cli-%s-%s", platform, arch)
 	return filepath.Join(root, "@hust-open-atom-club", packageName, "bin", executable), nil

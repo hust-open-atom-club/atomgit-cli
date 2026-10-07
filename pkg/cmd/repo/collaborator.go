@@ -52,7 +52,7 @@ func newCmdRepoCollaboratorList(f *cmdutil.Factory) *cobra.Command {
 		Use:     "list [<owner>/<repo>]",
 		Short:   "List repository collaborators",
 		Long:    "List accepted repository collaborators. Pending invitations are not exposed by AtomGit API v5 and cannot be included in this listing.",
-		Example: "  ag repo collaborator list owner/repo --limit 50",
+		Example: "  ag-cli repo collaborator list owner/repo --limit 50",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if limit <= 0 {
@@ -101,7 +101,7 @@ func newCmdRepoCollaboratorView(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "view [<owner>/<repo>] <username>",
 		Short:   "View a repository collaborator's effective permission",
-		Example: "  ag repo collaborator view owner/repo octocat",
+		Example: "  ag-cli repo collaborator view owner/repo octocat",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
@@ -151,7 +151,7 @@ func newCmdRepoCollaboratorAdd(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "add [<owner>/<repo>] <username>",
 		Short:   "Add a direct repository collaborator",
-		Example: "  ag repo collaborator add owner/repo octocat --permission push",
+		Example: "  ag-cli repo collaborator add owner/repo octocat --permission push",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			permission, err := validateCollaboratorPermission(permission)
@@ -176,7 +176,7 @@ func newCmdRepoCollaboratorAdd(f *cmdutil.Factory) *cobra.Command {
 			}
 			if found {
 				if directCollaborator(current, repository) {
-					return fmt.Errorf("%q is already a direct collaborator; use `ag repo collaborator edit`", username)
+					return fmt.Errorf("%q is already a direct collaborator; use `ag-cli repo collaborator edit`", username)
 				}
 				return inheritedCollaboratorError(current, repository)
 			}
@@ -198,7 +198,7 @@ func newCmdRepoCollaboratorEdit(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "edit [<owner>/<repo>] <username>",
 		Short:   "Update a direct repository collaborator's permission",
-		Example: "  ag repo collaborator edit owner/repo octocat --permission pull",
+		Example: "  ag-cli repo collaborator edit owner/repo octocat --permission pull",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			permission, err := validateCollaboratorPermission(permission)
@@ -266,7 +266,7 @@ Because AtomGit API v5 does not expose pending invitations, this command first
 checks accepted collaborators. If the user is not found, it sends the delete
 request as a possible invitation revocation. JSON output is not available for
 this mutation.`,
-		Example: "  ag repo collaborator remove owner/repo octocat --yes",
+		Example: "  ag-cli repo collaborator remove owner/repo octocat --yes",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)

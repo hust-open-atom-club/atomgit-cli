@@ -62,7 +62,7 @@ func NewCmdAPI(f *cmdutil.Factory) *cobra.Command {
 		Long: `Make an authenticated request to a relative AtomGit API v5 endpoint.
 
 GET is the default. Supported methods are GET, POST, PATCH, PUT, and DELETE.
-Explicit non-GET requests may change remote resources; ag does not infer or
+Explicit non-GET requests may change remote resources; ag-cli does not infer or
 confirm the endpoint's effects. Redirects only retain credentials on the exact
 AtomGit API origin. Paginated output is one compact JSON page per line.
 Response bytes use terminal-safe output unless --raw-output is specified.
@@ -71,12 +71,12 @@ Use --dry-run for a local, redacted JSON preview without reading credentials or
 sending requests. Values and unrecognized names/path segments are omitted.
 Explicit --input files or stdin may be read, but are never modified. A preview
 does not verify remote permissions, resource existence, or server-side validation.`,
-		Example: `  ag api /user
-  ag api /repos/owner/repo/issues --field state=open
-  ag api /repos/owner/repo/issues --method POST --field title='New issue'
-  ag api /repos/owner/repo/issues/42 --method PATCH --input update.json
-  ag api /repos/owner/repo/issues --paginate
-  ag api /repos/owner/repo/issues --method POST --field title=example --dry-run`,
+		Example: `  ag-cli api /user
+  ag-cli api /repos/owner/repo/issues --field state=open
+  ag-cli api /repos/owner/repo/issues --method POST --field title='New issue'
+  ag-cli api /repos/owner/repo/issues/42 --method PATCH --input update.json
+  ag-cli api /repos/owner/repo/issues --paginate
+  ag-cli api /repos/owner/repo/issues --method POST --field title=example --dry-run`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prepared, err := prepare(args[0], opts, cmd.InOrStdin())
@@ -99,7 +99,7 @@ does not verify remote permissions, resource existence, or server-side validatio
 	// Redact flag errors in both modes so argument order cannot leak values
 	// or unknown names before request preparation gets a chance to run.
 	cmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
-		return &redactedError{message: "invalid API flags (details omitted); see 'ag api --help' for supported flags and values", cause: err}
+		return &redactedError{message: "invalid API flags (details omitted); see 'ag-cli api --help' for supported flags and values", cause: err}
 	})
 	commandschema.Annotate(cmd, commandschema.Metadata{
 		Positionals: &commandschema.Positionals{MinCount: 1, MaxCount: 1, Description: "One relative AtomGit API v5 endpoint; absolute URLs and path escapes are rejected."},

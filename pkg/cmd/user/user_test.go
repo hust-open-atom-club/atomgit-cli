@@ -56,10 +56,10 @@ func TestNewCmdUserRegistersView(t *testing.T) {
 			t.Fatalf("view flag %q was not registered", flag)
 		}
 	}
-	if !strings.Contains(view.Example, "ag user view alice --json") {
+	if !strings.Contains(view.Example, "ag-cli user view alice --json") {
 		t.Fatalf("view examples = %q", view.Example)
 	}
-	if !strings.Contains(view.Example, "ag user view alice --web") {
+	if !strings.Contains(view.Example, "ag-cli user view alice --web") {
 		t.Fatalf("view examples = %q", view.Example)
 	}
 	if err := view.Args(view, []string{"one", "two"}); err == nil {
@@ -76,7 +76,7 @@ func TestNewCmdUserRegistersEmails(t *testing.T) {
 	if emails.Flags().Lookup("json") == nil {
 		t.Fatal("emails --json flag was not registered")
 	}
-	if !strings.Contains(emails.Example, "ag user emails --json") {
+	if !strings.Contains(emails.Example, "ag-cli user emails --json") {
 		t.Fatalf("emails examples = %q", emails.Example)
 	}
 	if err := emails.Args(emails, []string{"unexpected"}); err == nil {
@@ -181,7 +181,7 @@ func TestUserEmailsSanitizesTextOutput(t *testing.T) {
 }
 
 func TestUserEmailsRequiresToken(t *testing.T) {
-	cmd := newCmdUserEmails(userFactory(userTestConfig{tokenErr: errors.New("not authenticated: run `ag auth login`")}, nil))
+	cmd := newCmdUserEmails(userFactory(userTestConfig{tokenErr: errors.New("not authenticated: run `ag-cli auth login`")}, nil))
 	err := cmd.RunE(cmd, nil)
 	if err == nil || !strings.Contains(err.Error(), "not authenticated") {
 		t.Fatalf("error = %v", err)
@@ -263,7 +263,7 @@ func TestUserViewPublicProfileWithoutToken(t *testing.T) {
 		}
 		return userResponse(http.StatusOK, `{"login":"bob","html_url":"https://atomgit.com/bob"}`), nil
 	})
-	cmd := newCmdUserView(userFactory(userTestConfig{tokenErr: errors.New("not authenticated: run `ag auth login`")}, transport))
+	cmd := newCmdUserView(userFactory(userTestConfig{tokenErr: errors.New("not authenticated: run `ag-cli auth login`")}, transport))
 	var output bytes.Buffer
 	cmd.SetOut(&output)
 	if err := cmd.RunE(cmd, []string{"bob"}); err != nil {
@@ -275,7 +275,7 @@ func TestUserViewPublicProfileWithoutToken(t *testing.T) {
 }
 
 func TestUserViewCurrentUserRequiresToken(t *testing.T) {
-	cmd := newCmdUserView(userFactory(userTestConfig{tokenErr: errors.New("not authenticated: run `ag auth login`")}, nil))
+	cmd := newCmdUserView(userFactory(userTestConfig{tokenErr: errors.New("not authenticated: run `ag-cli auth login`")}, nil))
 	err := cmd.RunE(cmd, nil)
 	if err == nil || !strings.Contains(err.Error(), "not authenticated") {
 		t.Fatalf("error = %v", err)

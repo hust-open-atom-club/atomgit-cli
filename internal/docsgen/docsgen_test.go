@@ -10,14 +10,14 @@ import (
 
 func TestGenerateIsDeterministicAndIncludesCommandMetadata(t *testing.T) {
 	newRoot := func() *cobra.Command {
-		root := &cobra.Command{Use: "ag <command>", Short: "Root"}
+		root := &cobra.Command{Use: "ag-cli <command>", Short: "Root"}
 		root.PersistentFlags().String("host", "atomgit.com", "API host")
 		child := &cobra.Command{
 			Use:     "repo [name]",
 			Short:   "Manage repositories",
 			Long:    "Long repository description",
 			Aliases: []string{"r"},
-			Example: "  ag repo demo\n  ag repo other",
+			Example: "  ag-cli repo demo\n  ag-cli repo other",
 		}
 		child.Flags().BoolP("json", "j", false, "Output JSON")
 		root.AddCommand(child)
@@ -40,14 +40,14 @@ func TestGenerateIsDeterministicAndIncludesCommandMetadata(t *testing.T) {
 	}
 	for _, want := range []string{
 		"# AtomGit CLI command reference",
-		"- [ag repo](#ag-repo) — Manage repositories",
-		"Usage: `ag repo [name] [flags]`",
+		"- [ag-cli repo](#ag-cli-repo) — Manage repositories",
+		"Usage: `ag-cli repo [name] [flags]`",
 		"Long repository description",
 		"Aliases: `r`",
 		"`-j, --json`",
 		"`--host`",
 		"Scope",
-		"```bash\nag repo demo\nag repo other\n```",
+		"```bash\nag-cli repo demo\nag-cli repo other\n```",
 	} {
 		if !strings.Contains(output, want) {
 			t.Errorf("generated output does not contain %q:\n%s", want, output)
@@ -66,10 +66,10 @@ func TestNormalizeExample(t *testing.T) {
 		name, input, want string
 	}{
 		{"empty", " \n\t\n", ""},
-		{"shared spaces", "  ag repo demo\n  ag repo other", "ag repo demo\nag repo other"},
-		{"continuation", "\n  ag repo list \\\n    --json\n  \n  ag repo view\n", "ag repo list \\\n  --json\n\nag repo view"},
-		{"tabs and CRLF", "\r\n\tag repo list\r\n\t\t--help\r\n", "ag repo list\n\t--help"},
-		{"already unindented", "ag repo list\n  --help", "ag repo list\n  --help"},
+		{"shared spaces", "  ag-cli repo demo\n  ag-cli repo other", "ag-cli repo demo\nag-cli repo other"},
+		{"continuation", "\n  ag-cli repo list \\\n    --json\n  \n  ag-cli repo view\n", "ag-cli repo list \\\n  --json\n\nag-cli repo view"},
+		{"tabs and CRLF", "\r\n\tag-cli repo list\r\n\t\t--help\r\n", "ag-cli repo list\n\t--help"},
+		{"already unindented", "ag-cli repo list\n  --help", "ag-cli repo list\n  --help"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := normalizeExample(tt.input); got != tt.want {
@@ -80,7 +80,7 @@ func TestNormalizeExample(t *testing.T) {
 }
 
 func TestGenerateEscapesIndexAndFlagCells(t *testing.T) {
-	root := &cobra.Command{Use: "ag", Short: "Root"}
+	root := &cobra.Command{Use: "ag-cli", Short: "Root"}
 	root.PersistentFlags().String("query", "a|b", "Filter [name] | value\ncontinued")
 	root.AddCommand(&cobra.Command{
 		Use:   "list",
@@ -101,7 +101,7 @@ func TestGenerateEscapesIndexAndFlagCells(t *testing.T) {
 }
 
 func TestGenerateOrdersCommandsAndFlagsAndOmitsEmptySections(t *testing.T) {
-	root := &cobra.Command{Use: "ag", Short: "Root"}
+	root := &cobra.Command{Use: "ag-cli", Short: "Root"}
 	root.Flags().Bool("zulu", false, "Zulu")
 	root.Flags().Bool("alpha", false, "Alpha")
 	root.AddCommand(
@@ -114,13 +114,13 @@ func TestGenerateOrdersCommandsAndFlagsAndOmitsEmptySections(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := output.String()
-	if strings.Index(text, "- [ag alpha]") > strings.Index(text, "- [ag zulu]") {
+	if strings.Index(text, "- [ag-cli alpha]") > strings.Index(text, "- [ag-cli zulu]") {
 		t.Fatalf("commands are not ordered: %s", text)
 	}
 	if strings.Index(text, "`--alpha`") > strings.Index(text, "`--zulu`") {
 		t.Fatalf("flags are not ordered: %s", text)
 	}
-	section := text[strings.Index(text, "## ag alpha"):]
+	section := text[strings.Index(text, "## ag-cli alpha"):]
 	if strings.Contains(section, "### Flags") {
 		t.Fatalf("command without local options unexpectedly has a flags section: %s", section)
 	}

@@ -37,7 +37,7 @@ func newCmdAuthStatus(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "status", Short: "View local authentication status or verify identity online",
 		Long:    "Inspect local credentials without modifying them. Local presence does not prove token validity. Use --verify to check identity with the read-only /user API (30 second timeout); this does not verify access to other resources. No token or token fragment is displayed.",
-		Example: "  ag auth status\n  ag auth status --json\n  ag auth status --verify\n  ag auth status --verify --json",
+		Example: "  ag-cli auth status\n  ag-cli auth status --json\n  ag-cli auth status --verify\n  ag-cli auth status --verify --json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			r := inspectAuthStatus(cmd.Context(), f, verify)
@@ -79,7 +79,7 @@ func inspectAuthStatus(ctx context.Context, f *cmdutil.Factory, verify bool) aut
 		present := false
 		r.CredentialsPresent = &present
 		r.LocalStatus = "missing"
-		r.Message = "No local credentials; run ag auth login."
+		r.Message = "No local credentials; run ag-cli auth login."
 		return r
 	}
 	if err != nil || cred == nil || strings.TrimSpace(cred.AccessToken) == "" || strings.TrimSpace(cred.User) == "" {

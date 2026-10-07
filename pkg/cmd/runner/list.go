@@ -31,7 +31,7 @@ func newCmdList(f *cmdutil.Factory, shared bool) *cobra.Command {
 		Use:     name + " [<owner>/<repo>]",
 		Short:   short,
 		Long:    short + ". This command is read-only and does not change runner configuration.",
-		Example: "  ag runner " + name + " owner/repo\n  ag runner " + name + " owner/repo --limit 25 --json",
+		Example: "  ag-cli runner " + name + " owner/repo\n  ag-cli runner " + name + " owner/repo --limit 25 --json",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)

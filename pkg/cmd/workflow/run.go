@@ -23,8 +23,8 @@ func newCmdRun(f *cmdutil.Factory) *cobra.Command {
 		Aliases: []string{"dispatch"},
 		Short:   "Run a workflow",
 		Long:    `Manually trigger an AtomGit Actions workflow run (workflow_dispatch).`,
-		Example: `  ag workflow run owner/repo 12345 --ref main
-  ag workflow run owner/repo ci.yml --ref feature-branch -f env=prod -f debug=true`,
+		Example: `  ag-cli workflow run owner/repo 12345 --ref main
+  ag-cli workflow run owner/repo ci.yml --ref feature-branch -f env=prod -f debug=true`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := requireToken(f)
@@ -75,7 +75,7 @@ func newCmdRun(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			fmt.Fprintf(cmd.OutOrStdout(), "✓ Triggered workflow %q (%s) on ref %q\n", workflowTarget, workflowID, ref)
-			fmt.Fprintf(cmd.OutOrStdout(), "View runs with: ag run list %s/%s\n", repository.Owner, repository.Name)
+			fmt.Fprintf(cmd.OutOrStdout(), "View runs with: ag-cli run list %s/%s\n", repository.Owner, repository.Name)
 			return nil
 		},
 	}

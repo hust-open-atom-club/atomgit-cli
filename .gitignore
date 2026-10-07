@@ -7,7 +7,7 @@ dist/
 
 # Local development build; keep the npm command wrapper tracked.
 /bin/*
-!/bin/ag.js
+!/bin/ag-cli.js
 
 # Binaries for programs and plugins
 *.exe

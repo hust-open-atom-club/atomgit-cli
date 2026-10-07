@@ -40,8 +40,8 @@ func TestReleaseAssetJSON(t *testing.T) {
 	}{
 		{
 			name: "uploaded attachment is deletable",
-			raw:  `{"id": 42, "name": "ag.tar.gz", "type": "attach", "browser_download_url": "https://raw.atomgit.com/o/ag.tar.gz"}`,
-			want: ReleaseAsset{ID: 42, Name: "ag.tar.gz", Type: "attach", BrowserDownloadURL: "https://raw.atomgit.com/o/ag.tar.gz"},
+			raw:  `{"id": 42, "name": "ag-cli.tar.gz", "type": "attach", "browser_download_url": "https://raw.atomgit.com/o/ag-cli.tar.gz"}`,
+			want: ReleaseAsset{ID: 42, Name: "ag-cli.tar.gz", Type: "attach", BrowserDownloadURL: "https://raw.atomgit.com/o/ag-cli.tar.gz"},
 		},
 		{
 			name: "source archive has id 0 and is not deletable",

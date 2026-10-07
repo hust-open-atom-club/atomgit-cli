@@ -476,12 +476,12 @@ func TestUpdateViaNPMPreservesInstallAndVerificationErrors(t *testing.T) {
 
 func TestUpdateViaNPMRepairsBrokenWindowsLauncher(t *testing.T) {
 	prefix := t.TempDir()
-	for _, name := range []string{"ag", "ag.cmd", "ag.ps1"} {
+	for _, name := range []string{"ag-cli", "ag-cli.cmd", "ag-cli.ps1"} {
 		if err := os.WriteFile(filepath.Join(prefix, name), []byte("old launcher"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	binary := []byte("standalone ag.exe")
+	binary := []byte("standalone ag-cli.exe")
 	archive := makeWindowsArchive(t, binary)
 	checksum := fmt.Sprintf("%x  ag_windows_amd64.zip\n", sha256.Sum256(archive))
 
@@ -495,7 +495,7 @@ func TestUpdateViaNPMRepairsBrokenWindowsLauncher(t *testing.T) {
 		case name == "npm" && reflect.DeepEqual(args, []string{"prefix", "-g"}):
 			return commandResult{stdout: prefix}, nil
 		case name == "cmd.exe":
-			wantArgs := []string{"/d", "/s", "/c", fmt.Sprintf("\"%s\" version --json", filepath.Join(prefix, "ag.cmd"))}
+			wantArgs := []string{"/d", "/s", "/c", fmt.Sprintf("\"%s\" version --json", filepath.Join(prefix, "ag-cli.cmd"))}
 			if !reflect.DeepEqual(args, wantArgs) {
 				t.Fatalf("cmd.exe args = %#v, want %#v", args, wantArgs)
 			}
@@ -527,14 +527,14 @@ func TestUpdateViaNPMRepairsBrokenWindowsLauncher(t *testing.T) {
 	if err := updateViaNPM(cmd, deps, "v1.3.0"); err != nil {
 		t.Fatal(err)
 	}
-	installed, err := os.ReadFile(filepath.Join(prefix, "ag.exe"))
+	installed, err := os.ReadFile(filepath.Join(prefix, "ag-cli.exe"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(installed, binary) {
 		t.Fatalf("installed binary = %q", installed)
 	}
-	for _, name := range []string{"ag", "ag.cmd", "ag.ps1"} {
+	for _, name := range []string{"ag-cli", "ag-cli.cmd", "ag-cli.ps1"} {
 		if _, err := os.Stat(filepath.Join(prefix, name)); !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("old launcher %s still exists: %v", name, err)
 		}
@@ -548,9 +548,9 @@ func TestUpdateViaNPMRepairsBrokenWindowsLauncher(t *testing.T) {
 func TestRepairWindowsNPMLauncherRestoresOldLaunchersOnVerificationFailure(t *testing.T) {
 	prefix := t.TempDir()
 	oldLaunchers := map[string]string{
-		"ag":     "old shell launcher",
-		"ag.cmd": "old cmd launcher",
-		"ag.ps1": "old powershell launcher",
+		"ag-cli":     "old shell launcher",
+		"ag-cli.cmd": "old cmd launcher",
+		"ag-cli.ps1": "old powershell launcher",
 	}
 	for name, contents := range oldLaunchers {
 		if err := os.WriteFile(filepath.Join(prefix, name), []byte(contents), 0o600); err != nil {
@@ -588,14 +588,14 @@ func TestRepairWindowsNPMLauncherRestoresOldLaunchersOnVerificationFailure(t *te
 			t.Fatalf("restored %s = %q, want %q", name, contents, want)
 		}
 	}
-	if _, err := os.Stat(filepath.Join(prefix, "ag.exe")); !errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(filepath.Join(prefix, "ag-cli.exe")); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("failed repaired executable remains: %v", err)
 	}
 }
 
 func TestRepairWindowsNPMLauncherRejectsChecksumBeforeChangingLaunchers(t *testing.T) {
 	prefix := t.TempDir()
-	launcher := filepath.Join(prefix, "ag.cmd")
+	launcher := filepath.Join(prefix, "ag-cli.cmd")
 	if err := os.WriteFile(launcher, []byte("old launcher"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -626,7 +626,7 @@ func makeWindowsArchive(t *testing.T, binary []byte) []byte {
 	t.Helper()
 	var archive bytes.Buffer
 	writer := zip.NewWriter(&archive)
-	entry, err := writer.Create("ag.exe")
+	entry, err := writer.Create("ag-cli.exe")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -642,7 +642,7 @@ func makeWindowsArchive(t *testing.T, binary []byte) []byte {
 func TestUpdateViaHomebrewCore(t *testing.T) {
 	setCurrentVersion(t, "v1.2.3")
 	prefix := filepath.Join(t.TempDir(), "Cellar", "atomgit-cli", "1.2.3")
-	executable := filepath.Join(prefix, "bin", "ag")
+	executable := filepath.Join(prefix, "bin", "ag-cli")
 	deps := testDeps()
 	deps.goos = "darwin"
 	deps.executable = func() (string, error) { return executable, nil }
@@ -693,7 +693,7 @@ func TestUpdateViaHomebrewCore(t *testing.T) {
 func TestUpdateDoesNotTreatHomebrewTapAsCore(t *testing.T) {
 	setCurrentVersion(t, "v1.2.3")
 	prefix := filepath.Join(t.TempDir(), "Cellar", "atomgit-cli", "1.2.3")
-	executable := filepath.Join(prefix, "bin", "ag")
+	executable := filepath.Join(prefix, "bin", "ag-cli")
 	deps := testDeps()
 	deps.goos = "darwin"
 	deps.executable = func() (string, error) { return executable, nil }
@@ -724,7 +724,7 @@ func TestUpdateDoesNotTreatHomebrewTapAsCore(t *testing.T) {
 func TestUpdateRejectsUnknownInstallation(t *testing.T) {
 	setCurrentVersion(t, "v1.2.3")
 	deps := testDeps()
-	deps.executable = func() (string, error) { return "/usr/local/bin/ag", nil }
+	deps.executable = func() (string, error) { return "/usr/local/bin/ag-cli", nil }
 	deps.lookPath = func(string) (string, error) { return "", errors.New("not found") }
 	cmd := newCmdUpdateWithDeps(releaseFactory(t, "v1.3.0"), deps)
 	err := cmd.Execute()
@@ -778,7 +778,7 @@ func TestVerifyInstalledVersionRejectsMismatch(t *testing.T) {
 	deps.capture = func(context.Context, string, ...string) (commandResult, error) {
 		return commandResult{stdout: `{"version":"v1.2.3"}`}, nil
 	}
-	err := verifyInstalledVersion(context.Background(), deps, "/tmp/ag", "v1.3.0")
+	err := verifyInstalledVersion(context.Background(), deps, "/tmp/ag-cli", "v1.3.0")
 	if err == nil || !strings.Contains(err.Error(), `installed version is "v1.2.3", expected "v1.3.0"`) {
 		t.Fatalf("verifyInstalledVersion() error = %v", err)
 	}
@@ -790,10 +790,10 @@ func TestNPMExecutablePath(t *testing.T) {
 		wantPackage  string
 		wantBinary   string
 	}{
-		{goos: "linux", goarch: "amd64", wantPackage: "atomgit-cli-linux-x64", wantBinary: "ag"},
-		{goos: "linux", goarch: "loong64", wantPackage: "atomgit-cli-linux-loong64", wantBinary: "ag"},
-		{goos: "darwin", goarch: "arm64", wantPackage: "atomgit-cli-darwin-arm64", wantBinary: "ag"},
-		{goos: "windows", goarch: "amd64", wantPackage: "atomgit-cli-win32-x64", wantBinary: "ag.exe"},
+		{goos: "linux", goarch: "amd64", wantPackage: "atomgit-cli-linux-x64", wantBinary: "ag-cli"},
+		{goos: "linux", goarch: "loong64", wantPackage: "atomgit-cli-linux-loong64", wantBinary: "ag-cli"},
+		{goos: "darwin", goarch: "arm64", wantPackage: "atomgit-cli-darwin-arm64", wantBinary: "ag-cli"},
+		{goos: "windows", goarch: "amd64", wantPackage: "atomgit-cli-win32-x64", wantBinary: "ag-cli.exe"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.goos+"/"+tt.goarch, func(t *testing.T) {
@@ -854,7 +854,7 @@ func setCurrentVersion(t *testing.T, value string) {
 
 func testDeps() updateDeps {
 	return updateDeps{
-		executable:   func() (string, error) { return "/tmp/ag", nil },
+		executable:   func() (string, error) { return "/tmp/ag-cli", nil },
 		evalSymlinks: func(value string) (string, error) { return value, nil },
 		lookPath:     func(string) (string, error) { return "", errors.New("not found") },
 		capture: func(context.Context, string, ...string) (commandResult, error) {

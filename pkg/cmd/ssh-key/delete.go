@@ -20,8 +20,8 @@ func newCmdSSHKeyDelete(f *cmdutil.Factory) *cobra.Command {
 
 The target key is retrieved before deletion. By default, you will be prompted
 to confirm the deletion. Use --yes to skip the confirmation prompt.`,
-		Example: `  ag ssh-key delete 123
-  ag ssh-key delete 123 --yes`,
+		Example: `  ag-cli ssh-key delete 123
+  ag-cli ssh-key delete 123 --yes`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			keyID, err := parseSSHKeyID(args[0])
