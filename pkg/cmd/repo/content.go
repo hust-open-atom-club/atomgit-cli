@@ -51,7 +51,7 @@ func validateContentPath(path string, allowRoot bool) error {
 	}
 	if path == "." {
 		if !allowRoot {
-			return errors.New("'.' is only valid for directory listing; use 'ag repo content list' for repository root")
+			return errors.New("'.' is only valid for directory listing; use 'ag-cli repo content list' for repository root")
 		}
 		return nil
 	}
@@ -88,7 +88,7 @@ func contentTypeMismatchError(repository cmdutil.Repository, path, ref, actualTy
 		refGuidance = fmt.Sprintf(" and --ref %q", ref)
 	}
 	return fmt.Errorf(
-		"path %q in repository %q at %s is a %s; use 'ag repo content %s' with repository %q, path %q%s instead",
+		"path %q in repository %q at %s is a %s; use 'ag-cli repo content %s' with repository %q, path %q%s instead",
 		path,
 		repository.String(),
 		refDescription,
@@ -120,9 +120,9 @@ func newCmdRepoContentView(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "view [<owner>/<repo>] <path>",
 		Short: "View a repository file",
-		Example: `  ag repo content view README.md
-  ag repo content view owner/repo src/main.go --ref dev
-  ag repo content view owner/repo README.md --json`,
+		Example: `  ag-cli repo content view README.md
+  ag-cli repo content view owner/repo src/main.go --ref dev
+  ag-cli repo content view owner/repo README.md --json`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
@@ -213,10 +213,10 @@ func newCmdRepoContentList(f *cmdutil.Factory) *cobra.Command {
 		Short: "List a repository directory",
 		Long: "List a repository directory without modifying it. With no arguments, the repository is inferred and its root is listed. " +
 			"A single argument is a path in the inferred repository; use OWNER/REPO . to list the root of an explicit repository.",
-		Example: `  ag repo content list
-  ag repo content list docs
-  ag repo content list owner/repo .
-  ag repo content list owner/repo docs/guides --ref v1.0.0 --json`,
+		Example: `  ag-cli repo content list
+  ag-cli repo content list docs
+  ag-cli repo content list owner/repo .
+  ag-cli repo content list owner/repo docs/guides --ref v1.0.0 --json`,
 		Args: cobra.RangeArgs(0, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, path, err := resolveContentListArgs(f, args)
@@ -278,7 +278,7 @@ func newCmdRepoReadFile(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:        "read-file [<owner>/<repo>] <path>",
 		Short:      "Read a file from a repository",
-		Deprecated: "use 'ag repo content view' instead",
+		Deprecated: "use 'ag-cli repo content view' instead",
 		Args:       cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
@@ -355,7 +355,7 @@ func newCmdRepoReadDir(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:        "read-dir [<owner>/<repo>] <path>",
 		Short:      "List contents of a repository directory",
-		Deprecated: "use 'ag repo content list' instead",
+		Deprecated: "use 'ag-cli repo content list' instead",
 		Args:       cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)

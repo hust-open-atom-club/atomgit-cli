@@ -51,7 +51,7 @@ func NewCmdDoctor(f *cmdutil.Factory) *cobra.Command {
 		Short:   "CLI health check: config, auth, and connectivity",
 		Long:    "Check local configuration without modifying it. Use --live for read-only API probes (30 second overall timeout). Missing optional capabilities are skipped. Failures return a nonzero exit status; warnings alone do not.",
 		Args:    cobra.MaximumNArgs(1),
-		Example: "ag doctor\nag doctor --live\nag doctor owner/repo --live --json",
+		Example: "ag-cli doctor\nag-cli doctor --live\nag-cli doctor owner/repo --live --json",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 {
 				if _, err := cmdutil.ParseRepository(args[0]); err != nil {
@@ -106,7 +106,7 @@ func diagnose(f *cmdutil.Factory, args []string, live bool) report {
 	token := ""
 	switch {
 	case errors.Is(err, config.ErrTokenNotFound):
-		r.add("credentials", "warn", "No stored credentials", "Run ag auth login if authenticated access is needed.")
+		r.add("credentials", "warn", "No stored credentials", "Run ag-cli auth login if authenticated access is needed.")
 	case err != nil:
 		r.add("credentials", "fail", "Credential file or active account is invalid or unreadable", "Check token.json format, ownership and active account; doctor does not repair it.")
 	default:
@@ -122,7 +122,7 @@ func diagnose(f *cmdutil.Factory, args []string, live bool) report {
 		}
 		if cred.CreatedAt > 0 && cred.ExpiresIn > 0 {
 			if time.Now().Unix()-cred.CreatedAt >= cred.ExpiresIn {
-				r.add("credential_expiry", "warn", "Stored expiry time has passed; server validity is not verified", "Run ag auth refresh for OAuth credentials, or authorize again.")
+				r.add("credential_expiry", "warn", "Stored expiry time has passed; server validity is not verified", "Run ag-cli auth refresh for OAuth credentials, or authorize again.")
 			} else {
 				r.add("credential_expiry", "pass", "Stored expiry time has not passed; server validity is not verified", "")
 			}
@@ -146,7 +146,7 @@ func diagnose(f *cmdutil.Factory, args []string, live bool) report {
 	}
 	if !live {
 		for _, id := range []string{"connectivity", "service", "authentication", "repository_access", "actions", "discussion"} {
-			r.add(id, "skip", "Online check disabled", "Run ag doctor --live for read-only probes.")
+			r.add(id, "skip", "Online check disabled", "Run ag-cli doctor --live for read-only probes.")
 		}
 		return r
 	}
@@ -250,7 +250,7 @@ func (r *report) result(id string, err error) {
 	case errors.As(err, &cert), errors.As(err, &unknown):
 		message, hint = "TLS certificate verification failed", "Check system time, trust store and proxy certificates."
 	case statusCode(err) == 401:
-		message, hint = "HTTP 401: credentials were rejected", "Run ag auth login --force to authorize again."
+		message, hint = "HTTP 401: credentials were rejected", "Run ag-cli auth login --force to authorize again."
 	case statusCode(err) == 403:
 		message, hint = "HTTP 403: access denied; the specific cause is not established", "Check token permissions, repository role and organization policy."
 	case statusCode(err) == 404:

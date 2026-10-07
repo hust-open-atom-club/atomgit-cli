@@ -46,9 +46,9 @@ func newCmdOrgList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List organizations for the authenticated user",
-		Example: `  ag org list
-  ag org list --limit 100
-  ag org list --json`,
+		Example: `  ag-cli org list
+  ag-cli org list --limit 100
+  ag-cli org list --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runOrgList(cmd.OutOrStdout(), f, opts)

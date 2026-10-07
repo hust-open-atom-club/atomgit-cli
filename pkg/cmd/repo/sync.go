@@ -42,16 +42,16 @@ By default, AtomGit performs a non-forced synchronization and reports a
 conflict instead of overwriting divergent commits. --force requires an
 interactive confirmation unless --yes is also supplied.`,
 		Example: `  # Synchronize the current repository's default branch
-  ag repo sync
+  ag-cli repo sync
 
   # Synchronize an explicit branch of a fork
-  ag repo sync owner/fork --branch develop
+  ag-cli repo sync owner/fork --branch develop
 
   # Force synchronization after interactive confirmation
-  ag repo sync owner/fork --branch develop --force
+  ag-cli repo sync owner/fork --branch develop --force
 
   # Force synchronization non-interactively
-  ag repo sync owner/fork --branch develop --force --yes`,
+  ag-cli repo sync owner/fork --branch develop --force --yes`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)

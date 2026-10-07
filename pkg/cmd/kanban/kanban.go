@@ -48,9 +48,9 @@ func NewCmdKanban(f *cmdutil.Factory) *cobra.Command {
 		Use:   "kanban",
 		Short: "View organization Kanban boards",
 		Long:  "List and inspect read-only organization Kanban boards and their Issue/Pull Request items.",
-		Example: `  ag kanban list hust-open-atom-club
-  ag kanban view hust-open-atom-club 1234567890
-  ag kanban items hust-open-atom-club 1234567890 --json`,
+		Example: `  ag-cli kanban list hust-open-atom-club
+  ag-cli kanban view hust-open-atom-club 1234567890
+  ag-cli kanban items hust-open-atom-club 1234567890 --json`,
 	}
 	cmd.AddCommand(newCmdKanbanList(f))
 	cmd.AddCommand(newCmdKanbanView(f))
@@ -64,8 +64,8 @@ func newCmdKanbanList(f *cmdutil.Factory) *cobra.Command {
 		Use:   "list <owner>",
 		Short: "List organization Kanban boards",
 		Args:  cobra.ExactArgs(1),
-		Example: `  ag kanban list hust-open-atom-club
-  ag kanban list hust-open-atom-club --limit 50 --json`,
+		Example: `  ag-cli kanban list hust-open-atom-club
+  ag-cli kanban list hust-open-atom-club --limit 50 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			owner, err := api.ValidateKanbanOwner(args[0])
 			if err != nil {
@@ -96,7 +96,7 @@ func newCmdKanbanView(f *cmdutil.Factory) *cobra.Command {
 		Use:     "view <owner> <kanban-id>",
 		Short:   "View a Kanban board",
 		Args:    cobra.ExactArgs(2),
-		Example: "  ag kanban view hust-open-atom-club 1234567890 --json",
+		Example: "  ag-cli kanban view hust-open-atom-club 1234567890 --json",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			owner, kanbanID, err := validateBoardArgs(args)
 			if err != nil {
@@ -127,8 +127,8 @@ func newCmdKanbanItems(f *cmdutil.Factory) *cobra.Command {
 		Use:   "items <owner> <kanban-id>",
 		Short: "List items on a Kanban board",
 		Args:  cobra.ExactArgs(2),
-		Example: `  ag kanban items hust-open-atom-club 1234567890
-  ag kanban items hust-open-atom-club 1234567890 --limit 50 --json`,
+		Example: `  ag-cli kanban items hust-open-atom-club 1234567890
+  ag-cli kanban items hust-open-atom-club 1234567890 --limit 50 --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			owner, kanbanID, err := validateBoardArgs(args)
 			if err != nil {

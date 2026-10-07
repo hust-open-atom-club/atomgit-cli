@@ -258,7 +258,7 @@ func RemoveAccount(selector string) (string, bool, error) {
 	}
 	key := account.Key()
 	if store.Active == key && len(store.Accounts) > 1 {
-		return "", false, fmt.Errorf("cannot remove active account %s while other accounts remain; run `ag auth switch <account>` first", key)
+		return "", false, fmt.Errorf("cannot remove active account %s while other accounts remain; run `ag-cli auth switch <account>` first", key)
 	}
 	remaining := make([]StoredCredentials, 0, len(store.Accounts)-1)
 	for _, candidate := range store.Accounts {

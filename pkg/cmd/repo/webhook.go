@@ -56,7 +56,7 @@ func newCmdRepoWebhookList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
 		Short:   "List repository webhooks",
-		Example: "  ag repo webhook list owner/repo --limit 50",
+		Example: "  ag-cli repo webhook list owner/repo --limit 50",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if limit <= 0 {
@@ -97,7 +97,7 @@ func newCmdRepoWebhookView(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "view [<owner>/<repo>] <id>",
 		Short:   "View a repository webhook",
-		Example: "  ag repo webhook view owner/repo 42",
+		Example: "  ag-cli repo webhook view owner/repo 42",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
@@ -143,7 +143,7 @@ func newCmdRepoWebhookCreate(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "create [<owner>/<repo>]",
 		Short:   "Create a repository webhook",
-		Example: "  ag repo webhook create owner/repo --url https://example.com/hook --events push,issues --secret-env WEBHOOK_SECRET",
+		Example: "  ag-cli repo webhook create owner/repo --url https://example.com/hook --events push,issues --secret-env WEBHOOK_SECRET",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			targetURL, err := validateWebhookURL(targetURL)
@@ -226,7 +226,7 @@ func newCmdRepoWebhookEdit(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "edit [<owner>/<repo>] <id>",
 		Short:   "Edit a repository webhook",
-		Example: "  ag repo webhook edit owner/repo 42 --events push,merge-requests",
+		Example: "  ag-cli repo webhook edit owner/repo 42 --events push,merge-requests",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !cmd.Flags().Changed("url") && !cmd.Flags().Changed("events") && !cmd.Flags().Changed("encryption") && !webhookSecretFlagsChanged(cmd) {
@@ -327,7 +327,7 @@ func newCmdRepoWebhookDelete(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete [<owner>/<repo>] <id>",
 		Short:   "Delete a repository webhook",
-		Example: "  ag repo webhook delete owner/repo 42 --yes",
+		Example: "  ag-cli repo webhook delete owner/repo 42 --yes",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
@@ -372,7 +372,7 @@ func newCmdRepoWebhookTest(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "test [<owner>/<repo>] <id>",
 		Short:   "Send a test payload to a repository webhook",
-		Example: "  ag repo webhook test owner/repo 42 --yes",
+		Example: "  ag-cli repo webhook test owner/repo 42 --yes",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)

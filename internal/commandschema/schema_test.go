@@ -10,12 +10,12 @@ import (
 )
 
 func TestStaticDescriptionAndFlagGroups(t *testing.T) {
-	root := &cobra.Command{Use: "ag"}
+	root := &cobra.Command{Use: "ag-cli"}
 	root.PersistentFlags().Bool("global", false, "Inherited switch")
 	root.PersistentFlags().String("shadow", "parent", "Parent value")
 	leaf := &cobra.Command{
 		Use: "create [repo]", Short: "Create something", Aliases: []string{"z", "c"}, Deprecated: "use another command",
-		Example: "ag create example", Args: func(*cobra.Command, []string) error { t.Fatal("ran validator"); return nil },
+		Example: "ag-cli create example", Args: func(*cobra.Command, []string) error { t.Fatal("ran validator"); return nil },
 		RunE:    func(*cobra.Command, []string) error { t.Fatal("ran business logic"); return nil },
 		PreRunE: func(*cobra.Command, []string) error { t.Fatal("ran pre-hook"); return nil },
 		ValidArgsFunction: func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
@@ -53,7 +53,7 @@ func TestStaticDescriptionAndFlagGroups(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := doc.Command
-	if got.Path != "ag create" || !reflect.DeepEqual(got.Aliases, []string{"c", "z"}) || got.Deprecated == "" {
+	if got.Path != "ag-cli create" || !reflect.DeepEqual(got.Aliases, []string{"c", "z"}) || got.Deprecated == "" {
 		t.Fatalf("summary: %+v", got.Summary)
 	}
 	if got.Capabilities.Output != "undescribed" || got.Capabilities.Effects != "undescribed" || got.Validation != "partial" {
@@ -73,11 +73,11 @@ func TestStaticDescriptionAndFlagGroups(t *testing.T) {
 				t.Fatalf("count: %+v", f)
 			}
 		case "global":
-			if !f.Inherited || f.DefinedOn != "ag" || f.Type != "bool" || f.NoOptDefault != "true" {
+			if !f.Inherited || f.DefinedOn != "ag-cli" || f.Type != "bool" || f.NoOptDefault != "true" {
 				t.Fatalf("global: %+v", f)
 			}
 		case "shadow":
-			if f.Inherited || f.DefinedOn != "ag create" || f.Default != "child" {
+			if f.Inherited || f.DefinedOn != "ag-cli create" || f.Default != "child" {
 				t.Fatalf("shadow: %+v", f)
 			}
 		case "label":
@@ -119,7 +119,7 @@ func TestStaticDescriptionAndFlagGroups(t *testing.T) {
 }
 
 func TestCatalogueTracksTreeAndHidesSubtrees(t *testing.T) {
-	root := &cobra.Command{Use: "ag"}
+	root := &cobra.Command{Use: "ag-cli"}
 	public := &cobra.Command{Use: "zebra", Aliases: []string{"z"}}
 	hidden := &cobra.Command{Use: "credential-helper", Aliases: []string{"secret"}, Hidden: true}
 	hidden.AddCommand(&cobra.Command{Use: "public-looking"})
@@ -136,17 +136,17 @@ func TestCatalogueTracksTreeAndHidesSubtrees(t *testing.T) {
 		}
 		return result
 	}
-	if got := paths(); !reflect.DeepEqual(got, []string{"ag", "ag zebra"}) {
+	if got := paths(); !reflect.DeepEqual(got, []string{"ag-cli", "ag-cli zebra"}) {
 		t.Fatal(got)
 	}
 	public.Use = "renamed"
 	added := &cobra.Command{Use: "added", Deprecated: "old but public"}
 	root.AddCommand(added)
-	if got := paths(); !reflect.DeepEqual(got, []string{"ag", "ag added", "ag renamed"}) {
+	if got := paths(); !reflect.DeepEqual(got, []string{"ag-cli", "ag-cli added", "ag-cli renamed"}) {
 		t.Fatal(got)
 	}
 	root.RemoveCommand(added)
-	if got := paths(); !reflect.DeepEqual(got, []string{"ag", "ag renamed"}) {
+	if got := paths(); !reflect.DeepEqual(got, []string{"ag-cli", "ag-cli renamed"}) {
 		t.Fatal(got)
 	}
 	for _, path := range [][]string{{"credential-helper"}, {"secret"}, {"credential-helper", "public-looking"}, {"missing"}, {"ren"}, {"renamed", "extra"}, {"renamed", "--help"}} {
@@ -157,7 +157,7 @@ func TestCatalogueTracksTreeAndHidesSubtrees(t *testing.T) {
 }
 
 func TestInheritedOnlyUsageIsStable(t *testing.T) {
-	root := &cobra.Command{Use: "ag"}
+	root := &cobra.Command{Use: "ag-cli"}
 	root.PersistentFlags().Bool("global", false, "Inherited switch")
 	leaf := &cobra.Command{Use: "diff <number>"}
 	root.AddCommand(leaf)
@@ -169,7 +169,7 @@ func TestInheritedOnlyUsageIsStable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if first.Command.Usage != "ag diff <number> [flags]" || !reflect.DeepEqual(first, second) {
+	if first.Command.Usage != "ag-cli diff <number> [flags]" || !reflect.DeepEqual(first, second) {
 		t.Fatalf("inherited-only usage changes across queries: first=%q second=%q", first.Command.Usage, second.Command.Usage)
 	}
 }

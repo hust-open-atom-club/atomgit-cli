@@ -21,13 +21,13 @@ This command permanently deletes a repository. This action cannot be undone.
 By default, you will be prompted to confirm the deletion. Use --yes to skip
 the confirmation prompt.`,
 		Example: `  # Delete a repository (with confirmation)
-  ag repo delete my-project
+  ag-cli repo delete my-project
 
   # Delete a repository without confirmation
-  ag repo delete my-project --yes
+  ag-cli repo delete my-project --yes
 
   # Delete a repository in an organization
-  ag repo delete my-org/my-project --yes`,
+  ag-cli repo delete my-org/my-project --yes`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var owner, repoName string

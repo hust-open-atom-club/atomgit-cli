@@ -29,9 +29,9 @@ By default all notifications are listed; --unread keeps only unread ones.
 --since and --before accept RFC 3339 timestamps (for example
 2026-08-14T00:00:00+08:00). --type keeps only notifications of one type,
 such as merge_requests_open or issue_open.`,
-		Example: `  ag notification list owner/repo --limit 20
-  ag notification list --unread --json
-  ag notification list owner/repo --type issue_open --since 2026-08-01T00:00:00Z`,
+		Example: `  ag-cli notification list owner/repo --limit 20
+  ag-cli notification list --unread --json
+  ag-cli notification list owner/repo --type issue_open --since 2026-08-01T00:00:00Z`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)

@@ -101,7 +101,7 @@ func TestNewCmdBranchRegistersSubcommandsAndHelp(t *testing.T) {
 		t.Fatal(err)
 	}
 	help := out.String()
-	for _, text := range []string{"list", "view", "create", "delete", "protection", "ag branch create owner/repo feature/foo --ref main"} {
+	for _, text := range []string{"list", "view", "create", "delete", "protection", "ag-cli branch create owner/repo feature/foo --ref main"} {
 		if !strings.Contains(help, text) {
 			t.Fatalf("help missing %q:\n%s", text, help)
 		}

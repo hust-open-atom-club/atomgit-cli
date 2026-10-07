@@ -28,9 +28,9 @@ func newCmdOrgRunnerGroup(f *cmdutil.Factory) *cobra.Command {
 		Use:   "runner-group",
 		Short: "Inspect organization Actions runner groups",
 		Long:  "Inspect organization-level AtomGit Actions runner groups and their read-only associations.",
-		Example: `  ag org runner-group list my-organization
-  ag org runner-group view my-organization group-id
-  ag org runner-group runners my-organization group-id --json`,
+		Example: `  ag-cli org runner-group list my-organization
+  ag-cli org runner-group view my-organization group-id
+  ag-cli org runner-group runners my-organization group-id --json`,
 	}
 	cmd.AddCommand(newCmdRunnerGroupList(f))
 	cmd.AddCommand(newCmdRunnerGroupView(f))
@@ -45,9 +45,9 @@ func newCmdRunnerGroupList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list <org>",
 		Short: "List organization runner groups",
-		Example: `  ag org runner-group list my-organization
-  ag org runner-group list my-organization --limit 100
-  ag org runner-group list my-organization --json`,
+		Example: `  ag-cli org runner-group list my-organization
+  ag-cli org runner-group list my-organization --limit 100
+  ag-cli org runner-group list my-organization --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			organization, err := parseRunnerGroupOrganization(args[0])
@@ -87,8 +87,8 @@ func newCmdRunnerGroupView(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "view <org> <group-id>",
 		Short: "View an organization runner group",
-		Example: `  ag org runner-group view my-organization group-id
-  ag org runner-group view my-organization group-id --json`,
+		Example: `  ag-cli org runner-group view my-organization group-id
+  ag-cli org runner-group view my-organization group-id --json`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			organization, groupID, err := parseRunnerGroupArgs(args)

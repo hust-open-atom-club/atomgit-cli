@@ -19,8 +19,8 @@ func newCmdLabelDelete(f *cmdutil.Factory) *cobra.Command {
 
 By default, you will be prompted to confirm the deletion. Use --yes to skip
 the confirmation prompt.`,
-		Example: `  ag label delete owner/repo obsolete
-  ag label delete owner/repo obsolete --yes`,
+		Example: `  ag-cli label delete owner/repo obsolete
+  ag-cli label delete owner/repo obsolete --yes`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)

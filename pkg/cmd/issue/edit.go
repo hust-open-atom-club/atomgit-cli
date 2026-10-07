@@ -23,10 +23,10 @@ func newCmdIssueEdit(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "edit [<owner>/<repo>] <number>",
 		Short: "Edit an issue",
-		Example: `  ag issue edit owner/repo 42 --title "new title" --body "new body"
-  ag issue edit owner/repo 42 --assignee alice
-  ag issue edit owner/repo 42 --remove-assignee --yes
-  ag issue edit owner/repo 42 --body-file description.md`,
+		Example: `  ag-cli issue edit owner/repo 42 --title "new title" --body "new body"
+  ag-cli issue edit owner/repo 42 --assignee alice
+  ag-cli issue edit owner/repo 42 --remove-assignee --yes
+  ag-cli issue edit owner/repo 42 --body-file description.md`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			titleChanged := cmd.Flags().Changed("title")

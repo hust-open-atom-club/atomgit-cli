@@ -79,19 +79,19 @@ For fork PRs, a temporary remote is added to fetch the source branch.
 By default, the command will not overwrite uncommitted changes or existing local
 branches. Use --force to override these safety checks.`,
 		Example: `  # Check out PR #42, inferring the repository from git remote
-  ag pr checkout 42
+  ag-cli pr checkout 42
 
   # Check out PR #42 from a specific repository
-  ag pr checkout owner/repo 42
+  ag-cli pr checkout owner/repo 42
 
   # Check out to a custom branch name
-  ag pr checkout 42 --branch review-fix
+  ag-cli pr checkout 42 --branch review-fix
 
   # Force checkout, discarding safety checks
-  ag pr checkout 42 --force
+  ag-cli pr checkout 42 --force
 
   # Check out in detached HEAD mode and update submodules
-  ag pr checkout 42 --detach --recurse-submodules`,
+  ag-cli pr checkout 42 --detach --recurse-submodules`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			gitClient := git.NewClient()

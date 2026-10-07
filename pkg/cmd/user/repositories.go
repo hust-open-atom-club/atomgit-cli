@@ -65,7 +65,7 @@ func newCmdUserRepositoryCollection(f *cmdutil.Factory, collection userRepositor
 			"List %s for a user. Without a username, the authenticated-user endpoint is used; an explicit username selects the public-user endpoint. Authentication is required for both endpoints.",
 			collection.description,
 		),
-		Example: fmt.Sprintf("  ag user %s\n  ag user %s alice --limit 100\n  ag user %s alice --json", collection.command, collection.command, collection.command),
+		Example: fmt.Sprintf("  ag-cli user %s\n  ag-cli user %s alice --limit 100\n  ag-cli user %s alice --json", collection.command, collection.command, collection.command),
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUserRepositoryCollection(cmd.OutOrStdout(), f, opts, args, collection)

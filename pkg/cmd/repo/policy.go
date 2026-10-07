@@ -55,7 +55,7 @@ func newCmdRepoPolicyView(f *cmdutil.Factory) *cobra.Command {
 	var jsonOutput bool
 	cmd := &cobra.Command{Use: "view [<owner>/<repo>]", Short: "View repository policy settings",
 		Long:    "View all three sections, or select one with --section.\nCode-review defaults are read from pull_request_settings, not GET /reviewer.\nJSON uses repository and settings keys; unavailable optional fields are null.",
-		Example: "  ag repo policy view owner/repo\n  ag repo policy view --section permission --json",
+		Example: "  ag-cli repo policy view owner/repo\n  ag-cli repo policy view --section permission --json",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if section != "" && !validPolicySection(section) {
@@ -119,7 +119,7 @@ func newCmdRepoPolicyEdit(f *cmdutil.Factory) *cobra.Command {
 	var bindings []policyFlag
 	cmd := &cobra.Command{Use: "edit [<owner>/<repo>]", Short: "Edit one repository policy section",
 		Long:    "Send only explicitly supplied settings. False, zero, and empty strings are preserved.\nAll changes require confirmation unless --yes is supplied.\nCode-review assignees/testers are usernames; pull-request approver/tester IDs are IDs.\nPermission mode must be 1 (inherited) or 2 (independent).\nApproval-required-reviewers must be 0..5; other counts must be nonnegative.\nMerge-method: merge, rebase_merge, ff. Merged-commit-author: merged_by, created_by.",
-		Example: "  ag repo policy edit owner/repo --section permission --mode 2 --yes\n  ag repo policy edit --section code-review --assignees alice,bob --testers-number 0\n  ag repo policy edit owner/repo --section pull-request --can-force-merge=false --yes",
+		Example: "  ag-cli repo policy edit owner/repo --section permission --mode 2 --yes\n  ag-cli repo policy edit --section code-review --assignees alice,bob --testers-number 0\n  ag-cli repo policy edit owner/repo --section pull-request --can-force-merge=false --yes",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !validPolicySection(opts.section) {

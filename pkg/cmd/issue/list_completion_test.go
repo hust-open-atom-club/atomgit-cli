@@ -50,7 +50,7 @@ func TestIssueListStateCompletion(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			requests := 0
-			root := &cobra.Command{Use: "ag"}
+			root := &cobra.Command{Use: "ag-cli"}
 			root.AddCommand(NewCmdIssue(&cmdutil.Factory{
 				HttpClient: func() (*http.Client, error) {
 					requests++

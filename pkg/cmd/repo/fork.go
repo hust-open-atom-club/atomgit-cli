@@ -59,10 +59,10 @@ func newCmdRepoForkList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list [<owner>/<repo>]",
 		Short: "List forks of a repository",
-		Long:  "List existing forks of a repository.\n\nThis is read-only and is separate from `ag repo fork`, which creates a new fork.\nThe repository can be supplied explicitly or inferred from the current Git repository.",
-		Example: `  ag repo fork list owner/repo
-  ag repo fork list owner/repo --limit 100 --json
-  ag repo fork list`,
+		Long:  "List existing forks of a repository.\n\nThis is read-only and is separate from `ag-cli repo fork`, which creates a new fork.\nThe repository can be supplied explicitly or inferred from the current Git repository.",
+		Example: `  ag-cli repo fork list owner/repo
+  ag-cli repo fork list owner/repo --limit 100 --json
+  ag-cli repo fork list`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.Limit <= 0 {

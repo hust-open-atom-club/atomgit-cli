@@ -18,10 +18,10 @@
     "node": ">=18"
   },
   "bin": {
-    "ag": "bin/ag.js"
+    "ag-cli": "bin/ag-cli.js"
   },
   "files": [
-    "bin/ag.js"
+    "bin/ag-cli.js"
   ],
   "scripts": {
     "publish:npm": "node scripts/publish-npm-packages.js",

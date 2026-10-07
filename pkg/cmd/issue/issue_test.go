@@ -26,7 +26,7 @@ func (issueTestConfig) GetHost() string           { return "atomgit.com" }
 type issueAuthErrorConfig struct{ issueTestConfig }
 
 func (issueAuthErrorConfig) GetToken() (string, error) {
-	return "", errors.New("not authenticated: run `ag auth login`")
+	return "", errors.New("not authenticated: run `ag-cli auth login`")
 }
 
 type issueRoundTripFunc func(*http.Request) (*http.Response, error)
@@ -70,7 +70,7 @@ func TestNewCmdIssueRegistersSubcommands(t *testing.T) {
 			t.Fatalf("edit flag %q was not registered", name)
 		}
 	}
-	if !strings.Contains(edit.Example, "ag issue edit") {
+	if !strings.Contains(edit.Example, "ag-cli issue edit") {
 		t.Fatalf("edit command example = %q", edit.Example)
 	}
 }
@@ -191,7 +191,7 @@ func TestIssueListInfersRepositoryAndHonorsLimit(t *testing.T) {
 func TestIssueListReturnsCanonicalAuthenticationError(t *testing.T) {
 	cmd := newCmdIssueList(&cmdutil.Factory{Config: issueAuthErrorConfig{}})
 	err := cmd.RunE(cmd, []string{"alice/demo"})
-	if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
+	if err == nil || err.Error() != "not authenticated: run `ag-cli auth login`" {
 		t.Fatalf("error = %v", err)
 	}
 }

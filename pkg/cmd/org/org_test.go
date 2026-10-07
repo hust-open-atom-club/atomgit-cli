@@ -62,7 +62,7 @@ func TestNewCmdOrgRegistersList(t *testing.T) {
 			t.Fatalf("list flag %q was not registered", flag)
 		}
 	}
-	if !strings.Contains(list.Example, "ag org list --json") {
+	if !strings.Contains(list.Example, "ag-cli org list --json") {
 		t.Fatalf("list examples = %q", list.Example)
 	}
 	if err := list.Args(list, []string{"extra"}); err == nil {

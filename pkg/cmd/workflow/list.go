@@ -20,7 +20,7 @@ func newCmdList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
 		Short:   "List workflows in a repository",
-		Example: `  ag workflow list owner/repo`,
+		Example: `  ag-cli workflow list owner/repo`,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := requireToken(f)

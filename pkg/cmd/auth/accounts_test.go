@@ -277,7 +277,7 @@ func TestAuthLogoutActiveAccountRequiresExplicitSwitch(t *testing.T) {
 				_ = cmd.Flags().Set("account", "bob")
 			}
 			err := cmd.RunE(cmd, nil)
-			if err == nil || !strings.Contains(err.Error(), "ag auth switch <account>") {
+			if err == nil || !strings.Contains(err.Error(), "ag-cli auth switch <account>") {
 				t.Fatalf("error = %v", err)
 			}
 			accounts, active, loadErr := config.ListAccounts()

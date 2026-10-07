@@ -89,7 +89,7 @@ func TestUserEventsValidationBeforeAuthentication(t *testing.T) {
 }
 
 func TestUserEventsRequiresAuthentication(t *testing.T) {
-	config := &eventCountingConfig{tokenErr: errors.New("not authenticated: run `ag auth login`")}
+	config := &eventCountingConfig{tokenErr: errors.New("not authenticated: run `ag-cli auth login`")}
 	var out bytes.Buffer
 	err := runEventsCommand(t, &cmdutil.Factory{Config: config}, nil, nil, &out)
 	if err == nil || !strings.Contains(err.Error(), "not authenticated") {

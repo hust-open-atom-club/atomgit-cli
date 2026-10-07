@@ -52,7 +52,7 @@ func newCmdMilestoneList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
 		Short:   "List repository milestones",
-		Example: "  ag milestone list owner/repo --state all --limit 50",
+		Example: "  ag-cli milestone list owner/repo --state all --limit 50",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := validateMilestoneListOptions(opts.State, opts.Sort, opts.Direction, opts.Limit); err != nil {

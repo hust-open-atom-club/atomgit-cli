@@ -69,7 +69,7 @@
 | license | external | openEuler compliance /check；不属于 AtomGit OpenAPI | implemented | project | source | [实现](../pkg/cmd/license/check.go)、[结构测试](../pkg/cmd/license/license_test.go) | 外部服务响应尚无本清单可引用的 HTTP mock/在线验证 |
 | update | v5,external,local | AtomGit Release 版本检查；按安装来源处理 npm/Homebrew 更新与本地制品验证 | implemented | project | source,mock | [实现与注入测试](../pkg/cmd/update/) | [#53](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/53)、[PR #230](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/230)；不是通用包管理 API |
 | check-update | v5,external,local | 已弃用的兼容入口：只检查更新，复用 update 的版本发现逻辑 | implemented | project | source,mock | [实现与测试](../pkg/cmd/update/) | [#70](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/70)；兼容命令不重复计算 API 覆盖 |
-| alias | local | 本地 ag JSON 配置中的内置 ag 命令别名；不支持 shell 别名，不使用 Git config | implemented | project | source,local | [命令与测试](../pkg/cmd/alias/)、[存储](../internal/config/aliases.go)、[存储测试](../internal/config/aliases_test.go) | [PR #130](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/130)；无 AtomGit API |
+| alias | local | 本地 ag-cli JSON 配置中的内置 ag-cli 命令别名；不支持 shell 别名，不使用 Git config | implemented | project | source,local | [命令与测试](../pkg/cmd/alias/)、[存储](../internal/config/aliases.go)、[存储测试](../internal/config/aliases_test.go) | [PR #130](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/130)；无 AtomGit API |
 | version | local | 显示 Version/Commit/BuildDate 与 Go 构建信息回退 | implemented | project | source,local | [命令与测试](../pkg/cmd/version/)、[元数据](../internal/version/) | [#61](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/61)；无 AtomGit API |
 <!-- coverage:end -->
 
@@ -86,7 +86,7 @@
 | Dashboard/Kanban 完整模块 | partial | partner | 本地已有 v5 只读 list/view/items；更广覆盖、写操作待合作方推进或明确移交 | source,mock（仅已有只读部分）；[#87](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/87)、[#124](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/124) |
 | AI Hub | deferred | partner | 不把目录中的模块名称当作已支持端点；明确移交并验证契约后再立项 | docs（仅官方目录）；[#124](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/124)，具体契约未验证 |
 | PR request-changes / 正式拒绝审查 | unverified | project | 当前正式 review 只支持 approve；未确认公开 API 契约前不模拟服务端审查状态 | source；[review 实现](../pkg/cmd/pr/review.go)，不猜测未文档化端点 |
-| 通用 ag api 的 v8 访问 | deferred | project | 当前固定 v5；如新增版本选择，须单独明确认证、路径和状态码策略 | source,mock；[API 命令](../pkg/cmd/api/api.go)，v8 现经专用 Actions 命令访问 |
+| 通用 ag-cli api 的 v8 访问 | deferred | project | 当前固定 v5；如新增版本选择，须单独明确认证、路径和状态码策略 | source,mock；[API 命令](../pkg/cmd/api/api.go)，v8 现经专用 Actions 命令访问 |
 | Discussion 专用写命令 | deferred | project | 当前范围仅 list/view；待单独确定写入流程和安全交互，不因通用 v5 请求可用而标为专用命令已实现 | source；[#72](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/72) |
 
 ### Issues #113–#122 对账

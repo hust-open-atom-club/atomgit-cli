@@ -20,7 +20,7 @@ import (
 )
 
 func TestSchemaDoesNotInitializeConfig(t *testing.T) {
-	for _, args := range [][]string{{"schema"}, {"schema", "ag"}, {"schema", "ag", "pr", "create"}, {"schema", "pr", "create"}, {"schema", "unknown"}, {"--raw-output", "schema", "api"}, {"doctor"}} {
+	for _, args := range [][]string{{"schema"}, {"schema", "ag-cli"}, {"schema", "ag-cli", "pr", "create"}, {"schema", "pr", "create"}, {"schema", "unknown"}, {"--raw-output", "schema", "api"}, {"doctor"}} {
 		f := &cmdutil.Factory{}
 		cmd, err := root.NewCmdRoot(f)
 		if err != nil {
@@ -91,7 +91,7 @@ func TestAgCommandProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	http.DefaultTransport = forbiddenCommandTransport{}
-	os.Args = append([]string{"ag"}, args...)
+	os.Args = append([]string{"ag-cli"}, args...)
 	os.Exit(Main())
 }
 
@@ -147,7 +147,7 @@ func TestSchemaStartupWithIsolatedCredentials(t *testing.T) {
 			// schema calls, including an invalid target path.
 			aliases := filepath.Join(dir, "config.json")
 			aliasContent := []byte(`{"private-alias-secret": broken`)
-			calls := [][]string{{"schema"}, {"schema", "ag"}, {"schema", "ag", "pr", "create"}, {"schema", "pr", "create"}, {"--raw-output", "schema", "api"}, {"schema", "pr", "comment", "create"}, {"schema", "missing"}, {"schema", "ag", "missing"}}
+			calls := [][]string{{"schema"}, {"schema", "ag-cli"}, {"schema", "ag-cli", "pr", "create"}, {"schema", "pr", "create"}, {"--raw-output", "schema", "api"}, {"schema", "pr", "comment", "create"}, {"schema", "missing"}, {"schema", "ag-cli", "missing"}}
 			if state == "local-alias" {
 				aliasContent = []byte(`{"aliases":{"inspect-schema":"schema","private-alias-secret":"api /user"}}`)
 				calls = append(calls, []string{"schema", "private-alias-secret"}, []string{"inspect-schema", "api"})
@@ -203,18 +203,18 @@ func TestHelpAndVersionCommandsIgnoreCredentialFailures(t *testing.T) {
 		help     bool
 		json     bool
 	}{
-		{name: "no arguments", contains: "ag [command]", help: true},
-		{name: "root help flag", args: []string{"--help"}, contains: "ag [command]", help: true},
-		{name: "root help shorthand", args: []string{"-h"}, contains: "ag [command]", help: true},
-		{name: "help command", args: []string{"help"}, contains: "ag [command]", help: true},
-		{name: "help command target", args: []string{"help", "pr"}, contains: "ag pr [command]", help: true},
-		{name: "subcommand help flag", args: []string{"pr", "--help"}, contains: "ag pr [command]", help: true},
-		{name: "subcommand help shorthand", args: []string{"pr", "-h"}, contains: "ag pr [command]", help: true},
-		{name: "version command", args: []string{"version"}, contains: "ag version"},
+		{name: "no arguments", contains: "ag-cli [command]", help: true},
+		{name: "root help flag", args: []string{"--help"}, contains: "ag-cli [command]", help: true},
+		{name: "root help shorthand", args: []string{"-h"}, contains: "ag-cli [command]", help: true},
+		{name: "help command", args: []string{"help"}, contains: "ag-cli [command]", help: true},
+		{name: "help command target", args: []string{"help", "pr"}, contains: "ag-cli pr [command]", help: true},
+		{name: "subcommand help flag", args: []string{"pr", "--help"}, contains: "ag-cli pr [command]", help: true},
+		{name: "subcommand help shorthand", args: []string{"pr", "-h"}, contains: "ag-cli pr [command]", help: true},
+		{name: "version command", args: []string{"version"}, contains: "ag-cli version"},
 		{name: "version JSON", args: []string{"version", "--json"}, json: true},
-		{name: "root version flag", args: []string{"--version"}, contains: "ag version"},
-		{name: "help alias", args: []string{"prhelp"}, contains: "ag pr [command]", help: true},
-		{name: "version alias", args: []string{"v"}, contains: "ag version"},
+		{name: "root version flag", args: []string{"--version"}, contains: "ag-cli version"},
+		{name: "help alias", args: []string{"prhelp"}, contains: "ag-cli pr [command]", help: true},
+		{name: "version alias", args: []string{"v"}, contains: "ag-cli version"},
 	}
 
 	credentialStates := []string{"missing", "corrupt", "read-failure", "legacy"}

@@ -20,11 +20,11 @@ func NewCmdBranch(f *cmdutil.Factory) *cobra.Command {
 		Use:   "branch",
 		Short: "Manage remote branches",
 		Long:  `List, view, create, delete, and protect AtomGit remote branches.`,
-		Example: `  ag branch list owner/repo
-  ag branch view owner/repo main
-  ag branch create owner/repo feature/foo --ref main
-  ag branch delete owner/repo feature/foo
-  ag branch protection list owner/repo`,
+		Example: `  ag-cli branch list owner/repo
+  ag-cli branch view owner/repo main
+  ag-cli branch create owner/repo feature/foo --ref main
+  ag-cli branch delete owner/repo feature/foo
+  ag-cli branch protection list owner/repo`,
 	}
 
 	cmd.AddCommand(newCmdBranchList(f))
@@ -64,7 +64,7 @@ func newCmdBranchList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
 		Short:   "List remote branches",
-		Example: `  ag branch list owner/repo --limit 50`,
+		Example: `  ag-cli branch list owner/repo --limit 50`,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if limit <= 0 {
@@ -107,7 +107,7 @@ func newCmdBranchView(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "view [<owner>/<repo>] <branch>",
 		Short:   "View a remote branch",
-		Example: `  ag branch view owner/repo main`,
+		Example: `  ag-cli branch view owner/repo main`,
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := resolveRepositoryArgs(f, args, 1)
@@ -139,7 +139,7 @@ func newCmdBranchCreate(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "create [<owner>/<repo>] <branch> --ref <ref>",
 		Short:   "Create a remote branch",
-		Example: `  ag branch create owner/repo feature/foo --ref main`,
+		Example: `  ag-cli branch create owner/repo feature/foo --ref main`,
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := resolveRepositoryArgs(f, args, 1)
@@ -185,8 +185,8 @@ func newCmdBranchDelete(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete [<owner>/<repo>] <branch>",
 		Short: "Delete a remote branch",
-		Example: `  ag branch delete owner/repo feature/foo
-  ag branch delete owner/repo feature/foo --yes`,
+		Example: `  ag-cli branch delete owner/repo feature/foo
+  ag-cli branch delete owner/repo feature/foo --yes`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := resolveRepositoryArgs(f, args, 1)

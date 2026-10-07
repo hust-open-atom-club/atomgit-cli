@@ -140,14 +140,14 @@ func newCmdAuthLoginWithDeps(f *cmdutil.Factory, deps loginDeps) *cobra.Command 
 		Use:   "login",
 		Short: "Log in with AtomGit OAuth (opens browser, saves token.json)",
 		Args:  cobra.ExactArgs(0),
-		Long: `Opens a browser to authorize ag against atomgit.com, then writes
+		Long: `Opens a browser to authorize ag-cli against atomgit.com, then writes
 access_token and user to the XDG config path (see README). With --with-token,
 skips the browser and reads an existing access token (PAT or OAuth token)
 from standard input instead — useful in sandboxes, containers, and CI where
 no browser is available:
 
-    echo "$TOKEN" | ag auth login --with-token
-    ag auth login --with-token < token.txt
+    echo "$TOKEN" | ag-cli auth login --with-token
+    ag-cli auth login --with-token < token.txt
 
 Piped or redirected input is read to EOF without any prompt; in an
 interactive terminal a single hidden prompt is shown. The token is validated
@@ -168,7 +168,7 @@ do not change the active account.`,
 						skipped = "token login"
 					}
 					fmt.Fprintf(out, "✓ Already logged in as %s — skipping %s.\n", user, skipped)
-					fmt.Fprintln(out, "  Use `ag auth refresh` if this account has a refresh token, `ag auth logout` to sign out, or `ag auth login --force` to authenticate again.")
+					fmt.Fprintln(out, "  Use `ag-cli auth refresh` if this account has a refresh token, `ag-cli auth logout` to sign out, or `ag-cli auth login --force` to authenticate again.")
 					return nil
 				}
 			}
@@ -258,7 +258,7 @@ do not change the active account.`,
 			fmt.Fprintf(out, "  Token saved to %s\n", path)
 			if store.Active != cred.Key() {
 				fmt.Fprintf(out, "  Active account remains %s\n", store.Active)
-				fmt.Fprintf(out, "  Run `ag auth switch %s` to use this account\n", cred.Key())
+				fmt.Fprintf(out, "  Run `ag-cli auth switch %s` to use this account\n", cred.Key())
 			}
 			return nil
 		},
@@ -310,12 +310,12 @@ func newCmdAuthRefresh() *cobra.Command {
 			cred, err := config.LoadStoredCredentials()
 			if err != nil {
 				if errors.Is(err, config.ErrTokenNotFound) {
-					return fmt.Errorf("not authenticated: run `ag auth login`")
+					return fmt.Errorf("not authenticated: run `ag-cli auth login`")
 				}
 				return err
 			}
 			if cred.RefreshToken == "" {
-				return fmt.Errorf("no refresh_token stored for %s; this account was likely logged in via `ag auth login --with-token`, which cannot be refreshed — sign in again with a new token (`echo \"$TOKEN\" | ag auth login --with-token --force`) or run `ag auth login --force` for browser OAuth", cred.User)
+				return fmt.Errorf("no refresh_token stored for %s; this account was likely logged in via `ag-cli auth login --with-token`, which cannot be refreshed — sign in again with a new token (`echo \"$TOKEN\" | ag-cli auth login --with-token --force`) or run `ag-cli auth login --force` for browser OAuth", cred.User)
 			}
 
 			tok, err := oauth.RefreshAccessToken(ctx, cred.RefreshToken)

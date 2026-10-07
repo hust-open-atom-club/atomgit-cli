@@ -204,7 +204,7 @@ func TestRemoveActiveAccountRequiresExplicitSwitch(t *testing.T) {
 	}
 
 	removed, empty, err := RemoveAccount("bob")
-	if err == nil || !strings.Contains(err.Error(), "ag auth switch <account>") {
+	if err == nil || !strings.Contains(err.Error(), "ag-cli auth switch <account>") {
 		t.Fatalf("removed = %q, empty = %t, error = %v", removed, empty, err)
 	}
 	after, readErr := os.ReadFile(path)

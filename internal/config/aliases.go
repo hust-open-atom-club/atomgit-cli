@@ -82,7 +82,7 @@ func DeleteAlias(name string) (bool, error) {
 // result back to the configuration file with owner-only permissions.
 //
 // The whole read-modify-write transaction is serialized with a cross-process
-// lock, so concurrent `ag alias set/delete` processes cannot lose each
+// lock, so concurrent `ag-cli alias set/delete` processes cannot lose each
 // other's changes, and the result is persisted via a temporary file plus
 // atomic replacement so readers never observe a partial write.
 func updateAliases(mutate func(aliases map[string]string) (bool, error)) (resultErr error) {

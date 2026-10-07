@@ -40,7 +40,7 @@ func TestAuthStatusProcess(t *testing.T) {
 		}
 		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"login":"alice"}`)), Request: r}, nil
 	})
-	os.Args = append([]string{"ag"}, args...)
+	os.Args = append([]string{"ag-cli"}, args...)
 	os.Exit(Main())
 }
 

@@ -32,8 +32,8 @@ func newCmdUserEmails(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "emails",
 		Short: "List email addresses for the authenticated user",
-		Example: `  ag user emails
-  ag user emails --json`,
+		Example: `  ag-cli user emails
+  ag-cli user emails --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			token, err := f.Config.GetToken()
@@ -80,10 +80,10 @@ func newCmdUserView(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "view [<login>]",
 		Short: "View the current user or a public user profile",
-		Example: `  ag user view
-  ag user view alice
-  ag user view alice --json
-  ag user view alice --web`,
+		Example: `  ag-cli user view
+  ag-cli user view alice
+  ag-cli user view alice --json
+  ag-cli user view alice --web`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			login := ""
@@ -189,7 +189,7 @@ func userProfileURL(user api.User) string {
 	return "https://atomgit.com/" + url.PathEscape(user.Login)
 }
 
-// userJSON is the stable, documented JSON schema emitted by `ag user view
+// userJSON is the stable, documented JSON schema emitted by `ag-cli user view
 // --json`. Fields are always present so automation can distinguish a real
 // zero/empty value from a missing field.
 type userJSON struct {

@@ -243,7 +243,7 @@ func TestRejectedCredentialsSuggestForcedLogin(t *testing.T) {
 	}
 	for _, id := range []string{"authentication", "repository_access", "actions", "discussion"} {
 		c := row(t, r, id)
-		if c.Status != "fail" || !strings.Contains(c.Hint, "ag auth login --force") {
+		if c.Status != "fail" || !strings.Contains(c.Hint, "ag-cli auth login --force") {
 			t.Fatalf("%s must suggest forced reauthentication: %+v", id, c)
 		}
 	}

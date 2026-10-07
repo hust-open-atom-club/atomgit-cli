@@ -46,7 +46,7 @@ func NewCmdRoot(f *cmdutil.Factory) (*cobra.Command, error) {
 
 func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra.Command, error) {
 	cmd := &cobra.Command{
-		Use:           "ag <command> <subcommand> [flags]",
+		Use:           "ag-cli <command> <subcommand> [flags]",
 		Short:         "AtomGit CLI",
 		Long:          `Work seamlessly with AtomGit from the command line.`,
 		Version:       version.Text(),
@@ -122,7 +122,7 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 // ExpandAlias replaces the first invocation argument with its configured
 // alias expansion, if one exists. Built-in commands always take precedence
 // over aliases with the same name, and root-level flags (e.g. --raw-output,
-// --version) are skipped so that `ag --raw-output <alias>` still expands.
+// --version) are skipped so that `ag-cli --raw-output <alias>` still expands.
 func ExpandAlias(cmd *cobra.Command, args []string) ([]string, error) {
 	// Root-level flags precede the command word; skip them when locating
 	// the token that may be an alias.

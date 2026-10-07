@@ -15,7 +15,7 @@ func NewCmdAlias(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "alias",
 		Short: "Create command shortcuts",
-		Long:  `Create, list, and delete command shortcuts (aliases) for "ag" commands.`,
+		Long:  `Create, list, and delete command shortcuts (aliases) for "ag-cli" commands.`,
 	}
 
 	cmd.AddCommand(newCmdAliasSet(f))
@@ -27,18 +27,18 @@ func NewCmdAlias(f *cmdutil.Factory) *cobra.Command {
 func newCmdAliasSet(*cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set <alias> <expansion>...",
-		Short: "Create a shortcut for an ag command",
-		Long: `Create a shortcut for an ag command.
+		Short: "Create a shortcut for an ag-cli command",
+		Long: `Create a shortcut for an ag-cli command.
 
-Aliases are expanded at invocation time: the first non-flag argument of an ag
+Aliases are expanded at invocation time: the first non-flag argument of an ag-cli
 invocation is looked up and replaced with the expansion. Aliases never
 override built-in commands, so names that conflict with a built-in command
 are rejected, and the expansion must start with a known built-in command.
 
 To include a literal space inside an expansion argument (for example a
 Windows path), escape it with a backslash: C:\Program\ Files.`,
-		Example: `  ag alias set pl "pr list"
-  ag alias set rv repo view`,
+		Example: `  ag-cli alias set pl "pr list"
+  ag-cli alias set rv repo view`,
 		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
@@ -162,7 +162,7 @@ func validateExpansionTarget(root *cobra.Command, expansion string) error {
 	// validate the command word itself against the top-level commands.
 	c, _, err := root.Find([]string{fields[0]})
 	if err != nil || c == nil || c == root {
-		return fmt.Errorf("expansion %q does not start with a known ag command", expansion)
+		return fmt.Errorf("expansion %q does not start with a known ag-cli command", expansion)
 	}
 	return nil
 }

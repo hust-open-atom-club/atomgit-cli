@@ -15,7 +15,7 @@ import (
 // alias set-tests registered alongside alias, so expansion-target validation
 // resolves them.
 func newAliasTestRoot() *cobra.Command {
-	rootCmd := &cobra.Command{Use: "ag"}
+	rootCmd := &cobra.Command{Use: "ag-cli"}
 	prCmd := &cobra.Command{Use: "pr"}
 	prCmd.AddCommand(&cobra.Command{Use: "list"})
 	rootCmd.AddCommand(prCmd)
@@ -181,7 +181,7 @@ func TestAliasSetCommandRejectsUnknownExpansionTarget(t *testing.T) {
 func TestAliasSetCommandRejectsRootNameExpansion(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	if _, err := runAliasSet(t, "alias", "set", "x", "ag pr list"); err == nil {
+	if _, err := runAliasSet(t, "alias", "set", "x", "ag-cli pr list"); err == nil {
 		t.Fatal("alias set with an expansion starting with the root command succeeded, want error")
 	}
 }

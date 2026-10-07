@@ -26,9 +26,9 @@ func newCmdValidate(f *cmdutil.Factory) *cobra.Command {
 
 The file is not modified. HTTP 200 with valid=false is treated as a command
 error so CI can fail on invalid YAML.`,
-		Example: `  ag workflow validate --file .gitcode/workflows/ci.yml
-  ag workflow validate owner/repo --file workflow.yml
-  ag workflow validate owner/repo --file workflow.yml --json`,
+		Example: `  ag-cli workflow validate --file .gitcode/workflows/ci.yml
+  ag-cli workflow validate owner/repo --file workflow.yml
+  ag-cli workflow validate owner/repo --file workflow.yml --json`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runValidate(cmd, f, opts, args)

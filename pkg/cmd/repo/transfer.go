@@ -53,9 +53,9 @@ AtomGit. Local Git remotes are never modified.
 AtomGit requires the account password when the source repository is owned by
 an organization. It is read without echo from an interactive terminal, or from
 standard input when --password-stdin is combined with --yes.`,
-		Example: `  ag repo transfer owner/repo --to target-organization
-  ag repo transfer owner/repo --to target-organization --yes
-  printf '%s\n' "$PASSWORD" | ag repo transfer source-organization/repo --to target-organization --yes --password-stdin`,
+		Example: `  ag-cli repo transfer owner/repo --to target-organization
+  ag-cli repo transfer owner/repo --to target-organization --yes
+  printf '%s\n' "$PASSWORD" | ag-cli repo transfer source-organization/repo --to target-organization --yes --password-stdin`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)

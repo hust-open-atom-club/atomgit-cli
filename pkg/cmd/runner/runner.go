@@ -14,8 +14,8 @@ func NewCmdRunner(f *cmdutil.Factory) *cobra.Command {
 		Use:   "runner",
 		Short: "Inspect AtomGit Actions host runners",
 		Long:  "List repository-specific and shared AtomGit Actions host runners. These commands are read-only.",
-		Example: `  ag runner list owner/repo
-  ag runner shared owner/repo --json`,
+		Example: `  ag-cli runner list owner/repo
+  ag-cli runner shared owner/repo --json`,
 	}
 	cmd.AddCommand(newCmdList(f, false))
 	cmd.AddCommand(newCmdList(f, true))

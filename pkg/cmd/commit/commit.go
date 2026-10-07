@@ -1,4 +1,4 @@
-// Package commit provides the ag commit command for listing, viewing,
+// Package commit provides the ag-cli commit command for listing, viewing,
 // comparing, and inspecting repository commits.
 package commit
 

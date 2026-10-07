@@ -22,9 +22,9 @@ func formatText(info version.Info) string {
 		details = append(details, "built: "+buildDate)
 	}
 	if len(details) == 0 {
-		return fmt.Sprintf("ag version %s\n", info.Version)
+		return fmt.Sprintf("ag-cli version %s\n", info.Version)
 	}
-	return fmt.Sprintf("ag version %s (%s)\n", info.Version, strings.Join(details, ", "))
+	return fmt.Sprintf("ag-cli version %s (%s)\n", info.Version, strings.Join(details, ", "))
 }
 
 func knownMetadata(value string) string {

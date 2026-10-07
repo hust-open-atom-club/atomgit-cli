@@ -31,10 +31,10 @@ func newCmdReleaseUpload(f *cmdutil.Factory) *cobra.Command {
 		Use:   "upload [<owner>/<repo>] <tag> <file>",
 		Short: "Upload an attachment to a release",
 		Long:  `Upload a local file as an attachment to an existing release identified by its tag.`,
-		Example: `  ag release upload owner/repo v1.0.0 ./dist/app.tar.gz
-  ag release upload owner/repo v1.0.0 ./build/app.zip --name app-v1.zip
-  ag release upload owner/repo v1.0.0 ./new.tar.gz --overwrite
-  ag release upload owner/repo v1.0.0 ./existing.tar.gz --skip-existing`,
+		Example: `  ag-cli release upload owner/repo v1.0.0 ./dist/app.tar.gz
+  ag-cli release upload owner/repo v1.0.0 ./build/app.zip --name app-v1.zip
+  ag-cli release upload owner/repo v1.0.0 ./new.tar.gz --overwrite
+  ag-cli release upload owner/repo v1.0.0 ./existing.tar.gz --skip-existing`,
 		Args: cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runReleaseUpload(cmd, f, opts, args)

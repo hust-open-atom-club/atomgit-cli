@@ -33,10 +33,10 @@ func newCmdRunList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list [<owner>/<repo>]",
 		Short: "List workflow runs",
-		Example: `  ag run list owner/repo
-  ag run list
-  ag run list owner/repo --branch main --status failed
-  ag run list owner/repo --event push --workflow-name CI --limit 50`,
+		Example: `  ag-cli run list owner/repo
+  ag-cli run list
+  ag-cli run list owner/repo --branch main --status failed
+  ag-cli run list owner/repo --event push --workflow-name CI --limit 50`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)

@@ -6,7 +6,7 @@ const path = require("node:path");
 const AdmZip = require("adm-zip");
 const tar = require("tar");
 
-const { resolveBinary, run } = require("../bin/ag.js");
+const { resolveBinary, run } = require("../bin/ag-cli.js");
 const {
   TARGETS,
   buildNpmPackages,
@@ -84,8 +84,8 @@ test("forwards arguments and the child exit code to the platform binary", () => 
     platform: "linux",
     arch: "x64",
     resolve(specifier) {
-      assert.equal(specifier, "@hust-open-atom-club/atomgit-cli-linux-x64/bin/ag");
-      return "/platform-package/bin/ag";
+      assert.equal(specifier, "@hust-open-atom-club/atomgit-cli-linux-x64/bin/ag-cli");
+      return "/platform-package/bin/ag-cli";
     },
     spawn(command, args, options) {
       calls.push({ command, args, options });
@@ -96,7 +96,7 @@ test("forwards arguments and the child exit code to the platform binary", () => 
   assert.equal(result, 7);
   assert.deepEqual(calls, [
     {
-      command: "/platform-package/bin/ag",
+      command: "/platform-package/bin/ag-cli",
       args: ["version", "--json"],
       options: { stdio: "inherit" },
     },
@@ -117,7 +117,7 @@ test("creates platform-specific npm metadata", () => {
     homepage: "https://atomgit.com/hust-open-atom-club/atomgit-cli",
     os: ["linux"],
     cpu: ["x64"],
-    files: ["bin/ag"],
+    files: ["bin/ag-cli"],
     publishConfig: { access: "public" },
   });
 });
@@ -129,13 +129,13 @@ test("extracts binaries from release tar.gz and zip archives", async (t) => {
   const output = path.join(root, "output");
   await mkdir(source);
   await mkdir(output);
-  await writeFile(path.join(source, "ag"), "unix binary");
-  await writeFile(path.join(source, "ag.exe"), "windows binary");
+  await writeFile(path.join(source, "ag-cli"), "unix binary");
+  await writeFile(path.join(source, "ag-cli.exe"), "windows binary");
 
   const unixTarget = TARGETS.find(({ platform, arch }) => platform === "linux" && arch === "x64");
   const tarPath = path.join(root, unixTarget.archive);
-  await tar.c({ cwd: source, file: tarPath, gzip: true }, ["ag"]);
-  const unixDestination = path.join(output, "ag");
+  await tar.c({ cwd: source, file: tarPath, gzip: true }, ["ag-cli"]);
+  const unixDestination = path.join(output, "ag-cli");
   await extractBinary(tarPath, unixTarget, unixDestination);
   assert.equal(await readFile(unixDestination, "utf8"), "unix binary");
 
@@ -144,9 +144,9 @@ test("extracts binaries from release tar.gz and zip archives", async (t) => {
   );
   const zipPath = path.join(root, windowsTarget.archive);
   const zip = new AdmZip();
-  zip.addFile("ag.exe", Buffer.from("windows binary"));
+  zip.addFile("ag-cli.exe", Buffer.from("windows binary"));
   zip.writeZip(zipPath);
-  const windowsDestination = path.join(output, "ag.exe");
+  const windowsDestination = path.join(output, "ag-cli.exe");
   await extractBinary(zipPath, windowsTarget, windowsDestination);
   assert.equal(await readFile(windowsDestination, "utf8"), "windows binary");
 });
@@ -211,12 +211,16 @@ test("builds and validates npm packages from release archives", async (t) => {
     "package/LICENSE",
     "package/README.en.md",
     "package/README.md",
-    "package/bin/ag.js",
+    "package/bin/ag-cli.js",
     "package/package.json",
   ]);
 });
 
 test("all npm targets use ordinary release archives", () => {
+  assert.deepEqual(require("../package.json").bin, { "ag-cli": "bin/ag-cli.js" });
+  for (const target of TARGETS) {
+    assert.equal(target.executable, target.platform === "win32" ? "ag-cli.exe" : "ag-cli");
+  }
   assert.deepEqual(
     TARGETS.map(({ archive }) => archive),
     [

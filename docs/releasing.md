@@ -2,6 +2,8 @@
 
 本文档介绍 AtomGit CLI 的 GoReleaser 打包、npm 制品发布，以及 Homebrew tap、Nix package、WinGet、Scoop 和 AUR package 的维护流程。
 
+改名版本从 `cmd/ag-cli` 构建，发布归档内为 `ag-cli` / `ag-cli.exe`；归档文件名仍保持 `ag_<os>_<arch>.tar.gz` / `ag_windows_<arch>.zip`，npm 包名和版本同步流程不变。npm 主包仅注册 `ag-cli` 入口，不提供 `ag` 别名。发布前需协调下游维护人员同步二进制安装路径、补全文件、卸载清单及包元数据；本仓库不会自动修改这些外部清单。旧版用户的迁移步骤见[安装指南](installation.md#从-ag-迁移到-ag-cli)。
+
 ## 目录
 
 - [发布指南](#发布指南)
@@ -194,7 +196,7 @@ make publish \
   PRERELEASE=1
 ```
 
-发布入口要求 tag 存在、指向当前提交且工作区干净，并通过 `ag` 的现有认证配置访问 AtomGit。CI 中应从 secret 写入权限受限的临时 token 文件，格式和位置见[配置与认证](configuration.md)；不得把 PAT 写入仓库、制品或日志。
+发布入口要求 tag 存在、指向当前提交且工作区干净，并通过 `ag-cli` 的现有认证配置访问 AtomGit。CI 中应从 secret 写入权限受限的临时 token 文件，格式和位置见[配置与认证](configuration.md)；不得把 PAT 写入仓库、制品或日志。
 
 自动化流程会验证固定的十个项目附件、归档内容、安装脚本版本和 SHA-256，然后创建或安全补齐 Release，并确认 AtomGit 自动生成的四个源码归档存在。重复执行时，已有附件必须下载后与本地 checksum 一致才会跳过；目标提交冲突、未知附件、同名内容不一致或 API/上传失败都会停止。上传中断后可用相同 tag、发布说明和 `dist/<tag>/` 制品重新执行命令，脚本会列出尚未完成的附件。已发布且内容冲突的附件不会被自动覆盖；需要人工确认 Release 状态后再决定回滚。
 
@@ -252,7 +254,7 @@ npm stage view <main-stage-id>
 npm stage approve <main-stage-id>
 ```
 
-主包审批完成后再次运行相同的 `npm run publish:npm` 命令。脚本会验证八个远端版本的 integrity/shasum，在隔离临时目录安装主包的精确版本，并通过 `npm exec --prefix` 调用 npm 生成的 `.bin/ag`（Windows 为 `ag.cmd`）执行 `ag version --json`；只有实际命令入口可执行、输出与本次 `vX.Y.Z` tag 一致，且 JSON 只包含 `version`、`commit` 和 `buildDate` 时才报告发布完成。
+主包审批完成后再次运行相同的 `npm run publish:npm` 命令。脚本会验证八个远端版本的 integrity/shasum，在隔离临时目录安装主包的精确版本，并通过 `npm exec --prefix` 调用 npm 生成的 `.bin/ag-cli`（Windows 为 `ag-cli.cmd`）执行 `ag-cli version --json`；只有实际命令入口可执行、输出与本次 `vX.Y.Z` tag 一致，且 JSON 只包含 `version`、`commit` 和 `buildDate` 时才报告发布完成。
 
 staged publishing 不能创建从未在 npm registry 发布过的新包。新增平台包的首个版本应在 npm 支持的 Trusted Publishing CI 中完成，不能通过降低包的 2FA 或 token 安全设置绕过限制。
 
@@ -282,7 +284,7 @@ npm run publish:npm -- vX.Y.Z dist/vX.Y.Z/npm --publish
 - `stable` 从上游仓库的最新正式 AtomGit Release 源码归档构建，并固定版本、源码 hash 和 `vendorHash`。
 - `latest` 直接从当前 flake revision 的源码构建，因此始终对应检出仓库的最新 commit；工作流只维护其 `vendorHash`。
 
-两个 package 都由 Nix 管理；共享构建参数暂时保留 `Source=nix` 注入，以便仍基于旧版源码的 `stable` 正确报告由 Nix 管理。源码移除发行来源字段后，该兼容参数不会改变版本输出。`default` 和兼容名称 `ag` 都指向 `stable`。
+两个 package 都由 Nix 管理；共享构建参数暂时保留 `Source=nix` 注入，以便仍基于旧版源码的 `stable` 正确报告由 Nix 管理。源码移除发行来源字段后，该兼容参数不会改变版本输出。`default` 和兼容名称 `ag`、`ag-cli` 都指向 `stable`。固定的 v0.7.3 stable 仍从 `cmd/ag` 构建并提供旧 `ag`，后续版本及 `latest` 使用 `cmd/ag-cli`。
 
 Nix package 使用 `go` 行声明的最低版本约束，并由锁定的 nixpkgs input 提供实际编译器；它不要求与官方 Release 使用的建议工具链补丁版本完全一致。更新 flake inputs 时仍需确认所有支持平台提供的 Go 版本不低于 1.26.6。
 
@@ -415,13 +417,13 @@ AUR（Arch User Repository）上维护了三个包，均由维护者 `moyigeek`�
 - [atomgit-cli-bin](https://aur.archlinux.org/packages/atomgit-cli-bin)：稳定版，直接使用 Release 预编译二进制。
 - [atomgit-cli-git](https://aur.archlinux.org/packages/atomgit-cli-git)：开发版，跟随上游 `main` 分支最新提交。
 
-三个包共用 `provides=('ag')`，并互相声明 `conflicts`，避免同时安装冲突。arch 覆盖 `x86_64`、`aarch64`、`loong64`。
+三个包当前共用 `provides=('ag')`，并互相声明 `conflicts`，避免同时安装冲突。arch 覆盖 `x86_64`、`aarch64`、`loong64`。发布改名版本时，需由维护人员将二进制路径、补全文件及 `provides` 同步为 `ag-cli`。
 
 ### 稳定版（atomgit-cli / atomgit-cli-bin）
 
 新版本发布后，更新对应 AUR 仓库的 PKGBUILD：
 
-- **atomgit-cli**：将 `pkgver` 更新为新版本号，并**必须**把 `_commit` 更新为新 tag `v${pkgver}` 指向的 commit，同时确认源码 `git+...#tag=v${pkgver}` 已指向同一 tag。PKGBUILD 会无条件把 `_commit` 注入 `internal/version.Commit`；若仅更新 `pkgver` 而漏更 `_commit`，新 tag 的源码仍可正常构建，但 `ag version` 会继续报告上一个版本的 SHA。注意：本地 AUR 仓库（如 `~/atomgit-cli`）不包含上游 tag，在其中执行 `git rev-list -n 1 "v${pkgver}"` 会报 `unknown revision`（exit 128）。请改用以下任一方式在新 tag 指向的上游仓库中取得目标 commit 后再写入 `_commit`：
+- **atomgit-cli**：将 `pkgver` 更新为新版本号，并**必须**把 `_commit` 更新为新 tag `v${pkgver}` 指向的 commit，同时确认源码 `git+...#tag=v${pkgver}` 已指向同一 tag。PKGBUILD 会无条件把 `_commit` 注入 `internal/version.Commit`；若仅更新 `pkgver` 而漏更 `_commit`，新 tag 的源码仍可正常构建，但 `ag-cli version` 会继续报告上一个版本的 SHA。注意：本地 AUR 仓库（如 `~/atomgit-cli`）不包含上游 tag，在其中执行 `git rev-list -n 1 "v${pkgver}"` 会报 `unknown revision`（exit 128）。请改用以下任一方式在新 tag 指向的上游仓库中取得目标 commit 后再写入 `_commit`：
   ```bash
   # 方式 A：远程查询（可在任意目录执行，无需克隆）
   git ls-remote https://atomgit.com/hust-open-atom-club/atomgit-cli.git "refs/tags/v${pkgver}" \
@@ -452,4 +454,4 @@ git push                            # 推送到 AUR
 
 ### 校验
 
-推送前应在本机用 `makepkg -f` 实际构建一次，确认能产出 `.pkg.tar.*` 包且 `ag version` 显示的版本符合预期。对于 `atomgit-cli`，还需精确核对 `ag version` 输出的 commit 与新 tag `v${pkgver}` 指向的 commit 完全一致。注意本地 AUR 仓库不包含上游 tag，不能在其中查询；请使用 `git ls-remote https://atomgit.com/hust-open-atom-club/atomgit-cli.git "refs/tags/v${pkgver}" | awk '{print $1}'`（任意目录），或在上游 atomgit-cli 检出中执行 `git rev-list -n 1 "v${pkgver}"` 取得参照值。若 `ag version` 仍显示上一个版本的 SHA，说明 `_commit` 未同步更新，必须修正后重新构建、再次校验通过，再推送 AUR。
+推送前应在本机用 `makepkg -f` 实际构建一次，确认能产出 `.pkg.tar.*` 包且 `ag-cli version` 显示的版本符合预期。对于 `atomgit-cli`，还需精确核对 `ag-cli version` 输出的 commit 与新 tag `v${pkgver}` 指向的 commit 完全一致。注意本地 AUR 仓库不包含上游 tag，不能在其中查询；请使用 `git ls-remote https://atomgit.com/hust-open-atom-club/atomgit-cli.git "refs/tags/v${pkgver}" | awk '{print $1}'`（任意目录），或在上游 atomgit-cli 检出中执行 `git rev-list -n 1 "v${pkgver}"` 取得参照值。若 `ag-cli version` 仍显示上一个版本的 SHA，说明 `_commit` 未同步更新，必须修正后重新构建、再次校验通过，再推送 AUR。

@@ -74,7 +74,7 @@ function sha256(buffer) {
 
 async function validateArchive(filePath) {
   const fileName = path.basename(filePath);
-  const expectedBinary = fileName.endsWith(".zip") ? "ag.exe" : "ag";
+  const expectedBinary = fileName.endsWith(".zip") ? "ag-cli.exe" : "ag-cli";
   let entries;
   if (fileName.endsWith(".zip")) {
     entries = new Set(new AdmZip(filePath).getEntries().filter((entry) => !entry.isDirectory).map((entry) => entry.entryName));
@@ -144,7 +144,7 @@ function redact(value, env = process.env) {
 }
 
 function defaultRunAg(args, options = {}) {
-  const binary = process.env.AG_RELEASE_CLI || "ag";
+  const binary = process.env.AG_RELEASE_CLI || "ag-cli";
   const result = spawnSync(binary, args, {
     encoding: options.raw ? null : "utf8",
     env: process.env,

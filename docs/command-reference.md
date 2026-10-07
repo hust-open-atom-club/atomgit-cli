@@ -7,225 +7,225 @@
 
 ## Command index
 
-- [ag](#ag) — AtomGit CLI
-- [ag alias](#ag-alias) — Create command shortcuts
-- [ag alias delete](#ag-alias-delete) — Delete an alias
-- [ag alias list](#ag-alias-list) — List aliases
-- [ag alias set](#ag-alias-set) — Create a shortcut for an ag command
-- [ag api](#ag-api) — Make an authenticated AtomGit API request
-- [ag auth](#ag-auth) — Authenticate with AtomGit
-- [ag auth git-credential](#ag-auth-git-credential) — Implement the Git credential helper protocol
-- [ag auth list](#ag-auth-list) — List saved AtomGit accounts
-- [ag auth login](#ag-auth-login) — Log in with AtomGit OAuth (opens browser, saves token.json)
-- [ag auth logout](#ag-auth-logout) — Remove the active or a selected stored account
-- [ag auth refresh](#ag-auth-refresh) — Refresh the access token using the stored refresh_token
-- [ag auth setup-git](#ag-auth-setup-git) — Configure Git to use ag as a credential helper
-- [ag auth status](#ag-auth-status) — View local authentication status or verify identity online
-- [ag auth switch](#ag-auth-switch) — Switch the active account and synchronize Git identity
-- [ag auth token](#ag-auth-token) — Print the authentication token
-- [ag branch](#ag-branch) — Manage remote branches
-- [ag branch create](#ag-branch-create) — Create a remote branch
-- [ag branch delete](#ag-branch-delete) — Delete a remote branch
-- [ag branch list](#ag-branch-list) — List remote branches
-- [ag branch protection](#ag-branch-protection) — Manage protected branch rules
-- [ag branch protection delete](#ag-branch-protection-delete) — Delete a protected branch rule
-- [ag branch protection list](#ag-branch-protection-list) — List protected branch rules
-- [ag branch protection set](#ag-branch-protection-set) — Create or update a protected branch rule
-- [ag branch protection view](#ag-branch-protection-view) — View a protected branch rule
-- [ag branch view](#ag-branch-view) — View a remote branch
-- [ag browse](#ag-browse) — Open repositories, issues, pull requests, and more in the browser
-- [ag check-update](#ag-check-update) — Check for a newer AtomGit CLI release
-- [ag commit](#ag-commit) — Manage commits
-- [ag commit comment](#ag-commit-comment) — Manage commit comments
-- [ag commit comment create](#ag-commit-comment-create) — Create a comment on a commit
-- [ag commit comment delete](#ag-commit-comment-delete) — Delete a commit comment
-- [ag commit comment edit](#ag-commit-comment-edit) — Edit a commit comment
-- [ag commit comment list](#ag-commit-comment-list) — List comments on a commit
-- [ag commit comment view](#ag-commit-comment-view) — View a commit comment
-- [ag commit compare](#ag-commit-compare) — Compare two commits, branches, or tags
-- [ag commit diff](#ag-commit-diff) — Show a commit's diff
-- [ag commit list](#ag-commit-list) — List commits
-- [ag commit patch](#ag-commit-patch) — Show a commit's patch
-- [ag commit view](#ag-commit-view) — View a commit
-- [ag discussion](#ag-discussion) — View repository discussions
-- [ag discussion list](#ag-discussion-list) — List repository discussions
-- [ag discussion view](#ag-discussion-view) — View a repository discussion
-- [ag doctor](#ag-doctor) — CLI health check: config, auth, and connectivity
-- [ag issue](#ag-issue) — Manage issues
-- [ag issue activity](#ag-issue-activity) — List operation logs for an issue
-- [ag issue branches](#ag-issue-branches) — List or update related branches for an issue
-- [ag issue close](#ag-issue-close) — Close an issue
-- [ag issue comment](#ag-issue-comment) — Manage issue comments
-- [ag issue comment create](#ag-issue-comment-create) — Create a comment on an issue
-- [ag issue comment delete](#ag-issue-comment-delete) — Delete a comment on an issue
-- [ag issue comment edit](#ag-issue-comment-edit) — Edit a comment on an issue
-- [ag issue comment view](#ag-issue-comment-view) — View all comments on an issue
-- [ag issue create](#ag-issue-create) — Create an issue
-- [ag issue edit](#ag-issue-edit) — Edit an issue
-- [ag issue history](#ag-issue-history) — List modification history for an issue
-- [ag issue label](#ag-issue-label) — Add or remove labels on an issue
-- [ag issue list](#ag-issue-list) — List issues
-- [ag issue prs](#ag-issue-prs) — List pull requests linked to an issue
-- [ag issue reactions](#ag-issue-reactions) — List reactions on an issue
-- [ag issue reopen](#ag-issue-reopen) — Reopen an issue
-- [ag issue view](#ag-issue-view) — View an issue
-- [ag kanban](#ag-kanban) — View organization Kanban boards
-- [ag kanban items](#ag-kanban-items) — List items on a Kanban board
-- [ag kanban list](#ag-kanban-list) — List organization Kanban boards
-- [ag kanban view](#ag-kanban-view) — View a Kanban board
-- [ag label](#ag-label) — Manage repository labels
-- [ag label create](#ag-label-create) — Create a repository label
-- [ag label delete](#ag-label-delete) — Delete a repository label
-- [ag label edit](#ag-label-edit) — Edit a repository label
-- [ag label list](#ag-label-list) — List repository labels
-- [ag license](#ag-license) — License compliance checking
-- [ag license check](#ag-license-check) — Check license compliance
-- [ag milestone](#ag-milestone) — Manage repository milestones
-- [ag milestone close](#ag-milestone-close) — Close a repository milestone
-- [ag milestone create](#ag-milestone-create) — Create a repository milestone
-- [ag milestone delete](#ag-milestone-delete) — Delete a repository milestone
-- [ag milestone edit](#ag-milestone-edit) — Edit a repository milestone
-- [ag milestone list](#ag-milestone-list) — List repository milestones
-- [ag milestone reopen](#ag-milestone-reopen) — Reopen a repository milestone
-- [ag milestone view](#ag-milestone-view) — View a repository milestone
-- [ag notification](#ag-notification) — Manage repository notifications
-- [ag notification list](#ag-notification-list) — List repository notifications
-- [ag notification mark-read](#ag-notification-mark-read) — Mark repository notifications as read
-- [ag org](#ag-org) — Manage organizations
-- [ag org list](#ag-org-list) — List organizations for the authenticated user
-- [ag org members](#ag-org-members) — List organization members
-- [ag org repos](#ag-org-repos) — List organization repositories
-- [ag org runner-group](#ag-org-runner-group) — Inspect organization Actions runner groups
-- [ag org runner-group list](#ag-org-runner-group-list) — List organization runner groups
-- [ag org runner-group namespaces](#ag-org-runner-group-namespaces) — List repositories that can use an organization runner group
-- [ag org runner-group runner-sets](#ag-org-runner-group-runner-sets) — List Kubernetes runner sets in an organization runner group
-- [ag org runner-group runners](#ag-org-runner-group-runners) — List host runners in an organization runner group
-- [ag org runner-group view](#ag-org-runner-group-view) — View an organization runner group
-- [ag org view](#ag-org-view) — View an organization
-- [ag pr](#ag-pr) — Manage pull requests
-- [ag pr activity](#ag-pr-activity) — List the operation log of a pull request
-- [ag pr checkout](#ag-pr-checkout) — Check out a pull request locally
-- [ag pr checks](#ag-pr-checks) — Show CI checks for a pull request's current head commit
-- [ag pr close](#ag-pr-close) — Close a pull request
-- [ag pr comment](#ag-pr-comment) — Manage pull request comments
-- [ag pr comment create](#ag-pr-comment-create) — Create a comment on a pull request
-- [ag pr comment delete](#ag-pr-comment-delete) — Delete a comment on a pull request
-- [ag pr comment edit](#ag-pr-comment-edit) — Edit a comment on a pull request
-- [ag pr comment reply](#ag-pr-comment-reply) — Reply to a comment thread on a pull request
-- [ag pr comment view](#ag-pr-comment-view) — View all comments on a pull request
-- [ag pr commits](#ag-pr-commits) — List commits in a pull request
-- [ag pr create](#ag-pr-create) — Create a pull request
-- [ag pr diff](#ag-pr-diff) — Show diff of a pull request
-- [ag pr edit](#ag-pr-edit) — Edit a pull request
-- [ag pr files](#ag-pr-files) — List files changed in a pull request
-- [ag pr history](#ag-pr-history) — List the modification history of a pull request
-- [ag pr issues](#ag-pr-issues) — View linked issues of a pull request
-- [ag pr link-issues](#ag-pr-link-issues) — Link issues to a pull request
-- [ag pr list](#ag-pr-list) — List pull requests
-- [ag pr merge](#ag-pr-merge) — Merge a pull request
-- [ag pr reactions](#ag-pr-reactions) — List reactions on a pull request
-- [ag pr reopen](#ag-pr-reopen) — Reopen a pull request
-- [ag pr review](#ag-pr-review) — Approve a pull request review
-- [ag pr unlink-issues](#ag-pr-unlink-issues) — Unlink issues from a pull request
-- [ag pr view](#ag-pr-view) — View a pull request
-- [ag release](#ag-release) — Manage repository releases
-- [ag release create](#ag-release-create) — Create a release
-- [ag release download](#ag-release-download) — Download an attachment from a release
-- [ag release edit](#ag-release-edit) — Edit a release
-- [ag release list](#ag-release-list) — List repository releases
-- [ag release upload](#ag-release-upload) — Upload an attachment to a release
-- [ag release view](#ag-release-view) — View a release by tag
-- [ag repo](#ag-repo) — Manage repositories
-- [ag repo clone](#ag-repo-clone) — Clone a repository
-- [ag repo collaborator](#ag-repo-collaborator) — Manage repository collaborators
-- [ag repo collaborator add](#ag-repo-collaborator-add) — Add a direct repository collaborator
-- [ag repo collaborator edit](#ag-repo-collaborator-edit) — Update a direct repository collaborator's permission
-- [ag repo collaborator list](#ag-repo-collaborator-list) — List repository collaborators
-- [ag repo collaborator remove](#ag-repo-collaborator-remove) — Remove a direct repository collaborator
-- [ag repo collaborator view](#ag-repo-collaborator-view) — View a repository collaborator's effective permission
-- [ag repo content](#ag-repo-content) — Browse repository contents
-- [ag repo content list](#ag-repo-content-list) — List a repository directory
-- [ag repo content view](#ag-repo-content-view) — View a repository file
-- [ag repo create](#ag-repo-create) — Create a new repository
-- [ag repo delete](#ag-repo-delete) — Delete a repository
-- [ag repo edit](#ag-repo-edit) — Edit repository settings
-- [ag repo fork](#ag-repo-fork) — Fork a repository
-- [ag repo fork list](#ag-repo-fork-list) — List forks of a repository
-- [ag repo insights](#ag-repo-insights) — Inspect repository activity and statistics
-- [ag repo insights contributors](#ag-repo-insights-contributors) — List repository contributor statistics
-- [ag repo insights downloads](#ag-repo-insights-downloads) — Show repository download statistics
-- [ag repo insights events](#ag-repo-insights-events) — List repository activity events
-- [ag repo insights languages](#ag-repo-insights-languages) — Show repository language percentages
-- [ag repo insights stargazers](#ag-repo-insights-stargazers) — List repository stargazers
-- [ag repo insights watchers](#ag-repo-insights-watchers) — List repository watchers
-- [ag repo list](#ag-repo-list) — List repositories
-- [ag repo mirror](#ag-repo-mirror) — Inspect repository remote mirrors
-- [ag repo mirror list](#ag-repo-mirror-list) — List configured push remote mirrors
-- [ag repo mirror view](#ag-repo-mirror-view) — View repository remote mirror state
-- [ag repo policy](#ag-repo-policy) — View and edit repository policy settings
-- [ag repo policy edit](#ag-repo-policy-edit) — Edit one repository policy section
-- [ag repo policy view](#ag-repo-policy-view) — View repository policy settings
-- [ag repo push-rule](#ag-repo-push-rule) — Manage repository push rules
-- [ag repo push-rule edit](#ag-repo-push-rule-edit) — Edit repository push rules
-- [ag repo push-rule view](#ag-repo-push-rule-view) — View repository push rules
-- [ag repo read-dir](#ag-repo-read-dir) — List contents of a repository directory
-- [ag repo read-file](#ag-repo-read-file) — Read a file from a repository
-- [ag repo sync](#ag-repo-sync) — Synchronize a fork with its upstream repository
-- [ag repo transfer](#ag-repo-transfer) — Transfer a repository to an organization
-- [ag repo view](#ag-repo-view) — View a repository
-- [ag repo webhook](#ag-repo-webhook) — Manage repository webhooks
-- [ag repo webhook create](#ag-repo-webhook-create) — Create a repository webhook
-- [ag repo webhook delete](#ag-repo-webhook-delete) — Delete a repository webhook
-- [ag repo webhook edit](#ag-repo-webhook-edit) — Edit a repository webhook
-- [ag repo webhook list](#ag-repo-webhook-list) — List repository webhooks
-- [ag repo webhook test](#ag-repo-webhook-test) — Send a test payload to a repository webhook
-- [ag repo webhook view](#ag-repo-webhook-view) — View a repository webhook
-- [ag run](#ag-run) — Inspect AtomGit Actions workflow runs and artifacts
-- [ag run artifact](#ag-run-artifact) — Inspect and manage workflow artifacts
-- [ag run artifact delete](#ag-run-artifact-delete) — Delete a workflow artifact
-- [ag run artifact view](#ag-run-artifact-view) — View artifact metadata without downloading the archive
-- [ag run list](#ag-run-list) — List workflow runs
-- [ag run step-log](#ag-run-step-log) — Fetch step-level logs for a workflow job
-- [ag run view](#ag-run-view) — View a workflow run, jobs, logs, and artifacts
-- [ag runner](#ag-runner) — Inspect AtomGit Actions host runners
-- [ag runner list](#ag-runner-list) — List host runners configured for a repository
-- [ag runner shared](#ag-runner-shared) — List host runners shared with a repository
-- [ag schema](#ag-schema) — Describe public commands as versioned JSON
-- [ag search](#ag-search) — search atomgit
-- [ag search issues](#ag-search-issues) — search issues
-- [ag search repositories](#ag-search-repositories) — search repositories
-- [ag search users](#ag-search-users) — search users
-- [ag ssh-key](#ag-ssh-key) — Manage SSH keys
-- [ag ssh-key add](#ag-ssh-key-add) — Add an SSH key to your AtomGit account
-- [ag ssh-key delete](#ag-ssh-key-delete) — Delete an SSH key from your AtomGit account
-- [ag ssh-key list](#ag-ssh-key-list) — List SSH keys registered with your AtomGit account
-- [ag tag](#ag-tag) — Manage tags
-- [ag tag create](#ag-tag-create) — Create a tag
-- [ag tag delete](#ag-tag-delete) — Delete a tag
-- [ag tag list](#ag-tag-list) — List tags
-- [ag tag protection](#ag-tag-protection) — Manage protected tag rules
-- [ag tag protection delete](#ag-tag-protection-delete) — Delete a protected tag rule
-- [ag tag protection list](#ag-tag-protection-list) — List protected tag rules
-- [ag tag protection set](#ag-tag-protection-set) — Create or update a protected tag rule
-- [ag tag protection view](#ag-tag-protection-view) — View a protected tag rule
-- [ag update](#ag-update) — Update AtomGit CLI to the latest stable release
-- [ag user](#ag-user) — View AtomGit users, repositories, namespaces, and activity
-- [ag user edit](#ag-user-edit) — Edit the authenticated user's profile
-- [ag user emails](#ag-user-emails) — List email addresses for the authenticated user
-- [ag user events](#ag-user-events) — List personal activity events for a user
-- [ag user namespaces](#ag-user-namespaces) — List namespaces for the authenticated user
-- [ag user starred](#ag-user-starred) — List starred repositories for a user
-- [ag user view](#ag-user-view) — View the current user or a public user profile
-- [ag user watching](#ag-user-watching) — List watched repositories for a user
-- [ag version](#ag-version) — Show version information
-- [ag workflow](#ag-workflow) — Manage AtomGit Actions workflows
-- [ag workflow list](#ag-workflow-list) — List workflows in a repository
-- [ag workflow run](#ag-workflow-run) — Run a workflow
-- [ag workflow validate](#ag-workflow-validate) — Validate a local workflow YAML file
+- [ag-cli](#ag-cli) — AtomGit CLI
+- [ag-cli alias](#ag-cli-alias) — Create command shortcuts
+- [ag-cli alias delete](#ag-cli-alias-delete) — Delete an alias
+- [ag-cli alias list](#ag-cli-alias-list) — List aliases
+- [ag-cli alias set](#ag-cli-alias-set) — Create a shortcut for an ag-cli command
+- [ag-cli api](#ag-cli-api) — Make an authenticated AtomGit API request
+- [ag-cli auth](#ag-cli-auth) — Authenticate with AtomGit
+- [ag-cli auth git-credential](#ag-cli-auth-git-credential) — Implement the Git credential helper protocol
+- [ag-cli auth list](#ag-cli-auth-list) — List saved AtomGit accounts
+- [ag-cli auth login](#ag-cli-auth-login) — Log in with AtomGit OAuth (opens browser, saves token.json)
+- [ag-cli auth logout](#ag-cli-auth-logout) — Remove the active or a selected stored account
+- [ag-cli auth refresh](#ag-cli-auth-refresh) — Refresh the access token using the stored refresh_token
+- [ag-cli auth setup-git](#ag-cli-auth-setup-git) — Configure Git to use ag-cli as a credential helper
+- [ag-cli auth status](#ag-cli-auth-status) — View local authentication status or verify identity online
+- [ag-cli auth switch](#ag-cli-auth-switch) — Switch the active account and synchronize Git identity
+- [ag-cli auth token](#ag-cli-auth-token) — Print the authentication token
+- [ag-cli branch](#ag-cli-branch) — Manage remote branches
+- [ag-cli branch create](#ag-cli-branch-create) — Create a remote branch
+- [ag-cli branch delete](#ag-cli-branch-delete) — Delete a remote branch
+- [ag-cli branch list](#ag-cli-branch-list) — List remote branches
+- [ag-cli branch protection](#ag-cli-branch-protection) — Manage protected branch rules
+- [ag-cli branch protection delete](#ag-cli-branch-protection-delete) — Delete a protected branch rule
+- [ag-cli branch protection list](#ag-cli-branch-protection-list) — List protected branch rules
+- [ag-cli branch protection set](#ag-cli-branch-protection-set) — Create or update a protected branch rule
+- [ag-cli branch protection view](#ag-cli-branch-protection-view) — View a protected branch rule
+- [ag-cli branch view](#ag-cli-branch-view) — View a remote branch
+- [ag-cli browse](#ag-cli-browse) — Open repositories, issues, pull requests, and more in the browser
+- [ag-cli check-update](#ag-cli-check-update) — Check for a newer AtomGit CLI release
+- [ag-cli commit](#ag-cli-commit) — Manage commits
+- [ag-cli commit comment](#ag-cli-commit-comment) — Manage commit comments
+- [ag-cli commit comment create](#ag-cli-commit-comment-create) — Create a comment on a commit
+- [ag-cli commit comment delete](#ag-cli-commit-comment-delete) — Delete a commit comment
+- [ag-cli commit comment edit](#ag-cli-commit-comment-edit) — Edit a commit comment
+- [ag-cli commit comment list](#ag-cli-commit-comment-list) — List comments on a commit
+- [ag-cli commit comment view](#ag-cli-commit-comment-view) — View a commit comment
+- [ag-cli commit compare](#ag-cli-commit-compare) — Compare two commits, branches, or tags
+- [ag-cli commit diff](#ag-cli-commit-diff) — Show a commit's diff
+- [ag-cli commit list](#ag-cli-commit-list) — List commits
+- [ag-cli commit patch](#ag-cli-commit-patch) — Show a commit's patch
+- [ag-cli commit view](#ag-cli-commit-view) — View a commit
+- [ag-cli discussion](#ag-cli-discussion) — View repository discussions
+- [ag-cli discussion list](#ag-cli-discussion-list) — List repository discussions
+- [ag-cli discussion view](#ag-cli-discussion-view) — View a repository discussion
+- [ag-cli doctor](#ag-cli-doctor) — CLI health check: config, auth, and connectivity
+- [ag-cli issue](#ag-cli-issue) — Manage issues
+- [ag-cli issue activity](#ag-cli-issue-activity) — List operation logs for an issue
+- [ag-cli issue branches](#ag-cli-issue-branches) — List or update related branches for an issue
+- [ag-cli issue close](#ag-cli-issue-close) — Close an issue
+- [ag-cli issue comment](#ag-cli-issue-comment) — Manage issue comments
+- [ag-cli issue comment create](#ag-cli-issue-comment-create) — Create a comment on an issue
+- [ag-cli issue comment delete](#ag-cli-issue-comment-delete) — Delete a comment on an issue
+- [ag-cli issue comment edit](#ag-cli-issue-comment-edit) — Edit a comment on an issue
+- [ag-cli issue comment view](#ag-cli-issue-comment-view) — View all comments on an issue
+- [ag-cli issue create](#ag-cli-issue-create) — Create an issue
+- [ag-cli issue edit](#ag-cli-issue-edit) — Edit an issue
+- [ag-cli issue history](#ag-cli-issue-history) — List modification history for an issue
+- [ag-cli issue label](#ag-cli-issue-label) — Add or remove labels on an issue
+- [ag-cli issue list](#ag-cli-issue-list) — List issues
+- [ag-cli issue prs](#ag-cli-issue-prs) — List pull requests linked to an issue
+- [ag-cli issue reactions](#ag-cli-issue-reactions) — List reactions on an issue
+- [ag-cli issue reopen](#ag-cli-issue-reopen) — Reopen an issue
+- [ag-cli issue view](#ag-cli-issue-view) — View an issue
+- [ag-cli kanban](#ag-cli-kanban) — View organization Kanban boards
+- [ag-cli kanban items](#ag-cli-kanban-items) — List items on a Kanban board
+- [ag-cli kanban list](#ag-cli-kanban-list) — List organization Kanban boards
+- [ag-cli kanban view](#ag-cli-kanban-view) — View a Kanban board
+- [ag-cli label](#ag-cli-label) — Manage repository labels
+- [ag-cli label create](#ag-cli-label-create) — Create a repository label
+- [ag-cli label delete](#ag-cli-label-delete) — Delete a repository label
+- [ag-cli label edit](#ag-cli-label-edit) — Edit a repository label
+- [ag-cli label list](#ag-cli-label-list) — List repository labels
+- [ag-cli license](#ag-cli-license) — License compliance checking
+- [ag-cli license check](#ag-cli-license-check) — Check license compliance
+- [ag-cli milestone](#ag-cli-milestone) — Manage repository milestones
+- [ag-cli milestone close](#ag-cli-milestone-close) — Close a repository milestone
+- [ag-cli milestone create](#ag-cli-milestone-create) — Create a repository milestone
+- [ag-cli milestone delete](#ag-cli-milestone-delete) — Delete a repository milestone
+- [ag-cli milestone edit](#ag-cli-milestone-edit) — Edit a repository milestone
+- [ag-cli milestone list](#ag-cli-milestone-list) — List repository milestones
+- [ag-cli milestone reopen](#ag-cli-milestone-reopen) — Reopen a repository milestone
+- [ag-cli milestone view](#ag-cli-milestone-view) — View a repository milestone
+- [ag-cli notification](#ag-cli-notification) — Manage repository notifications
+- [ag-cli notification list](#ag-cli-notification-list) — List repository notifications
+- [ag-cli notification mark-read](#ag-cli-notification-mark-read) — Mark repository notifications as read
+- [ag-cli org](#ag-cli-org) — Manage organizations
+- [ag-cli org list](#ag-cli-org-list) — List organizations for the authenticated user
+- [ag-cli org members](#ag-cli-org-members) — List organization members
+- [ag-cli org repos](#ag-cli-org-repos) — List organization repositories
+- [ag-cli org runner-group](#ag-cli-org-runner-group) — Inspect organization Actions runner groups
+- [ag-cli org runner-group list](#ag-cli-org-runner-group-list) — List organization runner groups
+- [ag-cli org runner-group namespaces](#ag-cli-org-runner-group-namespaces) — List repositories that can use an organization runner group
+- [ag-cli org runner-group runner-sets](#ag-cli-org-runner-group-runner-sets) — List Kubernetes runner sets in an organization runner group
+- [ag-cli org runner-group runners](#ag-cli-org-runner-group-runners) — List host runners in an organization runner group
+- [ag-cli org runner-group view](#ag-cli-org-runner-group-view) — View an organization runner group
+- [ag-cli org view](#ag-cli-org-view) — View an organization
+- [ag-cli pr](#ag-cli-pr) — Manage pull requests
+- [ag-cli pr activity](#ag-cli-pr-activity) — List the operation log of a pull request
+- [ag-cli pr checkout](#ag-cli-pr-checkout) — Check out a pull request locally
+- [ag-cli pr checks](#ag-cli-pr-checks) — Show CI checks for a pull request's current head commit
+- [ag-cli pr close](#ag-cli-pr-close) — Close a pull request
+- [ag-cli pr comment](#ag-cli-pr-comment) — Manage pull request comments
+- [ag-cli pr comment create](#ag-cli-pr-comment-create) — Create a comment on a pull request
+- [ag-cli pr comment delete](#ag-cli-pr-comment-delete) — Delete a comment on a pull request
+- [ag-cli pr comment edit](#ag-cli-pr-comment-edit) — Edit a comment on a pull request
+- [ag-cli pr comment reply](#ag-cli-pr-comment-reply) — Reply to a comment thread on a pull request
+- [ag-cli pr comment view](#ag-cli-pr-comment-view) — View all comments on a pull request
+- [ag-cli pr commits](#ag-cli-pr-commits) — List commits in a pull request
+- [ag-cli pr create](#ag-cli-pr-create) — Create a pull request
+- [ag-cli pr diff](#ag-cli-pr-diff) — Show diff of a pull request
+- [ag-cli pr edit](#ag-cli-pr-edit) — Edit a pull request
+- [ag-cli pr files](#ag-cli-pr-files) — List files changed in a pull request
+- [ag-cli pr history](#ag-cli-pr-history) — List the modification history of a pull request
+- [ag-cli pr issues](#ag-cli-pr-issues) — View linked issues of a pull request
+- [ag-cli pr link-issues](#ag-cli-pr-link-issues) — Link issues to a pull request
+- [ag-cli pr list](#ag-cli-pr-list) — List pull requests
+- [ag-cli pr merge](#ag-cli-pr-merge) — Merge a pull request
+- [ag-cli pr reactions](#ag-cli-pr-reactions) — List reactions on a pull request
+- [ag-cli pr reopen](#ag-cli-pr-reopen) — Reopen a pull request
+- [ag-cli pr review](#ag-cli-pr-review) — Approve a pull request review
+- [ag-cli pr unlink-issues](#ag-cli-pr-unlink-issues) — Unlink issues from a pull request
+- [ag-cli pr view](#ag-cli-pr-view) — View a pull request
+- [ag-cli release](#ag-cli-release) — Manage repository releases
+- [ag-cli release create](#ag-cli-release-create) — Create a release
+- [ag-cli release download](#ag-cli-release-download) — Download an attachment from a release
+- [ag-cli release edit](#ag-cli-release-edit) — Edit a release
+- [ag-cli release list](#ag-cli-release-list) — List repository releases
+- [ag-cli release upload](#ag-cli-release-upload) — Upload an attachment to a release
+- [ag-cli release view](#ag-cli-release-view) — View a release by tag
+- [ag-cli repo](#ag-cli-repo) — Manage repositories
+- [ag-cli repo clone](#ag-cli-repo-clone) — Clone a repository
+- [ag-cli repo collaborator](#ag-cli-repo-collaborator) — Manage repository collaborators
+- [ag-cli repo collaborator add](#ag-cli-repo-collaborator-add) — Add a direct repository collaborator
+- [ag-cli repo collaborator edit](#ag-cli-repo-collaborator-edit) — Update a direct repository collaborator's permission
+- [ag-cli repo collaborator list](#ag-cli-repo-collaborator-list) — List repository collaborators
+- [ag-cli repo collaborator remove](#ag-cli-repo-collaborator-remove) — Remove a direct repository collaborator
+- [ag-cli repo collaborator view](#ag-cli-repo-collaborator-view) — View a repository collaborator's effective permission
+- [ag-cli repo content](#ag-cli-repo-content) — Browse repository contents
+- [ag-cli repo content list](#ag-cli-repo-content-list) — List a repository directory
+- [ag-cli repo content view](#ag-cli-repo-content-view) — View a repository file
+- [ag-cli repo create](#ag-cli-repo-create) — Create a new repository
+- [ag-cli repo delete](#ag-cli-repo-delete) — Delete a repository
+- [ag-cli repo edit](#ag-cli-repo-edit) — Edit repository settings
+- [ag-cli repo fork](#ag-cli-repo-fork) — Fork a repository
+- [ag-cli repo fork list](#ag-cli-repo-fork-list) — List forks of a repository
+- [ag-cli repo insights](#ag-cli-repo-insights) — Inspect repository activity and statistics
+- [ag-cli repo insights contributors](#ag-cli-repo-insights-contributors) — List repository contributor statistics
+- [ag-cli repo insights downloads](#ag-cli-repo-insights-downloads) — Show repository download statistics
+- [ag-cli repo insights events](#ag-cli-repo-insights-events) — List repository activity events
+- [ag-cli repo insights languages](#ag-cli-repo-insights-languages) — Show repository language percentages
+- [ag-cli repo insights stargazers](#ag-cli-repo-insights-stargazers) — List repository stargazers
+- [ag-cli repo insights watchers](#ag-cli-repo-insights-watchers) — List repository watchers
+- [ag-cli repo list](#ag-cli-repo-list) — List repositories
+- [ag-cli repo mirror](#ag-cli-repo-mirror) — Inspect repository remote mirrors
+- [ag-cli repo mirror list](#ag-cli-repo-mirror-list) — List configured push remote mirrors
+- [ag-cli repo mirror view](#ag-cli-repo-mirror-view) — View repository remote mirror state
+- [ag-cli repo policy](#ag-cli-repo-policy) — View and edit repository policy settings
+- [ag-cli repo policy edit](#ag-cli-repo-policy-edit) — Edit one repository policy section
+- [ag-cli repo policy view](#ag-cli-repo-policy-view) — View repository policy settings
+- [ag-cli repo push-rule](#ag-cli-repo-push-rule) — Manage repository push rules
+- [ag-cli repo push-rule edit](#ag-cli-repo-push-rule-edit) — Edit repository push rules
+- [ag-cli repo push-rule view](#ag-cli-repo-push-rule-view) — View repository push rules
+- [ag-cli repo read-dir](#ag-cli-repo-read-dir) — List contents of a repository directory
+- [ag-cli repo read-file](#ag-cli-repo-read-file) — Read a file from a repository
+- [ag-cli repo sync](#ag-cli-repo-sync) — Synchronize a fork with its upstream repository
+- [ag-cli repo transfer](#ag-cli-repo-transfer) — Transfer a repository to an organization
+- [ag-cli repo view](#ag-cli-repo-view) — View a repository
+- [ag-cli repo webhook](#ag-cli-repo-webhook) — Manage repository webhooks
+- [ag-cli repo webhook create](#ag-cli-repo-webhook-create) — Create a repository webhook
+- [ag-cli repo webhook delete](#ag-cli-repo-webhook-delete) — Delete a repository webhook
+- [ag-cli repo webhook edit](#ag-cli-repo-webhook-edit) — Edit a repository webhook
+- [ag-cli repo webhook list](#ag-cli-repo-webhook-list) — List repository webhooks
+- [ag-cli repo webhook test](#ag-cli-repo-webhook-test) — Send a test payload to a repository webhook
+- [ag-cli repo webhook view](#ag-cli-repo-webhook-view) — View a repository webhook
+- [ag-cli run](#ag-cli-run) — Inspect AtomGit Actions workflow runs and artifacts
+- [ag-cli run artifact](#ag-cli-run-artifact) — Inspect and manage workflow artifacts
+- [ag-cli run artifact delete](#ag-cli-run-artifact-delete) — Delete a workflow artifact
+- [ag-cli run artifact view](#ag-cli-run-artifact-view) — View artifact metadata without downloading the archive
+- [ag-cli run list](#ag-cli-run-list) — List workflow runs
+- [ag-cli run step-log](#ag-cli-run-step-log) — Fetch step-level logs for a workflow job
+- [ag-cli run view](#ag-cli-run-view) — View a workflow run, jobs, logs, and artifacts
+- [ag-cli runner](#ag-cli-runner) — Inspect AtomGit Actions host runners
+- [ag-cli runner list](#ag-cli-runner-list) — List host runners configured for a repository
+- [ag-cli runner shared](#ag-cli-runner-shared) — List host runners shared with a repository
+- [ag-cli schema](#ag-cli-schema) — Describe public commands as versioned JSON
+- [ag-cli search](#ag-cli-search) — search atomgit
+- [ag-cli search issues](#ag-cli-search-issues) — search issues
+- [ag-cli search repositories](#ag-cli-search-repositories) — search repositories
+- [ag-cli search users](#ag-cli-search-users) — search users
+- [ag-cli ssh-key](#ag-cli-ssh-key) — Manage SSH keys
+- [ag-cli ssh-key add](#ag-cli-ssh-key-add) — Add an SSH key to your AtomGit account
+- [ag-cli ssh-key delete](#ag-cli-ssh-key-delete) — Delete an SSH key from your AtomGit account
+- [ag-cli ssh-key list](#ag-cli-ssh-key-list) — List SSH keys registered with your AtomGit account
+- [ag-cli tag](#ag-cli-tag) — Manage tags
+- [ag-cli tag create](#ag-cli-tag-create) — Create a tag
+- [ag-cli tag delete](#ag-cli-tag-delete) — Delete a tag
+- [ag-cli tag list](#ag-cli-tag-list) — List tags
+- [ag-cli tag protection](#ag-cli-tag-protection) — Manage protected tag rules
+- [ag-cli tag protection delete](#ag-cli-tag-protection-delete) — Delete a protected tag rule
+- [ag-cli tag protection list](#ag-cli-tag-protection-list) — List protected tag rules
+- [ag-cli tag protection set](#ag-cli-tag-protection-set) — Create or update a protected tag rule
+- [ag-cli tag protection view](#ag-cli-tag-protection-view) — View a protected tag rule
+- [ag-cli update](#ag-cli-update) — Update AtomGit CLI to the latest stable release
+- [ag-cli user](#ag-cli-user) — View AtomGit users, repositories, namespaces, and activity
+- [ag-cli user edit](#ag-cli-user-edit) — Edit the authenticated user's profile
+- [ag-cli user emails](#ag-cli-user-emails) — List email addresses for the authenticated user
+- [ag-cli user events](#ag-cli-user-events) — List personal activity events for a user
+- [ag-cli user namespaces](#ag-cli-user-namespaces) — List namespaces for the authenticated user
+- [ag-cli user starred](#ag-cli-user-starred) — List starred repositories for a user
+- [ag-cli user view](#ag-cli-user-view) — View the current user or a public user profile
+- [ag-cli user watching](#ag-cli-user-watching) — List watched repositories for a user
+- [ag-cli version](#ag-cli-version) — Show version information
+- [ag-cli workflow](#ag-cli-workflow) — Manage AtomGit Actions workflows
+- [ag-cli workflow list](#ag-cli-workflow-list) — List workflows in a repository
+- [ag-cli workflow run](#ag-cli-workflow-run) — Run a workflow
+- [ag-cli workflow validate](#ag-cli-workflow-validate) — Validate a local workflow YAML file
 
-## ag
+## ag-cli
 
-Usage: `ag <command> <subcommand> [flags]`
+Usage: `ag-cli <command> <subcommand> [flags]`
 
 AtomGit CLI
 
@@ -240,13 +240,13 @@ Work seamlessly with AtomGit from the command line.
 | `-h, --help` | Show help for command | `false` | local |
 
 
-## ag alias
+## ag-cli alias
 
-Usage: `ag alias`
+Usage: `ag-cli alias`
 
 Create command shortcuts
 
-Create, list, and delete command shortcuts (aliases) for "ag" commands.
+Create, list, and delete command shortcuts (aliases) for "ag-cli" commands.
 
 ### Flags
 
@@ -256,9 +256,9 @@ Create, list, and delete command shortcuts (aliases) for "ag" commands.
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag alias delete
+## ag-cli alias delete
 
-Usage: `ag alias delete <alias>`
+Usage: `ag-cli alias delete <alias>`
 
 Delete an alias
 
@@ -270,9 +270,9 @@ Delete an alias
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag alias list
+## ag-cli alias list
 
-Usage: `ag alias list`
+Usage: `ag-cli alias list`
 
 List aliases
 
@@ -284,15 +284,15 @@ List aliases
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag alias set
+## ag-cli alias set
 
-Usage: `ag alias set <alias> <expansion>...`
+Usage: `ag-cli alias set <alias> <expansion>...`
 
-Create a shortcut for an ag command
+Create a shortcut for an ag-cli command
 
-Create a shortcut for an ag command.
+Create a shortcut for an ag-cli command.
 
-Aliases are expanded at invocation time: the first non-flag argument of an ag
+Aliases are expanded at invocation time: the first non-flag argument of an ag-cli
 invocation is looked up and replaced with the expansion. Aliases never
 override built-in commands, so names that conflict with a built-in command
 are rejected, and the expansion must start with a known built-in command.
@@ -310,21 +310,21 @@ Windows path), escape it with a backslash: C:\Program\ Files.
 ### Example
 
 ```bash
-ag alias set pl "pr list"
-ag alias set rv repo view
+ag-cli alias set pl "pr list"
+ag-cli alias set rv repo view
 ```
 
 
-## ag api
+## ag-cli api
 
-Usage: `ag api <endpoint> [flags]`
+Usage: `ag-cli api <endpoint> [flags]`
 
 Make an authenticated AtomGit API request
 
 Make an authenticated request to a relative AtomGit API v5 endpoint.
 
 GET is the default. Supported methods are GET, POST, PATCH, PUT, and DELETE.
-Explicit non-GET requests may change remote resources; ag does not infer or
+Explicit non-GET requests may change remote resources; ag-cli does not infer or
 confirm the endpoint's effects. Redirects only retain credentials on the exact
 AtomGit API origin. Paginated output is one compact JSON page per line.
 Response bytes use terminal-safe output unless --raw-output is specified.
@@ -350,18 +350,18 @@ does not verify remote permissions, resource existence, or server-side validatio
 ### Example
 
 ```bash
-ag api /user
-ag api /repos/owner/repo/issues --field state=open
-ag api /repos/owner/repo/issues --method POST --field title='New issue'
-ag api /repos/owner/repo/issues/42 --method PATCH --input update.json
-ag api /repos/owner/repo/issues --paginate
-ag api /repos/owner/repo/issues --method POST --field title=example --dry-run
+ag-cli api /user
+ag-cli api /repos/owner/repo/issues --field state=open
+ag-cli api /repos/owner/repo/issues --method POST --field title='New issue'
+ag-cli api /repos/owner/repo/issues/42 --method PATCH --input update.json
+ag-cli api /repos/owner/repo/issues --paginate
+ag-cli api /repos/owner/repo/issues --method POST --field title=example --dry-run
 ```
 
 
-## ag auth
+## ag-cli auth
 
-Usage: `ag auth <command>`
+Usage: `ag-cli auth <command>`
 
 Authenticate with AtomGit
 
@@ -375,9 +375,9 @@ Manage authentication state for AtomGit.
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag auth git-credential
+## ag-cli auth git-credential
 
-Usage: `ag auth git-credential <operation>`
+Usage: `ag-cli auth git-credential <operation>`
 
 Implement the Git credential helper protocol
 
@@ -391,9 +391,9 @@ Implement the Git credential helper protocol
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag auth list
+## ag-cli auth list
 
-Usage: `ag auth list [flags]`
+Usage: `ag-cli auth list [flags]`
 
 List saved AtomGit accounts
 
@@ -406,20 +406,20 @@ List saved AtomGit accounts
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag auth login
+## ag-cli auth login
 
-Usage: `ag auth login [flags]`
+Usage: `ag-cli auth login [flags]`
 
 Log in with AtomGit OAuth (opens browser, saves token.json)
 
-Opens a browser to authorize ag against atomgit.com, then writes
+Opens a browser to authorize ag-cli against atomgit.com, then writes
 access_token and user to the XDG config path (see README). With --with-token,
 skips the browser and reads an existing access token (PAT or OAuth token)
 from standard input instead — useful in sandboxes, containers, and CI where
 no browser is available:
 
-    echo "$TOKEN" | ag auth login --with-token
-    ag auth login --with-token < token.txt
+    echo "$TOKEN" | ag-cli auth login --with-token
+    ag-cli auth login --with-token < token.txt
 
 Piped or redirected input is read to EOF without any prompt; in an
 interactive terminal a single hidden prompt is shown. The token is validated
@@ -439,9 +439,9 @@ do not change the active account.
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag auth logout
+## ag-cli auth logout
 
-Usage: `ag auth logout [flags]`
+Usage: `ag-cli auth logout [flags]`
 
 Remove the active or a selected stored account
 
@@ -459,9 +459,9 @@ otherwise switch to another account first. Use --all to remove every account.
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag auth refresh
+## ag-cli auth refresh
 
-Usage: `ag auth refresh`
+Usage: `ag-cli auth refresh`
 
 Refresh the access token using the stored refresh_token
 
@@ -473,15 +473,15 @@ Refresh the access token using the stored refresh_token
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag auth setup-git
+## ag-cli auth setup-git
 
-Usage: `ag auth setup-git`
+Usage: `ag-cli auth setup-git`
 
-Configure Git to use ag as a credential helper
+Configure Git to use ag-cli as a credential helper
 
 Configure Git to use AtomGit CLI as the HTTPS credential helper for
 atomgit.com. Git requests credentials from the active account selected by
-ag auth switch; access tokens are not written to Git configuration.
+ag-cli auth switch; access tokens are not written to Git configuration.
 
 ### Flags
 
@@ -491,9 +491,9 @@ ag auth switch; access tokens are not written to Git configuration.
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag auth status
+## ag-cli auth status
 
-Usage: `ag auth status [flags]`
+Usage: `ag-cli auth status [flags]`
 
 View local authentication status or verify identity online
 
@@ -511,16 +511,16 @@ Inspect local credentials without modifying them. Local presence does not prove 
 ### Example
 
 ```bash
-ag auth status
-ag auth status --json
-ag auth status --verify
-ag auth status --verify --json
+ag-cli auth status
+ag-cli auth status --json
+ag-cli auth status --verify
+ag-cli auth status --verify --json
 ```
 
 
-## ag auth switch
+## ag-cli auth switch
 
-Usage: `ag auth switch <account> [flags]`
+Usage: `ag-cli auth switch <account> [flags]`
 
 Switch the active account and synchronize Git identity
 
@@ -536,9 +536,9 @@ Switch the active account and synchronize Git identity
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag auth token
+## ag-cli auth token
 
-Usage: `ag auth token`
+Usage: `ag-cli auth token`
 
 Print the authentication token
 
@@ -552,9 +552,9 @@ Display the authentication token used for AtomGit API requests.
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag branch
+## ag-cli branch
 
-Usage: `ag branch`
+Usage: `ag-cli branch`
 
 Manage remote branches
 
@@ -572,17 +572,17 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag branch list owner/repo
-ag branch view owner/repo main
-ag branch create owner/repo feature/foo --ref main
-ag branch delete owner/repo feature/foo
-ag branch protection list owner/repo
+ag-cli branch list owner/repo
+ag-cli branch view owner/repo main
+ag-cli branch create owner/repo feature/foo --ref main
+ag-cli branch delete owner/repo feature/foo
+ag-cli branch protection list owner/repo
 ```
 
 
-## ag branch create
+## ag-cli branch create
 
-Usage: `ag branch create [<owner>/<repo>] <branch> --ref <ref> [flags]`
+Usage: `ag-cli branch create [<owner>/<repo>] <branch> --ref <ref> [flags]`
 
 Create a remote branch
 
@@ -601,13 +601,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag branch create owner/repo feature/foo --ref main
+ag-cli branch create owner/repo feature/foo --ref main
 ```
 
 
-## ag branch delete
+## ag-cli branch delete
 
-Usage: `ag branch delete [<owner>/<repo>] <branch> [flags]`
+Usage: `ag-cli branch delete [<owner>/<repo>] <branch> [flags]`
 
 Delete a remote branch
 
@@ -626,14 +626,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag branch delete owner/repo feature/foo
-ag branch delete owner/repo feature/foo --yes
+ag-cli branch delete owner/repo feature/foo
+ag-cli branch delete owner/repo feature/foo --yes
 ```
 
 
-## ag branch list
+## ag-cli branch list
 
-Usage: `ag branch list [<owner>/<repo>] [flags]`
+Usage: `ag-cli branch list [<owner>/<repo>] [flags]`
 
 List remote branches
 
@@ -653,13 +653,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag branch list owner/repo --limit 50
+ag-cli branch list owner/repo --limit 50
 ```
 
 
-## ag branch protection
+## ag-cli branch protection
 
-Usage: `ag branch protection`
+Usage: `ag-cli branch protection`
 
 Manage protected branch rules
 
@@ -679,9 +679,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag branch protection delete
+## ag-cli branch protection delete
 
-Usage: `ag branch protection delete [<owner>/<repo>] <branch-or-pattern> [flags]`
+Usage: `ag-cli branch protection delete [<owner>/<repo>] <branch-or-pattern> [flags]`
 
 Delete a protected branch rule
 
@@ -698,9 +698,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-y, --yes` | Skip deletion confirmation | `false` | local |
 
 
-## ag branch protection list
+## ag-cli branch protection list
 
-Usage: `ag branch protection list [<owner>/<repo>] [flags]`
+Usage: `ag-cli branch protection list [<owner>/<repo>] [flags]`
 
 List protected branch rules
 
@@ -719,13 +719,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag branch protection list owner/repo --limit 50
+ag-cli branch protection list owner/repo --limit 50
 ```
 
 
-## ag branch protection set
+## ag-cli branch protection set
 
-Usage: `ag branch protection set [<owner>/<repo>] <branch-or-pattern> [flags]`
+Usage: `ag-cli branch protection set [<owner>/<repo>] <branch-or-pattern> [flags]`
 
 Create or update a protected branch rule
 
@@ -753,16 +753,16 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag branch protection set owner/repo main --push admin --merge admin
-ag branch protection set owner/repo main --push maintainer --merge maintainer
-ag branch protection set owner/repo "release/*" --push "develop;alice" --merge "develop;alice"
-ag branch protection set owner/repo main --push "" --yes
+ag-cli branch protection set owner/repo main --push admin --merge admin
+ag-cli branch protection set owner/repo main --push maintainer --merge maintainer
+ag-cli branch protection set owner/repo "release/*" --push "develop;alice" --merge "develop;alice"
+ag-cli branch protection set owner/repo main --push "" --yes
 ```
 
 
-## ag branch protection view
+## ag-cli branch protection view
 
-Usage: `ag branch protection view [<owner>/<repo>] <branch-or-pattern>`
+Usage: `ag-cli branch protection view [<owner>/<repo>] <branch-or-pattern>`
 
 View a protected branch rule
 
@@ -778,9 +778,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag branch view
+## ag-cli branch view
 
-Usage: `ag branch view [<owner>/<repo>] <branch>`
+Usage: `ag-cli branch view [<owner>/<repo>] <branch>`
 
 View a remote branch
 
@@ -798,13 +798,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag branch view owner/repo main
+ag-cli branch view owner/repo main
 ```
 
 
-## ag browse
+## ag-cli browse
 
-Usage: `ag browse [<number> | <path> | <commit-sha>] [flags]`
+Usage: `ag-cli browse [<number> | <path> | <commit-sha>] [flags]`
 
 Open repositories, issues, pull requests, and more in the browser
 
@@ -828,13 +828,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-w, --wiki` | Open repository wiki | `false` | local |
 
 
-## ag check-update
+## ag-cli check-update
 
-Usage: `ag check-update`
+Usage: `ag-cli check-update`
 
 Check for a newer AtomGit CLI release
 
-> Deprecated: use "ag update --check" instead
+> Deprecated: use "ag-cli update --check" instead
 
 ### Flags
 
@@ -844,9 +844,9 @@ Check for a newer AtomGit CLI release
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag commit
+## ag-cli commit
 
-Usage: `ag commit`
+Usage: `ag-cli commit`
 
 Manage commits
 
@@ -862,9 +862,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag commit comment
+## ag-cli commit comment
 
-Usage: `ag commit comment`
+Usage: `ag-cli commit comment`
 
 Manage commit comments
 
@@ -880,9 +880,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag commit comment create
+## ag-cli commit comment create
 
-Usage: `ag commit comment create [<owner>/<repo>] <sha> (--body <text> | --body-file <path-or->) [flags]`
+Usage: `ag-cli commit comment create [<owner>/<repo>] <sha> (--body <text> | --body-file <path-or->) [flags]`
 
 Create a comment on a commit
 
@@ -900,9 +900,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag commit comment delete
+## ag-cli commit comment delete
 
-Usage: `ag commit comment delete [<owner>/<repo>] <comment-id> [flags]`
+Usage: `ag-cli commit comment delete [<owner>/<repo>] <comment-id> [flags]`
 
 Delete a commit comment
 
@@ -919,9 +919,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
 
-## ag commit comment edit
+## ag-cli commit comment edit
 
-Usage: `ag commit comment edit [<owner>/<repo>] <comment-id> (--body <text> | --body-file <path-or->) [flags]`
+Usage: `ag-cli commit comment edit [<owner>/<repo>] <comment-id> (--body <text> | --body-file <path-or->) [flags]`
 
 Edit a commit comment
 
@@ -939,9 +939,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag commit comment list
+## ag-cli commit comment list
 
-Usage: `ag commit comment list [<owner>/<repo>] <ref> [flags]`
+Usage: `ag-cli commit comment list [<owner>/<repo>] <ref> [flags]`
 
 List comments on a commit
 
@@ -959,9 +959,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag commit comment view
+## ag-cli commit comment view
 
-Usage: `ag commit comment view [<owner>/<repo>] <comment-id> [flags]`
+Usage: `ag-cli commit comment view [<owner>/<repo>] <comment-id> [flags]`
 
 View a commit comment
 
@@ -978,9 +978,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag commit compare
+## ag-cli commit compare
 
-Usage: `ag commit compare [<owner>/<repo>] <base>...<head> [flags]`
+Usage: `ag-cli commit compare [<owner>/<repo>] <base>...<head> [flags]`
 
 Compare two commits, branches, or tags
 
@@ -997,9 +997,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag commit diff
+## ag-cli commit diff
 
-Usage: `ag commit diff [<owner>/<repo>] <sha>`
+Usage: `ag-cli commit diff [<owner>/<repo>] <sha>`
 
 Show a commit's diff
 
@@ -1015,9 +1015,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag commit list
+## ag-cli commit list
 
-Usage: `ag commit list [<owner>/<repo>] [flags]`
+Usage: `ag-cli commit list [<owner>/<repo>] [flags]`
 
 List commits
 
@@ -1039,9 +1039,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag commit patch
+## ag-cli commit patch
 
-Usage: `ag commit patch [<owner>/<repo>] <sha>`
+Usage: `ag-cli commit patch [<owner>/<repo>] <sha>`
 
 Show a commit's patch
 
@@ -1057,9 +1057,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag commit view
+## ag-cli commit view
 
-Usage: `ag commit view [<owner>/<repo>] <sha> [flags]`
+Usage: `ag-cli commit view [<owner>/<repo>] <sha> [flags]`
 
 View a commit
 
@@ -1077,9 +1077,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-w, --web` | Open a commit in the browser | `false` | local |
 
 
-## ag discussion
+## ag-cli discussion
 
-Usage: `ag discussion`
+Usage: `ag-cli discussion`
 
 View repository discussions
 
@@ -1095,9 +1095,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag discussion list
+## ag-cli discussion list
 
-Usage: `ag discussion list [<owner>/<repo>] [flags]`
+Usage: `ag-cli discussion list [<owner>/<repo>] [flags]`
 
 List repository discussions
 
@@ -1115,9 +1115,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag discussion view
+## ag-cli discussion view
 
-Usage: `ag discussion view [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli discussion view [<owner>/<repo>] <number> [flags]`
 
 View a repository discussion
 
@@ -1141,15 +1141,15 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag discussion view owner/repo 1
-ag discussion view owner/repo 1 --comments
-ag discussion view owner/repo 1 --comments --json
+ag-cli discussion view owner/repo 1
+ag-cli discussion view owner/repo 1 --comments
+ag-cli discussion view owner/repo 1 --comments --json
 ```
 
 
-## ag doctor
+## ag-cli doctor
 
-Usage: `ag doctor [<owner>/<repo>] [flags]`
+Usage: `ag-cli doctor [<owner>/<repo>] [flags]`
 
 CLI health check: config, auth, and connectivity
 
@@ -1169,15 +1169,15 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag doctor
-ag doctor --live
-ag doctor owner/repo --live --json
+ag-cli doctor
+ag-cli doctor --live
+ag-cli doctor owner/repo --live --json
 ```
 
 
-## ag issue
+## ag-cli issue
 
-Usage: `ag issue`
+Usage: `ag-cli issue`
 
 Manage issues
 
@@ -1193,9 +1193,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag issue activity
+## ag-cli issue activity
 
-Usage: `ag issue activity [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli issue activity [<owner>/<repo>] <number> [flags]`
 
 List operation logs for an issue
 
@@ -1217,14 +1217,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag issue activity owner/repo 42
-ag issue activity 42 --limit 100 --json
+ag-cli issue activity owner/repo 42
+ag-cli issue activity 42 --limit 100 --json
 ```
 
 
-## ag issue branches
+## ag-cli issue branches
 
-Usage: `ag issue branches [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli issue branches [<owner>/<repo>] <number> [flags]`
 
 List or update related branches for an issue
 
@@ -1252,16 +1252,16 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag issue branches owner/repo 42
-ag issue branches owner/repo 42 --json
-ag issue branches owner/repo 42 --add feature/x
-ag issue branches owner/repo 42 --remove main --yes
+ag-cli issue branches owner/repo 42
+ag-cli issue branches owner/repo 42 --json
+ag-cli issue branches owner/repo 42 --add feature/x
+ag-cli issue branches owner/repo 42 --remove main --yes
 ```
 
 
-## ag issue close
+## ag-cli issue close
 
-Usage: `ag issue close [<owner>/<repo>] <number>`
+Usage: `ag-cli issue close [<owner>/<repo>] <number>`
 
 Close an issue
 
@@ -1277,9 +1277,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag issue comment
+## ag-cli issue comment
 
-Usage: `ag issue comment`
+Usage: `ag-cli issue comment`
 
 Manage issue comments
 
@@ -1295,9 +1295,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag issue comment create
+## ag-cli issue comment create
 
-Usage: `ag issue comment create [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli issue comment create [<owner>/<repo>] <number> [flags]`
 
 Create a comment on an issue
 
@@ -1315,9 +1315,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag issue comment delete
+## ag-cli issue comment delete
 
-Usage: `ag issue comment delete [<owner>/<repo>] <number> <comment-id> [flags]`
+Usage: `ag-cli issue comment delete [<owner>/<repo>] <number> <comment-id> [flags]`
 
 Delete a comment on an issue
 
@@ -1334,9 +1334,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
 
-## ag issue comment edit
+## ag-cli issue comment edit
 
-Usage: `ag issue comment edit [<owner>/<repo>] <number> <comment-id> [flags]`
+Usage: `ag-cli issue comment edit [<owner>/<repo>] <number> <comment-id> [flags]`
 
 Edit a comment on an issue
 
@@ -1353,9 +1353,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag issue comment view
+## ag-cli issue comment view
 
-Usage: `ag issue comment view [<owner>/<repo>] <number>`
+Usage: `ag-cli issue comment view [<owner>/<repo>] <number>`
 
 View all comments on an issue
 
@@ -1371,9 +1371,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag issue create
+## ag-cli issue create
 
-Usage: `ag issue create [<owner>/<repo>] [flags]`
+Usage: `ag-cli issue create [<owner>/<repo>] [flags]`
 
 Create an issue
 
@@ -1395,16 +1395,16 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag issue create owner/repo --title "Bug report" --body "Description"
-ag issue create owner/repo --title "Bug report" --assignee alice
-ag issue create owner/repo --title "Bug report" --body-file description.md
-ag issue create owner/repo --title "Bug report" --body-file -
+ag-cli issue create owner/repo --title "Bug report" --body "Description"
+ag-cli issue create owner/repo --title "Bug report" --assignee alice
+ag-cli issue create owner/repo --title "Bug report" --body-file description.md
+ag-cli issue create owner/repo --title "Bug report" --body-file -
 ```
 
 
-## ag issue edit
+## ag-cli issue edit
 
-Usage: `ag issue edit [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli issue edit [<owner>/<repo>] <number> [flags]`
 
 Edit an issue
 
@@ -1428,16 +1428,16 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag issue edit owner/repo 42 --title "new title" --body "new body"
-ag issue edit owner/repo 42 --assignee alice
-ag issue edit owner/repo 42 --remove-assignee --yes
-ag issue edit owner/repo 42 --body-file description.md
+ag-cli issue edit owner/repo 42 --title "new title" --body "new body"
+ag-cli issue edit owner/repo 42 --assignee alice
+ag-cli issue edit owner/repo 42 --remove-assignee --yes
+ag-cli issue edit owner/repo 42 --body-file description.md
 ```
 
 
-## ag issue history
+## ag-cli issue history
 
-Usage: `ag issue history [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli issue history [<owner>/<repo>] <number> [flags]`
 
 List modification history for an issue
 
@@ -1459,14 +1459,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag issue history owner/repo 42
-ag issue history 42 --limit 100 --json
+ag-cli issue history owner/repo 42
+ag-cli issue history 42 --limit 100 --json
 ```
 
 
-## ag issue label
+## ag-cli issue label
 
-Usage: `ag issue label [<owner>/<repo>] <number> [<labels>] [flags]`
+Usage: `ag-cli issue label [<owner>/<repo>] <number> [<labels>] [flags]`
 
 Add or remove labels on an issue
 
@@ -1489,15 +1489,15 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag issue label owner/repo 42 "bug, help wanted"
-ag issue label owner/repo 42 --add "bug, help wanted"
-ag issue label owner/repo 42 --remove "priority/high"
+ag-cli issue label owner/repo 42 "bug, help wanted"
+ag-cli issue label owner/repo 42 --add "bug, help wanted"
+ag-cli issue label owner/repo 42 --remove "priority/high"
 ```
 
 
-## ag issue list
+## ag-cli issue list
 
-Usage: `ag issue list [<owner>/<repo>] [flags]`
+Usage: `ag-cli issue list [<owner>/<repo>] [flags]`
 
 List issues
 
@@ -1519,9 +1519,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-s, --state` | Filter by state: open, closed, all | `open` | local |
 
 
-## ag issue prs
+## ag-cli issue prs
 
-Usage: `ag issue prs [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli issue prs [<owner>/<repo>] <number> [flags]`
 
 List pull requests linked to an issue
 
@@ -1543,14 +1543,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag issue prs owner/repo 42
-ag issue prs owner/repo 42 --json
+ag-cli issue prs owner/repo 42
+ag-cli issue prs owner/repo 42 --json
 ```
 
 
-## ag issue reactions
+## ag-cli issue reactions
 
-Usage: `ag issue reactions [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli issue reactions [<owner>/<repo>] <number> [flags]`
 
 List reactions on an issue
 
@@ -1572,14 +1572,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag issue reactions owner/repo 42
-ag issue reactions 42 --limit 100 --json
+ag-cli issue reactions owner/repo 42
+ag-cli issue reactions 42 --limit 100 --json
 ```
 
 
-## ag issue reopen
+## ag-cli issue reopen
 
-Usage: `ag issue reopen [<owner>/<repo>] <number>`
+Usage: `ag-cli issue reopen [<owner>/<repo>] <number>`
 
 Reopen an issue
 
@@ -1595,9 +1595,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag issue view
+## ag-cli issue view
 
-Usage: `ag issue view [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli issue view [<owner>/<repo>] <number> [flags]`
 
 View an issue
 
@@ -1615,9 +1615,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-w, --web` | Open an issue in the browser | `false` | local |
 
 
-## ag kanban
+## ag-cli kanban
 
-Usage: `ag kanban`
+Usage: `ag-cli kanban`
 
 View organization Kanban boards
 
@@ -1633,15 +1633,15 @@ List and inspect read-only organization Kanban boards and their Issue/Pull Reque
 ### Example
 
 ```bash
-ag kanban list hust-open-atom-club
-ag kanban view hust-open-atom-club 1234567890
-ag kanban items hust-open-atom-club 1234567890 --json
+ag-cli kanban list hust-open-atom-club
+ag-cli kanban view hust-open-atom-club 1234567890
+ag-cli kanban items hust-open-atom-club 1234567890 --json
 ```
 
 
-## ag kanban items
+## ag-cli kanban items
 
-Usage: `ag kanban items <owner> <kanban-id> [flags]`
+Usage: `ag-cli kanban items <owner> <kanban-id> [flags]`
 
 List items on a Kanban board
 
@@ -1657,14 +1657,14 @@ List items on a Kanban board
 ### Example
 
 ```bash
-ag kanban items hust-open-atom-club 1234567890
-ag kanban items hust-open-atom-club 1234567890 --limit 50 --json
+ag-cli kanban items hust-open-atom-club 1234567890
+ag-cli kanban items hust-open-atom-club 1234567890 --limit 50 --json
 ```
 
 
-## ag kanban list
+## ag-cli kanban list
 
-Usage: `ag kanban list <owner> [flags]`
+Usage: `ag-cli kanban list <owner> [flags]`
 
 List organization Kanban boards
 
@@ -1680,14 +1680,14 @@ List organization Kanban boards
 ### Example
 
 ```bash
-ag kanban list hust-open-atom-club
-ag kanban list hust-open-atom-club --limit 50 --json
+ag-cli kanban list hust-open-atom-club
+ag-cli kanban list hust-open-atom-club --limit 50 --json
 ```
 
 
-## ag kanban view
+## ag-cli kanban view
 
-Usage: `ag kanban view <owner> <kanban-id> [flags]`
+Usage: `ag-cli kanban view <owner> <kanban-id> [flags]`
 
 View a Kanban board
 
@@ -1702,13 +1702,13 @@ View a Kanban board
 ### Example
 
 ```bash
-ag kanban view hust-open-atom-club 1234567890 --json
+ag-cli kanban view hust-open-atom-club 1234567890 --json
 ```
 
 
-## ag label
+## ag-cli label
 
-Usage: `ag label`
+Usage: `ag-cli label`
 
 Manage repository labels
 
@@ -1724,9 +1724,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag label create
+## ag-cli label create
 
-Usage: `ag label create [<owner>/<repo>] [flags]`
+Usage: `ag-cli label create [<owner>/<repo>] [flags]`
 
 Create a repository label
 
@@ -1746,13 +1746,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag label create owner/repo --name bug --color "#ff0000"
+ag-cli label create owner/repo --name bug --color "#ff0000"
 ```
 
 
-## ag label delete
+## ag-cli label delete
 
-Usage: `ag label delete [<owner>/<repo>] <name> [flags]`
+Usage: `ag-cli label delete [<owner>/<repo>] <name> [flags]`
 
 Delete a repository label
 
@@ -1774,14 +1774,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag label delete owner/repo obsolete
-ag label delete owner/repo obsolete --yes
+ag-cli label delete owner/repo obsolete
+ag-cli label delete owner/repo obsolete --yes
 ```
 
 
-## ag label edit
+## ag-cli label edit
 
-Usage: `ag label edit [<owner>/<repo>] <name> [flags]`
+Usage: `ag-cli label edit [<owner>/<repo>] <name> [flags]`
 
 Edit a repository label
 
@@ -1801,13 +1801,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag label edit owner/repo bug --name defect --color "#d73a4a"
+ag-cli label edit owner/repo bug --name defect --color "#d73a4a"
 ```
 
 
-## ag label list
+## ag-cli label list
 
-Usage: `ag label list [<owner>/<repo>] [flags]`
+Usage: `ag-cli label list [<owner>/<repo>] [flags]`
 
 List repository labels
 
@@ -1827,13 +1827,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag label list owner/repo --limit 50
+ag-cli label list owner/repo --limit 50
 ```
 
 
-## ag license
+## ag-cli license
 
-Usage: `ag license`
+Usage: `ag-cli license`
 
 License compliance checking
 
@@ -1847,9 +1847,9 @@ Check license compliance using openEuler compliance service.
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag license check
+## ag-cli license check
 
-Usage: `ag license check <license>`
+Usage: `ag-cli license check <license>`
 
 Check license compliance
 
@@ -1863,9 +1863,9 @@ Check if a license is compliant using openEuler compliance service.
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag milestone
+## ag-cli milestone
 
-Usage: `ag milestone`
+Usage: `ag-cli milestone`
 
 Manage repository milestones
 
@@ -1884,9 +1884,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag milestone close
+## ag-cli milestone close
 
-Usage: `ag milestone close [<owner>/<repo>] <number>`
+Usage: `ag-cli milestone close [<owner>/<repo>] <number>`
 
 Close a repository milestone
 
@@ -1902,9 +1902,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag milestone create
+## ag-cli milestone create
 
-Usage: `ag milestone create [<owner>/<repo>] [flags]`
+Usage: `ag-cli milestone create [<owner>/<repo>] [flags]`
 
 Create a repository milestone
 
@@ -1923,9 +1923,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-t, --title` | Milestone title | `` | local |
 
 
-## ag milestone delete
+## ag-cli milestone delete
 
-Usage: `ag milestone delete [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli milestone delete [<owner>/<repo>] <number> [flags]`
 
 Delete a repository milestone
 
@@ -1942,9 +1942,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
 
-## ag milestone edit
+## ag-cli milestone edit
 
-Usage: `ag milestone edit [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli milestone edit [<owner>/<repo>] <number> [flags]`
 
 Edit a repository milestone
 
@@ -1963,9 +1963,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-t, --title` | New milestone title | `` | local |
 
 
-## ag milestone list
+## ag-cli milestone list
 
-Usage: `ag milestone list [<owner>/<repo>] [flags]`
+Usage: `ag-cli milestone list [<owner>/<repo>] [flags]`
 
 List repository milestones
 
@@ -1988,13 +1988,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag milestone list owner/repo --state all --limit 50
+ag-cli milestone list owner/repo --state all --limit 50
 ```
 
 
-## ag milestone reopen
+## ag-cli milestone reopen
 
-Usage: `ag milestone reopen [<owner>/<repo>] <number>`
+Usage: `ag-cli milestone reopen [<owner>/<repo>] <number>`
 
 Reopen a repository milestone
 
@@ -2010,9 +2010,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag milestone view
+## ag-cli milestone view
 
-Usage: `ag milestone view [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli milestone view [<owner>/<repo>] <number> [flags]`
 
 View a repository milestone
 
@@ -2029,9 +2029,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag notification
+## ag-cli notification
 
-Usage: `ag notification`
+Usage: `ag-cli notification`
 
 Manage repository notifications
 
@@ -2047,9 +2047,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag notification list
+## ag-cli notification list
 
-Usage: `ag notification list [<owner>/<repo>] [flags]`
+Usage: `ag-cli notification list [<owner>/<repo>] [flags]`
 
 List repository notifications
 
@@ -2078,21 +2078,21 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag notification list owner/repo --limit 20
-ag notification list --unread --json
-ag notification list owner/repo --type issue_open --since 2026-08-01T00:00:00Z
+ag-cli notification list owner/repo --limit 20
+ag-cli notification list --unread --json
+ag-cli notification list owner/repo --type issue_open --since 2026-08-01T00:00:00Z
 ```
 
 
-## ag notification mark-read
+## ag-cli notification mark-read
 
-Usage: `ag notification mark-read [<owner>/<repo>] [<notification-id>...] [flags]`
+Usage: `ag-cli notification mark-read [<owner>/<repo>] [<notification-id>...] [flags]`
 
 Mark repository notifications as read
 
 Mark notifications for a repository as read.
 
-Pass one or more notification IDs (as shown by "ag notification list") to
+Pass one or more notification IDs (as shown by "ag-cli notification list") to
 mark exactly those notifications, or pass --all to mark every unread
 notification in the repository. --all asks for confirmation unless --yes is
 supplied.
@@ -2111,14 +2111,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag notification mark-read owner/repo 292ecbec857e4f27b426d66f2157938c
-ag notification mark-read --all --yes
+ag-cli notification mark-read owner/repo 292ecbec857e4f27b426d66f2157938c
+ag-cli notification mark-read --all --yes
 ```
 
 
-## ag org
+## ag-cli org
 
-Usage: `ag org`
+Usage: `ag-cli org`
 
 Manage organizations
 
@@ -2132,9 +2132,9 @@ List organizations associated with your AtomGit account and inspect organization
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag org list
+## ag-cli org list
 
-Usage: `ag org list [flags]`
+Usage: `ag-cli org list [flags]`
 
 List organizations for the authenticated user
 
@@ -2150,15 +2150,15 @@ List organizations for the authenticated user
 ### Example
 
 ```bash
-ag org list
-ag org list --limit 100
-ag org list --json
+ag-cli org list
+ag-cli org list --limit 100
+ag-cli org list --json
 ```
 
 
-## ag org members
+## ag-cli org members
 
-Usage: `ag org members <org> [flags]`
+Usage: `ag-cli org members <org> [flags]`
 
 List organization members
 
@@ -2174,15 +2174,15 @@ List organization members
 ### Example
 
 ```bash
-ag org members my-organization
-ag org members my-organization --limit 100
-ag org members my-organization --json
+ag-cli org members my-organization
+ag-cli org members my-organization --limit 100
+ag-cli org members my-organization --json
 ```
 
 
-## ag org repos
+## ag-cli org repos
 
-Usage: `ag org repos <org> [flags]`
+Usage: `ag-cli org repos <org> [flags]`
 
 List organization repositories
 
@@ -2198,15 +2198,15 @@ List organization repositories
 ### Example
 
 ```bash
-ag org repos my-organization
-ag org repos my-organization --limit 100
-ag org repos my-organization --json
+ag-cli org repos my-organization
+ag-cli org repos my-organization --limit 100
+ag-cli org repos my-organization --json
 ```
 
 
-## ag org runner-group
+## ag-cli org runner-group
 
-Usage: `ag org runner-group`
+Usage: `ag-cli org runner-group`
 
 Inspect organization Actions runner groups
 
@@ -2222,15 +2222,15 @@ Inspect organization-level AtomGit Actions runner groups and their read-only ass
 ### Example
 
 ```bash
-ag org runner-group list my-organization
-ag org runner-group view my-organization group-id
-ag org runner-group runners my-organization group-id --json
+ag-cli org runner-group list my-organization
+ag-cli org runner-group view my-organization group-id
+ag-cli org runner-group runners my-organization group-id --json
 ```
 
 
-## ag org runner-group list
+## ag-cli org runner-group list
 
-Usage: `ag org runner-group list <org> [flags]`
+Usage: `ag-cli org runner-group list <org> [flags]`
 
 List organization runner groups
 
@@ -2246,15 +2246,15 @@ List organization runner groups
 ### Example
 
 ```bash
-ag org runner-group list my-organization
-ag org runner-group list my-organization --limit 100
-ag org runner-group list my-organization --json
+ag-cli org runner-group list my-organization
+ag-cli org runner-group list my-organization --limit 100
+ag-cli org runner-group list my-organization --json
 ```
 
 
-## ag org runner-group namespaces
+## ag-cli org runner-group namespaces
 
-Usage: `ag org runner-group namespaces <org> <group-id> [flags]`
+Usage: `ag-cli org runner-group namespaces <org> <group-id> [flags]`
 
 List repositories that can use an organization runner group
 
@@ -2268,9 +2268,9 @@ List repositories that can use an organization runner group
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag org runner-group runner-sets
+## ag-cli org runner-group runner-sets
 
-Usage: `ag org runner-group runner-sets <org> <group-id> [flags]`
+Usage: `ag-cli org runner-group runner-sets <org> <group-id> [flags]`
 
 List Kubernetes runner sets in an organization runner group
 
@@ -2284,9 +2284,9 @@ List Kubernetes runner sets in an organization runner group
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag org runner-group runners
+## ag-cli org runner-group runners
 
-Usage: `ag org runner-group runners <org> <group-id> [flags]`
+Usage: `ag-cli org runner-group runners <org> <group-id> [flags]`
 
 List host runners in an organization runner group
 
@@ -2300,9 +2300,9 @@ List host runners in an organization runner group
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag org runner-group view
+## ag-cli org runner-group view
 
-Usage: `ag org runner-group view <org> <group-id> [flags]`
+Usage: `ag-cli org runner-group view <org> <group-id> [flags]`
 
 View an organization runner group
 
@@ -2317,14 +2317,14 @@ View an organization runner group
 ### Example
 
 ```bash
-ag org runner-group view my-organization group-id
-ag org runner-group view my-organization group-id --json
+ag-cli org runner-group view my-organization group-id
+ag-cli org runner-group view my-organization group-id --json
 ```
 
 
-## ag org view
+## ag-cli org view
 
-Usage: `ag org view <org> [flags]`
+Usage: `ag-cli org view <org> [flags]`
 
 View an organization
 
@@ -2339,14 +2339,14 @@ View an organization
 ### Example
 
 ```bash
-ag org view my-organization
-ag org view my-organization --json
+ag-cli org view my-organization
+ag-cli org view my-organization --json
 ```
 
 
-## ag pr
+## ag-cli pr
 
-Usage: `ag pr`
+Usage: `ag-cli pr`
 
 Manage pull requests
 
@@ -2362,9 +2362,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag pr activity
+## ag-cli pr activity
 
-Usage: `ag pr activity [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli pr activity [<owner>/<repo>] <number> [flags]`
 
 List the operation log of a pull request
 
@@ -2387,14 +2387,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag pr activity owner/repo 42
-ag pr activity owner/repo 42 --limit 50 --json
+ag-cli pr activity owner/repo 42
+ag-cli pr activity owner/repo 42 --limit 50 --json
 ```
 
 
-## ag pr checkout
+## ag-cli pr checkout
 
-Usage: `ag pr checkout [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli pr checkout [<owner>/<repo>] <number> [flags]`
 
 Check out a pull request locally
 
@@ -2426,25 +2426,25 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 # Check out PR #42, inferring the repository from git remote
-ag pr checkout 42
+ag-cli pr checkout 42
 
 # Check out PR #42 from a specific repository
-ag pr checkout owner/repo 42
+ag-cli pr checkout owner/repo 42
 
 # Check out to a custom branch name
-ag pr checkout 42 --branch review-fix
+ag-cli pr checkout 42 --branch review-fix
 
 # Force checkout, discarding safety checks
-ag pr checkout 42 --force
+ag-cli pr checkout 42 --force
 
 # Check out in detached HEAD mode and update submodules
-ag pr checkout 42 --detach --recurse-submodules
+ag-cli pr checkout 42 --detach --recurse-submodules
 ```
 
 
-## ag pr checks
+## ag-cli pr checks
 
-Usage: `ag pr checks [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli pr checks [<owner>/<repo>] <number> [flags]`
 
 Show CI checks for a pull request's current head commit
 
@@ -2464,15 +2464,15 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag pr checks owner/repo 42
-ag pr checks 42 --watch
-ag pr checks owner/repo 42 --watch --interval 5s
+ag-cli pr checks owner/repo 42
+ag-cli pr checks 42 --watch
+ag-cli pr checks owner/repo 42 --watch --interval 5s
 ```
 
 
-## ag pr close
+## ag-cli pr close
 
-Usage: `ag pr close [<owner>/<repo>] <number>`
+Usage: `ag-cli pr close [<owner>/<repo>] <number>`
 
 Close a pull request
 
@@ -2488,9 +2488,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag pr comment
+## ag-cli pr comment
 
-Usage: `ag pr comment`
+Usage: `ag-cli pr comment`
 
 Manage pull request comments
 
@@ -2506,9 +2506,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag pr comment create
+## ag-cli pr comment create
 
-Usage: `ag pr comment create [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli pr comment create [<owner>/<repo>] <number> [flags]`
 
 Create a comment on a pull request
 
@@ -2526,9 +2526,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag pr comment delete
+## ag-cli pr comment delete
 
-Usage: `ag pr comment delete [<owner>/<repo>] <number> <comment-id> [flags]`
+Usage: `ag-cli pr comment delete [<owner>/<repo>] <number> <comment-id> [flags]`
 
 Delete a comment on a pull request
 
@@ -2545,9 +2545,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
 
-## ag pr comment edit
+## ag-cli pr comment edit
 
-Usage: `ag pr comment edit [<owner>/<repo>] <number> <comment-id> [flags]`
+Usage: `ag-cli pr comment edit [<owner>/<repo>] <number> <comment-id> [flags]`
 
 Edit a comment on a pull request
 
@@ -2564,9 +2564,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag pr comment reply
+## ag-cli pr comment reply
 
-Usage: `ag pr comment reply [<owner>/<repo>] <number> <discussion-id> [flags]`
+Usage: `ag-cli pr comment reply [<owner>/<repo>] <number> <discussion-id> [flags]`
 
 Reply to a comment thread on a pull request
 
@@ -2583,9 +2583,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag pr comment view
+## ag-cli pr comment view
 
-Usage: `ag pr comment view [<owner>/<repo>] <number>`
+Usage: `ag-cli pr comment view [<owner>/<repo>] <number>`
 
 View all comments on a pull request
 
@@ -2601,9 +2601,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag pr commits
+## ag-cli pr commits
 
-Usage: `ag pr commits [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli pr commits [<owner>/<repo>] <number> [flags]`
 
 List commits in a pull request
 
@@ -2621,9 +2621,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag pr create
+## ag-cli pr create
 
-Usage: `ag pr create [<owner>/<repo>] [flags]`
+Usage: `ag-cli pr create [<owner>/<repo>] [flags]`
 
 Create a pull request
 
@@ -2657,17 +2657,17 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature
-ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature --draft
-ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature
-ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature
-ag pr create owner/repo --title "Fix bug" --head feature --prune-branch
+ag-cli pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature
+ag-cli pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature --draft
+ag-cli pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature
+ag-cli pr create owner/repo --title "Fix bug" --body-file - --base main --head feature
+ag-cli pr create owner/repo --title "Fix bug" --head feature --prune-branch
 ```
 
 
-## ag pr diff
+## ag-cli pr diff
 
-Usage: `ag pr diff [<owner>/<repo>] <number>`
+Usage: `ag-cli pr diff [<owner>/<repo>] <number>`
 
 Show diff of a pull request
 
@@ -2683,9 +2683,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag pr edit
+## ag-cli pr edit
 
-Usage: `ag pr edit [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli pr edit [<owner>/<repo>] <number> [flags]`
 
 Edit a pull request
 
@@ -2719,16 +2719,16 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag pr edit owner/repo 123 --title "Updated title"
-ag pr edit owner/repo 123 --body "Updated description"
-ag pr edit owner/repo 123 --body-file description.md
-ag pr edit owner/repo 123 --body-file -
+ag-cli pr edit owner/repo 123 --title "Updated title"
+ag-cli pr edit owner/repo 123 --body "Updated description"
+ag-cli pr edit owner/repo 123 --body-file description.md
+ag-cli pr edit owner/repo 123 --body-file -
 ```
 
 
-## ag pr files
+## ag-cli pr files
 
-Usage: `ag pr files [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli pr files [<owner>/<repo>] <number> [flags]`
 
 List files changed in a pull request
 
@@ -2745,9 +2745,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag pr history
+## ag-cli pr history
 
-Usage: `ag pr history [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli pr history [<owner>/<repo>] <number> [flags]`
 
 List the modification history of a pull request
 
@@ -2770,14 +2770,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag pr history owner/repo 42
-ag pr history owner/repo 42 --limit 50 --json
+ag-cli pr history owner/repo 42
+ag-cli pr history owner/repo 42 --limit 50 --json
 ```
 
 
-## ag pr issues
+## ag-cli pr issues
 
-Usage: `ag pr issues [<owner>/<repo>] <pr_number>`
+Usage: `ag-cli pr issues [<owner>/<repo>] <pr_number>`
 
 View linked issues of a pull request
 
@@ -2793,9 +2793,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag pr link-issues
+## ag-cli pr link-issues
 
-Usage: `ag pr link-issues [<owner>/<repo>] <pr_number> [flags]`
+Usage: `ag-cli pr link-issues [<owner>/<repo>] <pr_number> [flags]`
 
 Link issues to a pull request
 
@@ -2812,9 +2812,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-i, --issue` | Issue number to link (can be specified multiple times) | `[]` | local |
 
 
-## ag pr list
+## ag-cli pr list
 
-Usage: `ag pr list [<owner>/<repo>] [flags]`
+Usage: `ag-cli pr list [<owner>/<repo>] [flags]`
 
 List pull requests
 
@@ -2837,15 +2837,15 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-s, --state` | Filter by state: open, closed, locked, merged, all | `open` | local |
 
 
-## ag pr merge
+## ag-cli pr merge
 
-Usage: `ag pr merge [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli pr merge [<owner>/<repo>] <number> [flags]`
 
 Merge a pull request
 
 Merge a pull request.
 
-By default, ag creates a merge commit. Use --rebase to rebase the commits onto the base branch.
+By default, ag-cli creates a merge commit. Use --rebase to rebase the commits onto the base branch.
 
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
@@ -2864,9 +2864,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-t, --subject` | Subject text for the merge commit | `` | local |
 
 
-## ag pr reactions
+## ag-cli pr reactions
 
-Usage: `ag pr reactions [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli pr reactions [<owner>/<repo>] <number> [flags]`
 
 List reactions on a pull request
 
@@ -2886,14 +2886,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag pr reactions owner/repo 42
-ag pr reactions owner/repo 42 --limit 50 --json
+ag-cli pr reactions owner/repo 42
+ag-cli pr reactions owner/repo 42 --limit 50 --json
 ```
 
 
-## ag pr reopen
+## ag-cli pr reopen
 
-Usage: `ag pr reopen [<owner>/<repo>] <number>`
+Usage: `ag-cli pr reopen [<owner>/<repo>] <number>`
 
 Reopen a pull request
 
@@ -2909,15 +2909,15 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag pr review
+## ag-cli pr review
 
-Usage: `ag pr review <owner>/<repo> <number> [flags]`
+Usage: `ag-cli pr review <owner>/<repo> <number> [flags]`
 
 Approve a pull request review
 
 Approve a pull request using AtomGit's formal review API.
 
-AtomGit currently exposes approval as the only review action. Use ag pr comment
+AtomGit currently exposes approval as the only review action. Use ag-cli pr comment
 create to leave an ordinary comment; request-changes reviews are not supported
 by the public API.
 
@@ -2935,14 +2935,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag pr review owner/repo 42 --approve
-ag pr review owner/repo 42 --approve --force
+ag-cli pr review owner/repo 42 --approve
+ag-cli pr review owner/repo 42 --approve --force
 ```
 
 
-## ag pr unlink-issues
+## ag-cli pr unlink-issues
 
-Usage: `ag pr unlink-issues [<owner>/<repo>] <pr_number> [flags]`
+Usage: `ag-cli pr unlink-issues [<owner>/<repo>] <pr_number> [flags]`
 
 Unlink issues from a pull request
 
@@ -2959,9 +2959,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-i, --issue` | Issue number to unlink (can be specified multiple times) | `[]` | local |
 
 
-## ag pr view
+## ag-cli pr view
 
-Usage: `ag pr view [<owner>/<repo>] <number> [flags]`
+Usage: `ag-cli pr view [<owner>/<repo>] <number> [flags]`
 
 View a pull request
 
@@ -2979,9 +2979,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-w, --web` | Open a pull request in the browser | `false` | local |
 
 
-## ag release
+## ag-cli release
 
-Usage: `ag release`
+Usage: `ag-cli release`
 
 Manage repository releases
 
@@ -3002,16 +3002,16 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag release list owner/repo
-ag release view owner/repo v1.0.0
-ag release create owner/repo v1.0.0 --name "Version 1.0.0" --body "Release notes"
-ag release upload owner/repo v1.0.0 ./dist/app.tar.gz
+ag-cli release list owner/repo
+ag-cli release view owner/repo v1.0.0
+ag-cli release create owner/repo v1.0.0 --name "Version 1.0.0" --body "Release notes"
+ag-cli release upload owner/repo v1.0.0 ./dist/app.tar.gz
 ```
 
 
-## ag release create
+## ag-cli release create
 
-Usage: `ag release create [<owner>/<repo>] <tag> [flags]`
+Usage: `ag-cli release create [<owner>/<repo>] <tag> [flags]`
 
 Create a release
 
@@ -3034,14 +3034,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag release create owner/repo v1.0.0 --name "First" --body "Initial release"
-ag release create owner/repo v1.0.0-rc --prerelease --body-file notes.md
+ag-cli release create owner/repo v1.0.0 --name "First" --body "Initial release"
+ag-cli release create owner/repo v1.0.0-rc --prerelease --body-file notes.md
 ```
 
 
-## ag release download
+## ag-cli release download
 
-Usage: `ag release download [<owner>/<repo>] <tag> <asset> [flags]`
+Usage: `ag-cli release download [<owner>/<repo>] <tag> <asset> [flags]`
 
 Download an attachment from a release
 
@@ -3069,14 +3069,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag release download owner/repo v1.0.0 app.tar.gz -o ./dist/app.tar.gz
-ag release download owner/repo v1.0.0 app.tar.gz --output ./existing.tar.gz --overwrite
+ag-cli release download owner/repo v1.0.0 app.tar.gz -o ./dist/app.tar.gz
+ag-cli release download owner/repo v1.0.0 app.tar.gz --output ./existing.tar.gz --overwrite
 ```
 
 
-## ag release edit
+## ag-cli release edit
 
-Usage: `ag release edit [<owner>/<repo>] <tag> [flags]`
+Usage: `ag-cli release edit [<owner>/<repo>] <tag> [flags]`
 
 Edit a release
 
@@ -3099,15 +3099,15 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag release edit owner/repo v1.0.0 --name "First Release"
-ag release edit owner/repo v1.0.0 --latest --body-file notes.md
-ag release edit owner/repo v1.0.0-rc --prerelease
+ag-cli release edit owner/repo v1.0.0 --name "First Release"
+ag-cli release edit owner/repo v1.0.0 --latest --body-file notes.md
+ag-cli release edit owner/repo v1.0.0-rc --prerelease
 ```
 
 
-## ag release list
+## ag-cli release list
 
-Usage: `ag release list [<owner>/<repo>] [flags]`
+Usage: `ag-cli release list [<owner>/<repo>] [flags]`
 
 List repository releases
 
@@ -3127,13 +3127,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag release list owner/repo --limit 50
+ag-cli release list owner/repo --limit 50
 ```
 
 
-## ag release upload
+## ag-cli release upload
 
-Usage: `ag release upload [<owner>/<repo>] <tag> <file> [flags]`
+Usage: `ag-cli release upload [<owner>/<repo>] <tag> <file> [flags]`
 
 Upload an attachment to a release
 
@@ -3155,16 +3155,16 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag release upload owner/repo v1.0.0 ./dist/app.tar.gz
-ag release upload owner/repo v1.0.0 ./build/app.zip --name app-v1.zip
-ag release upload owner/repo v1.0.0 ./new.tar.gz --overwrite
-ag release upload owner/repo v1.0.0 ./existing.tar.gz --skip-existing
+ag-cli release upload owner/repo v1.0.0 ./dist/app.tar.gz
+ag-cli release upload owner/repo v1.0.0 ./build/app.zip --name app-v1.zip
+ag-cli release upload owner/repo v1.0.0 ./new.tar.gz --overwrite
+ag-cli release upload owner/repo v1.0.0 ./existing.tar.gz --skip-existing
 ```
 
 
-## ag release view
+## ag-cli release view
 
-Usage: `ag release view [<owner>/<repo>] <tag> [flags]`
+Usage: `ag-cli release view [<owner>/<repo>] <tag> [flags]`
 
 View a release by tag
 
@@ -3184,18 +3184,18 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag release view owner/repo v1.0.0
-ag release view owner/repo v1.0.0 --json
+ag-cli release view owner/repo v1.0.0
+ag-cli release view owner/repo v1.0.0 --json
 ```
 
 
-## ag repo
+## ag-cli repo
 
-Usage: `ag repo`
+Usage: `ag-cli repo`
 
 Manage repositories
 
-Create, clone, edit, fork, sync, transfer, view, browse contents, and manage repository collaborators and webhooks. Use `ag repo fork list` to inspect existing forks; `ag repo fork` creates a fork.
+Create, clone, edit, fork, sync, transfer, view, browse contents, and manage repository collaborators and webhooks. Use `ag-cli repo fork list` to inspect existing forks; `ag-cli repo fork` creates a fork.
 
 For repository-scoped commands, OWNER/REPO may be omitted and inferred from the current Git repository.
 
@@ -3207,9 +3207,9 @@ For repository-scoped commands, OWNER/REPO may be omitted and inferred from the 
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo clone
+## ag-cli repo clone
 
-Usage: `ag repo clone <repository> [<directory>] [flags]`
+Usage: `ag-cli repo clone <repository> [<directory>] [flags]`
 
 Clone a repository
 
@@ -3232,22 +3232,22 @@ The repository argument can be:
 
 ```bash
 # Clone using full URL
-ag repo clone https://atomgit.com/shinwell_hu/my-project
+ag-cli repo clone https://atomgit.com/shinwell_hu/my-project
 
 # Clone using owner/repo format
-ag repo clone shinwell_hu/my-project
+ag-cli repo clone shinwell_hu/my-project
 
 # Clone to specific directory
-ag repo clone shinwell_hu/my-project my-project-local
+ag-cli repo clone shinwell_hu/my-project my-project-local
 
 # Clone specific branch
-ag repo clone shinwell_hu/my-project --branch develop
+ag-cli repo clone shinwell_hu/my-project --branch develop
 ```
 
 
-## ag repo collaborator
+## ag-cli repo collaborator
 
-Usage: `ag repo collaborator`
+Usage: `ag-cli repo collaborator`
 
 Manage repository collaborators
 
@@ -3272,9 +3272,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo collaborator add
+## ag-cli repo collaborator add
 
-Usage: `ag repo collaborator add [<owner>/<repo>] <username> [flags]`
+Usage: `ag-cli repo collaborator add [<owner>/<repo>] <username> [flags]`
 
 Add a direct repository collaborator
 
@@ -3293,13 +3293,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo collaborator add owner/repo octocat --permission push
+ag-cli repo collaborator add owner/repo octocat --permission push
 ```
 
 
-## ag repo collaborator edit
+## ag-cli repo collaborator edit
 
-Usage: `ag repo collaborator edit [<owner>/<repo>] <username> [flags]`
+Usage: `ag-cli repo collaborator edit [<owner>/<repo>] <username> [flags]`
 
 Update a direct repository collaborator's permission
 
@@ -3319,13 +3319,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo collaborator edit owner/repo octocat --permission pull
+ag-cli repo collaborator edit owner/repo octocat --permission pull
 ```
 
 
-## ag repo collaborator list
+## ag-cli repo collaborator list
 
-Usage: `ag repo collaborator list [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo collaborator list [<owner>/<repo>] [flags]`
 
 List repository collaborators
 
@@ -3345,13 +3345,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo collaborator list owner/repo --limit 50
+ag-cli repo collaborator list owner/repo --limit 50
 ```
 
 
-## ag repo collaborator remove
+## ag-cli repo collaborator remove
 
-Usage: `ag repo collaborator remove [<owner>/<repo>] <username> [flags]`
+Usage: `ag-cli repo collaborator remove [<owner>/<repo>] <username> [flags]`
 
 Remove a direct repository collaborator
 
@@ -3375,13 +3375,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo collaborator remove owner/repo octocat --yes
+ag-cli repo collaborator remove owner/repo octocat --yes
 ```
 
 
-## ag repo collaborator view
+## ag-cli repo collaborator view
 
-Usage: `ag repo collaborator view [<owner>/<repo>] <username> [flags]`
+Usage: `ag-cli repo collaborator view [<owner>/<repo>] <username> [flags]`
 
 View a repository collaborator's effective permission
 
@@ -3400,13 +3400,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo collaborator view owner/repo octocat
+ag-cli repo collaborator view owner/repo octocat
 ```
 
 
-## ag repo content
+## ag-cli repo content
 
-Usage: `ag repo content`
+Usage: `ag-cli repo content`
 
 Browse repository contents
 
@@ -3422,9 +3422,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo content list
+## ag-cli repo content list
 
-Usage: `ag repo content list [<owner>/<repo>] [<path>] [flags]`
+Usage: `ag-cli repo content list [<owner>/<repo>] [<path>] [flags]`
 
 List a repository directory
 
@@ -3444,16 +3444,16 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo content list
-ag repo content list docs
-ag repo content list owner/repo .
-ag repo content list owner/repo docs/guides --ref v1.0.0 --json
+ag-cli repo content list
+ag-cli repo content list docs
+ag-cli repo content list owner/repo .
+ag-cli repo content list owner/repo docs/guides --ref v1.0.0 --json
 ```
 
 
-## ag repo content view
+## ag-cli repo content view
 
-Usage: `ag repo content view [<owner>/<repo>] <path> [flags]`
+Usage: `ag-cli repo content view [<owner>/<repo>] <path> [flags]`
 
 View a repository file
 
@@ -3473,15 +3473,15 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo content view README.md
-ag repo content view owner/repo src/main.go --ref dev
-ag repo content view owner/repo README.md --json
+ag-cli repo content view README.md
+ag-cli repo content view owner/repo src/main.go --ref dev
+ag-cli repo content view owner/repo README.md --json
 ```
 
 
-## ag repo create
+## ag-cli repo create
 
-Usage: `ag repo create <repo> | <owner>/<repo> [flags]`
+Usage: `ag-cli repo create <repo> | <owner>/<repo> [flags]`
 
 Create a new repository
 
@@ -3509,19 +3509,19 @@ Pass --clone to clone the repository locally after creation.
 
 ```bash
 # Create a new private repository under your account
-ag repo create my-project
+ag-cli repo create my-project
 
 # Create a public repository and clone it
-ag repo create my-project --public --clone
+ag-cli repo create my-project --public --clone
 
 # Create a repository in an organization
-ag repo create my-org/my-project --public
+ag-cli repo create my-org/my-project --public
 ```
 
 
-## ag repo delete
+## ag-cli repo delete
 
-Usage: `ag repo delete [<repository>] [flags]`
+Usage: `ag-cli repo delete [<repository>] [flags]`
 
 Delete a repository
 
@@ -3546,19 +3546,19 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 # Delete a repository (with confirmation)
-ag repo delete my-project
+ag-cli repo delete my-project
 
 # Delete a repository without confirmation
-ag repo delete my-project --yes
+ag-cli repo delete my-project --yes
 
 # Delete a repository in an organization
-ag repo delete my-org/my-project --yes
+ag-cli repo delete my-org/my-project --yes
 ```
 
 
-## ag repo edit
+## ag-cli repo edit
 
-Usage: `ag repo edit [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo edit [<owner>/<repo>] [flags]`
 
 Edit repository settings
 
@@ -3591,25 +3591,25 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 # Update the current Git repository
-ag repo edit --description "New description"
+ag-cli repo edit --description "New description"
 
 # Update an explicitly selected repository
-ag repo edit owner/repo --description "New description"
+ag-cli repo edit owner/repo --description "New description"
 
 # Clear a description without changing other settings
-ag repo edit owner/repo --description ""
+ag-cli repo edit owner/repo --description ""
 
 # Update several settings
-ag repo edit owner/repo --name "New name" --default-branch main --visibility private
+ag-cli repo edit owner/repo --name "New name" --default-branch main --visibility private
 
 # Skip confirmation for a visibility update
-ag repo edit owner/repo --public --yes
+ag-cli repo edit owner/repo --public --yes
 ```
 
 
-## ag repo fork
+## ag-cli repo fork
 
-Usage: `ag repo fork [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo fork [<owner>/<repo>] [flags]`
 
 Fork a repository
 
@@ -3635,15 +3635,15 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-n, --name` | Name for the forked repository | `` | local |
 
 
-## ag repo fork list
+## ag-cli repo fork list
 
-Usage: `ag repo fork list [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo fork list [<owner>/<repo>] [flags]`
 
 List forks of a repository
 
 List existing forks of a repository.
 
-This is read-only and is separate from `ag repo fork`, which creates a new fork.
+This is read-only and is separate from `ag-cli repo fork`, which creates a new fork.
 The repository can be supplied explicitly or inferred from the current Git repository.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
@@ -3660,15 +3660,15 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo fork list owner/repo
-ag repo fork list owner/repo --limit 100 --json
-ag repo fork list
+ag-cli repo fork list owner/repo
+ag-cli repo fork list owner/repo --limit 100 --json
+ag-cli repo fork list
 ```
 
 
-## ag repo insights
+## ag-cli repo insights
 
-Usage: `ag repo insights`
+Usage: `ag-cli repo insights`
 
 Inspect repository activity and statistics
 
@@ -3684,9 +3684,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo insights contributors
+## ag-cli repo insights contributors
 
-Usage: `ag repo insights contributors [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo insights contributors [<owner>/<repo>] [flags]`
 
 List repository contributor statistics
 
@@ -3704,9 +3704,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo insights downloads
+## ag-cli repo insights downloads
 
-Usage: `ag repo insights downloads [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo insights downloads [<owner>/<repo>] [flags]`
 
 Show repository download statistics
 
@@ -3723,9 +3723,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo insights events
+## ag-cli repo insights events
 
-Usage: `ag repo insights events [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo insights events [<owner>/<repo>] [flags]`
 
 List repository activity events
 
@@ -3743,9 +3743,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo insights languages
+## ag-cli repo insights languages
 
-Usage: `ag repo insights languages [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo insights languages [<owner>/<repo>] [flags]`
 
 Show repository language percentages
 
@@ -3762,9 +3762,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo insights stargazers
+## ag-cli repo insights stargazers
 
-Usage: `ag repo insights stargazers [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo insights stargazers [<owner>/<repo>] [flags]`
 
 List repository stargazers
 
@@ -3782,9 +3782,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo insights watchers
+## ag-cli repo insights watchers
 
-Usage: `ag repo insights watchers [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo insights watchers [<owner>/<repo>] [flags]`
 
 List repository watchers
 
@@ -3802,9 +3802,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo list
+## ag-cli repo list
 
-Usage: `ag repo list [<owner>] [flags]`
+Usage: `ag-cli repo list [<owner>] [flags]`
 
 List repositories
 
@@ -3822,16 +3822,16 @@ List repositories for the authenticated user, a specified user, or an organizati
 ### Example
 
 ```bash
-ag repo list
-ag repo list alice
-ag repo list my-organization --limit 100
-ag repo list alice --json
+ag-cli repo list
+ag-cli repo list alice
+ag-cli repo list my-organization --limit 100
+ag-cli repo list alice --json
 ```
 
 
-## ag repo mirror
+## ag-cli repo mirror
 
-Usage: `ag repo mirror`
+Usage: `ag-cli repo mirror`
 
 Inspect repository remote mirrors
 
@@ -3847,9 +3847,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo mirror list
+## ag-cli repo mirror list
 
-Usage: `ag repo mirror list [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo mirror list [<owner>/<repo>] [flags]`
 
 List configured push remote mirrors
 
@@ -3869,15 +3869,15 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo mirror list owner/repo
-ag repo mirror list owner/repo --limit 100 --json
-ag repo mirror list
+ag-cli repo mirror list owner/repo
+ag-cli repo mirror list owner/repo --limit 100 --json
+ag-cli repo mirror list
 ```
 
 
-## ag repo mirror view
+## ag-cli repo mirror view
 
-Usage: `ag repo mirror view [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo mirror view [<owner>/<repo>] [flags]`
 
 View repository remote mirror state
 
@@ -3896,14 +3896,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo mirror view owner/repo
-ag repo mirror view --json
+ag-cli repo mirror view owner/repo
+ag-cli repo mirror view --json
 ```
 
 
-## ag repo policy
+## ag-cli repo policy
 
-Usage: `ag repo policy`
+Usage: `ag-cli repo policy`
 
 View and edit repository policy settings
 
@@ -3920,9 +3920,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo policy edit
+## ag-cli repo policy edit
 
-Usage: `ag repo policy edit [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo policy edit [<owner>/<repo>] [flags]`
 
 Edit one repository policy section
 
@@ -3977,15 +3977,15 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo policy edit owner/repo --section permission --mode 2 --yes
-ag repo policy edit --section code-review --assignees alice,bob --testers-number 0
-ag repo policy edit owner/repo --section pull-request --can-force-merge=false --yes
+ag-cli repo policy edit owner/repo --section permission --mode 2 --yes
+ag-cli repo policy edit --section code-review --assignees alice,bob --testers-number 0
+ag-cli repo policy edit owner/repo --section pull-request --can-force-merge=false --yes
 ```
 
 
-## ag repo policy view
+## ag-cli repo policy view
 
-Usage: `ag repo policy view [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo policy view [<owner>/<repo>] [flags]`
 
 View repository policy settings
 
@@ -4007,14 +4007,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo policy view owner/repo
-ag repo policy view --section permission --json
+ag-cli repo policy view owner/repo
+ag-cli repo policy view --section permission --json
 ```
 
 
-## ag repo push-rule
+## ag-cli repo push-rule
 
-Usage: `ag repo push-rule`
+Usage: `ag-cli repo push-rule`
 
 Manage repository push rules
 
@@ -4034,9 +4034,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo push-rule edit
+## ag-cli repo push-rule edit
 
-Usage: `ag repo push-rule edit [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo push-rule edit [<owner>/<repo>] [flags]`
 
 Edit repository push rules
 
@@ -4065,15 +4065,15 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo push-rule edit owner/repo --deny-force-push --yes
-ag repo push-rule edit --commit-message-regex '^(feat|fix): '
-ag repo push-rule edit owner/repo --reject-not-signed-by-gpg=false --max-file-size 0
+ag-cli repo push-rule edit owner/repo --deny-force-push --yes
+ag-cli repo push-rule edit --commit-message-regex '^(feat|fix): '
+ag-cli repo push-rule edit owner/repo --reject-not-signed-by-gpg=false --max-file-size 0
 ```
 
 
-## ag repo push-rule view
+## ag-cli repo push-rule view
 
-Usage: `ag repo push-rule view [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo push-rule view [<owner>/<repo>] [flags]`
 
 View repository push rules
 
@@ -4092,18 +4092,18 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo push-rule view owner/repo
-ag repo push-rule view --json
+ag-cli repo push-rule view owner/repo
+ag-cli repo push-rule view --json
 ```
 
 
-## ag repo read-dir
+## ag-cli repo read-dir
 
-Usage: `ag repo read-dir [<owner>/<repo>] <path> [flags]`
+Usage: `ag-cli repo read-dir [<owner>/<repo>] <path> [flags]`
 
 List contents of a repository directory
 
-> Deprecated: use 'ag repo content list' instead
+> Deprecated: use 'ag-cli repo content list' instead
 
 ### Flags
 
@@ -4115,13 +4115,13 @@ List contents of a repository directory
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo read-file
+## ag-cli repo read-file
 
-Usage: `ag repo read-file [<owner>/<repo>] <path> [flags]`
+Usage: `ag-cli repo read-file [<owner>/<repo>] <path> [flags]`
 
 Read a file from a repository
 
-> Deprecated: use 'ag repo content view' instead
+> Deprecated: use 'ag-cli repo content view' instead
 
 ### Flags
 
@@ -4133,9 +4133,9 @@ Read a file from a repository
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo sync
+## ag-cli repo sync
 
-Usage: `ag repo sync [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo sync [<owner>/<repo>] [flags]`
 
 Synchronize a fork with its upstream repository
 
@@ -4165,22 +4165,22 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 ```bash
 # Synchronize the current repository's default branch
-ag repo sync
+ag-cli repo sync
 
 # Synchronize an explicit branch of a fork
-ag repo sync owner/fork --branch develop
+ag-cli repo sync owner/fork --branch develop
 
 # Force synchronization after interactive confirmation
-ag repo sync owner/fork --branch develop --force
+ag-cli repo sync owner/fork --branch develop --force
 
 # Force synchronization non-interactively
-ag repo sync owner/fork --branch develop --force --yes
+ag-cli repo sync owner/fork --branch develop --force --yes
 ```
 
 
-## ag repo transfer
+## ag-cli repo transfer
 
-Usage: `ag repo transfer [<owner>/<repo>] --to <organization> [flags]`
+Usage: `ag-cli repo transfer [<owner>/<repo>] --to <organization> [flags]`
 
 Transfer a repository to an organization
 
@@ -4212,15 +4212,15 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo transfer owner/repo --to target-organization
-ag repo transfer owner/repo --to target-organization --yes
-printf '%s\n' "$PASSWORD" | ag repo transfer source-organization/repo --to target-organization --yes --password-stdin
+ag-cli repo transfer owner/repo --to target-organization
+ag-cli repo transfer owner/repo --to target-organization --yes
+printf '%s\n' "$PASSWORD" | ag-cli repo transfer source-organization/repo --to target-organization --yes --password-stdin
 ```
 
 
-## ag repo view
+## ag-cli repo view
 
-Usage: `ag repo view [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo view [<owner>/<repo>] [flags]`
 
 View a repository
 
@@ -4238,9 +4238,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-w, --web` | Open a repository in the browser | `false` | local |
 
 
-## ag repo webhook
+## ag-cli repo webhook
 
-Usage: `ag repo webhook`
+Usage: `ag-cli repo webhook`
 
 Manage repository webhooks
 
@@ -4261,9 +4261,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag repo webhook create
+## ag-cli repo webhook create
 
-Usage: `ag repo webhook create [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo webhook create [<owner>/<repo>] [flags]`
 
 Create a repository webhook
 
@@ -4287,13 +4287,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo webhook create owner/repo --url https://example.com/hook --events push,issues --secret-env WEBHOOK_SECRET
+ag-cli repo webhook create owner/repo --url https://example.com/hook --events push,issues --secret-env WEBHOOK_SECRET
 ```
 
 
-## ag repo webhook delete
+## ag-cli repo webhook delete
 
-Usage: `ag repo webhook delete [<owner>/<repo>] <id> [flags]`
+Usage: `ag-cli repo webhook delete [<owner>/<repo>] <id> [flags]`
 
 Delete a repository webhook
 
@@ -4312,13 +4312,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo webhook delete owner/repo 42 --yes
+ag-cli repo webhook delete owner/repo 42 --yes
 ```
 
 
-## ag repo webhook edit
+## ag-cli repo webhook edit
 
-Usage: `ag repo webhook edit [<owner>/<repo>] <id> [flags]`
+Usage: `ag-cli repo webhook edit [<owner>/<repo>] <id> [flags]`
 
 Edit a repository webhook
 
@@ -4342,13 +4342,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo webhook edit owner/repo 42 --events push,merge-requests
+ag-cli repo webhook edit owner/repo 42 --events push,merge-requests
 ```
 
 
-## ag repo webhook list
+## ag-cli repo webhook list
 
-Usage: `ag repo webhook list [<owner>/<repo>] [flags]`
+Usage: `ag-cli repo webhook list [<owner>/<repo>] [flags]`
 
 List repository webhooks
 
@@ -4368,13 +4368,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo webhook list owner/repo --limit 50
+ag-cli repo webhook list owner/repo --limit 50
 ```
 
 
-## ag repo webhook test
+## ag-cli repo webhook test
 
-Usage: `ag repo webhook test [<owner>/<repo>] <id> [flags]`
+Usage: `ag-cli repo webhook test [<owner>/<repo>] <id> [flags]`
 
 Send a test payload to a repository webhook
 
@@ -4393,13 +4393,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo webhook test owner/repo 42 --yes
+ag-cli repo webhook test owner/repo 42 --yes
 ```
 
 
-## ag repo webhook view
+## ag-cli repo webhook view
 
-Usage: `ag repo webhook view [<owner>/<repo>] <id> [flags]`
+Usage: `ag-cli repo webhook view [<owner>/<repo>] <id> [flags]`
 
 View a repository webhook
 
@@ -4418,13 +4418,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag repo webhook view owner/repo 42
+ag-cli repo webhook view owner/repo 42
 ```
 
 
-## ag run
+## ag-cli run
 
-Usage: `ag run`
+Usage: `ag-cli run`
 
 Inspect AtomGit Actions workflow runs and artifacts
 
@@ -4441,9 +4441,9 @@ rerun, cancel, and deletion operations are not supported.
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag run artifact
+## ag-cli run artifact
 
-Usage: `ag run artifact`
+Usage: `ag-cli run artifact`
 
 Inspect and manage workflow artifacts
 
@@ -4455,9 +4455,9 @@ Inspect and manage workflow artifacts
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag run artifact delete
+## ag-cli run artifact delete
 
-Usage: `ag run artifact delete [<owner>/<repo>] <artifact-id> [flags]`
+Usage: `ag-cli run artifact delete [<owner>/<repo>] <artifact-id> [flags]`
 
 Delete a workflow artifact
 
@@ -4477,20 +4477,20 @@ confirmation. Deletion cannot be undone. Use --yes to skip the prompt.
 ### Example
 
 ```bash
-ag run artifact delete owner/repo <artifact-id>
-ag run artifact delete <artifact-id> --yes
+ag-cli run artifact delete owner/repo <artifact-id>
+ag-cli run artifact delete <artifact-id> --yes
 ```
 
 
-## ag run artifact view
+## ag-cli run artifact view
 
-Usage: `ag run artifact view [<owner>/<repo>] <artifact-id> [flags]`
+Usage: `ag-cli run artifact view [<owner>/<repo>] <artifact-id> [flags]`
 
 View artifact metadata without downloading the archive
 
 Display AtomGit Actions artifact metadata.
 
-This command does not download the archive. Use ag run view --artifact to
+This command does not download the archive. Use ag-cli run view --artifact to
 download a zip from a specific workflow run.
 
 ### Flags
@@ -4504,14 +4504,14 @@ download a zip from a specific workflow run.
 ### Example
 
 ```bash
-ag run artifact view owner/repo <artifact-id>
-ag run artifact view <artifact-id> --json
+ag-cli run artifact view owner/repo <artifact-id>
+ag-cli run artifact view <artifact-id> --json
 ```
 
 
-## ag run list
+## ag-cli run list
 
-Usage: `ag run list [<owner>/<repo>] [flags]`
+Usage: `ag-cli run list [<owner>/<repo>] [flags]`
 
 List workflow runs
 
@@ -4540,22 +4540,22 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag run list owner/repo
-ag run list
-ag run list owner/repo --branch main --status failed
-ag run list owner/repo --event push --workflow-name CI --limit 50
+ag-cli run list owner/repo
+ag-cli run list
+ag-cli run list owner/repo --branch main --status failed
+ag-cli run list owner/repo --event push --workflow-name CI --limit 50
 ```
 
 
-## ag run step-log
+## ag-cli run step-log
 
-Usage: `ag run step-log [<owner>/<repo>] <run-id> <job-id> <step-id> [flags]`
+Usage: `ag-cli run step-log [<owner>/<repo>] <run-id> <job-id> <step-id> [flags]`
 
 Fetch step-level logs for a workflow job
 
 Retrieve paginated AtomGit Actions step logs and write them as text.
 
-Use ag run view to discover step IDs. --output writes the complete log
+Use ag-cli run view to discover step IDs. --output writes the complete log
 atomically and refuses to replace an existing file unless --overwrite is set.
 
 ### Flags
@@ -4570,16 +4570,16 @@ atomically and refuses to replace an existing file unless --overwrite is set.
 ### Example
 
 ```bash
-ag run step-log owner/repo <run-id> <job-id> <step-id>
-ag run step-log <run-id> <job-id> <step-id>
-ag run step-log owner/repo <run-id> <job-id> <step-id> --output step.log
-ag run step-log owner/repo <run-id> <job-id> <step-id> --output step.log --overwrite
+ag-cli run step-log owner/repo <run-id> <job-id> <step-id>
+ag-cli run step-log <run-id> <job-id> <step-id>
+ag-cli run step-log owner/repo <run-id> <job-id> <step-id> --output step.log
+ag-cli run step-log owner/repo <run-id> <job-id> <step-id> --output step.log --overwrite
 ```
 
 
-## ag run view
+## ag-cli run view
 
-Usage: `ag run view [<owner>/<repo>] <run-id> [flags]`
+Usage: `ag-cli run view [<owner>/<repo>] <run-id> [flags]`
 
 View a workflow run, jobs, logs, and artifacts
 
@@ -4603,19 +4603,19 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag run view owner/repo 12345
-ag run view 12345
-ag run view owner/repo 12345 --job job-id
-ag run view owner/repo 12345 --job job-id --log
-ag run view owner/repo 12345 --job job-id --log-file job-logs.zip
-ag run view owner/repo 12345 --artifact artifact-id
-ag run view owner/repo 12345 --artifact artifact-id --artifact-file build.zip --overwrite
+ag-cli run view owner/repo 12345
+ag-cli run view 12345
+ag-cli run view owner/repo 12345 --job job-id
+ag-cli run view owner/repo 12345 --job job-id --log
+ag-cli run view owner/repo 12345 --job job-id --log-file job-logs.zip
+ag-cli run view owner/repo 12345 --artifact artifact-id
+ag-cli run view owner/repo 12345 --artifact artifact-id --artifact-file build.zip --overwrite
 ```
 
 
-## ag runner
+## ag-cli runner
 
-Usage: `ag runner`
+Usage: `ag-cli runner`
 
 Inspect AtomGit Actions host runners
 
@@ -4633,14 +4633,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag runner list owner/repo
-ag runner shared owner/repo --json
+ag-cli runner list owner/repo
+ag-cli runner shared owner/repo --json
 ```
 
 
-## ag runner list
+## ag-cli runner list
 
-Usage: `ag runner list [<owner>/<repo>] [flags]`
+Usage: `ag-cli runner list [<owner>/<repo>] [flags]`
 
 List host runners configured for a repository
 
@@ -4660,14 +4660,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag runner list owner/repo
-ag runner list owner/repo --limit 25 --json
+ag-cli runner list owner/repo
+ag-cli runner list owner/repo --limit 25 --json
 ```
 
 
-## ag runner shared
+## ag-cli runner shared
 
-Usage: `ag runner shared [<owner>/<repo>] [flags]`
+Usage: `ag-cli runner shared [<owner>/<repo>] [flags]`
 
 List host runners shared with a repository
 
@@ -4687,18 +4687,18 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag runner shared owner/repo
-ag runner shared owner/repo --limit 25 --json
+ag-cli runner shared owner/repo
+ag-cli runner shared owner/repo --limit 25 --json
 ```
 
 
-## ag schema
+## ag-cli schema
 
-Usage: `ag schema [<command> ...]`
+Usage: `ag-cli schema [<command> ...]`
 
 Describe public commands as versioned JSON
 
-List public commands or describe an exact command path without executing it. Paths may include the ag prefix; use 'ag schema ag' for root command details. Uses static command metadata only; no login or network is required. This is a versioned command description format, not JSON Schema. Undescribed behavior must not be inferred.
+List public commands or describe an exact command path without executing it. Paths may include the ag-cli prefix; use 'ag-cli schema ag-cli' for root command details. Uses static command metadata only; no login or network is required. This is a versioned command description format, not JSON Schema. Undescribed behavior must not be inferred.
 
 ### Flags
 
@@ -4710,18 +4710,18 @@ List public commands or describe an exact command path without executing it. Pat
 ### Example
 
 ```bash
-ag schema
-ag schema ag
-ag schema pr create
-ag schema ag pr create
-ag schema api
-ag schema pr comment create
+ag-cli schema
+ag-cli schema ag-cli
+ag-cli schema pr create
+ag-cli schema ag-cli pr create
+ag-cli schema api
+ag-cli schema pr comment create
 ```
 
 
-## ag search
+## ag-cli search
 
-Usage: `ag search`
+Usage: `ag-cli search`
 
 search atomgit
 
@@ -4735,9 +4735,9 @@ Search AtomGit repositories, issues, and users. Pull request search is not suppo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag search issues
+## ag-cli search issues
 
-Usage: `ag search issues <query> [flags]`
+Usage: `ag-cli search issues <query> [flags]`
 
 search issues
 
@@ -4755,9 +4755,9 @@ search issues
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag search repositories
+## ag-cli search repositories
 
-Usage: `ag search repositories <query> [flags]`
+Usage: `ag-cli search repositories <query> [flags]`
 
 search repositories
 
@@ -4778,9 +4778,9 @@ Aliases: `repos`
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag search users
+## ag-cli search users
 
-Usage: `ag search users <query> [flags]`
+Usage: `ag-cli search users <query> [flags]`
 
 search users
 
@@ -4796,9 +4796,9 @@ search users
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag ssh-key
+## ag-cli ssh-key
 
-Usage: `ag ssh-key <command>`
+Usage: `ag-cli ssh-key <command>`
 
 Manage SSH keys
 
@@ -4812,9 +4812,9 @@ Manage SSH keys registered with your AtomGit account.
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag ssh-key add
+## ag-cli ssh-key add
 
-Usage: `ag ssh-key add [<key-file>] [flags]`
+Usage: `ag-cli ssh-key add [<key-file>] [flags]`
 
 Add an SSH key to your AtomGit account
 
@@ -4827,9 +4827,9 @@ Add an SSH key to your AtomGit account
 | `-t, --title` | Title for the new key | `` | local |
 
 
-## ag ssh-key delete
+## ag-cli ssh-key delete
 
-Usage: `ag ssh-key delete <id> [flags]`
+Usage: `ag-cli ssh-key delete <id> [flags]`
 
 Delete an SSH key from your AtomGit account
 
@@ -4849,14 +4849,14 @@ to confirm the deletion. Use --yes to skip the confirmation prompt.
 ### Example
 
 ```bash
-ag ssh-key delete 123
-ag ssh-key delete 123 --yes
+ag-cli ssh-key delete 123
+ag-cli ssh-key delete 123 --yes
 ```
 
 
-## ag ssh-key list
+## ag-cli ssh-key list
 
-Usage: `ag ssh-key list [flags]`
+Usage: `ag-cli ssh-key list [flags]`
 
 List SSH keys registered with your AtomGit account
 
@@ -4871,14 +4871,14 @@ List SSH keys registered with your AtomGit account
 ### Example
 
 ```bash
-ag ssh-key list
-ag ssh-key list --limit 200
+ag-cli ssh-key list
+ag-cli ssh-key list --limit 200
 ```
 
 
-## ag tag
+## ag-cli tag
 
-Usage: `ag tag`
+Usage: `ag-cli tag`
 
 Manage tags
 
@@ -4894,9 +4894,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag tag create
+## ag-cli tag create
 
-Usage: `ag tag create [<owner>/<repo>] <tag_name> [flags]`
+Usage: `ag-cli tag create [<owner>/<repo>] <tag_name> [flags]`
 
 Create a tag
 
@@ -4914,9 +4914,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-m, --message` | Tag message | `` | local |
 
 
-## ag tag delete
+## ag-cli tag delete
 
-Usage: `ag tag delete [<owner>/<repo>] <tag_name> [flags]`
+Usage: `ag-cli tag delete [<owner>/<repo>] <tag_name> [flags]`
 
 Delete a tag
 
@@ -4938,14 +4938,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag tag delete owner/repo v1.0.0
-ag tag delete owner/repo v1.0.0 --yes
+ag-cli tag delete owner/repo v1.0.0
+ag-cli tag delete owner/repo v1.0.0 --yes
 ```
 
 
-## ag tag list
+## ag-cli tag list
 
-Usage: `ag tag list [<owner>/<repo>] [flags]`
+Usage: `ag-cli tag list [<owner>/<repo>] [flags]`
 
 List tags
 
@@ -4965,13 +4965,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag tag list owner/repo --limit 50
+ag-cli tag list owner/repo --limit 50
 ```
 
 
-## ag tag protection
+## ag-cli tag protection
 
-Usage: `ag tag protection`
+Usage: `ag-cli tag protection`
 
 Manage protected tag rules
 
@@ -4991,9 +4991,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag tag protection delete
+## ag-cli tag protection delete
 
-Usage: `ag tag protection delete [<owner>/<repo>] <tag-or-pattern> [flags]`
+Usage: `ag-cli tag protection delete [<owner>/<repo>] <tag-or-pattern> [flags]`
 
 Delete a protected tag rule
 
@@ -5015,14 +5015,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag tag protection delete owner/repo "v*"
-ag tag protection delete owner/repo "v*" --yes
+ag-cli tag protection delete owner/repo "v*"
+ag-cli tag protection delete owner/repo "v*" --yes
 ```
 
 
-## ag tag protection list
+## ag-cli tag protection list
 
-Usage: `ag tag protection list [<owner>/<repo>] [flags]`
+Usage: `ag-cli tag protection list [<owner>/<repo>] [flags]`
 
 List protected tag rules
 
@@ -5042,13 +5042,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag tag protection list owner/repo --limit 50
+ag-cli tag protection list owner/repo --limit 50
 ```
 
 
-## ag tag protection set
+## ag-cli tag protection set
 
-Usage: `ag tag protection set [<owner>/<repo>] <tag-or-pattern> [flags]`
+Usage: `ag-cli tag protection set [<owner>/<repo>] <tag-or-pattern> [flags]`
 
 Create or update a protected tag rule
 
@@ -5075,16 +5075,16 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag tag protection set owner/repo v1.0.0 --create-access maintainer
-ag tag protection set owner/repo "v*" --create-access developer
-ag tag protection set owner/repo v1.0.0
-ag tag protection set owner/repo v1.0.0 --create-access none --yes
+ag-cli tag protection set owner/repo v1.0.0 --create-access maintainer
+ag-cli tag protection set owner/repo "v*" --create-access developer
+ag-cli tag protection set owner/repo v1.0.0
+ag-cli tag protection set owner/repo v1.0.0 --create-access none --yes
 ```
 
 
-## ag tag protection view
+## ag-cli tag protection view
 
-Usage: `ag tag protection view [<owner>/<repo>] <tag-or-pattern> [flags]`
+Usage: `ag-cli tag protection view [<owner>/<repo>] <tag-or-pattern> [flags]`
 
 View a protected tag rule
 
@@ -5101,9 +5101,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag update
+## ag-cli update
 
-Usage: `ag update [flags]`
+Usage: `ag-cli update [flags]`
 
 Update AtomGit CLI to the latest stable release
 
@@ -5116,9 +5116,9 @@ Update AtomGit CLI to the latest stable release
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag user
+## ag-cli user
 
-Usage: `ag user`
+Usage: `ag-cli user`
 
 View AtomGit users, repositories, namespaces, and activity
 
@@ -5132,9 +5132,9 @@ View AtomGit user profiles, email addresses, starred and watched repositories, a
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag user edit
+## ag-cli user edit
 
-Usage: `ag user edit [flags]`
+Usage: `ag-cli user edit [flags]`
 
 Edit the authenticated user's profile
 
@@ -5163,15 +5163,15 @@ email addresses, or rename the account login.
 ### Example
 
 ```bash
-ag user edit --nickname "Alice" --company "Example Inc."
-ag user edit --description "" --location "Wuhan"
-ag user edit --website "https://example.com" --json
+ag-cli user edit --nickname "Alice" --company "Example Inc."
+ag-cli user edit --description "" --location "Wuhan"
+ag-cli user edit --website "https://example.com" --json
 ```
 
 
-## ag user emails
+## ag-cli user emails
 
-Usage: `ag user emails [flags]`
+Usage: `ag-cli user emails [flags]`
 
 List email addresses for the authenticated user
 
@@ -5186,14 +5186,14 @@ List email addresses for the authenticated user
 ### Example
 
 ```bash
-ag user emails
-ag user emails --json
+ag-cli user emails
+ag-cli user emails --json
 ```
 
 
-## ag user events
+## ag-cli user events
 
-Usage: `ag user events [<username>] [flags]`
+Usage: `ag-cli user events [<username>] [flags]`
 
 List personal activity events for a user
 
@@ -5212,16 +5212,16 @@ List personal activity events for a user. Without an explicit username, the auth
 ### Example
 
 ```bash
-ag user events
-ag user events alice
-ag user events alice --year 2026 --limit 50
-ag user events alice --json
+ag-cli user events
+ag-cli user events alice
+ag-cli user events alice --year 2026 --limit 50
+ag-cli user events alice --json
 ```
 
 
-## ag user namespaces
+## ag-cli user namespaces
 
-Usage: `ag user namespaces [flags]`
+Usage: `ag-cli user namespaces [flags]`
 
 List namespaces for the authenticated user
 
@@ -5240,15 +5240,15 @@ List user and group namespaces visible to the authenticated user. The default mo
 ### Example
 
 ```bash
-ag user namespaces
-ag user namespaces --mode project --limit 100
-ag user namespaces --mode all --json
+ag-cli user namespaces
+ag-cli user namespaces --mode project --limit 100
+ag-cli user namespaces --mode all --json
 ```
 
 
-## ag user starred
+## ag-cli user starred
 
-Usage: `ag user starred [<username>] [flags]`
+Usage: `ag-cli user starred [<username>] [flags]`
 
 List starred repositories for a user
 
@@ -5266,15 +5266,15 @@ List starred repositories for a user. Without a username, the authenticated-user
 ### Example
 
 ```bash
-ag user starred
-ag user starred alice --limit 100
-ag user starred alice --json
+ag-cli user starred
+ag-cli user starred alice --limit 100
+ag-cli user starred alice --json
 ```
 
 
-## ag user view
+## ag-cli user view
 
-Usage: `ag user view [<login>] [flags]`
+Usage: `ag-cli user view [<login>] [flags]`
 
 View the current user or a public user profile
 
@@ -5290,16 +5290,16 @@ View the current user or a public user profile
 ### Example
 
 ```bash
-ag user view
-ag user view alice
-ag user view alice --json
-ag user view alice --web
+ag-cli user view
+ag-cli user view alice
+ag-cli user view alice --json
+ag-cli user view alice --web
 ```
 
 
-## ag user watching
+## ag-cli user watching
 
-Usage: `ag user watching [<username>] [flags]`
+Usage: `ag-cli user watching [<username>] [flags]`
 
 List watched repositories for a user
 
@@ -5317,15 +5317,15 @@ List watched repositories for a user. Without a username, the authenticated-user
 ### Example
 
 ```bash
-ag user watching
-ag user watching alice --limit 100
-ag user watching alice --json
+ag-cli user watching
+ag-cli user watching alice --limit 100
+ag-cli user watching alice --json
 ```
 
 
-## ag version
+## ag-cli version
 
-Usage: `ag version [flags]`
+Usage: `ag-cli version [flags]`
 
 Show version information
 
@@ -5338,9 +5338,9 @@ Show version information
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
-## ag workflow
+## ag-cli workflow
 
-Usage: `ag workflow`
+Usage: `ag-cli workflow`
 
 Manage AtomGit Actions workflows
 
@@ -5358,16 +5358,16 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag workflow list owner/repo
-ag workflow validate --file .gitcode/workflows/ci.yml
-ag workflow run owner/repo 12345 --ref main
-ag workflow run owner/repo ci.yml -f env=production
+ag-cli workflow list owner/repo
+ag-cli workflow validate --file .gitcode/workflows/ci.yml
+ag-cli workflow run owner/repo 12345 --ref main
+ag-cli workflow run owner/repo ci.yml -f env=production
 ```
 
 
-## ag workflow list
+## ag-cli workflow list
 
-Usage: `ag workflow list [<owner>/<repo>] [flags]`
+Usage: `ag-cli workflow list [<owner>/<repo>] [flags]`
 
 List workflows in a repository
 
@@ -5386,13 +5386,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag workflow list owner/repo
+ag-cli workflow list owner/repo
 ```
 
 
-## ag workflow run
+## ag-cli workflow run
 
-Usage: `ag workflow run [<owner>/<repo>] <workflow_id> [flags]`
+Usage: `ag-cli workflow run [<owner>/<repo>] <workflow_id> [flags]`
 
 Run a workflow
 
@@ -5415,14 +5415,14 @@ Aliases: `dispatch`
 ### Example
 
 ```bash
-ag workflow run owner/repo 12345 --ref main
-ag workflow run owner/repo ci.yml --ref feature-branch -f env=prod -f debug=true
+ag-cli workflow run owner/repo 12345 --ref main
+ag-cli workflow run owner/repo ci.yml --ref feature-branch -f env=prod -f debug=true
 ```
 
 
-## ag workflow validate
+## ag-cli workflow validate
 
-Usage: `ag workflow validate [<owner>/<repo>] [flags]`
+Usage: `ag-cli workflow validate [<owner>/<repo>] [flags]`
 
 Validate a local workflow YAML file
 
@@ -5445,7 +5445,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag workflow validate --file .gitcode/workflows/ci.yml
-ag workflow validate owner/repo --file workflow.yml
-ag workflow validate owner/repo --file workflow.yml --json
+ag-cli workflow validate --file .gitcode/workflows/ci.yml
+ag-cli workflow validate owner/repo --file workflow.yml
+ag-cli workflow validate owner/repo --file workflow.yml --json
 ```

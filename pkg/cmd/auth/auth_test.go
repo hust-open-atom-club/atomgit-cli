@@ -325,7 +325,7 @@ func TestAuthLoginAddsAccountWithoutChangingActiveAccount(t *testing.T) {
 	}
 	for _, want := range []string{
 		"Active account remains alice",
-		"ag auth switch bob",
+		"ag-cli auth switch bob",
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("output %q does not contain %q", output, want)
@@ -457,7 +457,7 @@ func TestAuthLoginWithTokenAddsAccountWithoutChangingActive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Logged in to atomgit.com as bob", "Active account remains alice", "ag auth switch bob"} {
+	for _, want := range []string{"Logged in to atomgit.com as bob", "Active account remains alice", "ag-cli auth switch bob"} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("output %q does not contain %q", output, want)
 		}
@@ -655,9 +655,9 @@ func TestAuthToken(t *testing.T) {
 	})
 
 	t.Run("not authenticated", func(t *testing.T) {
-		cmd := newCmdAuthToken(&cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated: run `ag auth login`")}})
+		cmd := newCmdAuthToken(&cmdutil.Factory{Config: testConfig{tokenErr: errors.New("not authenticated: run `ag-cli auth login`")}})
 		err := cmd.RunE(cmd, nil)
-		if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
+		if err == nil || err.Error() != "not authenticated: run `ag-cli auth login`" {
 			t.Fatalf("error = %v", err)
 		}
 	})
@@ -755,7 +755,7 @@ func TestAuthRefreshValidation(t *testing.T) {
 		cmd := newCmdAuthRefresh()
 		cmd.SetContext(context.Background())
 		err := cmd.RunE(cmd, nil)
-		if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
+		if err == nil || err.Error() != "not authenticated: run `ag-cli auth login`" {
 			t.Fatalf("error = %v", err)
 		}
 	})

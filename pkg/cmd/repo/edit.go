@@ -36,19 +36,19 @@ used. --visibility, --public, and --private are mutually exclusive.
 This command does not change the repository path, owner, homepage, LFS state,
 module switches, merge policies, or other unsupported GitHub CLI settings.`,
 		Example: `  # Update the current Git repository
-  ag repo edit --description "New description"
+  ag-cli repo edit --description "New description"
 
   # Update an explicitly selected repository
-  ag repo edit owner/repo --description "New description"
+  ag-cli repo edit owner/repo --description "New description"
 
   # Clear a description without changing other settings
-  ag repo edit owner/repo --description ""
+  ag-cli repo edit owner/repo --description ""
 
   # Update several settings
-  ag repo edit owner/repo --name "New name" --default-branch main --visibility private
+  ag-cli repo edit owner/repo --name "New name" --default-branch main --visibility private
 
   # Skip confirmation for a visibility update
-  ag repo edit owner/repo --public --yes`,
+  ag-cli repo edit owner/repo --public --yes`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			request, consequential, err := buildRepoEditRequest(cmd, opts)

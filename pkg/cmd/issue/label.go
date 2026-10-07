@@ -28,9 +28,9 @@ func newCmdIssueLabel(f *cmdutil.Factory) *cobra.Command {
 
 Labels are comma-separated. Positional labels are treated as labels to add for
 backward compatibility. Use --add or --remove to make the operation explicit.`,
-		Example: `  ag issue label owner/repo 42 "bug, help wanted"
-  ag issue label owner/repo 42 --add "bug, help wanted"
-  ag issue label owner/repo 42 --remove "priority/high"`,
+		Example: `  ag-cli issue label owner/repo 42 "bug, help wanted"
+  ag-cli issue label owner/repo 42 --add "bug, help wanted"
+  ag-cli issue label owner/repo 42 --remove "priority/high"`,
 		Args: cobra.RangeArgs(1, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, number, labels, operation, err := resolveIssueLabelInput(f, cmd, args, addLabels, removeLabels)

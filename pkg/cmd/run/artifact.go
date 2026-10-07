@@ -35,10 +35,10 @@ func newCmdRunArtifactView(f *cmdutil.Factory) *cobra.Command {
 		Short: "View artifact metadata without downloading the archive",
 		Long: `Display AtomGit Actions artifact metadata.
 
-This command does not download the archive. Use ag run view --artifact to
+This command does not download the archive. Use ag-cli run view --artifact to
 download a zip from a specific workflow run.`,
-		Example: `  ag run artifact view owner/repo <artifact-id>
-  ag run artifact view <artifact-id> --json`,
+		Example: `  ag-cli run artifact view owner/repo <artifact-id>
+  ag-cli run artifact view <artifact-id> --json`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runArtifactView(cmd, f, opts, args)
@@ -103,8 +103,8 @@ func newCmdRunArtifactDelete(f *cmdutil.Factory) *cobra.Command {
 
 By default, the command displays the artifact details and asks for
 confirmation. Deletion cannot be undone. Use --yes to skip the prompt.`,
-		Example: `  ag run artifact delete owner/repo <artifact-id>
-  ag run artifact delete <artifact-id> --yes`,
+		Example: `  ag-cli run artifact delete owner/repo <artifact-id>
+  ag-cli run artifact delete <artifact-id> --yes`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runArtifactDelete(cmd, f, opts, args)

@@ -35,7 +35,7 @@ func TestNewCmdOrgRegistersDiscoveryCommands(t *testing.T) {
 					t.Fatalf("%s flag %q was not registered", tt.name, flag)
 				}
 			}
-			if !strings.Contains(subcommand.Example, "ag org "+tt.name) {
+			if !strings.Contains(subcommand.Example, "ag-cli org "+tt.name) {
 				t.Fatalf("examples = %q", subcommand.Example)
 			}
 			if err := subcommand.Args(subcommand, nil); err == nil {

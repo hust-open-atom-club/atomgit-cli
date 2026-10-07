@@ -5,8 +5,8 @@ GOVULNDB := https://vuln.go.dev
 GO_MIN_VERSION := $(shell sed -n 's/^go[[:space:]][[:space:]]*//p' go.mod)
 GO_MIN_TOOLCHAIN := go$(GO_MIN_VERSION)
 GO_TOOLCHAIN := $(shell sed -n 's/^toolchain[[:space:]][[:space:]]*//p' go.mod)
-BINARY := ag
-COMMAND := ./cmd/ag
+BINARY := ag-cli
+COMMAND := ./cmd/ag-cli
 BIN_DIR := bin
 RACE_PACKAGES ?= ./...
 RACE_OPTIONS ?= atexit_sleep_ms=0

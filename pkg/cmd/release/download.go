@@ -33,8 +33,8 @@ which case the existing file is replaced. The attachment is streamed to a
 temporary file in the destination directory and only installed at the target
 path after the transfer completes; a transfer interruption leaves any existing
 destination untouched.`,
-		Example: `  ag release download owner/repo v1.0.0 app.tar.gz -o ./dist/app.tar.gz
-  ag release download owner/repo v1.0.0 app.tar.gz --output ./existing.tar.gz --overwrite`,
+		Example: `  ag-cli release download owner/repo v1.0.0 app.tar.gz -o ./dist/app.tar.gz
+  ag-cli release download owner/repo v1.0.0 app.tar.gz --output ./existing.tar.gz --overwrite`,
 		Args: cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runReleaseDownload(cmd, f, opts, args)

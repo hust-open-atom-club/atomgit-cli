@@ -15,7 +15,7 @@
 CLI 的主要执行路径如下：
 
 ```text
-cmd/ag/main.go
+cmd/ag-cli/main.go
   └── internal/agcmd.Main
       └── pkg/cmd/root.NewCmdRoot
           └── pkg/cmd/<name>.NewCmdXxx
@@ -24,7 +24,7 @@ cmd/ag/main.go
               └── pkg/cmdutil
 ```
 
-- `cmd/ag` 只负责可执行程序入口。
+- `cmd/ag-cli` 只负责可执行程序入口。
 - `internal/agcmd` 初始化根命令、执行命令并处理顶层错误和退出码。
 - `pkg/cmd/root` 创建 Cobra 根命令并注册各子命令。
 - `pkg/cmd/<name>` 实现具体命令、参数校验和输出。
@@ -35,7 +35,7 @@ cmd/ag/main.go
 ```text
 atomgit-cli/
 ├── cmd/
-│   └── ag/                     # ag 可执行程序入口
+│   └── ag-cli/                     # ag-cli 可执行程序入口
 ├── internal/
 │   ├── agcmd/                  # 命令初始化、执行与退出码处理
 │   ├── api/                    # AtomGit API 客户端、类型和分页逻辑
@@ -71,7 +71,7 @@ atomgit-cli/
 │       └── version/            # 版本输出命令
 ├── nix/                        # stable/latest Nix package 表达式与共享构建参数
 ├── bin/
-│   └── ag.js                   # npm 主包的平台二进制启动器
+│   └── ag-cli.js                   # npm 主包的平台二进制启动器
 ├── docs/
 │   ├── api-contracts.md        # OpenAPI fixture 格式与验证流程
 │   ├── configuration.md        # 认证、凭据和运行配置

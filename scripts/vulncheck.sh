@@ -95,7 +95,7 @@ if [ "$VULNCHECK_BUILD" = 1 ]; then
 		binary=$(binary_path "$target")
 		echo "=== Build vulnerability target: $target ==="
 		GOOS="$target_goos" GOARCH="$target_goarch" CGO_ENABLED=0 \
-			"$GO" build -trimpath -o "$binary" ./cmd/ag
+			"$GO" build -trimpath -o "$binary" ./cmd/ag-cli
 	done
 else
 	for target in $VULNCHECK_TARGETS; do
@@ -151,13 +151,13 @@ run_informational_scan() {
 
 # Module findings are independent of GOOS/GOARCH. They are informational: only
 # a reachable symbol in a release binary blocks the gate.
-run_informational_scan module linux/amd64 -C ./cmd/ag
+run_informational_scan module linux/amd64 -C ./cmd/ag-cli
 
 # This repository has OS-specific Go files but no architecture-specific Go
 # files. One representative architecture per release OS therefore exposes the
 # package-only delta without repeating identical package scans for every arch.
 for target in $VULNCHECK_PACKAGE_TARGETS; do
-	run_informational_scan package "$target" -C ./cmd/ag .
+	run_informational_scan package "$target" -C ./cmd/ag-cli .
 done
 
 reachable_findings=0

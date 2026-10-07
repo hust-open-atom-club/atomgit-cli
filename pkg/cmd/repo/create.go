@@ -35,13 +35,13 @@ If neither is specified, it defaults to private.
 
 Pass --clone to clone the repository locally after creation.`,
 		Example: `  # Create a new private repository under your account
-  ag repo create my-project
+  ag-cli repo create my-project
 
   # Create a public repository and clone it
-  ag repo create my-project --public --clone
+  ag-cli repo create my-project --public --clone
 
   # Create a repository in an organization
-  ag repo create my-org/my-project --public`,
+  ag-cli repo create my-org/my-project --public`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.Name = args[0]

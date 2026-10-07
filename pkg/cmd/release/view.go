@@ -17,8 +17,8 @@ func newCmdReleaseView(f *cmdutil.Factory) *cobra.Command {
 		Short: "View a release by tag",
 		Long: `Show details of a single release identified by its tag.
 Use --json to output one JSON object with release metadata, body, and assets.`,
-		Example: `  ag release view owner/repo v1.0.0
-  ag release view owner/repo v1.0.0 --json`,
+		Example: `  ag-cli release view owner/repo v1.0.0
+  ag-cli release view owner/repo v1.0.0 --json`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)

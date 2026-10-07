@@ -182,7 +182,7 @@ func TestPRReviewCommandHelp(t *testing.T) {
 			t.Fatalf("unsupported review flag %q was registered", name)
 		}
 	}
-	if !strings.Contains(review.Long, "not supported") || !strings.Contains(review.Example, "ag pr review") {
+	if !strings.Contains(review.Long, "not supported") || !strings.Contains(review.Example, "ag-cli pr review") {
 		t.Fatalf("review help is missing API limitations or examples")
 	}
 }

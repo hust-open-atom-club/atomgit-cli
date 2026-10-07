@@ -84,7 +84,7 @@ func TestNewCmdRootRegistersCommands(t *testing.T) {
 	if legacy.Deprecated == "" {
 		t.Fatal("legacy check-update command is not marked deprecated")
 	}
-	if cmd.Use != "ag <command> <subcommand> [flags]" {
+	if cmd.Use != "ag-cli <command> <subcommand> [flags]" {
 		t.Fatalf("Use = %q", cmd.Use)
 	}
 	helpFlag := cmd.PersistentFlags().Lookup("help")
@@ -681,7 +681,7 @@ func TestExpandAliasWithEscapedSpaceInExpansion(t *testing.T) {
 // TestRootSilencesUsageOnAuthenticationError is a regression test for issue
 // #49: before SilenceUsage was set on the root command, an unauthenticated
 // invocation would print the full Cobra usage/help block before the
-// "not authenticated: run `ag auth login`" message, making the error hard to
+// "not authenticated: run `ag-cli auth login`" message, making the error hard to
 // spot. The root command now silences usage so only the actionable error
 // reaches the user.
 func TestRootSilencesUsageOnAuthenticationError(t *testing.T) {
