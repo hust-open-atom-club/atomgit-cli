@@ -599,6 +599,65 @@ go install ./cmd/ag
 
 可执行文件会安装到 `GOBIN` 指定的目录；未设置 `GOBIN` 时，默认目录为 `go env GOPATH` 所显示目录下的 `bin` 子目录。请确保该目录已加入 `PATH`。
 
+### 其他类 Unix 系统（FreeBSD / OpenBSD / NetBSD / OpenIndiana）
+
+AtomGit CLI 官方支持 macOS、Linux 和 Windows，但作为纯 Go 项目，它也可以在上述 BSD 及 Illumos 系统上编译运行。
+
+这些系统的默认 `make` 通常是 BSD make 或 Sun make，与项目 Makefile 使用的 GNU make 语法不兼容，因此需要使用 `gmake` 替代系统默认 `make`。
+
+#### 安装依赖
+
+- **Go 1.21 或更高版本**。项目 `go.mod` 的 `go` 行规定版本为 1.26.6，`toolchain` 行建议使用 1.26.8。只要本地 Go 不低于 1.21，在首次构建时自动下载并使用 1.26.8 工具链。
+- **git**（用于克隆仓库）。
+- **gmake**（GNU make），安装方式如下：
+
+| 系统 | 安装命令 |
+| --- | --- |
+| FreeBSD | `pkg install gmake` |
+| OpenBSD | `pkg_add gmake` |
+| NetBSD | `pkgin install gmake`（或通过 pkgsrc：`cd /usr/pkgsrc/devel/gmake && make install`） |
+| OpenIndiana | `sudo pkg install build-essential` |
+
+> `build-essential` 是 OpenIndiana 的开发工具元包，已包含 `gmake`，适合从源码构建时使用。如果只需要 gmake 而不想安装其他附加的开发工具，可改为安装 `developer/build/gnu-make`。安装前建议先执行 `pkg update`。
+
+#### 编译与安装
+
+克隆仓库并进入目录：
+
+```bash
+git clone https://atomgit.com/hust-open-atom-club/atomgit-cli.git
+cd atomgit-cli
+```
+
+使用 `gmake` 构建：
+
+```bash
+gmake build
+```
+
+构建产物位于 `bin/ag`中。
+
+```bash
+go build -trimpath -o ag ./cmd/ag
+```
+
+将生成的 `ag` 安装到 `PATH` 中的目录，例如 `/usr/local/bin` 或 `~/.local/bin`：
+
+```bash
+install -m 0755 ag /usr/local/bin/ag
+# 或
+mkdir -p "$HOME/.local/bin"
+install -m 0755 ag "$HOME/.local/bin/ag"
+```
+
+如果使用 `~/.local/bin`，请确保该目录已加入 `PATH`。
+
+#### 注意事项
+
+- 在 BSD 或 OpenIndiana 上需要手动配置 PAT，具体方法参见[配置与认证](configuration.md)。
+- 这些系统上的编译与运行属于社区尝试，项目不保证完整兼容。如遇到问题，欢迎在仓库中反馈。
+
+
 ## 安装验证
 
 完成安装或构建后，新开一个终端并执行：
