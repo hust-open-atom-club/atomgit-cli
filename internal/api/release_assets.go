@@ -106,7 +106,7 @@ func UploadReleaseAsset(ctx context.Context, client *Client, upload ReleaseUploa
 		if err != nil {
 			// Close any partial response body the transport may have left.
 			if resp != nil {
-				resp.Body.Close()
+				resp.Body.Close() //nolint:errcheck // Closing only releases a partial response after the transport error; the transport error remains primary.
 			}
 			if closeErr := requestBody.waitForClose(requestBodyCloseTimeout); closeErr != nil {
 				return fmt.Errorf("wait for upload request body to close after transport error: %w", closeErr)
@@ -125,7 +125,7 @@ func UploadReleaseAsset(ctx context.Context, client *Client, upload ReleaseUploa
 		}
 
 		if resp.StatusCode/100 == 2 {
-			resp.Body.Close()
+			resp.Body.Close() //nolint:errcheck // Successful upload has no response body to read; Close only releases response resources.
 			if closeErr := requestBody.waitForClose(requestBodyCloseTimeout); closeErr != nil {
 				return fmt.Errorf("wait for upload request body to close after success: %w", closeErr)
 			}
@@ -134,9 +134,9 @@ func UploadReleaseAsset(ctx context.Context, client *Client, upload ReleaseUploa
 
 		// HTTP failure: retain only the shared sanitized excerpt, do not retry.
 		responseErr := NewHTTPError(resp)
-		resp.Body.Close()
+		resp.Body.Close() //nolint:errcheck // HTTP error details were read before close; the sanitized upload error remains primary.
 		if closeErr := requestBody.waitForClose(requestBodyCloseTimeout); closeErr != nil {
-			return fmt.Errorf("upload failed: %v; wait for request body to close: %w", responseErr, closeErr)
+			return fmt.Errorf("upload failed: %w; wait for request body to close: %w", responseErr, closeErr)
 		}
 		return fmt.Errorf("upload failed: %w", responseErr)
 	}
@@ -225,7 +225,7 @@ func DeleteReleaseAttachment(client *Client, owner, repo, tag string, attachment
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and API error handling are separate.
 
 	if resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("delete attachment failed: %w", NewHTTPError(resp))
@@ -263,7 +263,7 @@ func DownloadReleaseAttachment(ctx context.Context, client *Client, owner, repo,
 
 	if resp.StatusCode != http.StatusOK {
 		responseErr := NewHTTPError(resp)
-		resp.Body.Close()
+		resp.Body.Close() //nolint:errcheck // HTTP error details were read before close; the download error remains primary.
 		return nil, fmt.Errorf("download failed: %w", responseErr)
 	}
 	return resp.Body, nil

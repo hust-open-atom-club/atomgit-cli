@@ -45,7 +45,7 @@ func credentials(t *testing.T, body string) string {
 
 const validCredentials = `{"version":2,"active":"alice","accounts":[{"user":"alice","access_token":"very-secret-token"}]}`
 
-func execute(t *testing.T, f *cmdutil.Factory, args ...string) (report, error, string) {
+func execute(t *testing.T, f *cmdutil.Factory, args ...string) (report, string, error) {
 	t.Helper()
 	cmd := NewCmdDoctor(f)
 	var out bytes.Buffer
@@ -61,7 +61,7 @@ func execute(t *testing.T, f *cmdutil.Factory, args ...string) (report, error, s
 			t.Fatalf("invalid JSON %q: %v", out.String(), e)
 		}
 	}
-	return r, err, out.String()
+	return r, out.String(), err
 }
 func row(t *testing.T, r report, id string) check {
 	t.Helper()
@@ -86,7 +86,7 @@ func TestOfflineReadOnly(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			path := credentials(t, tc.body)
 			f := &cmdutil.Factory{HttpClient: func() (*http.Client, error) { t.Fatal("offline requested HTTP client"); return nil, nil }}
-			r, err, out := execute(t, f)
+			r, out, err := execute(t, f)
 			if got := row(t, r, "credentials").Status; got != tc.want {
 				t.Fatalf("status %s", got)
 			}
@@ -121,7 +121,7 @@ func TestInsecurePermissionsAreNotRepaired(t *testing.T) {
 	if err := os.Chmod(path, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	r, err, _ := execute(t, &cmdutil.Factory{})
+	r, _, err := execute(t, &cmdutil.Factory{})
 	if err == nil || row(t, r, "credential_permissions").Status != "fail" {
 		t.Fatal("unsafe permissions accepted")
 	}
@@ -165,7 +165,7 @@ func TestLiveReadOnlyAndRedaction(t *testing.T) {
 					return &http.Response{StatusCode: code, Status: http.StatusText(code), Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: req}, nil
 				})}, nil
 			}
-			r, err, out := execute(t, f, "team/demo", "--live")
+			r, out, err := execute(t, f, "team/demo", "--live")
 			if (err != nil) != (status != 200) {
 				t.Fatalf("error %v; %s", err, out)
 			}
@@ -221,7 +221,7 @@ func TestRepositoryCanonicalPath(t *testing.T) {
 				if !inferred {
 					args = append(args, "TEAM/demo")
 				}
-				r, err, out := execute(t, f, args...)
+				r, out, err := execute(t, f, args...)
 				if (err == nil) != tc.valid || r.OK != tc.valid || (row(t, r, "repository_access").Status == "pass") != tc.valid {
 					t.Fatalf("valid=%t error=%v: %s", tc.valid, err, out)
 				}
@@ -237,7 +237,7 @@ func TestRejectedCredentialsSuggestForcedLogin(t *testing.T) {
 			return &http.Response{StatusCode: http.StatusUnauthorized, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"message":"Unauthorized"}`)), Request: req}, nil
 		})}, nil
 	}}
-	r, err, out := execute(t, f, "team/demo", "--live")
+	r, out, err := execute(t, f, "team/demo", "--live")
 	if err == nil || r.OK {
 		t.Fatalf("rejected credentials accepted: %s", out)
 	}
@@ -266,7 +266,7 @@ func TestCancellationAndTransportErrors(t *testing.T) {
 			f := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
 				return &http.Client{Transport: transport(func(*http.Request) (*http.Response, error) { return nil, tc.err })}, nil
 			}}
-			r, err, out := execute(t, f, "--live")
+			r, out, err := execute(t, f, "--live")
 			if err == nil || row(t, r, "connectivity").Message != tc.message || strings.Contains(out, "very-secret-token") {
 				t.Fatalf("%v %s", err, out)
 			}
@@ -284,7 +284,7 @@ func TestCancellationAndTransportErrors(t *testing.T) {
 				return nil, r.Context().Err()
 			})}, nil
 		}}
-		r, err, _ := execute(t, f, "--live")
+		r, _, err := execute(t, f, "--live")
 		if err == nil || row(t, r, "connectivity").Message != "Probe canceled" {
 			t.Fatal(r)
 		}
@@ -303,7 +303,7 @@ func TestLiveWithoutCredentialsStillChecksConnectivity(t *testing.T) {
 			return &http.Response{StatusCode: 401, Status: "Unauthorized", Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"message":"not logged in"}`)), Request: req}, nil
 		})}, nil
 	}}
-	r, err, out := execute(t, f, "team/demo", "--live")
+	r, out, err := execute(t, f, "team/demo", "--live")
 	if err != nil || calls != 1 || row(t, r, "connectivity").Status != "pass" || row(t, r, "authentication").Status != "skip" {
 		t.Fatalf("%v %s", err, out)
 	}
@@ -316,14 +316,14 @@ func TestKnownExpiryAndInvalidUserResponse(t *testing.T) {
 			return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{}`)), Request: req}, nil
 		})}, nil
 	}}
-	r, err, _ := execute(t, f, "--live")
+	r, _, err := execute(t, f, "--live")
 	if err == nil || row(t, r, "credential_expiry").Status != "warn" || row(t, r, "authentication").Status != "fail" {
 		t.Fatal(r)
 	}
 }
 
 func TestInvalidArgumentsBeforeAccess(t *testing.T) {
-	_, err, out := execute(t, &cmdutil.Factory{}, "https://secret@example.com/repo")
+	_, out, err := execute(t, &cmdutil.Factory{}, "https://secret@example.com/repo")
 	if err == nil || out != "" || strings.Contains(err.Error(), "secret") {
 		t.Fatalf("%v %s", err, out)
 	}
@@ -334,7 +334,7 @@ func TestConfigFailureDoesNotHideOtherChecks(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(filepath.Dir(path), "config.json"), []byte(`{"aliases":"very-secret-token"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	r, err, out := execute(t, &cmdutil.Factory{})
+	r, out, err := execute(t, &cmdutil.Factory{})
 	if err == nil || row(t, r, "config").Status != "fail" || row(t, r, "credentials").Status != "pass" || strings.Contains(out, "very-secret-token") {
 		t.Fatal(out)
 	}
@@ -349,7 +349,7 @@ func TestAnonymousServiceFailures(t *testing.T) {
 					return &http.Response{StatusCode: status, Status: http.StatusText(status), Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"message":"synthetic-private-response"}`)), Request: req}, nil
 				})}, nil
 			}}
-			r, err, out := execute(t, f, "--live")
+			r, out, err := execute(t, f, "--live")
 			failed := status != 401 && status != 403
 			if (err != nil) != failed || r.OK == failed {
 				t.Fatalf("status %d: err=%v report=%s", status, err, out)

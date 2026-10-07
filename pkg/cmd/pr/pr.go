@@ -118,6 +118,11 @@ func resolvePRListScope(author, assignee, reviewRequested, reviewNeeded string) 
 	}
 }
 
+// prListStates are the states the AtomGit pull request list endpoints accept.
+// They are a wider set than the issue list states, so each command keeps its
+// own completion candidates instead of sharing one enum.
+var prListStates = []string{"open", "closed", "locked", "merged", "all"}
+
 func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
 		State           string
@@ -196,13 +201,14 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.State, "state", "s", "open", "Filter by state: open, closed, all")
+	cmd.Flags().StringVarP(&opts.State, "state", "s", "open", "Filter by state: open, closed, locked, merged, all")
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of PRs to list")
 	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output pull requests as JSON")
 	cmd.Flags().StringVar(&opts.Author, "author", "", "Filter by author: @me for PRs you created across all your repositories")
 	cmd.Flags().StringVar(&opts.Assignee, "assignee", "", "Filter by assignee: @me for PRs assigned to you across all your repositories")
 	cmd.Flags().StringVar(&opts.ReviewRequested, "review-requested", "", "Filter by requested approver: @me for PRs that need your approval across all your repositories")
 	cmd.Flags().StringVar(&opts.ReviewNeeded, "review-needed", "", "Filter by requested reviewer: @me for PRs that need your review across all your repositories")
+	cmdutil.RegisterValueCompletion(cmd, "state", prListStates)
 
 	return cmd
 }
@@ -807,7 +813,7 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer resp.Body.Close()
+			defer resp.Body.Close() //nolint:errcheck // Status and streamed output copy errors are handled separately; Close only releases response resources.
 
 			if resp.StatusCode != http.StatusOK {
 				return api.NewHTTPError(resp)

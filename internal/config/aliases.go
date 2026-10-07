@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -84,7 +85,7 @@ func DeleteAlias(name string) (bool, error) {
 // lock, so concurrent `ag alias set/delete` processes cannot lose each
 // other's changes, and the result is persisted via a temporary file plus
 // atomic replacement so readers never observe a partial write.
-func updateAliases(mutate func(aliases map[string]string) (bool, error)) error {
+func updateAliases(mutate func(aliases map[string]string) (bool, error)) (resultErr error) {
 	path, err := AliasFilePath()
 	if err != nil {
 		return err
@@ -97,7 +98,8 @@ func updateAliases(mutate func(aliases map[string]string) (bool, error)) error {
 	if err != nil {
 		return err
 	}
-	defer lock.release()
+	saved := false
+	defer func() { releaseAliasLock(lock.release, saved, &resultErr) }()
 
 	aliases, err := LoadAliases()
 	if err != nil {
@@ -110,13 +112,27 @@ func updateAliases(mutate func(aliases map[string]string) (bool, error)) error {
 	if !changed {
 		return nil
 	}
-	return writeAliasesAtomic(path, aliases)
+	if err := writeAliasesAtomic(path, aliases); err != nil {
+		return err
+	}
+	saved = true
+	return nil
+}
+
+func releaseAliasLock(release func() error, saved bool, resultErr *error) {
+	if err := release(); err != nil {
+		operation := "release alias config lock"
+		if saved {
+			operation = "alias config was saved, but failed to release its lock"
+		}
+		*resultErr = errors.Join(*resultErr, fmt.Errorf("%s: %w", operation, err))
+	}
 }
 
 // writeAliasesAtomic persists aliases to path by writing a temporary file in
 // the same directory and atomically replacing the destination, so concurrent
 // readers never observe a truncated or half-written config file.
-func writeAliasesAtomic(path string, aliases map[string]string) error {
+func writeAliasesAtomic(path string, aliases map[string]string) (resultErr error) {
 	data, err := json.MarshalIndent(AliasConfig{Aliases: aliases}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode alias config: %w", err)
@@ -128,17 +144,17 @@ func writeAliasesAtomic(path string, aliases map[string]string) error {
 		return fmt.Errorf("create temp alias config: %w", err)
 	}
 	tmpPath := tmp.Name()
-	defer os.Remove(tmpPath)
+	defer func() { removeTemporaryConfig(tmpPath, &resultErr) }()
 	if err := tmp.Chmod(0o600); err != nil {
-		tmp.Close()
+		tmp.Close() //nolint:errcheck // Chmod failed; closing the temporary file is best-effort cleanup while the permission error remains primary.
 		return fmt.Errorf("set temp alias config permissions: %w", err)
 	}
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+		tmp.Close() //nolint:errcheck // Write failed; closing the temporary file is best-effort cleanup while the write error remains primary.
 		return fmt.Errorf("write temp alias config: %w", err)
 	}
 	if err := tmp.Sync(); err != nil {
-		tmp.Close()
+		tmp.Close() //nolint:errcheck // Sync failed; closing the temporary file is best-effort cleanup while the sync error remains primary.
 		return fmt.Errorf("sync temp alias config: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
@@ -147,6 +163,7 @@ func writeAliasesAtomic(path string, aliases map[string]string) error {
 	if err := os.Rename(tmpPath, path); err != nil {
 		return fmt.Errorf("replace alias config %s: %w", path, err)
 	}
+	tmpPath = "" // The rename transferred ownership to the destination.
 	if err := syncDir(filepath.Dir(path)); err != nil {
 		return fmt.Errorf("sync alias config directory: %w", err)
 	}

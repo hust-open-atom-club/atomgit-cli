@@ -24,9 +24,12 @@ type options struct {
 	input    string
 	accept   string
 	paginate bool
+	dryRun   bool
 }
 
 type preparedRequest struct {
+	baseURL     string
+	bodySource  string
 	method      string
 	path        string
 	body        []byte
@@ -62,17 +65,26 @@ GET is the default. Supported methods are GET, POST, PATCH, PUT, and DELETE.
 Explicit non-GET requests may change remote resources; ag does not infer or
 confirm the endpoint's effects. Redirects only retain credentials on the exact
 AtomGit API origin. Paginated output is one compact JSON page per line.
-Response bytes use terminal-safe output unless --raw-output is specified.`,
+Response bytes use terminal-safe output unless --raw-output is specified.
+
+Use --dry-run for a local, redacted JSON preview without reading credentials or
+sending requests. Values and unrecognized names/path segments are omitted.
+Explicit --input files or stdin may be read, but are never modified. A preview
+does not verify remote permissions, resource existence, or server-side validation.`,
 		Example: `  ag api /user
   ag api /repos/owner/repo/issues --field state=open
   ag api /repos/owner/repo/issues --method POST --field title='New issue'
   ag api /repos/owner/repo/issues/42 --method PATCH --input update.json
-  ag api /repos/owner/repo/issues --paginate`,
+  ag api /repos/owner/repo/issues --paginate
+  ag api /repos/owner/repo/issues --method POST --field title=example --dry-run`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prepared, err := prepare(args[0], opts, cmd.InOrStdin())
 			if err != nil {
 				return err
+			}
+			if opts.dryRun {
+				return writePreview(cmd.OutOrStdout(), prepared)
 			}
 			return execute(cmd, f, prepared)
 		},
@@ -82,10 +94,17 @@ Response bytes use terminal-safe output unless --raw-output is specified.`,
 	cmd.Flags().StringVar(&opts.input, "input", "", "Read the raw request body from a file or - for stdin")
 	cmd.Flags().StringVarP(&opts.accept, "accept", "H", "application/json", "Set the Accept request header")
 	cmd.Flags().BoolVar(&opts.paginate, "paginate", false, "Request all pages and emit compact JSON pages as NDJSON")
+	cmd.Flags().BoolVar(&opts.dryRun, "dry-run", false, "Preview the redacted request as JSON without credentials or network access")
+	// Parsing stops at the first invalid flag, possibly before --dry-run.
+	// Redact flag errors in both modes so argument order cannot leak values
+	// or unknown names before request preparation gets a chance to run.
+	cmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
+		return &redactedError{message: "invalid API flags (details omitted); see 'ag api --help' for supported flags and values", cause: err}
+	})
 	commandschema.Annotate(cmd, commandschema.Metadata{
 		Positionals: &commandschema.Positionals{MinCount: 1, MaxCount: 1, Description: "One relative AtomGit API v5 endpoint; absolute URLs and path escapes are rejected."},
 		Output:      "raw", Effects: "conditional",
-		Notes: []string{"Output is the response body; pagination emits JSON pages as NDJSON. Response shape and required permissions depend on the endpoint.", "Non-GET methods may modify remote resources. Field/input combinations and pagination have additional runtime validation."},
+		Notes: []string{"Output is the response body; pagination emits JSON pages as NDJSON. Response shape and required permissions depend on the endpoint.", "Non-GET methods may modify remote resources. Field/input combinations and pagination have additional runtime validation.", "--dry-run outputs a redacted JSON preview without credentials or network access; remote permissions and resource existence are not verified."},
 	})
 	return cmd
 }
@@ -95,11 +114,11 @@ func prepare(endpoint string, opts options, stdin io.Reader) (preparedRequest, e
 	switch method {
 	case http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete:
 	default:
-		return preparedRequest{}, fmt.Errorf("unsupported HTTP method %q", opts.method)
+		return preparedRequest{}, preparationError(opts, "unsupported HTTP method: use GET, POST, PATCH, PUT, or DELETE", fmt.Errorf("unsupported HTTP method %q", opts.method))
 	}
 	path, values, err := parseEndpoint(endpoint)
 	if err != nil {
-		return preparedRequest{}, err
+		return preparedRequest{}, preparationError(opts, "invalid endpoint: expected a relative API v5 path without credentials, fragments, traversal, or malformed escapes/query", err)
 	}
 	if !validHeaderValue(opts.accept) {
 		return preparedRequest{}, fmt.Errorf("invalid Accept value")
@@ -116,9 +135,9 @@ func prepare(endpoint string, opts options, stdin io.Reader) (preparedRequest, e
 
 	fields, err := parseFields(opts.fields)
 	if err != nil {
-		return preparedRequest{}, err
+		return preparedRequest{}, preparationError(opts, "invalid field: expected non-empty key=value", err)
 	}
-	request := preparedRequest{method: method, accept: opts.accept}
+	request := preparedRequest{baseURL: internalapi.BaseURL + internalapi.APIVersion, method: method, accept: opts.accept, bodySource: "none"}
 	if method == http.MethodGet {
 		for _, field := range fields {
 			values.Add(field[0], field[1])
@@ -133,15 +152,18 @@ func prepare(endpoint string, opts options, stdin io.Reader) (preparedRequest, e
 			return preparedRequest{}, fmt.Errorf("encode fields: %w", err)
 		}
 		request.contentType = "application/json"
+		request.bodySource = "fields"
 	}
 	if opts.input != "" {
 		if opts.input == "-" {
+			request.bodySource = "stdin"
 			request.body, err = io.ReadAll(stdin)
 		} else {
+			request.bodySource = "file"
 			request.body, err = os.ReadFile(opts.input)
 		}
 		if err != nil {
-			return preparedRequest{}, fmt.Errorf("read input %q: %w", opts.input, err)
+			return preparedRequest{}, preparationError(opts, "read input: unable to read --input (details omitted)", fmt.Errorf("read input %q: %w", opts.input, err))
 		}
 	}
 	if opts.paginate {
@@ -240,7 +262,7 @@ func execute(cmd *cobra.Command, f *cmdutil.Factory, request preparedRequest) er
 	if err != nil {
 		return redact(err, token)
 	}
-	client := internalapi.NewClientWithHTTPClient(token, cloneRedirectSafeClient(httpClient)).WithContext(cmd.Context()).WithRetryWriter(cmd.ErrOrStderr())
+	client := internalapi.NewClientWithBaseURL(token, request.baseURL, cloneRedirectSafeClient(httpClient)).WithContext(cmd.Context()).WithRetryWriter(cmd.ErrOrStderr())
 	if request.pagination != nil {
 		return executePagination(cmd.OutOrStdout(), client, request, token)
 	}
@@ -248,7 +270,7 @@ func execute(cmd *cobra.Command, f *cmdutil.Factory, request preparedRequest) er
 	if err != nil {
 		return redact(fmt.Errorf("request %s %s: %w", request.method, request.path, err), token)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and body copy errors are handled separately.
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return responseError(request.method+" "+request.path, resp, token)
 	}
@@ -368,11 +390,11 @@ func executePagination(out io.Writer, client *internalapi.Client, request prepar
 		}
 		if resp.StatusCode < 200 || resp.StatusCode > 299 {
 			err := responseError(fmt.Sprintf("request page %d", state.page), resp, token)
-			resp.Body.Close()
+			resp.Body.Close() //nolint:errcheck // Response error details were read before close; the status error remains primary.
 			return err
 		}
 		body, readErr := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		resp.Body.Close() //nolint:errcheck // Page body read result is checked separately; Close only releases response resources.
 		if readErr != nil {
 			return redact(fmt.Errorf("read page %d: %w", state.page, readErr), token)
 		}

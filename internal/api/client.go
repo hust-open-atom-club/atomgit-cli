@@ -338,7 +338,7 @@ func (c *Client) Get(path string, result any) error {
 	if err != nil {
 		return fmt.Errorf("API request GET %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return NewHTTPError(resp)
@@ -361,7 +361,7 @@ func (c *Client) Post(path string, body, result any) error {
 	if err != nil {
 		return fmt.Errorf("API request POST %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return NewHTTPError(resp)
@@ -380,7 +380,7 @@ func (c *Client) PostForm(path string, fields url.Values, result any) error {
 	if err != nil {
 		return fmt.Errorf("API request POST %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return NewHTTPError(resp)
@@ -401,7 +401,7 @@ func (c *Client) PutForm(path string, fields url.Values, result any) error {
 	if err != nil {
 		return fmt.Errorf("API request PUT %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusOK {
 		return NewHTTPError(resp)
@@ -427,7 +427,7 @@ func (c *Client) Put(path string, body, result any) error {
 	if err != nil {
 		return fmt.Errorf("API request PUT %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusOK {
 		return NewHTTPError(resp)
@@ -453,7 +453,7 @@ func (c *Client) Patch(path string, body, result any) error {
 	if err != nil {
 		return fmt.Errorf("API request PATCH %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return NewHTTPError(resp)
@@ -484,7 +484,7 @@ func (c *Client) PatchForm(path string, fields map[string]string, result any) er
 	if err != nil {
 		return fmt.Errorf("API request PATCH %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusOK {
 		return NewHTTPError(resp)
@@ -501,7 +501,7 @@ func (c *Client) Delete(path string) error {
 	if err != nil {
 		return fmt.Errorf("API request DELETE %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; request and status errors are handled separately.
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		return NewHTTPError(resp)
@@ -524,7 +524,7 @@ func (c *Client) DeleteWithBody(path string, body any) error {
 	if err != nil {
 		return fmt.Errorf("API request DELETE %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; request and status errors are handled separately.
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		return NewHTTPError(resp)
@@ -630,7 +630,7 @@ func (c *Client) doJSONRequestContext(ctx context.Context, httpClient *http.Clie
 	if err != nil {
 		return fmt.Errorf("API request %s %s: %w", method, path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if !statusAllowed(resp.StatusCode, policy.AllowedStatuses) {
 		return NewHTTPError(resp)

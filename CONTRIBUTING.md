@@ -294,6 +294,23 @@ fixture 必须注明合成或脱敏采集来源。使用专用测试仓库采集
 - 业务错误从 Cobra 的 `RunE` 返回，不要在库代码中调用 `os.Exit` 或 `log.Fatal`
 - 不要在日志、错误或测试数据中泄露 access token、refresh token、client secret 等凭据
 
+### 代码质量
+
+使用 [golangci-lint v2](https://golangci-lint.run/) ，基于工作区中的现有配置检查本次修改，
+并评估报告的诊断是否需要修复。
+
+如果诊断经确认属于误报，或对应行为属于有明确理由的例外，需要进行豁免时，
+使用 `//nolint:<linter> // <reason>` 的格式抑制告警，并说明具体原因。
+
+例如：
+
+```go
+//nolint:gosec // G301: Windows ACLs are not controlled by Unix mode bits.
+```
+
+修改包含现有 `nolint` 豁免的代码时，应临时移除相关豁免，并使用项目配置重新运行 lint，
+以确认本次修改没有引入被现有 `nolint` 一并抑制的新诊断。
+
 ## 行为准则
 
 - 尊重所有参与者

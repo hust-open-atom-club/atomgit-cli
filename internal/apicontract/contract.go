@@ -280,7 +280,7 @@ func (s Shape) validate(v any, path string) error {
 			kind = "integer"
 		}
 	}
-	if !slices.Contains(s.Types, kind) && !(kind == "integer" && slices.Contains(s.Types, "number")) {
+	if !slices.Contains(s.Types, kind) && (kind != "integer" || !slices.Contains(s.Types, "number")) {
 		return fmt.Errorf("%s: incompatible JSON type", path)
 	}
 	switch x := v.(type) {

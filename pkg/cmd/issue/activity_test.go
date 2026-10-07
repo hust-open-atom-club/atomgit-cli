@@ -56,7 +56,9 @@ func TestIssueInspectionOutput(t *testing.T) {
 				cmd := tc.newCmd(f)
 				cmd.SetArgs([]string{"alice/demo", "0007"})
 				if asJSON {
-					cmd.Flags().Set("json", "true")
+					if err := cmd.Flags().Set("json", "true"); err != nil {
+						t.Fatal(err)
+					}
 				}
 				var out bytes.Buffer
 				cmd.SetOut(&out)
@@ -80,7 +82,9 @@ func TestIssueInspectionOutput(t *testing.T) {
 						}
 					}
 					var actor string
-					json.Unmarshal(rows[0]["author"], &actor)
+					if err := json.Unmarshal(rows[0]["author"], &actor); err != nil {
+						t.Fatal(err)
+					}
 					if actor != "alice" {
 						t.Fatalf("actor %v", actor)
 					}
@@ -118,7 +122,9 @@ func TestIssueInspectionEmptyAndErrors(t *testing.T) {
 					cmd := tc.newCmd(f)
 					cmd.SetArgs([]string{"alice/demo", "7"})
 					if asJSON {
-						cmd.Flags().Set("json", "true")
+						if err := cmd.Flags().Set("json", "true"); err != nil {
+							t.Fatal(err)
+						}
 					}
 					var out bytes.Buffer
 					cmd.SetOut(&out)
@@ -178,7 +184,9 @@ func TestIssueInspectionLimits(t *testing.T) {
 						t.Fatalf("page %s", req.URL.RawQuery)
 					}
 					var original []map[string]any
-					json.Unmarshal([]byte(tc.body), &original)
+					if err := json.Unmarshal([]byte(tc.body), &original); err != nil {
+						t.Fatalf("decode inspection fixture: %v", err)
+					}
 					var rows []map[string]any
 					count := 103
 					if tc.name == "reactions" {

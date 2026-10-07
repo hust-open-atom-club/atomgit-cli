@@ -61,7 +61,7 @@ func GetCommitText(ctx context.Context, client *Client, owner, repo, sha, format
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		defer resp.Body.Close()
+		defer resp.Body.Close() //nolint:errcheck // Closing only releases the error response resources; NewHTTPError preserves the primary API error.
 		return nil, fmt.Errorf("get commit %s: %w", format, NewHTTPError(resp))
 	}
 	return resp.Body, nil

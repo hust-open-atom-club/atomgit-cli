@@ -54,18 +54,18 @@ func TestSanitizeTerminal(t *testing.T) {
 		{name: "CR NULL BEL combined", input: "a\x0db\x00c\x07d", want: "a\\x0db\\x00c\\x07d"},
 
 		// C1 → \u00NN (valid UTF-8, caught by unicode.IsControl)
-		{name: "C1 CSI stripped", input: "text1mstyled", want: "text\\u009b1mstyled"},
+		{name: "C1 CSI stripped", input: "text\u009b1mstyled", want: "text\\u009b1mstyled"},
 
 		// DEL
 		{name: "DEL stripped", input: "del\x7Fchar", want: "del\\x7fchar"},
 
 		// Bidi controls → \uNNNN
-		{name: "RLO bidi stripped", input: "text‮over", want: "text\\u202eover"},
-		{name: "LRI bidi stripped", input: "text⁦iso", want: "text\\u2066iso"},
-		{name: "line separator stripped", input: "line break", want: "line\\u2028break"},
-		{name: "ALM stripped", input: "text؜dir", want: "text\\u061cdir"},
-		{name: "LRM stripped", input: "text‎dir", want: "text\\u200edir"},
-		{name: "RLM stripped", input: "text‏dir", want: "text\\u200fdir"},
+		{name: "RLO bidi stripped", input: "text\u202eover", want: "text\\u202eover"},
+		{name: "LRI bidi stripped", input: "text\u2066iso", want: "text\\u2066iso"},
+		{name: "line separator stripped", input: "line\u2028break", want: "line\\u2028break"},
+		{name: "ALM stripped", input: "text\u061cdir", want: "text\\u061cdir"},
+		{name: "LRM stripped", input: "text\u200edir", want: "text\\u200edir"},
+		{name: "RLM stripped", input: "text\u200fdir", want: "text\\u200fdir"},
 
 		// Realistic attack payloads
 		{name: "diff line with OSC 52", input: "  result();  \x1b]52;c;ZWNobyBQV05FRA==\x07",
@@ -98,8 +98,8 @@ func TestSanitizeTerminal_NoPanic(t *testing.T) {
 	for _, input := range []string{
 		"\x00\x00\x00",
 		"\x1b\x1b\x1b",
-		"",
-		"‮⁦⁩",
+		"\u009b",
+		"\u202e\u2066\u2069",
 	} {
 		_ = SanitizeTerminal(input)
 	}

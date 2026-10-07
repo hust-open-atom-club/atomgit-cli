@@ -329,10 +329,16 @@ confirm the endpoint's effects. Redirects only retain credentials on the exact
 AtomGit API origin. Paginated output is one compact JSON page per line.
 Response bytes use terminal-safe output unless --raw-output is specified.
 
+Use --dry-run for a local, redacted JSON preview without reading credentials or
+sending requests. Values and unrecognized names/path segments are omitted.
+Explicit --input files or stdin may be read, but are never modified. A preview
+does not verify remote permissions, resource existence, or server-side validation.
+
 ### Flags
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--dry-run` | Preview the redacted request as JSON without credentials or network access | `false` | local |
 | `--input` | Read the raw request body from a file or - for stdin | `` | local |
 | `--paginate` | Request all pages and emit compact JSON pages as NDJSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
@@ -349,6 +355,7 @@ ag api /repos/owner/repo/issues --field state=open
 ag api /repos/owner/repo/issues --method POST --field title='New issue'
 ag api /repos/owner/repo/issues/42 --method PATCH --input update.json
 ag api /repos/owner/repo/issues --paginate
+ag api /repos/owner/repo/issues --method POST --field title=example --dry-run
 ```
 
 
@@ -2827,7 +2834,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--review-requested` | Filter by requested approver: @me for PRs that need your approval across all your repositories | `` | local |
 | `-L, --limit` | Maximum number of PRs to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
-| `-s, --state` | Filter by state: open, closed, all | `open` | local |
+| `-s, --state` | Filter by state: open, closed, locked, merged, all | `open` | local |
 
 
 ## ag pr merge

@@ -562,7 +562,7 @@ func updateViaNPM(cmd *cobra.Command, deps updateDeps, latest string) error {
 		}
 		if deps.goos != "windows" {
 			return fmt.Errorf(
-				"update AtomGit CLI via npm: %w; the npm command entry is no longer usable (%v); reinstall with: npm install -g %s@%s --registry=%s",
+				"update AtomGit CLI via npm: %w; the npm command entry is no longer usable (%w); reinstall with: npm install -g %s@%s --registry=%s",
 				installErr,
 				verification.err,
 				npmPackage,
@@ -595,7 +595,7 @@ func updateViaNPM(cmd *cobra.Command, deps updateDeps, latest string) error {
 		executable, cleanupWarnings, err := repairWindowsNPMLauncher(cmd.Context(), deps, prefix, latest)
 		if err != nil {
 			if installErr != nil {
-				return fmt.Errorf("npm update failed (%v) and command-entry repair failed: %w", installErr, err)
+				return fmt.Errorf("npm update failed (%w) and command-entry repair failed: %w", installErr, err)
 			}
 			return fmt.Errorf("npm update did not produce a working command entry and repair failed: %w", err)
 		}
@@ -649,7 +649,7 @@ func updateViaHomebrewCore(cmd *cobra.Command, deps updateDeps, installed instal
 	}
 	executable := filepath.Join(prefix, "bin", homebrewExecutableName)
 	if err := verifyInstalledVersion(cmd.Context(), deps, executable, latest); err != nil {
-		return fmt.Errorf(
+		return fmt.Errorf( //nolint:staticcheck // Homebrew is a product name and is intentionally capitalized in this user-facing error.
 			"Homebrew Core update completed but verification failed (the Formula may not provide %s yet): %w",
 			latest,
 			err,
@@ -741,6 +741,7 @@ func repairWindowsNPMLauncher(
 		return "", nil, fmt.Errorf("extract %s: %w", assetName, err)
 	}
 
+	//nolint:gosec // G301: Windows ACLs are not controlled by Unix mode bits.
 	if err := os.MkdirAll(prefix, 0o755); err != nil {
 		return "", nil, fmt.Errorf("create npm prefix %s: %w", prefix, err)
 	}
@@ -783,7 +784,7 @@ func repairWindowsNPMLauncher(
 	}
 	rollback := func(cause error) (string, []string, error) {
 		if err := os.Remove(target); err != nil && !errors.Is(err, os.ErrNotExist) {
-			cause = fmt.Errorf("%w; remove failed repaired command %s: %v", cause, target, err)
+			cause = fmt.Errorf("%w; remove failed repaired command %s: %w", cause, target, err)
 		}
 		return "", nil, rollbackLauncherBackups(backups, cause)
 	}
@@ -918,7 +919,7 @@ func downloadUpdateAsset(ctx context.Context, rawURL string, limit int64) ([]byt
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer response.Body.Close() //nolint:errcheck // Status and update asset read errors are handled separately; Close only releases response resources.
 	if response.StatusCode/100 != 2 {
 		return nil, fmt.Errorf("download update asset: %w", api.NewHTTPError(response))
 	}

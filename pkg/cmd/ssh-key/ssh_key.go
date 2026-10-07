@@ -66,7 +66,7 @@ func runAdd(out io.Writer, f *cmdutil.Factory, opts *AddOptions) error {
 		if err != nil {
 			return fmt.Errorf("failed to open key file: %w", err)
 		}
-		defer file.Close()
+		defer file.Close() //nolint:errcheck // Key file is read-only; read errors are handled separately and Close only releases resources.
 		keyReader = file
 	}
 

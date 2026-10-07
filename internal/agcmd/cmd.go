@@ -75,11 +75,18 @@ func loadCommandConfig(selected *cobra.Command, factory *cmdutil.Factory, load f
 	// PersistentPreRunE. These commands also do not need credentials when they
 	// run normally. Doctor inspects credentials itself; schema uses static
 	// metadata only. Auth status also inspects the original credentials and
-	// renders structured failures itself.
+	// renders structured failures itself. API dry-run only prepares a local
+	// request preview; flag parsing has already completed before this hook.
 	if selected != nil {
 		switch selected.Name() {
 		case "doctor", "help", "schema", "version":
 			return nil
+		}
+		if selected.CommandPath() == selected.Root().Name()+" api" {
+			dryRun, err := selected.Flags().GetBool("dry-run")
+			if err == nil && dryRun {
+				return nil
+			}
 		}
 		if selected.CommandPath() == selected.Root().Name()+" auth status" {
 			return nil

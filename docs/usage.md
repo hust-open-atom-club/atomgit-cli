@@ -840,6 +840,8 @@ ag pr history owner/repo 42 --limit 50 --json
 
 `pr view --json` 在现有字段基础上新增 `assignees`、`approvalReviewers`、`testers`（均为字符串数组，空时为 `[]`）和 `milestone`（对象或 `null`）字段。`pr list --json` 的 schema 保持不变。两个命令的 `merged` 字段会综合 AtomGit 响应中的 `merged`、`state` 和 `merged_at` 判断，避免 API 省略 `merged` 时把已合并 PR 错报为 `false`。
 
+`pr list --state`（含短选项 `-s`）提供静态补全：在启用了 Shell 补全的终端中按 Tab，会列出 PR 列表实际支持的状态候选 `open`、`closed`、`locked`、`merged`、`all`，并按已输入的前缀过滤；无匹配候选时不会退化为文件补全。补全使用本地静态候选，不需要登录，也不会发送网络请求。
+
 跨仓库创建 PR 时 `--head` 的写法请参阅[跨仓库 PR 示例](cross_repo_pr_demo.md)。
 
 负责人（assignee）负责后续工作，批准审查人（approval reviewer）负责批准变更，测试人（tester）负责验证变更；三个 AtomGit 角色相互独立。用户账号、标签和里程碑会在修改 PR 前解析，标签和里程碑必须已存在。`pr edit` 只修改显式传入的字段；`--body-file -` 从标准输入读取正文，`--body` 与 `--body-file` 互斥，显式传入空正文会清空现有正文。添加和移除参数可重复使用，也可用逗号一次传入多个值。
@@ -952,6 +954,8 @@ ag issue reopen owner/repo 42
 `--assignee` 接受一个非空用户登录名。`--assignee` 和 `--remove-assignee` 互斥。创建 Issue 时设置负责人是纯新增操作，不需要确认；修改已有 Issue 的负责人（设置或清除）默认需要确认，确认提示输出到 stderr 以免混入正常命令输出，`--yes` 可跳过确认。
 
 `issue list` 的 `--author`、`--assignee` 和 `--involved` 目前只支持 `@me`：通过授权用户接口（`/api/v5/user/issues`）按登录账号跨所有仓库过滤，分别对应服务端 `filter` 的 `created`（我创建的）、`assigned`（分配给我的）和 `all`（创建或分配给我的）。这三个参数彼此互斥，也不能与显式 `owner/repo` 参数同用；不带这些参数时按仓库列出，行为不变。`--state`、`--limit` 和 `--json` 在两种模式下均可使用。跨仓库模式的文本输出会在每行开头附带 `owner/repo` 前缀（如 `owner/repo #1 标题 [open]`），因为编号只在各自仓库内唯一；`--json` 输出可通过每条记录的 `url` 字段区分仓库，schema 保持不变。
+
+`issue list --state`（含短选项 `-s`）的静态补全行为与 `pr list --state` 一致，候选为 Issue 列表实际支持的状态 `open`、`closed`、`all`，两者枚举不同，各自独立维护。
 
 ### Issue 关联 PR 与分支
 
@@ -1171,7 +1175,9 @@ ag run artifact delete owner/repo <artifact-id>
 ag run artifact delete <artifact-id> --yes
 ```
 
-`--log` 会先把 AtomGit 返回的日志 ZIP 流式写入临时文件，再逐项输出其中的日志文本；若服务端返回纯文本也会直接兼容。`--log-file` 保留服务端原始 ZIP。`ag run view --artifact` 下载的是 artifact 归档，而 `ag run artifact view` 只读取元数据。`ag run artifact delete` 会先读取 artifact 元数据并显示仓库、ID、名称、workflow run ID 和过期时间，只有输入 `y` 或 `yes` 才会继续；`--yes` 可跳过确认，但不会跳过元数据读取。artifact 删除后无法恢复。日志、step-log `--output` 和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
+`--log` 会先把 AtomGit 返回的日志 ZIP 流式写入临时文件，再逐项输出其中的日志文本；纯文本响应也受相同限制并保持兼容。日志展示的响应上限为 64 MiB，用于限制临时文件；单条解压日志上限为 128 MiB，允许其达到最大归档响应的两倍；全部解压日志累计上限为 256 MiB，允许两条最大日志并限制多条日志的总展开量。累计量不含条目间补入的换行。ZIP 元数据会用于提前拒绝超限内容，实际读取仍会执行限制；恰好达到上限可正常输出，超限则返回错误。错误可能发生在已有部分日志输出之后，请勿将非零退出的部分输出当作完整日志。无法识别为 ZIP 的文本响应按纯文本处理；带 ZIP 签名但格式损坏的响应会报错。
+
+`--log-file` 保留服务端原始 ZIP 下载行为，不应用上述展示限制。`ag run view --artifact` 下载的是 artifact 归档，而 `ag run artifact view` 只读取元数据。`ag run artifact delete` 会先读取 artifact 元数据并显示仓库、ID、名称、workflow run ID 和过期时间，只有输入 `y` 或 `yes` 才会继续；`--yes` 可跳过确认，但不会跳过元数据读取。artifact 删除后无法恢复。日志、step-log `--output` 和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
 
 ## Actions 工作流管理 (workflow)
 
@@ -1233,6 +1239,11 @@ printf '%s' '{"title":"stdin"}' | ag api /repos/owner/repo/issues --method POST 
 
 # 逐页请求；每个完整 JSON 页面压缩为一行 NDJSON
 ag api /repos/owner/repo/issues --paginate
+
+# 仅本地预览，不发送请求，不需要登录
+ag api /repos/owner/repo/issues --method POST --field title=example --dry-run
+ag api /repos/owner/repo/issues/42 --method PATCH --input update.json --dry-run
+ag api /repos/owner/repo/issues --paginate --dry-run
 ```
 
 端点必须是 API v5 下的相对路径；绝对 URL、`//host/path`、片段和越过 API 基址的路径会在读取凭据前被拒绝。认证信息仅通过 `Authorization` 请求头发送。同源重定向可保留认证；scheme、主机或有效端口变化后，当前及后续跳转均不会再携带认证信息。
@@ -1242,6 +1253,34 @@ ag api /repos/owner/repo/issues --paginate
 `--paginate` 仅支持无原始输入的 GET。默认从 `page=1&per_page=100` 开始；已有的正整数值会被保留。服务端提供一致的 `total_page` 响应头时据此停止；否则仅数组响应可通过空页或短页停止。后续页面失败时，已完成的 NDJSON 行会保留，失败页面不会产生部分输出。
 
 成功响应（包括空响应和二进制响应）会直接写到标准输出，不增加标签或换行。终端控制字符默认仍会转换为可见转义；机器处理确需原始字节时使用 `ag --raw-output api ...`，不要将未经检查的原始输出直接转发到终端。
+
+### API 请求预览
+
+`--dry-run` 复用真实模式的请求准备与校验，成功时只输出一个 JSON 对象和结尾换行；失败返回非零且不输出成功对象。它不读取令牌、不初始化或修改凭据，也不发起网络请求、刷新令牌或检查更新。未登录、凭据文件损坏时仍可使用；显式指定的 `--input` 文件或 stdin 会被读取，但不会写回。
+
+预览中的 `dryRun: true`、`executed: false` 表示**仅完成本地准备，尚未执行请求**。预览不验证远端权限、资源存在性或服务端业务规则，也不授权后续写操作；实际执行需另行移除 `--dry-run`。`--dry-run=false` 保留原有真实请求行为。
+
+预览 JSON 的字段固定保留：
+
+| 字段 | 含义 |
+| --- | --- |
+| `schemaVersion` | 当前预览结构版本，固定为 `1` |
+| `dryRun` / `executed` | 固定为 `true` / `false` |
+| `method` | 最终 HTTP 方法，已转为大写 |
+| `apiVersion` / `host` / `basePath` | 从实际请求基址取得；当前为 `v5` / `api.atomgit.com` / `/api/v5` |
+| `path` | 规范化后的相对路径，不含查询字符串；未知片段以 `[redacted]` 替代 |
+| `query` | 查询参数数组，按原始名称排序；每项含 `name`、`type: "string"`、`count`（同名值数量），不含值；无参数时为 `[]` |
+| `accept` | 默认 `application/json` 原样展示；自定义值为 `[redacted]` |
+| `body` | `source` 为 `none` / `fields` / `file` / `stdin`；`contentType` 是实际 HTTP 类型（未设置时为 `""`），`byteLength` 为请求体字节数 |
+| `body.type` / `body.count` | 无请求体为 `absent`，非 JSON 为 `opaque`，否则为 JSON 类型（object/array/string/number/boolean/null）；count 为顶层对象字段数或数组元素数，其他类型为 `0` |
+| `body.fields` / `body.truncated` | 顶层对象最多 50 项字段的名称与 JSON 类型，按原始名称排序，超出时 truncated 为 `true`；其他类型 fields 为 `[]`，不展开嵌套内容 |
+| `pagination` | 固定含 `enabled`、`firstPage`、`perPage`、`strategy`；启用时两个数值字段均为字符串 `"[redacted]"`，包括默认值；未启用时分别为 `false`、`null`、`null`、`"none"` |
+
+脱敏采用固定名称白名单，仅保留常见路由词和字段名（例如 `repos`、`issues`、`title`、`token`），其余名称与路径片段均为 `[redacted]`。因此 `/repos/owner/repo/issues/42` 显示为 `/repos/[redacted]/[redacted]/issues/[redacted]`。所有字段值、查询值、正文标量、嵌套内容、输入文件路径及认证信息都不展示；不根据某个字段“看起来安全”而输出其值。请求体字节数与结构数量仍可见。请求准备错误也会省略可能带有输入内容的底层详情。全局 `--raw-output` 不会关闭这些脱敏规则。
+
+选项解析会在第一个错误处停止，可能尚未读到 `--dry-run`；因此 `ag api` 在预览和真实模式下均省略非法选项的原始名称和值，并提示查看 `ag api --help`。
+
+`--paginate --dry-run` 只预览首个请求，将 `firstPage` / `perPage` 统一脱敏为 `"[redacted]"`，不展示通过 URL 查询参数或 `--field` 提供的原始数值。`strategy` 为 `total_page-or-short-array`，表示实际执行时依据服务端 `total_page` 或数组短页停止。实际请求仍使用准备阶段校验后的分页数值；预览没有远端总页数或后续请求结果，所有原有分页和输入互斥限制继续生效。
 
 ## Release
 
