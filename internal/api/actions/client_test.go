@@ -142,6 +142,28 @@ func TestListRunsUsesV8PathFiltersAndBearerAuth(t *testing.T) {
 	}
 }
 
+func TestActionsMetadataRetriesRateLimit(t *testing.T) {
+	calls := 0
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		calls++
+		if calls == 1 {
+			resp := response(req, http.StatusTooManyRequests, `{"error":"slow down"}`)
+			resp.Header.Set("Retry-After", "0")
+			return resp, nil
+		}
+		return response(req, http.StatusOK, `{"workflow_run_id":"run-1","status":"COMPLETED"}`), nil
+	})
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+
+	run, err := client.GetRun("team", "demo", "run-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if calls != 2 || run.WorkflowRunID != "run-1" {
+		t.Fatalf("calls = %d, run = %#v", calls, run)
+	}
+}
+
 func TestRunJobAndArtifactJSONPaths(t *testing.T) {
 	expected := []string{
 		"/api/v8/repos/team/demo/actions/runs/run-1",

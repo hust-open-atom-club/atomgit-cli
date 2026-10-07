@@ -255,6 +255,7 @@ func DownloadReleaseAttachment(ctx context.Context, client *Client, owner, repo,
 		"",
 		"*/*",
 		true,
+		false,
 	)
 	if err != nil {
 		return nil, err

@@ -26,14 +26,7 @@ func NewCmdRunner(f *cmdutil.Factory) *cobra.Command {
 const maxRunnersPerPage = 100
 
 func newActionsClient(f *cmdutil.Factory, token string) (*actions.Client, error) {
-	if f == nil || f.HttpClient == nil {
-		return actions.NewClient(token), nil
-	}
-	httpClient, err := f.HttpClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
-	}
-	return actions.NewClientWithHTTPClient(token, httpClient), nil
+	return f.NewActionsClient(token)
 }
 
 func requireToken(f *cmdutil.Factory) (string, error) {
