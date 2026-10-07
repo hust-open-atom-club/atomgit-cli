@@ -69,6 +69,63 @@ jobs:
       - name: Check generated command reference
         run: time make docs-reference-check
 
+      - name: Install Unix manual parser
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mandoc man-db
+
+      - name: Check generated manuals and command coverage
+        run: time make docs-man-check
+
+  manpage-release:
+    name: Verify manuals in release archives
+    needs: quality-and-test
+    runs-on: [ubuntu-latest, x64, small]
+    env:
+      GOPROXY: https://goproxy.cn,direct
+    steps:
+      - name: Check out PR code
+        if: ${{ atomgit.head_ref != '' }}
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check out pushed code
+        if: ${{ atomgit.head_ref == '' }}
+        uses: checkout
+        with:
+          fetch-depth: 0
+
+      - name: Restore Go modules and downloaded toolchains
+        uses: cache
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum') }}
+          restore-keys: |
+            go-mod-${{ runner.os }}-
+
+      - name: Set up bootstrap Go
+        uses: setup-go
+        with:
+          version: "1.26.1"
+
+      - name: Set up Node.js
+        uses: setup-node
+        with:
+          node-version: "20"
+
+      - name: Install npm build dependencies
+        run: npm ci --no-fund --no-audit
+
+      - name: Install verified GoReleaser
+        run: sh scripts/install-goreleaser.sh "$RUNNER_TEMP/manpage-goreleaser"
+
+      - name: Build snapshots and verify complete manual coverage in Unix archives
+        run: |
+          version="v$(node -p 'require("./package.json").version')"
+          make release-snapshot VERSION="$version" GORELEASER="$RUNNER_TEMP/manpage-goreleaser/goreleaser"
+
   race-test:
     name: Linux race test
     needs: quality-and-test

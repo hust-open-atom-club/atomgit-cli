@@ -12,6 +12,9 @@ const {
   parseArguments,
   publishRelease,
 } = require("../scripts/publish-atomgit-release");
+const { checkReleaseManpages } = require("../scripts/check-release-manpages");
+
+const MANPAGES = ["ag-cli.1", "ag-cli-auth-login.1", "ag-cli-pr-create.1"];
 
 const ARCHIVES = [
   "ag_darwin_amd64.tar.gz",
@@ -26,7 +29,7 @@ function digest(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
-async function createFixture(t, tag = "v1.2.3") {
+async function createFixture(t, tag = "v1.2.3", { manualNames = MANPAGES } = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), "ag-release-publish-test-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const releaseDir = path.join(root, tag);
@@ -42,7 +45,10 @@ async function createFixture(t, tag = "v1.2.3") {
       await mkdir(source);
       await writeFile(path.join(source, "LICENSE"), "license");
       await writeFile(path.join(source, "ag-cli"), `binary-${index}`);
-      await tar.c({ cwd: source, file: path.join(directory, name), gzip: true }, ["LICENSE", "ag-cli"]);
+      const manuals = path.join(source, "share/man/man1");
+      await mkdir(manuals, { recursive: true });
+      for (const manual of manualNames) await writeFile(path.join(manuals, manual), '.TH "AG-CLI" "1"\n');
+      await tar.c({ cwd: source, file: path.join(directory, name), gzip: true }, ["LICENSE", "ag-cli", "share"]);
     }
   }
   for (const [index, name] of ARCHIVES.entries()) await createArchive(releaseDir, name, index);
@@ -55,8 +61,25 @@ async function createFixture(t, tag = "v1.2.3") {
   await mkdir(path.join(releaseDir, "npm"));
   const notesFile = path.join(root, "notes.md");
   await writeFile(notesFile, "Release notes\n");
-  return { notesFile, releaseDir, tag };
+  const manDir = path.join(root, "generated-man");
+  await mkdir(manDir);
+  for (const name of MANPAGES) await writeFile(path.join(manDir, name), '.TH "AG-CLI" "1"\n');
+  return { notesFile, releaseDir, tag, manDir };
 }
+
+test("requires representative Unix manuals even when archive checksums match", async (t) => {
+  const fixture = await createFixture(t, "v1.2.3", { manualNames: MANPAGES.slice(1) });
+  await assert.rejects(inspectArtifacts(fixture.releaseDir, fixture.tag), /does not contain share\/man\/man1\/ag-cli\.1/);
+});
+
+test("verifies every generated page, detecting missing and extra archive pages", async (t) => {
+  const fixture = await createFixture(t);
+  assert.equal(await checkReleaseManpages(fixture.releaseDir, fixture.manDir), MANPAGES.length);
+  await writeFile(path.join(fixture.manDir, "ag-cli-repo.1"), "manual");
+  await assert.rejects(checkReleaseManpages(fixture.releaseDir, fixture.manDir), /does not contain share\/man\/man1\/ag-cli-repo\.1/);
+  const extra = await createFixture(t, "v1.2.3", { manualNames: [...MANPAGES, "ag-cli-extra.1"] });
+  await assert.rejects(checkReleaseManpages(extra.releaseDir, extra.manDir), /extra: share\/man\/man1\/ag-cli-extra\.1/);
+});
 
 function optionsFor(fixture, overrides = {}) {
   return {

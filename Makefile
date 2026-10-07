@@ -8,6 +8,7 @@ GO_TOOLCHAIN := $(shell sed -n 's/^toolchain[[:space:]][[:space:]]*//p' go.mod)
 BINARY := ag-cli
 COMMAND := ./cmd/ag-cli
 BIN_DIR := bin
+MAN_DIR ?= dist/man/man1
 RACE_PACKAGES ?= ./...
 RACE_OPTIONS ?= atexit_sleep_ms=0
 RELEASE_TARGETS ?= linux/amd64 linux/arm64 linux/loong64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64
@@ -44,7 +45,7 @@ PRERELEASE ?=
 
 .DEFAULT_GOAL := build
 
-.PHONY: all go-min-version go-version build cross-build install uninstall test test-min-go test-race test-contract test-contract-live test-platform-compile vet fix-check lint vulncheck fmt fmt-check docs-reference docs-reference-check coverage release release-snapshot publish clean help
+.PHONY: all go-min-version go-version build cross-build install uninstall test test-min-go test-race test-contract test-contract-live test-platform-compile vet fix-check lint vulncheck fmt fmt-check docs-reference docs-reference-check docs-man docs-man-check coverage release release-snapshot publish clean help
 
 all: lint test build
 
@@ -189,6 +190,19 @@ docs-reference:
 docs-reference-check:
 	$(GO) run ./scripts/generate-command-reference --check
 
+docs-man:
+	$(GO) run ./scripts/generate-manpages --output "$(MAN_DIR)"
+
+# Manuals are build artifacts, not checked-in documentation. Verify fresh output
+# against a second generation and run coverage/escaping/parser regression tests.
+docs-man-check:
+	@set -eu; \
+	man_check_dir="$$(mktemp -d)"; \
+	trap 'rm -rf "$$man_check_dir"' 0 HUP INT TERM; \
+	$(GO) run ./scripts/generate-manpages --output "$$man_check_dir"; \
+	$(GO) run ./scripts/generate-manpages --output "$$man_check_dir" --check
+	$(GO) test ./internal/mangen ./scripts/generate-manpages
+
 coverage:
 	$(GO) test ./... -coverprofile=$(COVERAGE_FILE)
 	$(GO) tool cover -func=$(COVERAGE_FILE)
@@ -255,6 +269,8 @@ help:
 	@echo "  make coverage               Run tests and generate $(COVERAGE_FILE)"
 	@echo "  make docs-reference         Regenerate docs/command-reference.md"
 	@echo "  make docs-reference-check   Check command reference is up to date"
+	@echo "  make docs-man               Generate section 1 manuals into MAN_DIR"
+	@echo "  make docs-man-check         Check manual coverage and reproducibility"
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make fmt                    Format Go source files in place"
