@@ -99,18 +99,18 @@ func TestNewCmdTagRegistersSubcommands(t *testing.T) {
 		t.Fatalf("create rejected valid arguments: %v", err)
 	}
 
-	delete, _, err := cmd.Find([]string{"delete"})
+	deleteCmd, _, err := cmd.Find([]string{"delete"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if delete.Flags().Lookup("yes") == nil || delete.Flags().ShorthandLookup("y") == nil {
+	if deleteCmd.Flags().Lookup("yes") == nil || deleteCmd.Flags().ShorthandLookup("y") == nil {
 		t.Fatal("delete yes flag was not registered")
 	}
-	if !strings.Contains(delete.Long, "By default") || !strings.Contains(delete.Long, "--yes") {
-		t.Fatalf("delete help does not explain confirmation: %q", delete.Long)
+	if !strings.Contains(deleteCmd.Long, "By default") || !strings.Contains(deleteCmd.Long, "--yes") {
+		t.Fatalf("delete help does not explain confirmation: %q", deleteCmd.Long)
 	}
-	if !strings.Contains(delete.Example, "--yes") {
-		t.Fatalf("delete example does not explain --yes: %q", delete.Example)
+	if !strings.Contains(deleteCmd.Example, "--yes") {
+		t.Fatalf("delete example does not explain --yes: %q", deleteCmd.Example)
 	}
 
 	protection, _, err := cmd.Find([]string{"protection"})

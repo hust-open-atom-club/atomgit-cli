@@ -99,7 +99,7 @@ func (t *uploadTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 }
 
-func uploadNotFoundHandler(method, path, rawQuery string, body []byte) (*http.Response, error) {
+func uploadNotFoundHandler(string, string, string, []byte) (*http.Response, error) {
 	return &http.Response{
 		StatusCode: http.StatusNotFound,
 		Status:     "404 Not Found",
@@ -736,7 +736,7 @@ func TestReleaseUploadHTTPErrorFirstBatch(t *testing.T) {
 		{
 			name: "GET release 404",
 			args: []string{"alice/demo", "v1/rc", path},
-			apiHandler: func(method, escapedPath, rawQuery string, body []byte) (*http.Response, error) {
+			apiHandler: func(string, string, string, []byte) (*http.Response, error) {
 				return uploadJSONResponse(http.StatusNotFound, `{"message":"not found"}`), nil
 			},
 			wantError: []string{"failed to get release before uploading", "404"},

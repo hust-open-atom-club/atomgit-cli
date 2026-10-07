@@ -50,7 +50,7 @@ func TestListCommitCommentsPaginatesAndEscapesRef(t *testing.T) {
 
 func TestListCommitCommentsHonorsLimitAndEmptyPage(t *testing.T) {
 	requests := 0
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		requests++
 		writeJSON(t, w, json.RawMessage(commentsBody(1, 3)))
 	})
@@ -101,7 +101,7 @@ func TestCreateCommitCommentSendsBodyOnly(t *testing.T) {
 }
 
 func TestGetCommitCommentMapsNoteTypeRejection(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(t, w, json.RawMessage(`{"error_code":400,"error_code_name":"UN_KNOW","error_message":"Note type is not correct.","trace_id":"t"}`))
 	})
@@ -119,7 +119,7 @@ func TestGetCommitCommentMapsNoteTypeRejection(t *testing.T) {
 }
 
 func TestGetCommitCommentSurfacesNotFound(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		writeJSON(t, w, json.RawMessage(`{"error_code":404,"error_code_name":"UN_KNOW","error_message":"note not found by noteId","trace_id":"t"}`))
 	})
@@ -134,7 +134,7 @@ func TestGetCommitCommentSurfacesNotFound(t *testing.T) {
 }
 
 func TestGetCommitCommentOtherBadRequestNotMapped(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(t, w, json.RawMessage(`{"error_code":400,"error_message":"Something else"}`))
 	})
@@ -208,7 +208,7 @@ func TestCommitCommentDecodesDocumentedUserShapes(t *testing.T) {
 
 func decodeCommitComment(t *testing.T, response string) CommitComment {
 	t.Helper()
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(t, w, json.RawMessage(response))
 	})
 	comment, err := GetCommitComment(client, "alice", "demo", "7")

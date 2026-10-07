@@ -48,7 +48,7 @@ func TestAuthListRedactsTokensAndMarksActive(t *testing.T) {
 func TestAuthSwitchWithoutGitChangesActiveAccount(t *testing.T) {
 	saveAuthTestAccounts(t)
 	gitCalls := 0
-	factory := &cmdutil.Factory{GitConfig: func(args ...string) (string, error) {
+	factory := &cmdutil.Factory{GitConfig: func(...string) (string, error) {
 		gitCalls++
 		return "", nil
 	}}

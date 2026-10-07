@@ -182,7 +182,7 @@ func TestListAllNotificationsFetchesEveryPage(t *testing.T) {
 }
 
 func TestListNotificationsHugeLimitDoesNotPreallocateTheLimit(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"total":0,"list":[]}`))
 	})
@@ -229,7 +229,7 @@ func TestListNotificationsStopsOnEmptyPageAndTruncatesToLimit(t *testing.T) {
 }
 
 func TestListNotificationsRejectsNonPositiveLimit(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(http.ResponseWriter, *http.Request) {
 		t.Fatal("no request expected for an invalid limit")
 	})
 	if _, err := ListNotifications(client, "owner", "repo", NotificationListOptions{Limit: 0}); err == nil ||
@@ -274,7 +274,7 @@ func TestMarkNotificationsReadSendsExactFormIDs(t *testing.T) {
 }
 
 func TestMarkNotificationsReadRejectsEmptyIDs(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(http.ResponseWriter, *http.Request) {
 		t.Fatal("no request expected without IDs")
 	})
 	if err := MarkNotificationsRead(client, "owner", "repo", nil); err == nil ||
@@ -284,7 +284,7 @@ func TestMarkNotificationsReadRejectsEmptyIDs(t *testing.T) {
 }
 
 func TestMarkNotificationsReadSurfacesAPIError(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		_, _ = w.Write([]byte(`{"message":"forbidden"}`))
 	})

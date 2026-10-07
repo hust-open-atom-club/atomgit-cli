@@ -46,7 +46,7 @@ func TestAuthSetupGitRequiresAuthentication(t *testing.T) {
 	called := false
 	factory := &cmdutil.Factory{
 		Config: testConfig{tokenErr: errors.New("not authenticated: run `ag auth login`")},
-		GitConfig: func(args ...string) (string, error) {
+		GitConfig: func(...string) (string, error) {
 			called = true
 			return "", nil
 		},

@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdCheck(f *cmdutil.Factory) *cobra.Command {
+func newCmdCheck(*cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "check <license>",
 		Short: "Check license compliance",

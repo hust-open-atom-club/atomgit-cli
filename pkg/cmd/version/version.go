@@ -44,7 +44,7 @@ func NewCmdVersion() *cobra.Command {
 		Use:   "version",
 		Short: "Show version information",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			if opts.JSON {
 				info := version.Get()
 				enc := json.NewEncoder(cmd.OutOrStdout())

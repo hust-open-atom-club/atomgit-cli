@@ -168,7 +168,7 @@ func TestBranchListPaginatesHonorsLimitAndFormatsOutput(t *testing.T) {
 
 func TestBranchListJSONUsesStableFieldsAndLimit(t *testing.T) {
 	requests := 0
-	transport := branchRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := branchRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		requests++
 		return branchResponse(http.StatusOK, `[
 			{"name":"main\u001b[31m","protected":true,"default_branch":true,"can_push":true,"created_at":"2026-08-22T00:00:00Z","creator":{"login":"alice"},"commit":{"sha":"abcdef1234567890"}},

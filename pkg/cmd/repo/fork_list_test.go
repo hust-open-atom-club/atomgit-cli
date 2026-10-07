@@ -45,7 +45,7 @@ func TestRepoForkListTextAndPagination(t *testing.T) {
 }
 
 func TestRepoForkListJSONAndEmptyResults(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `[{"id":1,"full_name":"alice/copy","url":"https://api.atomgit.com/api/v5/repos/alice/copy","namespace":{"path":"alice","html_url":"https://atomgit.com/alice"},"owner":{"login":"alice"},"parent":{"full_name":"team/demo"},"private":false,"public":true}]`), nil
 	})
 	cmd := newCmdRepoForkList(repoFactory(repoCommandConfig{token: "token"}, transport))
@@ -61,7 +61,7 @@ func TestRepoForkListJSONAndEmptyResults(t *testing.T) {
 		}
 	}
 
-	empty := newCmdRepoForkList(repoFactory(repoCommandConfig{token: "token"}, forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	empty := newCmdRepoForkList(repoFactory(repoCommandConfig{token: "token"}, forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `[]`), nil
 	})))
 	out.Reset()
@@ -111,7 +111,7 @@ func TestRepoForkListRejectsInvalidLimitBeforeAuthentication(t *testing.T) {
 }
 
 func TestRepoForkListReportsAPIError(t *testing.T) {
-	cmd := newCmdRepoForkList(repoFactory(repoCommandConfig{token: "token"}, forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	cmd := newCmdRepoForkList(repoFactory(repoCommandConfig{token: "token"}, forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusForbidden, `{"message":"private forks denied"}`), nil
 	})))
 	cmd.SetOut(io.Discard)

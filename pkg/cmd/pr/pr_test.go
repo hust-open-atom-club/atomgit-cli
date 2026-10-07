@@ -442,7 +442,7 @@ func TestPRCreateFallsBackToBrowserURL(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
 		HttpClient: func() (*http.Client, error) {
-			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusCreated, `{"number":7}`), nil
 			})}, nil
 		},
@@ -477,7 +477,7 @@ func TestPRWriteCommandsUseRequestNumberForEmptyResponses(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: prTestConfig{},
 				HttpClient: func() (*http.Client, error) {
-					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+					return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						return prResponse(http.StatusNoContent, ""), nil
 					})}, nil
 				},
@@ -1209,7 +1209,7 @@ func TestPRMergeErrors(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: prTestConfig{},
 				HttpClient: func() (*http.Client, error) {
-					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+					return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						return prResponse(tt.getStatus, tt.getBody), nil
 					})}, nil
 				},
@@ -1372,7 +1372,7 @@ func TestPRReopenWrapsAPIError(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
 		HttpClient: func() (*http.Client, error) {
-			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader(`{"message":"not found"}`)), Header: make(http.Header)}, nil
 			})}, nil
 		},
@@ -1480,7 +1480,7 @@ func TestPRListJSONSchemaUnchanged(t *testing.T) {
 			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 		},
 		HttpClient: func() (*http.Client, error) {
-			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				body := `[{"id":1,"number":9,"title":"change","body":"desc","state":"open","html_url":"https://u","user":{"login":"alice"},"head":{"ref":"feature"},"base":{"ref":"main"},"labels":[{"name":"bug"}],"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-02T00:00:00Z","merged":false,"mergeable":true}]`
 				return prResponse(http.StatusOK, body), nil
 			})}, nil
@@ -1671,7 +1671,7 @@ func TestPRDiffRejectInvalidNumberBeforeAuth(t *testing.T) {
 	var requests int
 	factory.HttpClient = func() (*http.Client, error) {
 		requests++
-		return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return &http.Response{StatusCode: 200, Status: "200 OK", Body: http.NoBody, Header: make(http.Header)}, nil
 		})}, nil
 	}
@@ -1694,7 +1694,7 @@ func TestPRIssuesRejectInvalidNumberBeforeAuth(t *testing.T) {
 	var requests int
 	factory.HttpClient = func() (*http.Client, error) {
 		requests++
-		return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return &http.Response{StatusCode: 200, Status: "200 OK", Body: http.NoBody, Header: make(http.Header)}, nil
 		})}, nil
 	}

@@ -8,7 +8,7 @@ import (
 )
 
 func TestGetPaginatedWithPolicyRejectsUnlistedStatus(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 		_, _ = io.WriteString(w, `[1]`)
 	})

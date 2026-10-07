@@ -65,7 +65,7 @@ func TestCreateLabelSendsFormAndRejectsRetry(t *testing.T) {
 }
 
 func TestCreateLabelAcceptsCreatedJSON(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 		_, _ = io.WriteString(w, `{"id":1,"name":"bug","color":"#ff0000"}`)
 	})
@@ -137,7 +137,7 @@ func TestDeleteLabelAcceptsNoContentWithoutRetry(t *testing.T) {
 }
 
 func TestDeleteLabelAcceptsOK(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = io.WriteString(w, `{}`)
 	})
@@ -147,7 +147,7 @@ func TestDeleteLabelAcceptsOK(t *testing.T) {
 }
 
 func TestListLabelsDoesNotAcceptCreated(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 		_, _ = io.WriteString(w, `[]`)
 	})

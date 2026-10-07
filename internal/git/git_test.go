@@ -15,7 +15,7 @@ import (
 // TestGitHelper is a sentinel test function used by the mock command.
 // When AG_GIT_HELPER=1, it writes configured output and exits with a configured code.
 // Otherwise it is a no-op (so normal test runs are unaffected).
-func TestGitHelper(t *testing.T) {
+func TestGitHelper(*testing.T) {
 	if os.Getenv("AG_GIT_HELPER") != "1" {
 		return
 	}

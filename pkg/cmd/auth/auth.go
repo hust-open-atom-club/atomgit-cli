@@ -74,7 +74,7 @@ func newCmdAuthLogout() *cobra.Command {
 An active account can only be removed when it is the last saved account;
 otherwise switch to another account first. Use --all to remove every account.`,
 		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			out := cmd.OutOrStdout()
 			if all {
 				removed, err := config.ClearCredentials()
@@ -302,7 +302,7 @@ func newCmdAuthRefresh() *cobra.Command {
 		Use:   "refresh",
 		Short: "Refresh the access token using the stored refresh_token",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
 			ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 			defer cancel()
@@ -351,7 +351,7 @@ func newCmdAuthToken(f *cmdutil.Factory) *cobra.Command {
 		Short: "Print the authentication token",
 		Long:  `Display the authentication token used for AtomGit API requests.`,
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return err

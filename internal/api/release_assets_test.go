@@ -273,7 +273,7 @@ func TestUploadReleaseAssetRejectsRedirects(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("%d_%s", statusCode, http.StatusText(statusCode)), func(t *testing.T) {
 			var targetCalls atomic.Int32
-			target := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			target := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				targetCalls.Add(1)
 				w.WriteHeader(http.StatusOK)
 			}))
@@ -531,7 +531,7 @@ func TestDeleteReleaseAttachmentSanitizesHTTPError(t *testing.T) {
 
 func TestDeleteReleaseAttachmentDoesNotRetryTransportError(t *testing.T) {
 	var calls atomic.Int32
-	client := NewClientWithHTTPClient("token", &http.Client{Transport: funcRoundTrip(func(req *http.Request) (*http.Response, error) {
+	client := NewClientWithHTTPClient("token", &http.Client{Transport: funcRoundTrip(func(*http.Request) (*http.Response, error) {
 		calls.Add(1)
 		return nil, errors.New("response lost")
 	})})
@@ -546,7 +546,7 @@ func TestDeleteReleaseAttachmentDoesNotRetryTransportError(t *testing.T) {
 }
 
 func TestDeleteReleaseAttachmentRejectsNonPositiveID(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(_ http.ResponseWriter, r *http.Request) {
 		t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
 	})
 	for _, id := range []int64{0, -1, -42} {
@@ -603,7 +603,7 @@ func TestDownloadReleaseAttachmentSuccess(t *testing.T) {
 }
 
 func TestDownloadReleaseAttachmentDoesNotUseMetadataTimeout(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("first-"))
 		if flusher, ok := w.(http.Flusher); ok {
 			flusher.Flush()
@@ -635,7 +635,7 @@ func TestDownloadReleaseAttachmentRejectsNonOKAndClosesBody(t *testing.T) {
 	for _, status := range []int{http.StatusNoContent, http.StatusPartialContent, http.StatusNotFound} {
 		t.Run(fmt.Sprintf("status_%d", status), func(t *testing.T) {
 			tracker := &closeTracker{rc: io.NopCloser(strings.NewReader("response body"))}
-			transport := funcRoundTrip(func(req *http.Request) (*http.Response, error) {
+			transport := funcRoundTrip(func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: status,
 					Status:     fmt.Sprintf("%d %s", status, http.StatusText(status)),

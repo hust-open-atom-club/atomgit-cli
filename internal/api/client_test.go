@@ -680,7 +680,7 @@ func newRetryTestClient(t *testing.T, failFirst int) (*Client, *int32) {
 	client := NewClient("test-token")
 	client.baseURL = "https://example.test"
 	client.httpClient = &http.Client{
-		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 			n := atomic.AddInt32(&calls, 1)
 			if int(n) <= failFirst {
 				return nil, errors.New("connection reset by peer")
@@ -825,7 +825,7 @@ func TestDoJSONRequestRejectsEmptyJSONBody(t *testing.T) {
 func TestDoJSONRequestRejectsEmptyAllowedStatuses(t *testing.T) {
 	var calls int32
 	client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
-		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 			atomic.AddInt32(&calls, 1)
 			return nil, errors.New("request should not be sent")
 		}),
@@ -846,7 +846,7 @@ func TestDoJSONRequestRetryPolicy(t *testing.T) {
 		var calls atomic.Int32
 		originalErr := errors.New("network failure")
 		client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
-			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 				calls.Add(1)
 				return nil, originalErr
 			}),
@@ -872,7 +872,7 @@ func TestDoJSONRequestRetryPolicy(t *testing.T) {
 	t.Run("CanRetry true retries once on network error", func(t *testing.T) {
 		var calls atomic.Int32
 		client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
-			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 				n := calls.Add(1)
 				if n == 1 {
 					return nil, errors.New("network failure")
@@ -1219,7 +1219,7 @@ func TestAPIErrorPreservesBodyReadFailure(t *testing.T) {
 func TestAPIErrorWrapsTransportError(t *testing.T) {
 	originalErr := errors.New("connection reset by peer")
 	client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
-		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 			return nil, originalErr
 		}),
 	})

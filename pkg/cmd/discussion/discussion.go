@@ -17,7 +17,7 @@ func NewCmdDiscussion(f *cmdutil.Factory) *cobra.Command {
 		Long:         "List AtomGit discussions for a repository",
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Help()
 		},
 	}

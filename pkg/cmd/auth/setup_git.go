@@ -29,7 +29,7 @@ func newCmdAuthSetupGitWithExecutable(f *cmdutil.Factory, executable func() (str
 atomgit.com. Git requests credentials from the active account selected by
 ag auth switch; access tokens are not written to Git configuration.`,
 		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			if f == nil || f.Config == nil {
 				return fmt.Errorf("configuration is unavailable")
 			}

@@ -24,7 +24,7 @@ func NewCmdAlias(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
-func newCmdAliasSet(f *cmdutil.Factory) *cobra.Command {
+func newCmdAliasSet(*cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set <alias> <expansion>...",
 		Short: "Create a shortcut for an ag command",
@@ -72,12 +72,12 @@ Windows path), escape it with a backslash: C:\Program\ Files.`,
 	return cmd
 }
 
-func newCmdAliasList(f *cmdutil.Factory) *cobra.Command {
+func newCmdAliasList(*cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List aliases",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			aliases, err := config.LoadAliases()
 			if err != nil {
 				return fmt.Errorf("failed to load aliases: %w", err)
@@ -102,7 +102,7 @@ func newCmdAliasList(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
-func newCmdAliasDelete(f *cmdutil.Factory) *cobra.Command {
+func newCmdAliasDelete(*cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <alias>",
 		Short: "Delete an alias",

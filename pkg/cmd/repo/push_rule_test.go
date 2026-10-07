@@ -213,7 +213,7 @@ func TestRepoPushRuleEditConfirmation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			writes := 0
-			factory := pushRuleTestFactory(t, func(w http.ResponseWriter, req *http.Request) {
+			factory := pushRuleTestFactory(t, func(w http.ResponseWriter, _ *http.Request) {
 				writes++
 				fmt.Fprint(w, `{}`)
 			})

@@ -42,6 +42,6 @@ func (l *fileLock) release() error {
 }
 
 // syncDir is a no-op on Windows, where directories cannot be fsynced.
-func syncDir(dir string) error {
+func syncDir(string) error {
 	return nil
 }

@@ -156,7 +156,7 @@ func TestReadFileOutputText(t *testing.T) {
 func TestReadFileOutputJSON(t *testing.T) {
 	encoded := base64.StdEncoding.EncodeToString([]byte("test"))
 
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		body := `{"name":"f.txt","path":"f.txt","sha":"abc","size":4,"type":"file","encoding":"base64","content":"` + encoded + `"}`
 		return forkResponse(http.StatusOK, body), nil
 	})
@@ -185,7 +185,7 @@ func TestReadFileOutputJSON(t *testing.T) {
 func TestReadFileJSONWithRef(t *testing.T) {
 	encoded := base64.StdEncoding.EncodeToString([]byte("data"))
 
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		body := `{"name":"data.txt","path":"data.txt","sha":"123","size":4,"type":"file","encoding":"base64","content":"` + encoded + `"}`
 		return forkResponse(http.StatusOK, body), nil
 	})
@@ -213,7 +213,7 @@ func TestReadFileJSONWithRef(t *testing.T) {
 }
 
 func TestReadFileRejectsDirectory(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `{"name":"src","path":"src","sha":"abc","size":0,"type":"dir"}`), nil
 	})
 
@@ -225,7 +225,7 @@ func TestReadFileRejectsDirectory(t *testing.T) {
 }
 
 func TestReadFileRejectsUnsupportedEncoding(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `{"name":"f.txt","path":"f.txt","sha":"abc","size":4,"type":"file","encoding":"utf-8","content":"test"}`), nil
 	})
 
@@ -237,7 +237,7 @@ func TestReadFileRejectsUnsupportedEncoding(t *testing.T) {
 }
 
 func TestReadFileRejectsMissingContent(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `{"name":"f.txt","path":"f.txt","sha":"abc","size":0,"type":"file","encoding":"base64"}`), nil
 	})
 
@@ -249,7 +249,7 @@ func TestReadFileRejectsMissingContent(t *testing.T) {
 }
 
 func TestReadFileAcceptsZeroByteFile(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `{"name":"empty.txt","path":"empty.txt","sha":"abc","size":0,"type":"file","encoding":"base64","content":""}`), nil
 	})
 
@@ -286,7 +286,7 @@ func TestReadFileAcceptsZeroByteFile(t *testing.T) {
 }
 
 func TestReadFileRejectsMalformedBase64(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `{"name":"f.txt","path":"f.txt","sha":"abc","size":4,"type":"file","encoding":"base64","content":"!!invalid!!"}`), nil
 	})
 
@@ -298,7 +298,7 @@ func TestReadFileRejectsMalformedBase64(t *testing.T) {
 }
 
 func TestReadDirOutputText(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		body := `[{"name":"src","path":"src","sha":"aaa","size":0,"type":"dir"},{"name":"README.md","path":"README.md","sha":"bbb","size":42,"type":"file"}]`
 		return forkResponse(http.StatusOK, body), nil
 	})
@@ -317,7 +317,7 @@ func TestReadDirOutputText(t *testing.T) {
 }
 
 func TestReadDirOutputEscapesTSVFields(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		body := `[{"name":"odd","path":"dir\\name\tpart\nnext\rline","sha":"abc","size":1,"type":"fi\tle"}]`
 		return forkResponse(http.StatusOK, body), nil
 	})
@@ -335,7 +335,7 @@ func TestReadDirOutputEscapesTSVFields(t *testing.T) {
 }
 
 func TestReadDirReportsOutputError(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `[{"path":"README.md","size":42,"type":"file"}]`), nil
 	})
 	wantErr := errors.New("write failed")
@@ -348,7 +348,7 @@ func TestReadDirReportsOutputError(t *testing.T) {
 }
 
 func TestReadDirOutputJSON(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		body := `[{"name":"cmd","path":"cmd","sha":"def","size":0,"type":"dir"},{"name":"main.go","path":"main.go","sha":"abc","size":100,"type":"file"}]`
 		return forkResponse(http.StatusOK, body), nil
 	})
@@ -382,7 +382,7 @@ func TestReadDirOutputJSON(t *testing.T) {
 }
 
 func TestReadDirEmptyDirectory(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `[]`), nil
 	})
 
@@ -412,7 +412,7 @@ func TestReadDirEmptyDirectory(t *testing.T) {
 }
 
 func TestReadDirPreservesServerOrder(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `[{"name":"z","path":"z","sha":"1","size":0,"type":"file"},{"name":"a","path":"a","sha":"2","size":0,"type":"file"}]`), nil
 	})
 
@@ -575,7 +575,7 @@ func TestReadDirCommandRegistration(t *testing.T) {
 }
 
 func TestReadDirJSONStableFields(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `[{"name":"f.txt","path":"dir/f.txt","sha":"sha1","size":256,"type":"file"}]`), nil
 	})
 
@@ -645,7 +645,7 @@ func TestReadFileRequestCount(t *testing.T) {
 	var count int
 	encoded := base64.StdEncoding.EncodeToString([]byte("x"))
 
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		count++
 		body := `{"name":"f.txt","path":"f.txt","sha":"abc","size":1,"type":"file","encoding":"base64","content":"` + encoded + `"}`
 		return forkResponse(http.StatusOK, body), nil
@@ -663,7 +663,7 @@ func TestReadFileRequestCount(t *testing.T) {
 func TestReadDirRequestCount(t *testing.T) {
 	var count int
 
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		count++
 		return forkResponse(http.StatusOK, `[]`), nil
 	})

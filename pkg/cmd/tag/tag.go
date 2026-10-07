@@ -112,7 +112,7 @@ func newCmdTagCreate(f *cmdutil.Factory) *cobra.Command {
 		Use:   "create [<owner>/<repo>] <tag_name>",
 		Short: "Create a tag",
 		Args:  cobra.RangeArgs(1, 2),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: func(*cobra.Command, []string) error {
 			return validateTagCreateRef(opts.Ref)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {

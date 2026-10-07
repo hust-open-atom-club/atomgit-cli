@@ -48,7 +48,7 @@ func NewCmdSearch(f *cmdutil.Factory) *cobra.Command {
 		Long:         "Search AtomGit repositories, issues, and users. Pull request search is not supported.",
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Help()
 		},
 	}

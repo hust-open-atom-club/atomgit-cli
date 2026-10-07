@@ -72,7 +72,7 @@ func TestPolicyWritesAreNotRetried(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			calls := 0
-			c := NewClientWithHTTPClient("synthetic", &http.Client{Transport: policyTransport(func(r *http.Request) (*http.Response, error) { calls++; return nil, errors.New("transport failed") })})
+			c := NewClientWithHTTPClient("synthetic", &http.Client{Transport: policyTransport(func(*http.Request) (*http.Response, error) { calls++; return nil, errors.New("transport failed") })})
 			if err := tc.run(c); err == nil {
 				t.Fatal("expected error")
 			}
@@ -95,7 +95,7 @@ func TestPolicyPathEscapesSegments(t *testing.T) {
 }
 func TestPermissionPolicyRejectsFailureAcknowledgement(t *testing.T) {
 	mode := 2
-	c := NewClientWithHTTPClient("synthetic", &http.Client{Transport: policyTransport(func(r *http.Request) (*http.Response, error) {
+	c := NewClientWithHTTPClient("synthetic", &http.Client{Transport: policyTransport(func(*http.Request) (*http.Response, error) {
 		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"code":0,"msg":"failed"}`))}, nil
 	})})
 	if err := UpdatePermissionPolicy(c, "team", "demo", UpdatePermissionPolicyRequest{Mode: &mode}); err == nil {
@@ -105,7 +105,7 @@ func TestPermissionPolicyRejectsFailureAcknowledgement(t *testing.T) {
 func TestPolicyRejectsMalformedFieldTypes(t *testing.T) {
 	for _, body := range []string{`{"memberMgntMode":"2"}`, `{"memberMgntMode":false}`} {
 		t.Run(body, func(t *testing.T) {
-			c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, body) })
+			c := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) { fmt.Fprint(w, body) })
 			if _, err := GetPermissionPolicy(c, "team", "demo"); err == nil {
 				t.Fatal("expected type error")
 			}
@@ -116,7 +116,7 @@ func TestPolicyRejectsMalformedFieldTypes(t *testing.T) {
 		`{"merge_request_setting":{"can_force_merge":"invalid"},"merge_method":"merge","only_allow_merge_if_pipeline_succeeds":false,"only_allow_merge_if_all_discussions_are_resolved":false}`,
 	} {
 		t.Run(body, func(t *testing.T) {
-			c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, body) })
+			c := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) { fmt.Fprint(w, body) })
 			if _, err := GetPullRequestPolicy(c, "team", "demo"); err == nil {
 				t.Fatal("expected type error")
 			}

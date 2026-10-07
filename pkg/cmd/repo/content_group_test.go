@@ -110,7 +110,7 @@ func TestRepoContentListExplicitRepositoryTakesPrecedence(t *testing.T) {
 }
 
 func TestRepoContentListJSONPreservesAPIMetadata(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `[{"name":"docs","path":"docs","sha":"abc","type":"dir","url":"https://example.test/docs","_links":{"self":"https://example.test/self"},"future_field":"kept"}]`), nil
 	})
 
@@ -139,7 +139,7 @@ func TestRepoContentListJSONPreservesAPIMetadata(t *testing.T) {
 }
 
 func TestRepoContentListRejectsFile(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `{"name":"README.md","path":"README.md","sha":"abc","size":1,"type":"file","encoding":"base64","content":"eA=="}`), nil
 	})
 
@@ -162,7 +162,7 @@ func TestRepoContentListRejectsFile(t *testing.T) {
 }
 
 func TestRepoContentListEmptyDirectory(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `[]`), nil
 	})
 
@@ -216,7 +216,7 @@ func TestRepoContentViewDecodedBytesAndExplicitRepository(t *testing.T) {
 
 func TestRepoContentViewJSONPreservesEncodedAPIObject(t *testing.T) {
 	body := `{"name":"README.md","path":"README.md","sha":"abc","size":4,"type":"file","encoding":"base64","content":"dGVzdA==","download_url":"https://example.test/raw","_links":{"html":"https://example.test/html"},"future_field":42}`
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, body), nil
 	})
 
@@ -245,7 +245,7 @@ func TestRepoContentViewJSONPreservesEncodedAPIObject(t *testing.T) {
 }
 
 func TestRepoContentViewRejectsDirectory(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `[{"name":"main.go","path":"src/main.go","sha":"abc","type":"file"}]`), nil
 	})
 
@@ -268,7 +268,7 @@ func TestRepoContentViewRejectsDirectory(t *testing.T) {
 }
 
 func TestRepoContentViewRejectsMalformedBase64(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `{"name":"bad","path":"bad","sha":"abc","size":3,"type":"file","encoding":"base64","content":"!!!"}`), nil
 	})
 
@@ -280,7 +280,7 @@ func TestRepoContentViewRejectsMalformedBase64(t *testing.T) {
 }
 
 func TestRepoContentViewReportsWriterError(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusOK, `{"name":"f","path":"f","sha":"abc","size":1,"type":"file","encoding":"base64","content":"eA=="}`), nil
 	})
 	wantErr := errors.New("write failed")

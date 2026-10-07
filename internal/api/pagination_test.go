@@ -54,7 +54,7 @@ func TestGetPaginatedHonorsLimit(t *testing.T) {
 
 func TestGetPaginatedStopsAtLastPage(t *testing.T) {
 	requests := 0
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		requests++
 		_ = json.NewEncoder(w).Encode([]int{1, 2})
 	})
@@ -154,7 +154,7 @@ func TestGetPaginatedUntilEmptyContinuesAfterShortPage(t *testing.T) {
 
 func TestGetPaginatedUntilEmptyDeduplicatesOverlappingPages(t *testing.T) {
 	requests := 0
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		requests++
 		var items []int
 		switch requests {
@@ -224,7 +224,7 @@ func TestGetPaginatedUntilEmptyStopsWhenPageMakesNoProgress(t *testing.T) {
 
 func TestGetPaginatedUntilEmptyErrorsAtMaximumPageBeforeLimit(t *testing.T) {
 	requests := 0
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		requests++
 		if err := json.NewEncoder(w).Encode([]int{requests}); err != nil {
 			t.Fatal(err)
