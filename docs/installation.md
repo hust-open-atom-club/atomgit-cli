@@ -18,6 +18,7 @@ AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、WinGet
 - [源码安装](#源码安装)
 - [安装验证](#安装验证)
 - [Shell 补全](#shell-补全)
+- [Unix man 手册](#unix-man-手册)
 
 ## 从 ag 迁移到 ag-cli
 
@@ -28,6 +29,31 @@ AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、WinGet
 - Release 归档名仍为 `ag_<os>_<arch>.tar.gz` / `ag_windows_<arch>.zip`，其中的新二进制为 `ag-cli` / `ag-cli.exe`。手动安装时只安装新文件；安装脚本不会删除已有的 `ag`，它可能属于其他工具（例如 The Silver Searcher）。
 - 将脚本、CI 和日常命令中的调用改为 `ag-cli`，重新生成对应 Shell 补全。曾配置 Git credential helper 的用户应运行 `ag-cli auth setup-git`，更新其中记录的可执行文件路径；安装过程不会自动修改 Git 配置。
 - Homebrew、WinGet、Scoop、nixpkgs、AUR 及发行版包的二进制路径、补全文件和元数据需由对应维护人员同步。尚未更新的渠道继续使用旧命令。
+
+## Unix man 手册
+
+Linux/macOS Release 归档除二进制与 LICENSE 外，还包含 `share/man/man1/`，提供根页面 `ag-cli.1` 和公开子命令页面（例如 `ag-cli-auth-login.1`、`ag-cli-pr-create.1`）。Windows 归档不包含手册，也无需安装 man 阅读器；npm 平台包仍只分发二进制。外部包管理器可自行将这些文件安装到对应前缀的 `share/man/man1`，本仓库不会自动修改它们的清单。
+
+手动解压 Release 后，可将手册安装到用户前缀（不需要 sudo）：
+
+```bash
+ag_man_prefix="$HOME/.local"
+mkdir -p "$ag_man_prefix/share/man/man1"
+install -m 0644 share/man/man1/*.1 "$ag_man_prefix/share/man/man1/"
+MANPATH="$ag_man_prefix/share/man:" man 1 ag-cli
+MANPATH="$ag_man_prefix/share/man:" man 1 ag-cli-auth-login
+```
+
+也可从当前源码生成并在临时前缀下验证，不写入系统目录：
+
+```bash
+ag_man_prefix="$(mktemp -d)"
+make docs-man MAN_DIR="$ag_man_prefix/share/man/man1"
+MANPATH="$ag_man_prefix/share/man:" man 1 ag-cli
+MANPATH="$ag_man_prefix/share/man:" man 1 ag-cli-pr-create
+```
+
+需要 `man` 和可用的 roff 格式化工具。完成验证后可删除自行创建的临时前缀。手册生成不需要登录，默认输出到被忽略的 `dist/man/man1`；完整维护与检查方法见[发布指南](releasing.md#manpage-生成与分发)。
 
 ## npm 安装
 

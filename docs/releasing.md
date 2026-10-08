@@ -12,6 +12,7 @@
   - [CI 验证时机](#ci-验证时机)
   - [GoReleaser 构建工具](#goreleaser-构建工具)
   - [发布打包](#发布打包)
+  - [Manpage 生成与分发](#manpage-生成与分发)
   - [自动发布 AtomGit Release](#自动发布-atomgit-release)
   - [发布到 npm registry](#发布到-npm-registry)
     - [AtomGit Actions：暂存后人工审批](#atomgit-actions暂存后人工审批)
@@ -176,6 +177,24 @@ npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registr
 ```
 
 `scripts/build-release.sh` 始终使用 GoReleaser 的 `--skip=publish`，只在本地准备并验证制品，然后打印完整的附件 basename 清单。发布上传由下述 `make publish` 入口调用独立脚本完成；单独执行构建脚本不会创建 AtomGit Release 或上传附件。
+
+## Manpage 生成与分发
+
+手册是构建产物，不入库。`make docs-man` 从实际 Cobra 命令树生成 section 1 文件到 `dist/man/man1`；可用 `MAN_DIR` 指定其他目录。生成器不执行 Cobra 命令或认证钩子，不加载本机配置、凭据和别名，也不访问网络。它使用轻量 roff 渲染器，复用 Cobra 元数据，无需新增文档转换依赖。
+
+```bash
+make docs-man
+make docs-man-check
+go run ./scripts/generate-manpages --output dist/man/man1 --check
+```
+
+规则：仅为可见、未弃用的规范命令生成页面，隐藏/弃用命令及其子树均排除；别名列在规范页面中，不另建页面；不初始化运行时的 help/completion 辅助命令。隐藏选项排除，可见弃用选项保留并标注，弃用的短选项单独说明。父子 SEE ALSO 链接仅引用实际生成的页面；名称冲突会使生成失败。
+
+默认头部不包含版本与日期，不使用当前时间或用户目录。需要发布元数据时显式传入 `--version vX.Y.Z --date YYYY-MM-DD`；相同源码和参数产生相同结果。`--check` 检查全部页面内容、缺页和多余 `.1` 文件。生成器不会删除目录中的未知页面；命令删除或重命名后请使用新的空输出目录。发布脚本会重建专用 `dist/man` 构建目录。
+
+`scripts/build-release.sh` 使用既有的 tag 和可复现构建日期生成手册。GoReleaser 将 Linux/macOS 手册放入归档的 `share/man/man1`，Windows 不收录。归档名、安装脚本和根附件清单保持不变；手册由归档的 SHA-256 校验和覆盖。npm 从归档中只提取二进制，不将手册混入平台包；安装器暂不自动安装手册，用户和下游维护人员可按[安装指南](installation.md#unix-man-手册)自行安装。
+
+本地运行 `make docs-man-check`，验证命令覆盖、转义、导航和重复生成一致性；安装 `mandoc` 和 `man` 后，测试还会验证 roff 解析和临时前缀中的手册读取。当前不新增 CI job 或安装步骤。发布前须运行 `make release-snapshot VERSION=vX.Y.Z`，构建七个平台 snapshot；打包脚本调用 `scripts/check-release-manpages.js` 对每个 Unix 归档核对完整页面集合，任一缺页或多余页面均失败。`scripts/publish-atomgit-release.js` 也会拒绝缺少根页、auth login 或 pr create 手册的 Unix 归档。不要提交 `dist/` 或为此修改 Debian `CHANGELOG.md`。
 
 ## 自动发布 AtomGit Release
 

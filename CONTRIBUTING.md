@@ -166,6 +166,8 @@
 
    修改命令参数或输出时，请执行对应命令的 `--help` 冒烟检查；纯文档修改至少运行 `git diff --check`。命令树或命令元数据发生变化时，请运行 `make docs-reference` 更新自动生成的 `docs/command-reference.md`，并运行 `make docs-reference-check` 确认没有文档漂移。
 
+   Unix manpage 从同一棵 Cobra 命令树生成，但作为构建产物不入库。运行 `make docs-man`（可设置 `MAN_DIR`）和 `make docs-man-check`；安装 `mandoc` 后，Go 测试会检查所有页面的 roff 解析。发布变化还需通过 snapshot 的完整归档手册检查。规范名称、别名、隐藏/弃用命令与选项、显式版本/日期及离线生成规则见[发布指南](docs/releasing.md#manpage-生成与分发)，临时前缀和 `MANPATH` 验证方法见[安装指南](docs/installation.md#unix-man-手册)。不要提交 `dist/` 或更改 Debian changelog。
+
 5. **提交更改**
 
    ```bash

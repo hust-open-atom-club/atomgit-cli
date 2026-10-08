@@ -30,6 +30,8 @@ cmd/ag-cli/main.go
 - `pkg/cmd/<name>` 实现具体命令、参数校验和输出。
 - `internal/api`、`internal/config` 等内部包提供底层能力。
 
+`internal/mangen` 负责从 Cobra 元数据生成可重复的 section 1 roff 手册；`scripts/generate-manpages` 是离线生成与检查入口，`scripts/check-release-manpages.js` 校验 Unix 归档是否包含完整页面集合。默认手册输出在被忽略的 `dist/man/man1` 中。
+
 ## 目录说明
 
 ```text

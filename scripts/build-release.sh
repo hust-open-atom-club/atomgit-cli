@@ -288,6 +288,12 @@ echo ""
 echo "==> 校验 GoReleaser 配置 ..."
 "$GORELEASER" check
 
+# Rebuild all manuals from this command tree, with explicit release metadata.
+# The output is ignored build data; no credentials or CLI business hooks run.
+rm -rf "$ROOT/dist/man"
+go run ./scripts/generate-manpages --output "$ROOT/dist/man/man1" \
+  --version "$TAG" --date "${BUILD_DATE%%T*}"
+
 if [ "$RELEASE_MODE" = "snapshot" ]; then
   # 快照模式只在本地打包。AG_VERSION 保留项目已有的 vX.Y 等
   # 标签格式；快照内部版本去掉 v 前缀。
@@ -315,6 +321,7 @@ cp "$STAGING"/ag_windows_amd64.zip "$OUT/"
 cp "$STAGING"/ag_windows_arm64.zip "$OUT/"
 
 validate_archive_matrix "$OUT" "$ORDINARY_ARCHIVES"
+node scripts/check-release-manpages.js "$OUT" "$ROOT/dist/man/man1"
 
 rm -rf "$STAGING"
 
