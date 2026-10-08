@@ -194,7 +194,7 @@ go run ./scripts/generate-manpages --output dist/man/man1 --check
 
 `scripts/build-release.sh` 使用既有的 tag 和可复现构建日期生成手册。GoReleaser 将 Linux/macOS 手册放入归档的 `share/man/man1`，Windows 不收录。归档名、安装脚本和根附件清单保持不变；手册由归档的 SHA-256 校验和覆盖。npm 从归档中只提取二进制，不将手册混入平台包；安装器暂不自动安装手册，用户和下游维护人员可按[安装指南](installation.md#unix-man-手册)自行安装。
 
-CI 安装 `mandoc` 并执行 `make docs-man-check`，验证解析、命令覆盖、转义、导航和重复生成一致性；另构建七个平台 snapshot，调用 `scripts/check-release-manpages.js` 对每个 Unix 归档核对完整页面集合，任一缺页或多余页面均失败。发布前仍须运行 `make release-snapshot VERSION=vX.Y.Z`；`scripts/publish-atomgit-release.js` 也会拒绝缺少根页、auth login 或 pr create 手册的 Unix 归档。不要提交 `dist/` 或为此修改 Debian `CHANGELOG.md`。
+本地运行 `make docs-man-check`，验证命令覆盖、转义、导航和重复生成一致性；安装 `mandoc` 和 `man` 后，测试还会验证 roff 解析和临时前缀中的手册读取。当前不新增 CI job 或安装步骤。发布前须运行 `make release-snapshot VERSION=vX.Y.Z`，构建七个平台 snapshot；打包脚本调用 `scripts/check-release-manpages.js` 对每个 Unix 归档核对完整页面集合，任一缺页或多余页面均失败。`scripts/publish-atomgit-release.js` 也会拒绝缺少根页、auth login 或 pr create 手册的 Unix 归档。不要提交 `dist/` 或为此修改 Debian `CHANGELOG.md`。
 
 ## 自动发布 AtomGit Release
 
