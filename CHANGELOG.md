@@ -1,3 +1,42 @@
+atomgit-cli (v0.7.4) unstable; urgency=medium
+
+  * Rename the executable from ag to ag-cli, without a legacy command shim.
+    Preserve package names, configuration paths, credentials, and AG_ variables.
+    Upgrade with the package manager or Release installer instead of the old
+    ag update command; update scripts and shell completions, and rerun
+    ag-cli auth setup-git if a Git credential helper was configured.
+  * Generate Unix manpages from the command tree and include them in Linux and
+    macOS Release archives for manual installation; Windows archives and npm
+    packages do not include manuals, and installers do not install them.
+  * Add offline command discovery with schema and read-only health checks with
+    doctor, including optional live API probes and structured JSON reports.
+  * Add auth status with optional identity verification, authenticated private
+    HTTPS cloning, and host-scoped Git credential helper setup. Request OAuth
+    workflow and discussion scopes, and keep help/version usable without
+    loading credentials.
+  * Add organization details, member and repository discovery, repository
+    Runner queries, and organization Runner Group inspection.
+  * Add repository insights and permission, code-review, and pull-request
+    policy management, including compatible boolean response handling.
+  * Add user profile editing, personal Issue and PR list scopes, activity and
+    modification history queries, Issue reactions, and commit comment CRUD.
+  * Add PR editing from a body file or stdin, Release detail JSON output, and
+    state-value shell completion; fix PR reaction string-ID decoding and
+    pagination, and normalize displayed update versions.
+  * Add credential-free, redacted API request previews with api --dry-run.
+    Retry rate-limited API v5 and Actions v8 metadata GET/HEAD requests within
+    a bounded budget while respecting Retry-After; do not retry writes.
+  * Harden Windows path validation, bound Actions job-log archive expansion,
+    improve cleanup error reporting, and update vulnerable Go and ZIP
+    dependencies.
+  * Pin and verify GoReleaser downloads, harden Nix update automation, and
+    expand release-platform vulnerability checks.
+  * Add generated command reference documentation, API coverage and contract
+    guides, security reporting guidance, and expanded installation and shell
+    completion instructions.
+
+ -- Dongliang Mu <dzm91@hust.edu.cn>  Thu, 08 Oct 2026 15:34:43 +0800
+
 atomgit-cli (v0.7.3) unstable; urgency=medium
 
   * Add user profile, email, namespace, activity, starred repository, and
