@@ -30,6 +30,7 @@ func TestRegisteredCommands(t *testing.T) {
 		{[]string{"pr", "create"}, 0, 1, "text", "write"},
 		{[]string{"api"}, 1, 1, "raw", "conditional"},
 		{[]string{"pr", "comment", "create"}, 1, 2, "text", "write"},
+		{[]string{"discussion", "edit"}, 1, 2, "text", "write"},
 	} {
 		t.Run(strings.Join(tc.path, "/"), func(t *testing.T) {
 			f := &cmdutil.Factory{
@@ -79,6 +80,18 @@ func TestRegisteredCommands(t *testing.T) {
 				}
 				if len(detail.FlagGroups) != 1 || detail.FlagGroups[0].Kind != "mutuallyExclusive" {
 					t.Fatal("missing body/body-file constraint")
+				}
+			}
+			if detail.Path == "ag-cli discussion edit" {
+				wantGroups := []commandschema.FlagGroup{
+					{Kind: "atLeastOneRequired", Flags: []string{"body", "body-file", "category", "title"}},
+					{Kind: "mutuallyExclusive", Flags: []string{"body", "body-file"}},
+				}
+				if !reflect.DeepEqual(detail.FlagGroups, wantGroups) {
+					t.Fatalf("edit constraints = %+v", detail.FlagGroups)
+				}
+				if !strings.Contains(strings.Join(detail.Notes, " "), "stdin") {
+					t.Fatal("missing body input metadata")
 				}
 			}
 			global := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == "raw-output" })

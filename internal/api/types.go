@@ -809,6 +809,14 @@ type DiscussionAuthor struct {
 	AvatarURL string `json:"avatar_url"`
 }
 
+// DiscussionEditRequest includes every field required by the discussion PUT
+// endpoint, including an explicitly empty Markdown body.
+type DiscussionEditRequest struct {
+	Title        string `json:"title"`
+	MDContent    string `json:"md_content"`
+	CategoryName string `json:"category_name"`
+}
+
 type DiscussionCategory struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`

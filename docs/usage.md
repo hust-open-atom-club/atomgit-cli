@@ -1466,6 +1466,49 @@ ag-cli discussion view hust-open-atom-club/atomgit-cli 1 --comments --json
 
 `discussion view` 的 `<number>` 必须是正整数，在认证之前就会校验。加 `--comments` 时会额外请求评论串，评论按服务端顺序排列，仅 `reply_total` 大于 0 的评论才继续拉取嵌套回复。已删除、已隐藏或正文为空的条目分别显示为 `[deleted]`、`[hidden]`、`[no content]`。JSON 输出中 `comments` 字段仅在指定 `--comments` 时出现：请求了但没有评论时输出 `[]`。
 
+### Edit a discussion
+
+```bash
+# Infer the repository from the current AtomGit remote
+ag-cli discussion edit 6 --title "Updated title"
+
+# Use an explicit repository and preserve Markdown from a file or stdin
+ag-cli discussion edit owner/repo 6 --body-file discussion.md
+ag-cli discussion edit 6 --body-file -
+
+# Edit individual fields or combine changes
+ag-cli discussion edit owner/repo 6 --body "Updated **Markdown**"
+ag-cli discussion edit owner/repo 6 --category "Ideas"
+ag-cli discussion edit owner/repo 6 --title "Roadmap" --category "Ideas" --body-file discussion.md
+```
+
+`discussion edit` requires authentication and a positive discussion number.
+An explicit `owner/repo` takes precedence over Git remote inference. At least
+one of `--title`, `--body`, `--body-file`, or `--category` must be supplied;
+`--body` and `--body-file` are mutually exclusive.
+
+The command reads the current discussion before sending the three required
+JSON fields (`title`, `md_content`, and `category_name`) to the
+[discussion update API](https://docs.atomgit.com/en/docs/apis/put-api-v-5-repos-owner-repo-discuss-number/).
+Unspecified fields keep their current values. Category values use the name
+alone, without the display emoji or category ID. Locked, closed, pinned, and
+answered states and comments are not part of the update.
+
+Empty or whitespace-only titles and category names are rejected. Explicit
+`--body ''`, an empty file, or empty stdin sends an empty Markdown body to
+request clearing it; the server may reject this under its validation rules.
+Body text, including whitespace, trailing newlines, quotes, and Markdown
+characters, is sent without trimming. Omitting both body flags preserves the
+current body. Invalid arguments, unreadable files, and failed or incomplete
+reads of the current discussion prevent the PUT request.
+
+Success is reported only when the returned discussion identity, title, body,
+and category match the requested result. An incomplete or mismatched update
+response triggers a GET readback; failed or mismatched verification returns
+an error, even after HTTP 200. PUT requests are never automatically retried.
+If a write or verification fails, inspect `ag-cli discussion view owner/repo 6`
+before retrying, because the update may already have been applied.
+
 ## 版本
 
 ```bash

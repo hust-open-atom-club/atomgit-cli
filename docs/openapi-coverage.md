@@ -47,7 +47,7 @@
 | org | v5,v8 | Organizations/Member v5：/users/orgs、/orgs/{org}、members、repos；Actions v8：组织 runner-group 的列表/详情及 runners、runner-sets、shared-namespaces，只读发现 | partial | project | source,mock | [命令与测试](../pkg/cmd/org/)、[v8 API](../internal/api/actions/client.go) | [#75](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/75)、[#116](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/116)；不含 runner-group 写操作 |
 | user | v5 | Users：/user、/users/{name}、/emails、namespaces、starred/subscriptions、events；显式字段更新个人资料 | implemented | project | source,mock | [命令与测试](../pkg/cmd/user/) | [#80](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/80)、[PR #275](https://atomgit.com/hust-open-atom-club/atomgit-cli/merge_requests/275) 已合入；不是账号管理全覆盖 |
 | search | v5 | Search：/search/repositories、users、issues | implemented | project | source,mock | [命令与测试](../pkg/cmd/search/) | [#31](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/31) |
-| discussion | v5 | Discussion：/repos/{owner}/{repo}/discuss，列表/详情、评论与回复读取 | partial | project | source,mock | [命令与测试](../pkg/cmd/discussion/)、[API](../internal/api/discussion.go) | [#71](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/71)、[#72](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/72)；没有专用写命令 |
+| discussion | v5 | Discussion: /repos/{owner}/{repo}/discuss; list/detail, comment/reply reads, and PUT title/Markdown/category edits with response verification | partial | project | source,mock | [Commands and tests](../pkg/cmd/discussion/), [API](../internal/api/discussion.go) | [#71](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/71), [#72](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/72), [#162](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/162); no create/delete, state changes, comment writes, or organization discussion commands |
 | ssh-key | v5 | Users SSH keys：认证用户 SSH 公钥添加、列举与删除 | implemented | project | source,mock | [命令与测试](../pkg/cmd/ssh-key/) | [#27](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/27)；不代表所有 SSH key 端点已覆盖 |
 | kanban | v5 | Dashboard：/org/{org}/kanban/list、detail、item_list；仅组织看板只读发现 | partial | partner | source,mock | [命令与测试](../pkg/cmd/kanban/)、[API](../internal/api/kanban.go) | [#87](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/87) 已实现部分由本项目维护；完整模块/写操作由合作方负责 |
 
@@ -87,7 +87,7 @@
 | AI Hub | deferred | partner | 不把目录中的模块名称当作已支持端点；明确移交并验证契约后再立项 | docs（仅官方目录）；[#124](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/124)，具体契约未验证 |
 | PR request-changes / 正式拒绝审查 | unverified | project | 当前正式 review 只支持 approve；未确认公开 API 契约前不模拟服务端审查状态 | source；[review 实现](../pkg/cmd/pr/review.go)，不猜测未文档化端点 |
 | 通用 ag-cli api 的 v8 访问 | deferred | project | 当前固定 v5；如新增版本选择，须单独明确认证、路径和状态码策略 | source,mock；[API 命令](../pkg/cmd/api/api.go)，v8 现经专用 Actions 命令访问 |
-| Discussion 专用写命令 | deferred | project | 当前范围仅 list/view；待单独确定写入流程和安全交互，不因通用 v5 请求可用而标为专用命令已实现 | source；[#72](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/72) |
+| Other Discussion write commands | deferred | project | Repository edit is implemented; creation, deletion, state changes, comment/reply writes, and organization discussion management remain outside the dedicated command scope | source,mock; [#162](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/162), [documented edit API](https://docs.atomgit.com/en/docs/apis/put-api-v-5-repos-owner-repo-discuss-number/) |
 
 ### Issues #113–#122 对账
 

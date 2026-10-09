@@ -126,9 +126,14 @@ func TestActualTreeIsOfflineCompleteAndDeterministic(t *testing.T) {
 			t.Errorf("included internal/deprecated/helper command %s", excluded)
 		}
 	}
-	for _, representative := range []string{"ag-cli.1", "ag-cli-auth-login.1", "ag-cli-pr-create.1"} {
+	for _, representative := range []string{"ag-cli.1", "ag-cli-auth-login.1", "ag-cli-pr-create.1", "ag-cli-discussion-edit.1"} {
 		if _, ok := first[representative]; !ok {
 			t.Errorf("missing %s", representative)
+		}
+	}
+	for _, want := range []string{`\-\-body\-file`, "stdin", `\-\-category`, "PUT requests are never automatically"} {
+		if !strings.Contains(first["ag-cli-discussion-edit.1"], want) {
+			t.Errorf("discussion edit manual missing %q", want)
 		}
 	}
 }
