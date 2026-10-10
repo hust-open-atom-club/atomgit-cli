@@ -116,6 +116,20 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	cmd.AddCommand(version.NewCmdVersion())
 	cmd.AddCommand(alias.NewCmdAlias(f))
 
+	// Cobra creates completion commands lazily; keep its generators unchanged.
+	defaultHelp := cmd.HelpFunc()
+	cmd.SetHelpFunc(func(helpCmd *cobra.Command, args []string) {
+		if parent := helpCmd.Parent(); helpCmd.Name() == "bash" && parent != nil && parent.Name() == "completion" && parent.Parent() == cmd {
+			helpCmd.Long = strings.ReplaceAll(helpCmd.Long,
+				fmt.Sprintf("%s completion bash > /etc/bash_completion.d/%s", cmd.Name(), cmd.Name()),
+				fmt.Sprintf("%s completion bash | sudo tee /etc/bash_completion.d/%s >/dev/null", cmd.Name(), cmd.Name()))
+			helpCmd.Long = strings.ReplaceAll(helpCmd.Long,
+				fmt.Sprintf("%s completion bash > $(brew --prefix)/etc/bash_completion.d/%s", cmd.Name(), cmd.Name()),
+				fmt.Sprintf("%s completion bash | tee \"$(brew --prefix)/etc/bash_completion.d/%s\" >/dev/null", cmd.Name(), cmd.Name()))
+		}
+		defaultHelp(helpCmd, args)
+	})
+
 	return cmd, nil
 }
 

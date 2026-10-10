@@ -55,6 +55,34 @@ func setVersionMetadata(t *testing.T) {
 	})
 }
 
+func TestBashCompletionHelpUsesTee(t *testing.T) {
+	for _, args := range [][]string{{"completion", "bash", "--help"}, {"help", "completion", "bash"}} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			var out bytes.Buffer
+			cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &out, &out)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cmd.SetArgs(args)
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range []string{
+				"ag-cli completion bash | sudo tee /etc/bash_completion.d/ag-cli >/dev/null",
+				"ag-cli completion bash | tee \"$(brew --prefix)/etc/bash_completion.d/ag-cli\" >/dev/null",
+				"source <(ag-cli completion bash)",
+			} {
+				if !strings.Contains(out.String(), want) {
+					t.Errorf("help does not contain %q", want)
+				}
+			}
+			if strings.Contains(out.String(), "completion bash > ") {
+				t.Errorf("help still contains a direct redirection: %s", out.String())
+			}
+		})
+	}
+}
+
 func TestNewCmdRootRegistersCommands(t *testing.T) {
 	cmd, err := NewCmdRoot(&cmdutil.Factory{})
 	if err != nil {
