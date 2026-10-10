@@ -44,10 +44,6 @@ ag-cli pr --help
 ag-cli pr create --help
 ```
 
-运行 `ag-cli completion bash --help` 可查看 Bash 补全安装示例。系统目录使用
-`ag-cli completion bash | sudo tee /etc/bash_completion.d/ag-cli >/dev/null`，
-只让文件写入操作使用 sudo；用户目录与 Homebrew 示例见[安装指南](installation.md#bash)。
-
 ## 机器可读命令说明 (schema)
 
 ```bash
