@@ -47,7 +47,8 @@
 - [ag-cli commit list](#ag-cli-commit-list) — List commits
 - [ag-cli commit patch](#ag-cli-commit-patch) — Show a commit's patch
 - [ag-cli commit view](#ag-cli-commit-view) — View a commit
-- [ag-cli discussion](#ag-cli-discussion) — View repository discussions
+- [ag-cli discussion](#ag-cli-discussion) — Manage repository discussions
+- [ag-cli discussion edit](#ag-cli-discussion-edit) — Edit a repository discussion
 - [ag-cli discussion list](#ag-cli-discussion-list) — List repository discussions
 - [ag-cli discussion view](#ag-cli-discussion-view) — View a repository discussion
 - [ag-cli doctor](#ag-cli-doctor) — CLI health check: config, auth, and connectivity
@@ -1081,9 +1082,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 Usage: `ag-cli discussion`
 
-View repository discussions
+Manage repository discussions
 
-List AtomGit discussions for a repository
+List, view, and edit AtomGit discussions for a repository.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -1093,6 +1094,48 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | --- | --- | --- | --- |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli discussion edit
+
+Usage: `ag-cli discussion edit [<owner>/<repo>] <number> [flags]`
+
+Edit a repository discussion
+
+Edit the title, Markdown body, or category of a repository discussion.
+
+At least one edit flag is required. Unspecified fields retain their current
+values. Titles and category names cannot be empty or whitespace-only. Use the
+category name alone, without its display emoji or ID. --body and --body-file
+are mutually exclusive; an empty body, file, or stdin requests clearing the
+body, subject to server validation. Body text is sent without trimming.
+
+The command requires authentication and verifies the update response, reading
+the discussion back when necessary. PUT requests are never automatically
+retried; inspect the discussion before retrying an uncertain result.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--category` | New category name without a display emoji or ID (cannot be blank) | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read the Markdown body from file (use - for stdin) | `` | local |
+| `-b, --body` | New Markdown body (empty requests clearing it) | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-t, --title` | New discussion title (cannot be blank) | `` | local |
+
+### Example
+
+```bash
+ag-cli discussion edit 6 --title "Updated title"
+ag-cli discussion edit owner/repo 6 --body "Updated **Markdown**"
+ag-cli discussion edit owner/repo 6 --body-file discussion.md
+ag-cli discussion edit 6 --body-file -
+ag-cli discussion edit owner/repo 6 --title "Roadmap" --category "Ideas"
+```
 
 
 ## ag-cli discussion list
