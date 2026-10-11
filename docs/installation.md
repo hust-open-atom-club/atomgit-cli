@@ -718,19 +718,6 @@ Bash 补全可通过 `bash-completion` 自动加载。
 
 ```shell
 # 创建补全目录
-mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
-
-# 安装补全文件
-ag-cli completion bash | tee "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag-cli" >/dev/null
-
-# 移除补全文件
-rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag-cli"
-```
-
-如需安装到系统目录，可使用 `sudo tee` 写入；无需以 root 身份运行 `ag-cli`：
-
-```shell
-# 创建补全目录
 sudo mkdir -p /etc/bash_completion.d
 
 # 安装补全文件
