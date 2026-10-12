@@ -76,6 +76,7 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	var rawOutput bool
 	cmd.PersistentFlags().BoolVar(&rawOutput, "raw-output", false, "Disable terminal output sanitization for machine processing")
 	cmd.PersistentPreRunE = func(*cobra.Command, []string) error {
+		updateBashCompletionHelp(cmd)
 		if err := safeOut.SetRaw(rawOutput); err != nil {
 			return fmt.Errorf("configure stdout: %w", err)
 		}
@@ -119,18 +120,31 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	// Cobra creates completion commands lazily; keep its generators unchanged.
 	defaultHelp := cmd.HelpFunc()
 	cmd.SetHelpFunc(func(helpCmd *cobra.Command, args []string) {
-		if parent := helpCmd.Parent(); helpCmd.Name() == "bash" && parent != nil && parent.Name() == "completion" && parent.Parent() == cmd {
-			helpCmd.Long = strings.ReplaceAll(helpCmd.Long,
-				fmt.Sprintf("%s completion bash > /etc/bash_completion.d/%s", cmd.Name(), cmd.Name()),
-				fmt.Sprintf("%s completion bash | sudo tee /etc/bash_completion.d/%s >/dev/null", cmd.Name(), cmd.Name()))
-			helpCmd.Long = strings.ReplaceAll(helpCmd.Long,
-				fmt.Sprintf("%s completion bash > $(brew --prefix)/etc/bash_completion.d/%s", cmd.Name(), cmd.Name()),
-				fmt.Sprintf("%s completion bash | tee \"$(brew --prefix)/etc/bash_completion.d/%s\" >/dev/null", cmd.Name(), cmd.Name()))
-		}
+		updateBashCompletionHelp(cmd)
 		defaultHelp(helpCmd, args)
 	})
 
 	return cmd, nil
+}
+
+// Update Cobra's lazily initialized metadata for both help and schema output.
+func updateBashCompletionHelp(cmd *cobra.Command) {
+	for _, completion := range cmd.Commands() {
+		if completion.Name() != "completion" {
+			continue
+		}
+		for _, shell := range completion.Commands() {
+			if shell.Name() != "bash" {
+				continue
+			}
+			shell.Long = strings.ReplaceAll(shell.Long,
+				fmt.Sprintf("%s completion bash > /etc/bash_completion.d/%s", cmd.Name(), cmd.Name()),
+				fmt.Sprintf("%s completion bash | sudo tee /etc/bash_completion.d/%s >/dev/null", cmd.Name(), cmd.Name()))
+			shell.Long = strings.ReplaceAll(shell.Long,
+				fmt.Sprintf("%s completion bash > $(brew --prefix)/etc/bash_completion.d/%s", cmd.Name(), cmd.Name()),
+				fmt.Sprintf("%s completion bash | tee \"$(brew --prefix)/etc/bash_completion.d/%s\" >/dev/null", cmd.Name(), cmd.Name()))
+		}
+	}
 }
 
 // ExpandAlias replaces the first invocation argument with its configured

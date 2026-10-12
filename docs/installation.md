@@ -716,6 +716,21 @@ ag-cli version
 Bash 补全可通过 `bash-completion` 自动加载。
 以下操作假设已安装并启用 `bash-completion`。
 
+用户目录安装无需 sudo：
+
+```shell
+# 创建补全目录
+mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
+
+# 安装补全文件
+ag-cli completion bash | tee "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag-cli" >/dev/null
+
+# 移除补全文件
+rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag-cli"
+```
+
+也可安装到系统目录，只让文件写入操作使用 sudo：
+
 ```shell
 # 创建补全目录
 sudo mkdir -p /etc/bash_completion.d
