@@ -1,7 +1,10 @@
 package version
 
 import (
+	"fmt"
+	"runtime"
 	"runtime/debug"
+	"strings"
 	"testing"
 )
 
@@ -221,5 +224,23 @@ func TestGet_PartialVCS(t *testing.T) {
 	}
 	if info.BuildDate != "unknown" {
 		t.Errorf("BuildDate = %q, want %q", info.BuildDate, "unknown")
+	}
+}
+
+func TestUserAgent(t *testing.T) {
+	cleanup := restoreVars(linkerMetadata{
+		version: "1.2.3", commit: "abc", buildDate: "2026-01-01",
+	}, func() (*debug.BuildInfo, bool) {
+		return nil, false
+	})
+	defer cleanup()
+
+	got := UserAgent()
+	want := fmt.Sprintf("AtomGit CLI 1.2.3 (%s; %s)", runtime.GOOS, runtime.GOARCH)
+	if got != want {
+		t.Fatalf("UserAgent() = %q, want %q", got, want)
+	}
+	if !strings.HasPrefix(got, "AtomGit CLI ") {
+		t.Fatalf("UserAgent() missing product prefix: %q", got)
 	}
 }

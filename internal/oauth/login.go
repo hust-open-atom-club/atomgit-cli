@@ -18,6 +18,7 @@ import (
 
 	internalapi "atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/browser"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 )
 
 // Defaults match AtomCode / AtomGit OAuth app (see project oauth reference); override with env.
@@ -233,6 +234,7 @@ func exchangeCode(ctx context.Context, id, secret, redir, code string) (*tokenRe
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("User-Agent", version.UserAgent())
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -280,6 +282,7 @@ func RefreshAccessToken(ctx context.Context, refreshToken string) (*RefreshedTok
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("User-Agent", version.UserAgent())
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -326,6 +329,7 @@ func FetchUserWithURL(ctx context.Context, url, accessToken string) (*UserInfo, 
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("User-Agent", version.UserAgent())
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 )
 
 // Probe checks one page of a read-only endpoint. The transport argument allows
@@ -34,6 +36,7 @@ func Probe(ctx context.Context, transport http.RoundTripper, f Fixture, owner, r
 	}
 	request.Header.Set("Authorization", "Bearer "+token)
 	request.Header.Set("Accept", "application/json")
+	request.Header.Set("User-Agent", version.UserAgent())
 	client := &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	resp, err := client.Do(request)
 	if err != nil {

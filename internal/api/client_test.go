@@ -15,6 +15,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -223,8 +225,8 @@ func TestGetSendsHeadersAndDecodesResponse(t *testing.T) {
 		if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
 			t.Fatalf("Authorization = %q", got)
 		}
-		if got := r.Header.Get("User-Agent"); !strings.HasPrefix(got, "AtomCode-CLI/") {
-			t.Fatalf("User-Agent = %q", got)
+		if got := r.Header.Get("User-Agent"); got != version.UserAgent() {
+			t.Fatalf("User-Agent = %q, want %q", got, version.UserAgent())
 		}
 		if got := r.Header.Get("Accept"); got != "application/json" {
 			t.Fatalf("Accept = %q", got)
@@ -310,8 +312,8 @@ func TestDoRequestRawWithBody(t *testing.T) {
 				if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
 					t.Fatalf("Authorization = %q", got)
 				}
-				if got := r.Header.Get("User-Agent"); !strings.HasPrefix(got, "AtomCode-CLI/") {
-					t.Fatalf("User-Agent = %q", got)
+				if got := r.Header.Get("User-Agent"); got != version.UserAgent() {
+					t.Fatalf("User-Agent = %q, want %q", got, version.UserAgent())
 				}
 				w.WriteHeader(http.StatusAccepted)
 			})

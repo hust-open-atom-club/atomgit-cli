@@ -1,6 +1,8 @@
 package version
 
 import (
+	"fmt"
+	"runtime"
 	"runtime/debug"
 	"strings"
 )
@@ -65,4 +67,10 @@ func Get() Info {
 	}
 
 	return info
+}
+
+// UserAgent returns the HTTP User-Agent for AtomGit API and OAuth requests.
+// Format: "AtomGit CLI <version> (<os>; <arch>)".
+func UserAgent() string {
+	return fmt.Sprintf("AtomGit CLI %s (%s; %s)", Get().Version, runtime.GOOS, runtime.GOARCH)
 }
