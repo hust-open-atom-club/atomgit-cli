@@ -14,7 +14,7 @@ func NewCmdDiscussion(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "discussion",
 		Short:        "Manage repository discussions",
-		Long:         "List, view, and edit AtomGit discussions for a repository.",
+		Long:         "List, view, create, edit, and delete AtomGit discussions for a repository.",
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -25,6 +25,8 @@ func NewCmdDiscussion(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdDiscussionList(f))
 	cmd.AddCommand(newCmdDiscussionView(f))
 	cmd.AddCommand(newCmdDiscussionEdit(f))
+	cmd.AddCommand(newCmdDiscussionCreate(f))
+	cmd.AddCommand(newCmdDiscussionDelete(f))
 	cmdutil.AddRepositoryContextHelp(cmd)
 	return cmd
 }

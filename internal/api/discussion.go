@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 )
@@ -91,6 +92,29 @@ func UpdateDiscussion(client *Client, owner, repo string, number int, request Di
 		return DiscussionDetail{}, err
 	}
 	return detail, nil
+}
+
+// CreateDiscussion creates a discussion once and returns the server identity.
+func CreateDiscussion(client *Client, owner, repo string, request DiscussionCreateRequest) (DiscussionDetail, error) {
+	body, err := json.Marshal(request)
+	if err != nil {
+		return DiscussionDetail{}, fmt.Errorf("encode discussion creation: %w", err)
+	}
+	var detail DiscussionDetail
+	err = discussionWrite(client, http.MethodPost, RepositoryPath(owner, repo, "discuss"), bytes.NewReader(body), "application/json", &detail)
+	return detail, err
+}
+
+// DeleteDiscussion accepts the documented empty HTTP 200 response.
+func DeleteDiscussion(client *Client, owner, repo string, number int) error {
+	return discussionWrite(client, http.MethodDelete, RepositoryPath(owner, repo, "discuss", strconv.Itoa(number)), nil, "", nil)
+}
+
+// discussionWrite disables both retries and redirect replay for mutations.
+func discussionWrite(client *Client, method, path string, body io.Reader, contentType string, result any) error {
+	httpClient := *metadataHTTPClient(client.httpClient)
+	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	return client.doJSONRequestContext(client.requestContext(), &httpClient, method, path, body, contentType, "application/json", RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: false}, result)
 }
 
 // ListDiscussionComments fetches every comment in a discussion thread. total

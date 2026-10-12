@@ -1509,6 +1509,32 @@ an error, even after HTTP 200. PUT requests are never automatically retried.
 If a write or verification fails, inspect `ag-cli discussion view owner/repo 6`
 before retrying, because the update may already have been applied.
 
+### 创建与删除仓库讨论
+
+```bash
+# 创建讨论；分类填写名称，不包含展示用 emoji 或分类 ID
+ag-cli discussion create owner/repo --title "Roadmap" --category "Ideas" --body "Next steps"
+
+# 省略仓库时从 Git remote 推断；文件/stdin 保留 Markdown 原文
+ag-cli discussion create --title "Roadmap" --category "Ideas" --body-file discussion.md
+ag-cli discussion create --title "Roadmap" --category "Ideas" --body-file -
+
+# 删除前提示确认仓库与讨论编号；--yes 用于明确授权的非交互调用
+ag-cli discussion delete owner/repo 7
+ag-cli discussion delete 7 --yes
+```
+
+`discussion create` 和 `discussion delete` 均要求认证，显式 `owner/repo` 优先于 Git remote 推断。
+创建必须提供非空且非纯空白的标题、分类和正文；`--body` 与 `--body-file` 必须且只能选择一个。
+空文件、空 stdin、读取失败或参数无效时不会发起创建请求。有效正文不做 trim，保留 Unicode、Markdown 和末尾换行。
+创建使用 JSON 字段 `title`、`md_content`、`category_name`，接受 HTTP 200，仅在响应包含正整数编号时报告成功，不拼接未经服务端确认的 URL。
+若响应无效或缺少编号，创建可能已完成，请先使用 `discussion list` 检查，避免重复创建。
+
+删除编号必须为正整数，`007` 会规范化为 `7`。确认提示包含仓库和编号，仅 `y`、`yes`（不区分大小写）或 `--yes` 授权删除。
+空输入、EOF 或其他回答会取消且不发送请求。删除接受 HTTP 200 空响应，不尝试将空正文解码为 JSON。
+两个写操作均不自动重试或跟随重定向；失败后先检查远端状态，再决定是否重试。
+这两个命令只处理仓库 Discussion，不包含组织讨论、评论写操作或关闭/锁定等状态管理。
+
 ## 版本
 
 ```bash
