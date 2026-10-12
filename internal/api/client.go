@@ -289,7 +289,7 @@ func (c *Client) doRequestWithPolicyContext(
 		if c.token != "" {
 			req.Header.Set("Authorization", "Bearer "+c.token)
 		}
-		req.Header.Set("User-Agent", "AtomCode-CLI/"+version.Get().Version)
+		req.Header.Set("User-Agent", version.UserAgent())
 		if contentType != "" {
 			req.Header.Set("Content-Type", contentType)
 		}
