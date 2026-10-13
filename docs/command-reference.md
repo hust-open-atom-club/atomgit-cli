@@ -131,6 +131,7 @@
 - [ag-cli pr view](#ag-cli-pr-view) — View a pull request
 - [ag-cli release](#ag-cli-release) — Manage repository releases
 - [ag-cli release create](#ag-cli-release-create) — Create a release
+- [ag-cli release delete-asset](#ag-cli-release-delete-asset) — Delete an attachment from a release
 - [ag-cli release download](#ag-cli-release-download) — Download an attachment from a release
 - [ag-cli release edit](#ag-cli-release-edit) — Edit a release
 - [ag-cli release list](#ag-cli-release-list) — List repository releases
@@ -3028,7 +3029,7 @@ Usage: `ag-cli release`
 
 Manage repository releases
 
-List, view, create, and edit repository releases on AtomGit, and upload or download release attachments.
+List, view, create, and edit repository releases on AtomGit, and upload, download, or delete release attachments.
 
 The repository's automated release pipeline validates tags and artifacts, then
 uses these primitives through "make publish VERSION=vX.Y.Z NOTES_FILE=notes.md".
@@ -3079,6 +3080,34 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ```bash
 ag-cli release create owner/repo v1.0.0 --name "First" --body "Initial release"
 ag-cli release create owner/repo v1.0.0-rc --prerelease --body-file notes.md
+```
+
+
+## ag-cli release delete-asset
+
+Usage: `ag-cli release delete-asset [<owner>/<repo>] <tag> <asset-id> [flags]`
+
+Delete an attachment from a release
+
+Delete one uploaded attachment by its ID after checking that it belongs to the specified release.
+Use release view --json to find attachment IDs. Source archives cannot be deleted.
+By default, confirmation is required; use --yes to skip the prompt.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip confirmation prompt | `false` | local |
+
+### Example
+
+```bash
+ag-cli release delete-asset owner/repo v1.0.0 42
+ag-cli release delete-asset v1.0.0 attachment-id --yes
 ```
 
 

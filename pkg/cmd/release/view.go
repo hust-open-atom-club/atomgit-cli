@@ -79,7 +79,7 @@ type releaseViewJSON struct {
 }
 
 type releaseAssetJSON struct {
-	ID                 int64  `json:"id"`
+	ID                 any    `json:"id"`
 	Name               string `json:"name"`
 	Type               string `json:"type"`
 	BrowserDownloadURL string `json:"browserDownloadUrl"`
@@ -88,8 +88,12 @@ type releaseAssetJSON struct {
 func releaseDetailsJSON(release api.Release) releaseViewJSON {
 	assets := make([]releaseAssetJSON, len(release.Assets))
 	for i, asset := range release.Assets {
+		var id any = asset.ID
+		if asset.StringID != "" {
+			id = asset.StringID
+		}
 		assets[i] = releaseAssetJSON{
-			ID:                 asset.ID,
+			ID:                 id,
 			Name:               asset.Name,
 			Type:               asset.Type,
 			BrowserDownloadURL: asset.BrowserDownloadURL,

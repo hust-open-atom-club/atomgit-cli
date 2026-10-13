@@ -727,13 +727,62 @@ type ReleaseAuthor struct {
 }
 
 // ReleaseAsset is one entry of the assets array on a Release. The id and
-// type fields distinguish deletable uploaded attachments (type="attach",
-// id>0) from auto-generated source archives that cannot be removed.
+// type fields distinguish uploaded attachments (type="attach") from
+// auto-generated source archives. IDs may be numeric or opaque strings.
 type ReleaseAsset struct {
 	ID                 int64  `json:"id"`
+	StringID           string `json:"-"`
 	Name               string `json:"name"`
 	Type               string `json:"type"`
 	BrowserDownloadURL string `json:"browser_download_url"`
+}
+
+// UnmarshalJSON preserves opaque string IDs without changing numeric ID consumers.
+func (a *ReleaseAsset) UnmarshalJSON(data []byte) error {
+	type plain ReleaseAsset
+	var wire struct {
+		*plain
+		ID json.RawMessage `json:"id"`
+	}
+	decoded := ReleaseAsset{}
+	wire.plain = (*plain)(&decoded)
+	if err := json.Unmarshal(data, &wire); err != nil {
+		return err
+	}
+	if len(wire.ID) > 0 && wire.ID[0] == '"' {
+		if err := json.Unmarshal(wire.ID, &decoded.StringID); err != nil {
+			return err
+		}
+	} else if len(wire.ID) > 0 {
+		if err := json.Unmarshal(wire.ID, &decoded.ID); err != nil {
+			return err
+		}
+	}
+	*a = decoded
+	return nil
+}
+
+// MarshalJSON retains the server's string ID when serializing an asset.
+func (a ReleaseAsset) MarshalJSON() ([]byte, error) {
+	type plain ReleaseAsset
+	if a.StringID == "" {
+		return json.Marshal(plain(a))
+	}
+	return json.Marshal(struct {
+		plain
+		ID string `json:"id"`
+	}{plain: plain(a), ID: a.StringID})
+}
+
+// AttachmentID returns the exact identifier used in attachment API paths.
+func (a ReleaseAsset) AttachmentID() string {
+	if a.StringID != "" {
+		return a.StringID
+	}
+	if a.ID <= 0 {
+		return ""
+	}
+	return strconv.FormatInt(a.ID, 10)
 }
 
 // Release is the response shape returned by the AtomGit release endpoints.

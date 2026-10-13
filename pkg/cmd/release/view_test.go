@@ -35,6 +35,11 @@ func TestReleaseViewJSON(t *testing.T) {
 {"id":0,"name":"Source code","type":"source","browserDownloadUrl":"https://example.com/source.zip"}]}`,
 		},
 		{
+			name:     "opaque attachment ID",
+			response: `{"tag_name":"v1/rc","assets":[{"id":"file/a b","name":"app.zip","type":"attach"}]}`,
+			want:     `{"tag":"v1/rc","name":"","status":"release","draft":false,"prerelease":false,"targetCommitish":"","createdAt":"","author":"","body":"","assets":[{"id":"file/a b","name":"app.zip","type":"attach","browserDownloadUrl":""}]}`,
+		},
+		{
 			name:     "missing optional fields",
 			response: `{"tag_name":"v1/rc"}`,
 			want:     `{"tag":"v1/rc","name":"","status":"release","draft":false,"prerelease":false,"targetCommitish":"","createdAt":"","author":"","body":"","assets":[]}`,

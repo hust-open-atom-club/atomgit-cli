@@ -1338,7 +1338,7 @@ ag-cli release download owner/repo v1.0.0 app.tar.gz --output ./existing.tar.gz 
 
 | 附件字段 | 类型 | 含义 |
 | --- | --- | --- |
-| `id` | number | API 返回的附件 ID |
+| `id` | number/string | API 返回的附件 ID，保留数字或字符串类型 |
 | `name` | string | 附件名称 |
 | `type` | string | 附件类型，例如 `attach` 或 `source` |
 | `browserDownloadUrl` | string | 附件下载 URL |
@@ -1353,6 +1353,15 @@ ag-cli release download owner/repo v1.0.0 app.tar.gz --output ./existing.tar.gz 
 - `--overwrite`：仅当远端唯一匹配且该附件 `type=attach`、ID 为正整数时，先成功取得上传地址，再删除旧附件并上传新文件；取得上传地址失败时旧附件保持不变。若删除响应中断，命令会重新读取 Release，仅在确认旧附件已经不存在时继续；若后续上传失败，错误信息会明确说明旧附件已被删除。对于 `type=source` 的源码归档、ID 非正、或存在多个同名匹配的情况，均会拒绝且不执行删除。
 
 附件传输不会使用普通 API 请求的 30 秒总超时，而是默认限制为 30 分钟，可用 `--timeout` 调整，或用 `--timeout 0` 关闭总时限。非空文件只会在传输尚未开始（请求体零字节被读取）时自动重试一次；零字节文件或传输开始后的中断会返回非零退出码并提示远端状态可能不确定，不会盲目重放上传。
+
+`ag-cli release delete-asset [<owner>/<repo>] <tag> <asset-id> [--yes]` 删除指定附件。先用 `release view --json` 获取 ID（数字或字符串），再执行：
+
+```bash
+ag-cli release delete-asset owner/repo v1.0.0 42
+ag-cli release delete-asset v1.0.0 attachment-id --yes
+```
+
+命令先读取 Release，核对 tag、附件 ID 和 `attach` 类型，并在确认提示中展示仓库、tag、附件名和 ID。同名附件按 ID 区分；不存在、不属于该 Release、源代码归档或读取失败时不会删除。默认需要确认，取消或非交互空输入时不发送 DELETE；自动化调用须显式传入 `-y/--yes`。DELETE 不自动重试，204 空响应表示成功，其他状态返回错误。该命令仅删除选中的附件，不删除 Release 或 tag，也不改变上传覆盖策略。
 
 `ag-cli release download` 的 `-o/--output` 为必填项，命令不会将二进制写入 stdout。默认若目标文件已存在会立即失败且不发任何请求，只有显式 `--overwrite` 才允许替换。下载体先写入目标目录中的临时文件，完整接收后才安装到目标路径；传输失败会保留已有目标文件且不残留临时文件。下载与上传一样默认限制为 30 分钟，可通过 `--timeout` 调整或用 `--timeout 0` 关闭总时限。
 
