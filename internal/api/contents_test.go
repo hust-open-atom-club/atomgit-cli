@@ -813,6 +813,23 @@ func TestRepositoryContentWriteDoesNotFollowRedirectOrRetry(t *testing.T) {
 			}
 		})
 	}
+	t.Run("zero timeout", func(t *testing.T) {
+		var calls int
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			calls++
+			if r.URL.Path == "/followed" {
+				t.Fatal("followed redirect")
+			}
+			w.Header().Set("Location", "/followed")
+			w.WriteHeader(http.StatusTemporaryRedirect)
+		}))
+		t.Cleanup(server.Close)
+		client := NewClientWithBaseURL("token", server.URL, &http.Client{})
+		_, err := DeleteRepositoryContent(client, "alice", "demo", "README.md", "main", "remove", "0123456789abcdef0123456789abcdef01234567")
+		if err == nil || calls != 1 {
+			t.Fatalf("calls = %d err = %v", calls, err)
+		}
+	})
 }
 
 func TestRepositoryContentWriteReportsConflictOnce(t *testing.T) {

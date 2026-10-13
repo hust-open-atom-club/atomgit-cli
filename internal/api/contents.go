@@ -203,6 +203,9 @@ func writeRepositoryContent(client *Client, method, owner, repo, path string, re
 	// metadataHTTPClient returns a positive-timeout client unchanged, and
 	// doJSONRequestContext wraps the client again, so mutate a fresh copy.
 	base := metadataHTTPClient(client.httpClient)
+	if base.Timeout == 0 {
+		base.Timeout = defaultMetadataTimeout
+	}
 	httpClient := *base
 	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error {
 		return http.ErrUseLastResponse
