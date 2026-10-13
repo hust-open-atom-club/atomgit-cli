@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -782,21 +783,29 @@ func TestRepositoryContentWritesUseDocumentedRequests(t *testing.T) {
 }
 
 func TestRepositoryContentWriteDoesNotFollowRedirectOrRetry(t *testing.T) {
-	for _, status := range []int{http.StatusMovedPermanently, http.StatusFound, http.StatusTemporaryRedirect} {
+	for _, status := range []int{http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect, http.StatusPermanentRedirect} {
 		t.Run(http.StatusText(status), func(t *testing.T) {
 			var calls int
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls++
+				if r.URL.Path == "/followed" {
+					w.WriteHeader(http.StatusOK)
+					_, _ = io.WriteString(w, `{"commit":{"sha":"followed"}}`)
+					return
+				}
+				w.Header().Set("Location", "/followed")
+				w.WriteHeader(status)
+				_, _ = io.WriteString(w, `{"commit":{"sha":"ignored"}}`)
+			}))
+			t.Cleanup(server.Close)
 			var redirects int
 			httpClient := &http.Client{
 				Timeout:       time.Second,
 				CheckRedirect: func(*http.Request, []*http.Request) error { redirects++; return nil },
-				Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-					calls++
-					return &http.Response{StatusCode: status, Header: http.Header{"Location": {"https://api.atomgit.com/api/v5/other"}}, Body: io.NopCloser(strings.NewReader(`{"commit":{"sha":"ignored"}}`)), Request: req}, nil
-				}),
 			}
-			client := NewClientWithBaseURL("token", "https://api.atomgit.com", httpClient)
+			client := NewClientWithBaseURL("token", server.URL, httpClient)
 			_, err := UpdateRepositoryContent(client, "alice", "demo", "README.md", "main", "edit", "0123456789abcdef0123456789abcdef01234567", []byte("x"))
-			if err == nil || calls != 1 {
+			if err == nil || calls != 1 || !strings.Contains(err.Error(), http.StatusText(status)) {
 				t.Fatalf("calls = %d err = %v", calls, err)
 			}
 			if err := httpClient.CheckRedirect(nil, nil); err != nil || redirects != 1 {
