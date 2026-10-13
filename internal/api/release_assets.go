@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -205,12 +206,21 @@ func DeleteReleaseAttachment(client *Client, owner, repo, tag string, attachment
 		return fmt.Errorf("invalid attachment id: %d (must be positive)", attachmentID)
 	}
 
+	return DeleteReleaseAttachmentByID(client, owner, repo, tag, strconv.FormatInt(attachmentID, 10))
+}
+
+// DeleteReleaseAttachmentByID removes an attachment using its opaque identifier.
+func DeleteReleaseAttachmentByID(client *Client, owner, repo, tag, attachmentID string) error {
+	if strings.TrimSpace(attachmentID) == "" {
+		return fmt.Errorf("attachment id is required")
+	}
+
 	path := fmt.Sprintf(
-		"/repos/%s/%s/releases/%s/attach_files/%d",
+		"/repos/%s/%s/releases/%s/attach_files/%s",
 		url.PathEscape(owner),
 		url.PathEscape(repo),
 		url.PathEscape(tag),
-		attachmentID,
+		url.PathEscape(attachmentID),
 	)
 
 	resp, err := client.doRequestWithPolicy(

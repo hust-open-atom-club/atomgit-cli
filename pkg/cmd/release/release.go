@@ -11,7 +11,7 @@ func NewCmdRelease(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "release",
 		Short: "Manage repository releases",
-		Long: `List, view, create, and edit repository releases on AtomGit, and upload or download release attachments.
+		Long: `List, view, create, and edit repository releases on AtomGit, and upload, download, or delete release attachments.
 
 The repository's automated release pipeline validates tags and artifacts, then
 uses these primitives through "make publish VERSION=vX.Y.Z NOTES_FILE=notes.md".`,
@@ -27,6 +27,7 @@ uses these primitives through "make publish VERSION=vX.Y.Z NOTES_FILE=notes.md".
 	cmd.AddCommand(newCmdReleaseEdit(f))
 	cmd.AddCommand(newCmdReleaseUpload(f))
 	cmd.AddCommand(newCmdReleaseDownload(f))
+	cmd.AddCommand(newCmdReleaseDeleteAsset(f))
 	cmdutil.AddRepositoryContextHelp(cmd)
 	return cmd
 }
