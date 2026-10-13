@@ -53,7 +53,7 @@ func Main() int {
 	if executeErr != nil {
 		// Error may contain raw API response body; write through the
 		// sanitizing stderr writer that root.NewCmdRoot configured.
-		fmt.Fprintf(rootCmd.ErrOrStderr(), "%s\n", executeErr)
+		renderCommandError(rootCmd.ErrOrStderr(), executeErr)
 		_ = cmdutil.FlushWriter(rootCmd.ErrOrStderr())
 		return 1
 	}

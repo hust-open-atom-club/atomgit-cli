@@ -6,6 +6,15 @@ Unix 用户安装手册后，还可通过 `man 1 ag-cli`、`man 1 ag-cli-auth-lo
 
 需要了解 API 覆盖边界、尚未实现的功能和维护归属时，请参阅 [OpenAPI 覆盖与责任清单](openapi-coverage.md)。
 
+普通 AtomGit API v5、Actions API v8 和通用 `api` 命令的请求失败会在 stderr 显示
+`API request failed.`，以及请求准备、请求执行、响应读取或无效响应的诊断。
+HTTP 失败响应显示状态码；错误体读取失败只作为附加原因，不会覆盖状态码。
+默认诊断不展开响应正文、原始解析原因或完整错误链，`--raw-output` 也不会展开这些内容。
+底层错误仍保留操作上下文、阶段分类和原始原因，供程序通过 `errors.Is` / `errors.As` 判断。
+认证命令继续使用其专属诊断；`run view --job` 遇到正常空响应时提示 `Job "<job-id>" was not found.`，
+读取中断则报告读取失败。
+响应读取或解码失败不能证明写操作没有生效，重试前应先核对服务端结果。
+
 ## 目录
 
 - [健康检查 (doctor)](#健康检查-doctor)
@@ -1264,6 +1273,10 @@ ag-cli api /repos/owner/repo/issues --paginate --dry-run
 
 `--paginate` 仅支持无原始输入的 GET。默认从 `page=1&per_page=100` 开始；已有的正整数值会被保留。服务端提供一致的 `total_page` 响应头时据此停止；否则仅数组响应可通过空页或短页停止。后续页面失败时，已完成的 NDJSON 行会保留，失败页面不会产生部分输出。
 
+HTTP 状态失败会保留状态及错误体读取原因；错误体读取超时不会替代主 HTTP 失败。
+分页读取失败与无效 JSON、数组形状或分页响应头会在底层错误链中保留页码及原始原因；CLI 使用上述固定诊断，不展开原始原因。
+分页仍校验整页 JSON，首个 JSON 值后的额外 JSON 或无效数据也会导致该页失败。
+
 成功响应（包括空响应和二进制响应）会直接写到标准输出，不增加标签或换行。终端控制字符默认仍会转换为可见转义；机器处理确需原始字节时使用 `ag-cli --raw-output api ...`，不要将未经检查的原始输出直接转发到终端。
 
 ### API 请求预览
@@ -1387,6 +1400,8 @@ ag-cli license check MIT
 ag-cli license check Apache-2.0
 ag-cli license check GPL-3.0
 ```
+
+合规检查默认超时 30 秒，随命令取消而中止。非成功 HTTP 状态与错误体读取失败分别保留；成功响应读取中断时不会输出部分结果。诊断省略原始服务端正文和读取/执行原因。
 
 ## SSH Key
 

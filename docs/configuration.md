@@ -114,6 +114,8 @@ ag-cli auth setup-git
 
 AtomGit API v5、Actions API v8、OAuth 与 Release 等领域客户端的非成功响应统一经过同一安全边界：错误正文最多保留 4 KiB，超出部分会显示为 `...`；明确省略敏感响应正文的端点仅输出清洗后的状态。错误上下文会转义终端控制字符和 Unicode 方向控制字符，并脱敏 Bearer 值及常见的 token、secret、password、authorization 字段。该安全边界独立于终端 writer，因此 `--raw-output` 不会关闭 API 错误脱敏。
 
+普通 API v5、Actions API v8、外部许可证合规检查和通用 `api` 命令在顶层只展示固定诊断和 HTTP 状态码，不展开上述错误正文、状态文本或原始原因。HTTP 错误体读取失败作为附加诊断，不能将已收到的 HTTP 状态改判为取消或超时。底层错误链仍保留这些事实，`--raw-output` 不会切换为详细诊断模式。
+
 ## API 限流重试
 
 普通 AtomGit API v5 和 Actions API v8 元数据 GET/HEAD 请求遇到 HTTP 429 时会进行有界重试，包括使用共享客户端的分页查询。每个逻辑请求默认最多发送 3 次 HTTP 请求，并具有包含请求执行和等待时间在内的 30 秒总预算；调用方设置的更短 context 截止时间会优先生效。服务端 `Retry-After` 支持非负秒数和 HTTP-date。该响应头缺失、非法或已经过期时，CLI 使用带抖动且不超过 2 秒的退避。

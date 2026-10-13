@@ -239,7 +239,13 @@ func preparePagination(values url.Values) (*paginationState, error) {
 		}
 		if len(entries) == 1 {
 			parsed, err := strconv.Atoi(entries[0])
-			if err != nil || parsed <= 0 {
+			if err != nil {
+				return nil, &redactedError{
+					message: fmt.Sprintf("pagination query %q must be a positive integer", key),
+					cause:   err,
+				}
+			}
+			if parsed <= 0 {
 				return nil, fmt.Errorf("pagination query %q must be a positive integer", key)
 			}
 			*target = parsed
@@ -274,10 +280,23 @@ func execute(cmd *cobra.Command, f *cmdutil.Factory, request preparedRequest) er
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return responseError(request.method+" "+request.path, resp, token)
 	}
-	if _, err := io.Copy(cmd.OutOrStdout(), resp.Body); err != nil {
+	if _, err := io.Copy(cmd.OutOrStdout(), responseReadClassifier{reader: resp.Body}); err != nil {
 		return redact(fmt.Errorf("read response: %w", err), token)
 	}
 	return nil
+}
+
+// responseReadClassifier labels errors at the reader boundary so io.Copy can
+// still return writer failures with their original identity and precedence.
+// Expose only Read so an underlying WriterTo cannot bypass classification.
+type responseReadClassifier struct{ reader io.Reader }
+
+func (r responseReadClassifier) Read(p []byte) (int, error) {
+	n, err := r.reader.Read(p)
+	if err != nil && err != io.EOF {
+		return n, &internalapi.ResponseReadError{Err: err}
+	}
+	return n, err
 }
 
 func requestHTTPClient(f *cmdutil.Factory) (*http.Client, error) {
@@ -340,21 +359,39 @@ func effectivePort(value *url.URL) string {
 
 func responseError(operation string, resp *http.Response, token string) error {
 	details := internalapi.ReadErrorResponse(resp)
-	result := fmt.Errorf("%s: API request failed (%s)", internalapi.SanitizeErrorText(operation), details.Status)
+	httpErr := &internalapi.HTTPError{
+		StatusCode: resp.StatusCode,
+		Status:     details.Status,
+		Body:       details.Body,
+		RetryAfter: details.RetryAfter,
+		ReadError:  details.ReadError,
+	}
+	operation = internalapi.SanitizeErrorText(operation)
+	message := fmt.Sprintf("%s: API request failed (%s)", operation, details.Status)
 	if details.Message != "" {
-		result = fmt.Errorf("%w: %s", result, details.Message)
+		message += ": " + details.Message
 	}
 	if details.RetryAfter != "" {
-		result = fmt.Errorf("%w (retry after %s)", result, details.RetryAfter)
+		message += " (retry after " + details.RetryAfter + ")"
 	}
 	if details.ReadError != nil {
-		safeReadError := &redactedError{
-			message: internalapi.SanitizeErrorText(details.ReadError.Error()),
-			cause:   details.ReadError,
-		}
-		result = fmt.Errorf("%w: read error response: %w", result, safeReadError)
+		message += ": read error response: " + internalapi.SanitizeErrorText(details.ReadError.Error())
 	}
-	return redact(result, token)
+	return redact(&redactedError{
+		message: message,
+		cause:   fmt.Errorf("%s: %w", operation, httpErr),
+	}, token)
+}
+
+// invalidResponseError keeps untrusted parser values out of the visible message
+// while preserving the response contract and any concrete parsing cause.
+func invalidResponseError(message string, cause error) error {
+	if cause == nil {
+		cause = internalapi.ErrInvalidResponse
+	} else {
+		cause = fmt.Errorf("%w; cause: %w", internalapi.ErrInvalidResponse, cause)
+	}
+	return &redactedError{message: message, cause: cause}
 }
 
 // redact replaces an access token in an error message with a placeholder.
@@ -396,15 +433,19 @@ func executePagination(out io.Writer, client *internalapi.Client, request prepar
 		body, readErr := io.ReadAll(resp.Body)
 		resp.Body.Close() //nolint:errcheck // Page body read result is checked separately; Close only releases response resources.
 		if readErr != nil {
-			return redact(fmt.Errorf("read page %d: %w", state.page, readErr), token)
+			err := fmt.Errorf("read page %d: %w", state.page, &internalapi.ResponseReadError{Err: readErr})
+			return redact(&redactedError{
+				message: internalapi.SanitizeErrorText(err.Error()),
+				cause:   err,
+			}, token)
 		}
 		var value json.RawMessage
-		if json.Unmarshal(body, &value) != nil {
-			return fmt.Errorf("page %d is not valid JSON", state.page)
+		if err := json.Unmarshal(body, &value); err != nil {
+			return invalidResponseError(fmt.Sprintf("page %d is not valid JSON", state.page), err)
 		}
 		compact := bytes.Buffer{}
 		if err := json.Compact(&compact, body); err != nil {
-			return fmt.Errorf("compact page %d: %w", state.page, err)
+			return invalidResponseError(fmt.Sprintf("compact page %d failed", state.page), err)
 		}
 		total, err := parseTotalPages(resp.Header.Get("total_page"))
 		if err != nil {
@@ -412,7 +453,7 @@ func executePagination(out io.Writer, client *internalapi.Client, request prepar
 		}
 		if total > 0 {
 			if state.totalPages != 0 && total != state.totalPages {
-				return fmt.Errorf("page %d returned inconsistent total_page", state.page)
+				return invalidResponseError(fmt.Sprintf("page %d returned inconsistent total_page", state.page), nil)
 			}
 			state.totalPages = total
 		}
@@ -420,7 +461,7 @@ func executePagination(out io.Writer, client *internalapi.Client, request prepar
 		if state.totalPages == 0 {
 			var array []json.RawMessage
 			if err := json.Unmarshal(body, &array); err != nil {
-				return fmt.Errorf("page %d has no total_page and is not an array", state.page)
+				return invalidResponseError(fmt.Sprintf("page %d has no total_page and is not an array", state.page), err)
 			}
 			stop = len(array) < state.perPage
 		}
@@ -442,8 +483,11 @@ func parseTotalPages(value string) (int, error) {
 		return 0, nil
 	}
 	total, err := strconv.Atoi(value)
-	if err != nil || total <= 0 {
-		return 0, fmt.Errorf("invalid total_page header")
+	if err != nil {
+		return 0, invalidResponseError("invalid total_page header", err)
+	}
+	if total <= 0 {
+		return 0, invalidResponseError("invalid total_page header", nil)
 	}
 	return total, nil
 }

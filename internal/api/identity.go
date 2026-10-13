@@ -37,12 +37,20 @@ func (c *Client) CurrentUserLogin() (string, error) {
 	const maxSize = 1 << 20
 	data, err := io.ReadAll(io.LimitReader(resp.Body, maxSize+1))
 	if err != nil {
-		return "", fmt.Errorf("read current user response: %w", err)
+		return "", fmt.Errorf("read current user response: %w", &ResponseReadError{Err: err})
 	}
 	var user struct {
 		Login string `json:"login"`
 	}
-	if len(data) > maxSize || json.Unmarshal(data, &user) != nil || user.Login == "" || strings.ContainsFunc(user.Login, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) {
+	if len(data) > maxSize {
+		return "", ErrInvalidUserIdentity
+	}
+	if err := json.Unmarshal(data, &user); err != nil {
+		return "", fmt.Errorf("decode current user response: %w; cause: %w", ErrInvalidUserIdentity, err)
+	}
+	if user.Login == "" || strings.ContainsFunc(user.Login, func(r rune) bool {
+		return unicode.IsSpace(r) || unicode.IsControl(r)
+	}) {
 		return "", ErrInvalidUserIdentity
 	}
 	return user.Login, nil

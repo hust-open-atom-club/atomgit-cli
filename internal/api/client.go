@@ -245,7 +245,7 @@ func (c *Client) doRequestWithPolicyContext(
 		var err error
 		bodyBytes, err = io.ReadAll(body)
 		if err != nil {
-			return nil, fmt.Errorf("read request body: %w", err)
+			return nil, fmt.Errorf("read request body: %w; cause: %w", ErrRequestPreparation, err)
 		}
 	}
 
@@ -283,7 +283,8 @@ func (c *Client) doRequestWithPolicyContext(
 
 		req, err := http.NewRequestWithContext(requestCtx, method, requestURL, bodyReader)
 		if err != nil {
-			return finishRateLimitedRequest(nil, err, cancel)
+			prepareErr := fmt.Errorf("prepare HTTP request: %w; cause: %w", ErrRequestPreparation, err)
+			return finishRateLimitedRequest(nil, prepareErr, cancel)
 		}
 
 		if c.token != "" {
@@ -306,7 +307,7 @@ func (c *Client) doRequestWithPolicyContext(
 			continue
 		}
 		if err != nil {
-			return finishRateLimitedRequest(resp, err, cancel)
+			return finishRateLimitedRequest(resp, &RequestExecutionError{Err: err}, cancel)
 		}
 		if !rateLimitEligible || resp.StatusCode != http.StatusTooManyRequests || attempt >= maxAttempts {
 			return finishRateLimitedRequest(resp, nil, cancel)
@@ -352,7 +353,12 @@ func (c *Client) Post(path string, body, result any) error {
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"API request POST %s: encode request body: %w; cause: %w",
+				path,
+				ErrRequestPreparation,
+				err,
+			)
 		}
 		bodyReader = bytes.NewReader(jsonBody)
 	}
@@ -418,7 +424,12 @@ func (c *Client) Put(path string, body, result any) error {
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"API request PUT %s: encode request body: %w; cause: %w",
+				path,
+				ErrRequestPreparation,
+				err,
+			)
 		}
 		bodyReader = bytes.NewReader(jsonBody)
 	}
@@ -444,7 +455,12 @@ func (c *Client) Patch(path string, body, result any) error {
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"API request PATCH %s: encode request body: %w; cause: %w",
+				path,
+				ErrRequestPreparation,
+				err,
+			)
 		}
 		bodyReader = bytes.NewReader(jsonBody)
 	}
@@ -515,7 +531,12 @@ func (c *Client) DeleteWithBody(path string, body any) error {
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"API request DELETE %s: encode request body: %w; cause: %w",
+				path,
+				ErrRequestPreparation,
+				err,
+			)
 		}
 		bodyReader = bytes.NewReader(jsonBody)
 	}
@@ -574,8 +595,38 @@ func (c *Client) DoRequestRawStreamingWithAccept(method, path, accept string) (*
 	)
 }
 
+// responseReadRecorder distinguishes actual reader failures from decoder errors
+// such as io.ErrUnexpectedEOF caused by truncated JSON on a normally ended stream.
+type responseReadRecorder struct {
+	io.Reader
+	err error
+}
+
+func (r *responseReadRecorder) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	if err != nil && err != io.EOF && r.err == nil {
+		r.err = err
+	}
+	return n, err
+}
+
+// DecodeJSONResponse decodes the first JSON value using the shared API error
+// contract. It distinguishes actual response reads from invalid JSON and preserves
+// the original causes. It does not require consuming or validating trailing data.
+func DecodeJSONResponse(method, path string, body io.Reader, result any) error {
+	return decodeJSONResponse(method, path, body, result)
+}
+
 func decodeJSONResponse(method, path string, body io.Reader, result any) error {
-	if err := json.NewDecoder(body).Decode(result); err != nil {
+	reader := &responseReadRecorder{Reader: body}
+	if err := json.NewDecoder(reader).Decode(result); err != nil {
+		if reader.err != nil {
+			// Keep the read role separate: a distinct decoder cause must neither
+			// disappear nor determine ResponseReadError.Timeout.
+			err = fmt.Errorf("%w; decode cause: %w", &ResponseReadError{Err: reader.err}, err)
+		} else if _, invalidTarget := errors.AsType[*json.InvalidUnmarshalError](err); !invalidTarget {
+			err = fmt.Errorf("%w; cause: %w", ErrInvalidResponse, err)
+		}
 		return fmt.Errorf("API request %s %s: decode response: %w", method, path, err)
 	}
 	return nil

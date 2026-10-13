@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -72,7 +73,7 @@ func UploadReleaseAsset(ctx context.Context, client *Client, upload ReleaseUploa
 			select {
 			case <-time.After(retryDelay):
 			case <-ctx.Done():
-				return fmt.Errorf("upload canceled before retry: %w", ctx.Err())
+				return fmt.Errorf("upload transport failed: %w; upload canceled before retry: %w", lastErr, ctx.Err())
 			}
 		}
 
@@ -110,10 +111,10 @@ func UploadReleaseAsset(ctx context.Context, client *Client, upload ReleaseUploa
 				resp.Body.Close() //nolint:errcheck // Closing only releases a partial response after the transport error; the transport error remains primary.
 			}
 			if closeErr := requestBody.waitForClose(requestBodyCloseTimeout); closeErr != nil {
-				return fmt.Errorf("wait for upload request body to close after transport error: %w", closeErr)
+				return fmt.Errorf("upload transport failed: %w; wait for upload request body to close: %w", errors.Join(err, ctx.Err()), closeErr)
 			}
 			if ctx.Err() != nil {
-				return fmt.Errorf("upload canceled: %w", ctx.Err())
+				return fmt.Errorf("upload transport failed: %w; upload canceled: %w", err, ctx.Err())
 			}
 			if size == 0 {
 				return fmt.Errorf("zero-byte upload interrupted; remote state may be unknown: %w", err)

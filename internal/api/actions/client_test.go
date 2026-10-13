@@ -400,8 +400,12 @@ func TestGetJobHandlesEmptySuccessResponse(t *testing.T) {
 	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
 
 	_, err := client.GetJob("team", "demo", "run-1", "missing-job")
-	if err == nil || err.Error() != "get workflow run job: job missing-job not found (API returned an empty response)" {
-		t.Fatalf("error = %v", err)
+	missing, ok := errors.AsType[*JobNotFoundError](err)
+	if !ok || missing.JobID != "missing-job" {
+		t.Fatalf("missing job = %#v, error = %v", missing, err)
+	}
+	if !errors.Is(err, io.EOF) || !errors.Is(err, baseapi.ErrInvalidResponse) {
+		t.Fatalf("lost empty response cause: %v", err)
 	}
 }
 
