@@ -180,6 +180,9 @@ func TestDiscussionCommentReplyRejectsWrongParent(t *testing.T) {
 			}
 			return discussionCommentResponse(http.StatusOK, `[]`), nil
 		default:
+			if strings.HasSuffix(req.URL.Path, "/reply") {
+				return discussionCommentResponse(http.StatusOK, `[]`), nil
+			}
 			t.Fatalf("path = %s", req.URL.Path)
 			return nil, nil
 		}
@@ -306,6 +309,9 @@ func TestDiscussionCommentEditRejectsForeignComment(t *testing.T) {
 			}
 			return discussionCommentResponse(http.StatusOK, `[]`), nil
 		default:
+			if strings.HasSuffix(req.URL.Path, "/reply") {
+				return discussionCommentResponse(http.StatusOK, `[]`), nil
+			}
 			t.Fatalf("path = %s", req.URL.Path)
 			return nil, nil
 		}

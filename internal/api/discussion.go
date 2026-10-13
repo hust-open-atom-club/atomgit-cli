@@ -229,9 +229,6 @@ func FindDiscussionComment(client *Client, owner, repo string, number int, comme
 		}
 	}
 	for _, comment := range comments {
-		if comment.ReplyTotal <= 0 {
-			continue
-		}
 		replies, err := listAllDiscussionReplies(client, owner, repo, number, comment.ID)
 		if err != nil {
 			return DiscussionCommentLocation{}, err
@@ -259,8 +256,8 @@ func RequireTopLevelDiscussionComment(client *Client, owner, repo string, number
 
 // Membership scans continue until an empty page. A short page is not terminal:
 // the server may ignore per_page or cap a page below 100. comment_total and
-// reply_total are hints for the read commands; a stale total must not hide a
-// comment and allow a write against the wrong discussion.
+// reply_total are display hints; a stale count must not hide a comment or
+// reply and allow a write against the wrong discussion.
 func listAllDiscussionComments(client *Client, owner, repo string, number int) ([]DiscussionComment, error) {
 	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment")
 	return listDiscussionPages(client, func(page int) string {

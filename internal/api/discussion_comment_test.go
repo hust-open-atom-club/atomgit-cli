@@ -166,6 +166,10 @@ func TestFindDiscussionCommentPagesAndNestedReply(t *testing.T) {
 			}
 			_, _ = io.WriteString(w, `[]`)
 		default:
+			if strings.HasSuffix(r.URL.EscapedPath(), "/reply") {
+				_, _ = io.WriteString(w, `[]`)
+				return
+			}
 			t.Fatalf("unexpected path %s", r.URL.EscapedPath())
 		}
 	})
@@ -213,6 +217,41 @@ func TestFindDiscussionCommentContinuesAfterShortPage(t *testing.T) {
 	}
 	if strings.Join(pages, ",") != "1,2,3" {
 		t.Fatalf("pages = %#v", pages)
+	}
+}
+
+func TestFindDiscussionCommentIgnoresStaleReplyTotal(t *testing.T) {
+	var replyPages int
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.EscapedPath() {
+		case "/repos/alice/demo/discuss/7":
+			_, _ = io.WriteString(w, `{"number":7}`)
+		case "/repos/alice/demo/discuss/7/comment":
+			if r.URL.Query().Get("page") == "1" {
+				_, _ = io.WriteString(w, `[{"id":"parent","reply_total":0},{"id":"other","reply_total":0}]`)
+				return
+			}
+			_, _ = io.WriteString(w, `[]`)
+		case "/repos/alice/demo/discuss/7/comment/parent/reply":
+			replyPages++
+			if r.URL.Query().Get("page") == "1" {
+				_, _ = io.WriteString(w, `[{"id":"hidden-reply","reply_total":0}]`)
+				return
+			}
+			_, _ = io.WriteString(w, `[]`)
+		case "/repos/alice/demo/discuss/7/comment/other/reply":
+			_, _ = io.WriteString(w, `[]`)
+		default:
+			t.Fatalf("unexpected path %s", r.URL.EscapedPath())
+		}
+	})
+
+	located, err := FindDiscussionComment(client, "alice", "demo", 7, "hidden-reply")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if located.TopLevel || located.ParentID != "parent" || located.Comment.ID != "hidden-reply" || replyPages != 2 {
+		t.Fatalf("location = %#v, reply pages = %d", located, replyPages)
 	}
 }
 
@@ -283,6 +322,10 @@ func TestFindDiscussionCommentMissingDoesNotImplySuccess(t *testing.T) {
 			}
 			_, _ = io.WriteString(w, `[]`)
 		default:
+			if strings.HasSuffix(r.URL.EscapedPath(), "/reply") {
+				_, _ = io.WriteString(w, `[]`)
+				return
+			}
 			t.Fatalf("unexpected path %s", r.URL.EscapedPath())
 		}
 	})
