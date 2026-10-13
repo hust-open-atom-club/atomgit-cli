@@ -83,6 +83,7 @@ func TestContentCreateSendsRawBytes(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got["content"] != "AP8K" || got["message"] != "add file" || got["branch"] != "feature/x" || got["sha"] != "" {
+		t.Fatalf("request = %#v", got)
 	}
 	if out.String() != "Created docs/文件.txt on feature/x\nCommit: commit-sha\n" {
 		t.Fatalf("output = %q", out.String())

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestGetRepositoryContentPathConstruction(t *testing.T) {
@@ -786,6 +787,7 @@ func TestRepositoryContentWriteDoesNotFollowRedirectOrRetry(t *testing.T) {
 			var calls int
 			var redirects int
 			httpClient := &http.Client{
+				Timeout:       time.Second,
 				CheckRedirect: func(*http.Request, []*http.Request) error { redirects++; return nil },
 				Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 					calls++

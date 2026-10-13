@@ -200,7 +200,10 @@ func writeRepositoryContent(client *Client, method, owner, repo, path string, re
 		return RepositoryContentChange{}, fmt.Errorf("%s contents for repository %s/%s path %q: %w", operation, owner, repo, path, err)
 	}
 	// Redirects can replay PUT and DELETE independently of the retry policy.
-	httpClient := *metadataHTTPClient(client.httpClient)
+	// metadataHTTPClient returns a positive-timeout client unchanged, and
+	// doJSONRequestContext wraps the client again, so mutate a fresh copy.
+	base := metadataHTTPClient(client.httpClient)
+	httpClient := *base
 	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error {
 		return http.ErrUseLastResponse
 	}
