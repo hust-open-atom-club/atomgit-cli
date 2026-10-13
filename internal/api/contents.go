@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -132,4 +133,81 @@ func ListRepositoryContent(client *Client, owner, repo, path, ref string) ([]Rep
 		return nil, fmt.Errorf("repository content path %q is a file, not a directory", path)
 	}
 	return response.Entries, nil
+}
+
+const contentWriteMessage = "repository content writes are not retried; inspect the branch before retrying"
+
+type contentWriteRequest struct {
+	Content *string `json:"content,omitempty"`
+	Message string  `json:"message"`
+	SHA     string  `json:"sha,omitempty"`
+	Branch  string  `json:"branch"`
+}
+
+// RepositoryContentChange is the documented result of creating, updating, or
+// deleting one file. Create and delete primarily return commit; update may
+// also return content. Either object can be absent.
+type RepositoryContentChange struct {
+	Commit  *RepositoryContentCommit `json:"commit"`
+	Content *RepositoryContent       `json:"content"`
+}
+
+// RepositoryContentCommit is the commit object returned by a content write.
+type RepositoryContentCommit struct {
+	SHA     string `json:"sha"`
+	Message string `json:"message"`
+}
+
+// CreateRepositoryContent creates path on branch. It does not read the path
+// first and never turns a conflict into an update.
+func CreateRepositoryContent(client *Client, owner, repo, path, branch, message string, content []byte) (RepositoryContentChange, error) {
+	encoded := base64.StdEncoding.EncodeToString(content)
+	return writeRepositoryContent(client, http.MethodPost, owner, repo, path, contentWriteRequest{
+		Content: &encoded,
+		Message: message,
+		Branch:  branch,
+	}, "create")
+}
+
+// UpdateRepositoryContent replaces path using its current file Blob SHA.
+// A conflicting SHA is returned to the caller and is not refreshed or retried.
+func UpdateRepositoryContent(client *Client, owner, repo, path, branch, message, sha string, content []byte) (RepositoryContentChange, error) {
+	encoded := base64.StdEncoding.EncodeToString(content)
+	return writeRepositoryContent(client, http.MethodPut, owner, repo, path, contentWriteRequest{
+		Content: &encoded,
+		Message: message,
+		SHA:     sha,
+		Branch:  branch,
+	}, "update")
+}
+
+// DeleteRepositoryContent deletes path using its current file Blob SHA.
+func DeleteRepositoryContent(client *Client, owner, repo, path, branch, message, sha string) (RepositoryContentChange, error) {
+	return writeRepositoryContent(client, http.MethodDelete, owner, repo, path, contentWriteRequest{
+		Message: message,
+		SHA:     sha,
+		Branch:  branch,
+	}, "delete")
+}
+
+func writeRepositoryContent(client *Client, method, owner, repo, path string, request contentWriteRequest, operation string) (RepositoryContentChange, error) {
+	contentPath, err := buildContentsPath(owner, repo, path, false)
+	if err != nil {
+		return RepositoryContentChange{}, fmt.Errorf("%s contents for repository %s/%s path %q: %w", operation, owner, repo, path, err)
+	}
+	body, err := json.Marshal(request)
+	if err != nil {
+		return RepositoryContentChange{}, fmt.Errorf("%s contents for repository %s/%s path %q: %w", operation, owner, repo, path, err)
+	}
+	// Redirects can replay PUT and DELETE independently of the retry policy.
+	httpClient := *metadataHTTPClient(client.httpClient)
+	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	var change RepositoryContentChange
+	if err := client.doJSONRequestContext(client.requestContext(), &httpClient, method, contentPath, bytes.NewReader(body), "application/json", "application/json",
+		RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: false}, &change); err != nil {
+		return RepositoryContentChange{}, fmt.Errorf("%s contents for repository %s/%s path %q on branch %q: %w; %s", operation, owner, repo, path, request.Branch, err, contentWriteMessage)
+	}
+	return change, nil
 }

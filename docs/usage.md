@@ -365,7 +365,7 @@ ag-cli repo insights downloads owner/repo --json
 
 文本输出中，语言按占比降序排列，贡献者按提交数降序排列，下载明细按日期降序排列；相同数值使用名称作为稳定的次级排序条件。空响应不会报错。每个子命令都支持 `--json`，并输出固定字段名：语言和列表结果为数组，下载结果包含 `periodDownloads`、`historyDownloads` 和 `details`。
 
-### 仓库内容读取
+### 仓库内容
 
 ```bash
 # 列出当前仓库默认分支的根目录或嵌套目录
@@ -384,9 +384,18 @@ ag-cli repo content view owner/repo README.md --json
 
 `content list` 每行输出一个目录条目的类型、路径和对象 ID；`content view` 输出解码后的文件字节。字段中的反斜杠、制表符、换行和回车分别显示为 `\\`、`\t`、`\n` 和 `\r`。`--json` 保留 AtomGit API 返回的完整目录数组或文件对象，包括文件的 Base64 编码 `content` 和 `_links` 等元数据；空目录输出 `[]`。
 
-路径必须是仓库相对路径，不能以 `/` 开头或结尾，不能包含连续斜杠或 `.`/`..` 段（`content list` 的 `.` 是唯一例外，表示仓库根目录）。不带参数的 `content list` 会推断当前仓库并列出根目录；单个参数始终作为推断仓库内的路径，因此列出显式仓库根目录时应使用 `owner/repo .`。每个路径段独立转义。文件内容默认经过终端清理；如需保留原始字节，使用根级 `--raw-output`。这些命令只发送 GET 请求，不会修改仓库内容。
+路径必须是仓库相对路径，不能以 `/` 开头或结尾，不能包含连续斜杠或 `.`/`..` 段（`content list` 的 `.` 是唯一例外，表示仓库根目录）。不带参数的 `content list` 会推断当前仓库并列出根目录；单个参数始终作为推断仓库内的路径，因此列出显式仓库根目录时应使用 `owner/repo .`。每个路径段独立转义。文件内容默认经过终端清理；如需保留原始字节，使用根级 `--raw-output`。`content list` 和 `content view` 只发送 GET 请求。
 
 原有的 `ag-cli repo read-file` 和 `ag-cli repo read-dir` 已弃用，但会继续保留以兼容已有脚本；请分别迁移到 `ag-cli repo content view` 和 `ag-cli repo content list`。
+
+```bash
+# 在指定分支创建、替换或删除一个文件
+ag-cli repo content create owner/repo docs/guide.md --branch main --message "Add guide" --file guide.md
+ag-cli repo content update README.md --branch main --message "Update README" --sha <blob-sha> --file -
+ag-cli repo content delete owner/repo docs/guide.md --branch main --message "Remove guide" --sha <blob-sha> --yes
+```
+
+`create`、`update` 和 `delete` 分别发送 POST、PUT 和 DELETE 到 `/contents/:path`。三者都必须显式指定 `--branch` 和 `--message`，不会回退到仓库默认分支。`--file` 读取本地文件，`-` 读取 stdin；原始字节按 Base64 放入 JSON，不裁剪、不按文本重编码，空文件和二进制文件都有效。`--sha` 是目标文件当前的 Blob SHA，不是 commit SHA；更新或删除遇到 SHA 冲突时返回非零并停止，不会读取新 SHA 后重试。创建不会先查询再改成覆盖。删除默认要求确认，`--yes` 跳过确认，取消不发送请求。成功输出基于响应里实际存在的 commit SHA 和文件 Blob SHA，不要求三种操作返回相同结构。这些命令一次只处理一个文件，不提交多个文件、不递归删除目录，也不修改本地 Git 工作区。
 
 ### 仓库协作者
 
