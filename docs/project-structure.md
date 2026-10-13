@@ -54,7 +54,7 @@ atomgit-cli/
 │       ├── auth/               # 登录、刷新和凭据管理
 │       ├── branch/             # 分支管理
 │       ├── browse/             # 在浏览器中打开 AtomGit 资源
-│       ├── discussion/         # 讨论列举
+│       ├── discussion/         # 讨论列举与评论写入
 │       ├── issue/              # Issue 与 Issue 评论
 │       ├── label/              # 标签管理
 │       ├── license/            # License 检查
@@ -120,7 +120,7 @@ atomgit-cli/
 - 需要登录的命令使用 `Factory.AuthenticatedAPIClient` 或 `Factory.AuthenticatedActionsClient`；公开只读内容使用 `Factory.OptionalAPIClient`。可选认证只在尚未登录时降级为匿名请求，凭据存储故障不得匿名兜底。
 - 仓库与资源标识通过 `api.RepositoryPath` 等共享 helper 转义一次；调用方传入原始值，不要预先 `url.PathEscape`。
 - API 请求和响应结构集中定义，字段使用明确的 JSON 标签。领域操作应显式指定 `RequestPolicy`：只读请求可按契约重试一次网络错误；写操作默认不重试。
-- 新增端点族应先提供领域客户端，再由命令调用。现有命令在下次改动该命令族时再机会式迁移；参考实现是 `discussion`（只读、可选认证）和 `label`（读写、必需认证）。
+- 新增端点族应先提供领域客户端，再由命令调用。现有命令在下次改动该命令族时再机会式迁移；参考实现是 `discussion`（列表/详情可选认证，评论写入必需认证）和 `label`（读写、必需认证）。
 - 用户配置和凭据由 `internal/config` 管理，并兼容 XDG 主路径与旧版 token 路径。
 - OAuth 浏览器登录流程位于 `internal/oauth`，系统浏览器调用封装在 `internal/browser`。
 

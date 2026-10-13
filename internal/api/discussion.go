@@ -1,6 +1,10 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 )
@@ -8,6 +12,33 @@ import (
 var discussionReadPolicy = RequestPolicy{
 	AllowedStatuses: []int{http.StatusOK},
 	CanRetry:        true,
+}
+
+var (
+	discussionWritePolicy = RequestPolicy{
+		AllowedStatuses: []int{http.StatusOK},
+		CanRetry:        false,
+	}
+	discussionDeletePolicy = RequestPolicy{
+		AllowedStatuses: []int{http.StatusOK, http.StatusNoContent},
+		CanRetry:        false,
+	}
+)
+
+// ErrDiscussionCommentNotFound reports that a comment or reply ID was not
+// found in the specified discussion. The write endpoints accept any comment
+// ID in the path, so callers must confirm membership before mutating.
+var ErrDiscussionCommentNotFound = errors.New("comment does not belong to discussion")
+
+// ErrDiscussionReplyParent reports that a reply was requested against a
+// comment that is itself a reply. Replies are only one level deep.
+var ErrDiscussionReplyParent = errors.New("reply parent must be a top-level discussion comment")
+
+// DiscussionCommentLocation is where a comment was found inside one discussion.
+type DiscussionCommentLocation struct {
+	Comment  DiscussionComment
+	TopLevel bool
+	ParentID string
 }
 
 // DiscussionDetail is a single discussion as returned by the detail endpoint.
@@ -72,6 +103,125 @@ func ListDiscussionReplies(client *Client, owner, repo string, number int, comme
 
 	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", commentID, "reply")
 	return getPaginatedWithPolicy[DiscussionComment](client, total, discussionReadPolicy, func(page, perPage int) string {
+		return pageQuery(path, page, perPage)
+	})
+}
+
+type discussionCommentBody struct {
+	MDContent string `json:"md_content"`
+}
+
+// CreateDiscussionComment posts a top-level Markdown comment on a discussion.
+func CreateDiscussionComment(client *Client, owner, repo string, number int, body string) (DiscussionComment, error) {
+	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment")
+	comment, err := writeDiscussionComment(client, http.MethodPost, path, body)
+	if err != nil {
+		return DiscussionComment{}, fmt.Errorf("create discussion comment: %w", err)
+	}
+	return comment, nil
+}
+
+// ReplyDiscussionComment posts a reply to a top-level comment of a discussion.
+func ReplyDiscussionComment(client *Client, owner, repo string, number int, commentID, body string) (DiscussionComment, error) {
+	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", commentID, "reply")
+	comment, err := writeDiscussionComment(client, http.MethodPost, path, body)
+	if err != nil {
+		return DiscussionComment{}, fmt.Errorf("reply to discussion comment %s: %w", commentID, err)
+	}
+	return comment, nil
+}
+
+// UpdateDiscussionComment replaces the Markdown body of a comment or reply.
+func UpdateDiscussionComment(client *Client, owner, repo string, number int, commentID, body string) (DiscussionComment, error) {
+	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", commentID)
+	comment, err := writeDiscussionComment(client, http.MethodPut, path, body)
+	if err != nil {
+		return DiscussionComment{}, fmt.Errorf("update discussion comment %s: %w", commentID, err)
+	}
+	return comment, nil
+}
+
+// DeleteDiscussionComment removes a comment or reply. A successful empty body
+// is not an error.
+func DeleteDiscussionComment(client *Client, owner, repo string, number int, commentID string) error {
+	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", commentID)
+	if err := client.doJSONRequest(http.MethodDelete, path, nil, "", "application/json", discussionDeletePolicy, nil); err != nil {
+		return fmt.Errorf("delete discussion comment %s: %w", commentID, err)
+	}
+	return nil
+}
+
+func writeDiscussionComment(client *Client, method, path, body string) (DiscussionComment, error) {
+	payload, err := json.Marshal(discussionCommentBody{MDContent: body})
+	if err != nil {
+		return DiscussionComment{}, err
+	}
+	var comment DiscussionComment
+	if err := client.doJSONRequest(method, path, bytes.NewReader(payload), "application/json", "application/json", discussionWritePolicy, &comment); err != nil {
+		return DiscussionComment{}, err
+	}
+	return comment, nil
+}
+
+// FindDiscussionComment walks a discussion's top-level comments and their
+// one-level replies until commentID is found. A missing comment is
+// ErrDiscussionCommentNotFound; lookup failures are returned unchanged so a
+// caller can refuse to write.
+func FindDiscussionComment(client *Client, owner, repo string, number int, commentID string) (DiscussionCommentLocation, error) {
+	if _, err := GetDiscussion(client, owner, repo, number); err != nil {
+		return DiscussionCommentLocation{}, err
+	}
+	comments, err := listAllDiscussionComments(client, owner, repo, number)
+	if err != nil {
+		return DiscussionCommentLocation{}, err
+	}
+	for _, comment := range comments {
+		if comment.ID == commentID {
+			return DiscussionCommentLocation{Comment: comment, TopLevel: true}, nil
+		}
+	}
+	for _, comment := range comments {
+		if comment.ReplyTotal <= 0 {
+			continue
+		}
+		replies, err := listAllDiscussionReplies(client, owner, repo, number, comment.ID)
+		if err != nil {
+			return DiscussionCommentLocation{}, err
+		}
+		for _, reply := range replies {
+			if reply.ID == commentID {
+				return DiscussionCommentLocation{Comment: reply, ParentID: comment.ID}, nil
+			}
+		}
+	}
+	return DiscussionCommentLocation{}, fmt.Errorf("comment %s on discussion #%d: %w", commentID, number, ErrDiscussionCommentNotFound)
+}
+
+// RequireTopLevelDiscussionComment finds commentID and rejects replies.
+func RequireTopLevelDiscussionComment(client *Client, owner, repo string, number int, commentID string) (DiscussionComment, error) {
+	located, err := FindDiscussionComment(client, owner, repo, number, commentID)
+	if err != nil {
+		return DiscussionComment{}, err
+	}
+	if !located.TopLevel {
+		return DiscussionComment{}, fmt.Errorf("comment %s on discussion #%d: %w", commentID, number, ErrDiscussionReplyParent)
+	}
+	return located.Comment, nil
+}
+
+// Membership scans keep going until a short page. comment_total and
+// reply_total are hints for the read commands; a stale total must not hide a
+// comment and allow a write against the wrong discussion.
+func listAllDiscussionComments(client *Client, owner, repo string, number int) ([]DiscussionComment, error) {
+	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment")
+	return getPaginatedWithPolicy[DiscussionComment](client, defaultMaxPerPage*maxUntilEmptyRequestPages, discussionReadPolicy, func(page, perPage int) string {
+		return pageQuery(path, page, perPage)
+	})
+}
+
+func listAllDiscussionReplies(client *Client, owner, repo string, number int, commentID string) ([]DiscussionComment, error) {
+	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", commentID, "reply")
+	return getPaginatedWithPolicy[DiscussionComment](client, defaultMaxPerPage*maxUntilEmptyRequestPages, discussionReadPolicy, func(page, perPage int) string {
 		return pageQuery(path, page, perPage)
 	})
 }

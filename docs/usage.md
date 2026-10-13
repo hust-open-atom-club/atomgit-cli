@@ -1360,6 +1360,27 @@ ag discussion view hust-open-atom-club/atomgit-cli 1 --comments --json
 
 `discussion view` 的 `<number>` 必须是正整数，在认证之前就会校验。加 `--comments` 时会额外请求评论串，评论按服务端顺序排列，仅 `reply_total` 大于 0 的评论才继续拉取嵌套回复。已删除、已隐藏或正文为空的条目分别显示为 `[deleted]`、`[hidden]`、`[no content]`。JSON 输出中 `comments` 字段仅在指定 `--comments` 时出现：请求了但没有评论时输出 `[]`。
 
+评论写入需要登录。`<number>` 是讨论编号，`<comment-id>` 是评论或回复的字符串 ID，两者不能互换。回复的父级必须是该讨论的顶层评论。
+
+```bash
+# 创建顶层评论；正文来自参数、文件或 stdin，二者互斥
+ag discussion comment create hust-open-atom-club/atomgit-cli 1 --body "Looks good"
+ag discussion comment create hust-open-atom-club/atomgit-cli 1 --body-file comment.md
+ag discussion comment create 1 --body-file -
+
+# 回复一条顶层评论
+ag discussion comment reply hust-open-atom-club/atomgit-cli 1 abc123 --body "Agreed"
+
+# 编辑评论或回复；先确认 ID 属于该讨论
+ag discussion comment edit hust-open-atom-club/atomgit-cli 1 abc123 --body "Updated"
+
+# 删除前会确认；--yes 跳过确认。取消不会发送删除请求
+ag discussion comment delete hust-open-atom-club/atomgit-cli 1 abc123
+ag discussion comment delete hust-open-atom-club/atomgit-cli 1 abc123 --yes
+```
+
+创建、回复和编辑都发送 JSON `md_content`，成功状态为 HTTP 200，且不会自动重试。编辑和删除会先分页查找该讨论的顶层评论及其一层回复；找不到目标时不发送写请求。删除成功时允许空响应。点赞、采纳和讨论本身的编辑不在这些命令范围内。
+
 ## 版本
 
 ```bash

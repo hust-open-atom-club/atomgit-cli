@@ -6,6 +6,7 @@ import (
 	"text/tabwriter"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/discussion/comment"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -24,6 +25,7 @@ func NewCmdDiscussion(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.AddCommand(newCmdDiscussionList(f))
 	cmd.AddCommand(newCmdDiscussionView(f))
+	cmd.AddCommand(comment.NewCmdComment(f))
 	cmdutil.AddRepositoryContextHelp(cmd)
 	return cmd
 }
