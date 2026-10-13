@@ -48,6 +48,8 @@
 - [ag-cli commit patch](#ag-cli-commit-patch) — Show a commit's patch
 - [ag-cli commit view](#ag-cli-commit-view) — View a commit
 - [ag-cli discussion](#ag-cli-discussion) — Manage repository discussions
+- [ag-cli discussion create](#ag-cli-discussion-create) — Create a repository discussion
+- [ag-cli discussion delete](#ag-cli-discussion-delete) — Delete a repository discussion
 - [ag-cli discussion edit](#ag-cli-discussion-edit) — Edit a repository discussion
 - [ag-cli discussion list](#ag-cli-discussion-list) — List repository discussions
 - [ag-cli discussion view](#ag-cli-discussion-view) — View a repository discussion
@@ -1084,7 +1086,7 @@ Usage: `ag-cli discussion`
 
 Manage repository discussions
 
-List, view, and edit AtomGit discussions for a repository.
+List, view, create, edit, and delete AtomGit discussions for a repository.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -1094,6 +1096,74 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | --- | --- | --- | --- |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli discussion create
+
+Usage: `ag-cli discussion create [<owner>/<repo>] [flags]`
+
+Create a repository discussion
+
+Create a repository discussion with a title, category name, and Markdown body.
+
+Title, category, and body must not be empty or whitespace-only. Use the category
+name without its display emoji or ID. Provide exactly one of --body or --body-file;
+use --body-file - to read stdin. Body text is sent without trimming.
+
+Requires authentication. POST requests are not automatically retried or redirected.
+If the result is uncertain, inspect the discussion list before retrying.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--category` | Category name without a display emoji or ID (required) | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read the Markdown body from file (use - for stdin) | `` | local |
+| `-b, --body` | Markdown body (cannot be blank) | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-t, --title` | Discussion title (required, cannot be blank) | `` | local |
+
+### Example
+
+```bash
+ag-cli discussion create owner/repo --title "Roadmap" --category "Ideas" --body "Next steps"
+ag-cli discussion create --title "Roadmap" --category "Ideas" --body-file discussion.md
+ag-cli discussion create --title "Roadmap" --category "Ideas" --body-file -
+```
+
+
+## ag-cli discussion delete
+
+Usage: `ag-cli discussion delete [<owner>/<repo>] <number> [flags]`
+
+Delete a repository discussion
+
+Permanently delete a repository discussion by its positive number.
+
+Requires authentication. Confirm with y or yes at the prompt, or pass --yes.
+Empty input, EOF, or a negative response cancels without sending a request.
+Use --yes for non-interactive deletion. DELETE requests are not automatically
+retried or redirected; inspect uncertain results before retrying.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip confirmation prompt | `false` | local |
+
+### Example
+
+```bash
+ag-cli discussion delete owner/repo 7
+ag-cli discussion delete 7 --yes
+```
 
 
 ## ag-cli discussion edit

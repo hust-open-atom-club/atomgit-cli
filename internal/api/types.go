@@ -817,6 +817,13 @@ type DiscussionEditRequest struct {
 	CategoryName string `json:"category_name"`
 }
 
+// DiscussionCreateRequest supplies the three required fields for creation.
+type DiscussionCreateRequest struct {
+	Title        string `json:"title"`
+	MDContent    string `json:"md_content"`
+	CategoryName string `json:"category_name"`
+}
+
 type DiscussionCategory struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
