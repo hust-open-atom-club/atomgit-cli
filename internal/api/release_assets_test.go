@@ -765,3 +765,31 @@ func TestUploadReleaseAssetExhaustsRetryOnRepeatedInterruption(t *testing.T) {
 		t.Fatalf("error %q does not contain the second interruption context", err.Error())
 	}
 }
+
+func TestDeleteReleaseAttachmentByIDContract(t *testing.T) {
+	calls := 0
+	client := NewClientWithHTTPClient("token", &http.Client{Transport: funcRoundTrip(func(r *http.Request) (*http.Response, error) {
+		calls++
+		if r.Method != http.MethodDelete || r.URL.EscapedPath() != "/api/v5/repos/atom%20club/demo/releases/v1%2Frc/attach_files/file%2Fa%20b" {
+			t.Fatalf("request = %s %s", r.Method, r.URL.EscapedPath())
+		}
+		if r.Body != nil {
+			t.Fatal("unexpected body")
+		}
+		return &http.Response{StatusCode: http.StatusNoContent, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
+	})})
+	for _, id := range []string{"", "   "} {
+		if err := DeleteReleaseAttachmentByID(client, "atom club", "demo", "v1/rc", id); err == nil {
+			t.Fatal("expected validation error")
+		}
+	}
+	if calls != 0 {
+		t.Fatal("invalid ID sent a request")
+	}
+	if err := DeleteReleaseAttachmentByID(client, "atom club", "demo", "v1/rc", "file/a b"); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("calls = %d", calls)
+	}
+}

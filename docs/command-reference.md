@@ -53,6 +53,8 @@
 - [ag-cli discussion comment delete](#ag-cli-discussion-comment-delete) — Delete a discussion comment
 - [ag-cli discussion comment edit](#ag-cli-discussion-comment-edit) — Edit a discussion comment
 - [ag-cli discussion comment reply](#ag-cli-discussion-comment-reply) — Reply to a discussion comment
+- [ag-cli discussion create](#ag-cli-discussion-create) — Create a repository discussion
+- [ag-cli discussion delete](#ag-cli-discussion-delete) — Delete a repository discussion
 - [ag-cli discussion edit](#ag-cli-discussion-edit) — Edit a repository discussion
 - [ag-cli discussion list](#ag-cli-discussion-list) — List repository discussions
 - [ag-cli discussion view](#ag-cli-discussion-view) — View a repository discussion
@@ -136,6 +138,7 @@
 - [ag-cli pr view](#ag-cli-pr-view) — View a pull request
 - [ag-cli release](#ag-cli-release) — Manage repository releases
 - [ag-cli release create](#ag-cli-release-create) — Create a release
+- [ag-cli release delete-asset](#ag-cli-release-delete-asset) — Delete an attachment from a release
 - [ag-cli release download](#ag-cli-release-download) — Download an attachment from a release
 - [ag-cli release edit](#ag-cli-release-edit) — Edit a release
 - [ag-cli release list](#ag-cli-release-list) — List repository releases
@@ -1089,7 +1092,7 @@ Usage: `ag-cli discussion`
 
 Manage repository discussions
 
-List, view, and edit AtomGit discussions for a repository.
+List, view, create, edit, and delete AtomGit discussions for a repository.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -1238,6 +1241,74 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ```bash
 ag discussion comment reply owner/repo 1 abc123 --body "Agreed"
 ag discussion comment reply 1 abc123 --body-file reply.md
+```
+
+
+## ag-cli discussion create
+
+Usage: `ag-cli discussion create [<owner>/<repo>] [flags]`
+
+Create a repository discussion
+
+Create a repository discussion with a title, category name, and Markdown body.
+
+Title, category, and body must not be empty or whitespace-only. Use the category
+name without its display emoji or ID. Provide exactly one of --body or --body-file;
+use --body-file - to read stdin. Body text is sent without trimming.
+
+Requires authentication. POST requests are not automatically retried or redirected.
+If the result is uncertain, inspect the discussion list before retrying.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--category` | Category name without a display emoji or ID (required) | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read the Markdown body from file (use - for stdin) | `` | local |
+| `-b, --body` | Markdown body (cannot be blank) | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-t, --title` | Discussion title (required, cannot be blank) | `` | local |
+
+### Example
+
+```bash
+ag-cli discussion create owner/repo --title "Roadmap" --category "Ideas" --body "Next steps"
+ag-cli discussion create --title "Roadmap" --category "Ideas" --body-file discussion.md
+ag-cli discussion create --title "Roadmap" --category "Ideas" --body-file -
+```
+
+
+## ag-cli discussion delete
+
+Usage: `ag-cli discussion delete [<owner>/<repo>] <number> [flags]`
+
+Delete a repository discussion
+
+Permanently delete a repository discussion by its positive number.
+
+Requires authentication. Confirm with y or yes at the prompt, or pass --yes.
+Empty input, EOF, or a negative response cancels without sending a request.
+Use --yes for non-interactive deletion. DELETE requests are not automatically
+retried or redirected; inspect uncertain results before retrying.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip confirmation prompt | `false` | local |
+
+### Example
+
+```bash
+ag-cli discussion delete owner/repo 7
+ag-cli discussion delete 7 --yes
 ```
 
 
@@ -3173,7 +3244,7 @@ Usage: `ag-cli release`
 
 Manage repository releases
 
-List, view, create, and edit repository releases on AtomGit, and upload or download release attachments.
+List, view, create, and edit repository releases on AtomGit, and upload, download, or delete release attachments.
 
 The repository's automated release pipeline validates tags and artifacts, then
 uses these primitives through "make publish VERSION=vX.Y.Z NOTES_FILE=notes.md".
@@ -3224,6 +3295,34 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ```bash
 ag-cli release create owner/repo v1.0.0 --name "First" --body "Initial release"
 ag-cli release create owner/repo v1.0.0-rc --prerelease --body-file notes.md
+```
+
+
+## ag-cli release delete-asset
+
+Usage: `ag-cli release delete-asset [<owner>/<repo>] <tag> <asset-id> [flags]`
+
+Delete an attachment from a release
+
+Delete one uploaded attachment by its ID after checking that it belongs to the specified release.
+Use release view --json to find attachment IDs. Source archives cannot be deleted.
+By default, confirmation is required; use --yes to skip the prompt.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip confirmation prompt | `false` | local |
+
+### Example
+
+```bash
+ag-cli release delete-asset owner/repo v1.0.0 42
+ag-cli release delete-asset v1.0.0 attachment-id --yes
 ```
 
 

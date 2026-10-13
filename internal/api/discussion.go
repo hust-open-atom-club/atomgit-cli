@@ -111,21 +111,37 @@ func UpdateDiscussion(client *Client, owner, repo string, number int, request Di
 	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number))
 	// Redirects can replay PUT independently of the API retry policy.
 	var detail DiscussionDetail
-	if err := doDiscussionWrite(client, http.MethodPut, path, bytes.NewReader(body),
+	if err := doDiscussionWrite(client, http.MethodPut, path, bytes.NewReader(body), "application/json",
 		RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: false}, &detail); err != nil {
 		return DiscussionDetail{}, err
 	}
 	return detail, nil
 }
 
+// CreateDiscussion creates a discussion once and returns the server identity.
+func CreateDiscussion(client *Client, owner, repo string, request DiscussionCreateRequest) (DiscussionDetail, error) {
+	body, err := json.Marshal(request)
+	if err != nil {
+		return DiscussionDetail{}, fmt.Errorf("encode discussion creation: %w", err)
+	}
+	var detail DiscussionDetail
+	err = doDiscussionWrite(client, http.MethodPost, RepositoryPath(owner, repo, "discuss"), bytes.NewReader(body), "application/json", discussionWritePolicy, &detail)
+	return detail, err
+}
+
+// DeleteDiscussion accepts the documented empty HTTP 200 response.
+func DeleteDiscussion(client *Client, owner, repo string, number int) error {
+	return doDiscussionWrite(client, http.MethodDelete, RepositoryPath(owner, repo, "discuss", strconv.Itoa(number)), nil, "", discussionWritePolicy, nil)
+}
+
 // doDiscussionWrite disables redirect following. Go otherwise replays the
 // original method and body, including DELETE, outside the retry policy.
-func doDiscussionWrite(client *Client, method, path string, body io.Reader, policy RequestPolicy, result any) error {
+func doDiscussionWrite(client *Client, method, path string, body io.Reader, contentType string, policy RequestPolicy, result any) error {
 	httpClient := *metadataHTTPClient(client.httpClient)
 	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error {
 		return http.ErrUseLastResponse
 	}
-	return client.doJSONRequestContext(client.requestContext(), &httpClient, method, path, body, "application/json", "application/json", policy, result)
+	return client.doJSONRequestContext(client.requestContext(), &httpClient, method, path, body, contentType, "application/json", policy, result)
 }
 
 // ListDiscussionComments fetches every comment in a discussion thread. total
@@ -193,7 +209,7 @@ func UpdateDiscussionComment(client *Client, owner, repo string, number int, com
 // is not an error.
 func DeleteDiscussionComment(client *Client, owner, repo string, number int, commentID string) error {
 	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", commentID)
-	if err := doDiscussionWrite(client, http.MethodDelete, path, nil, discussionDeletePolicy, nil); err != nil {
+	if err := doDiscussionWrite(client, http.MethodDelete, path, nil, "", discussionDeletePolicy, nil); err != nil {
 		return fmt.Errorf("delete discussion comment %s: %w", commentID, err)
 	}
 	return nil
@@ -205,7 +221,7 @@ func writeDiscussionComment(client *Client, method, path, body string) (Discussi
 		return DiscussionComment{}, err
 	}
 	var comment DiscussionComment
-	if err := doDiscussionWrite(client, method, path, bytes.NewReader(payload), discussionWritePolicy, &comment); err != nil {
+	if err := doDiscussionWrite(client, method, path, bytes.NewReader(payload), "application/json", discussionWritePolicy, &comment); err != nil {
 		return DiscussionComment{}, err
 	}
 	return comment, nil

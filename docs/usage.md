@@ -69,6 +69,7 @@ ag-cli schema pr comment create  # 嵌套命令
 - 无参数时，`commands` 给出按规范路径排序的目录（包含根命令）；指定路径时，`command` 给出详情。
   别名查询返回规范路径，不生成重复目录项。公开的弃用入口保留 `deprecated` 提示。
   隐藏命令及其子树、隐藏 flags 均排除；运行时 Cobra 添加的公开 help/completion 辅助入口会收录。
+  `ag-cli schema completion bash` 的安装示例与 `ag-cli completion bash --help` 保持一致。
 - 详情包括 `usage`、描述、示例、子命令和公开 `flags`。flag 的 `type` 为 pflag 类型名，
   `default` 为声明时的字符串表示（例如布尔值 `"false"`、列表 `"[]"`），不会读取运行时值或解析动态默认值。
   `noOptDefault` 表示省略参数值时的取值；`inherited` 和 `definedOn` 说明继承关系。
@@ -1338,7 +1339,7 @@ ag-cli release download owner/repo v1.0.0 app.tar.gz --output ./existing.tar.gz 
 
 | 附件字段 | 类型 | 含义 |
 | --- | --- | --- |
-| `id` | number | API 返回的附件 ID |
+| `id` | number/string | API 返回的附件 ID，保留数字或字符串类型 |
 | `name` | string | 附件名称 |
 | `type` | string | 附件类型，例如 `attach` 或 `source` |
 | `browserDownloadUrl` | string | 附件下载 URL |
@@ -1353,6 +1354,15 @@ ag-cli release download owner/repo v1.0.0 app.tar.gz --output ./existing.tar.gz 
 - `--overwrite`：仅当远端唯一匹配且该附件 `type=attach`、ID 为正整数时，先成功取得上传地址，再删除旧附件并上传新文件；取得上传地址失败时旧附件保持不变。若删除响应中断，命令会重新读取 Release，仅在确认旧附件已经不存在时继续；若后续上传失败，错误信息会明确说明旧附件已被删除。对于 `type=source` 的源码归档、ID 非正、或存在多个同名匹配的情况，均会拒绝且不执行删除。
 
 附件传输不会使用普通 API 请求的 30 秒总超时，而是默认限制为 30 分钟，可用 `--timeout` 调整，或用 `--timeout 0` 关闭总时限。非空文件只会在传输尚未开始（请求体零字节被读取）时自动重试一次；零字节文件或传输开始后的中断会返回非零退出码并提示远端状态可能不确定，不会盲目重放上传。
+
+`ag-cli release delete-asset [<owner>/<repo>] <tag> <asset-id> [--yes]` 删除指定附件。先用 `release view --json` 获取 ID（数字或字符串），再执行：
+
+```bash
+ag-cli release delete-asset owner/repo v1.0.0 42
+ag-cli release delete-asset v1.0.0 attachment-id --yes
+```
+
+命令先读取 Release，核对 tag、附件 ID 和 `attach` 类型，并在确认提示中展示仓库、tag、附件名和 ID。同名附件按 ID 区分；不存在、不属于该 Release、源代码归档或读取失败时不会删除。默认需要确认，取消或非交互空输入时不发送 DELETE；自动化调用须显式传入 `-y/--yes`。DELETE 不自动重试，204 空响应表示成功，其他状态返回错误。该命令仅删除选中的附件，不删除 Release 或 tag，也不改变上传覆盖策略。
 
 `ag-cli release download` 的 `-o/--output` 为必填项，命令不会将二进制写入 stdout。默认若目标文件已存在会立即失败且不发任何请求，只有显式 `--overwrite` 才允许替换。下载体先写入目标目录中的临时文件，完整接收后才安装到目标路径；传输失败会保留已有目标文件且不残留临时文件。下载与上传一样默认限制为 30 分钟，可通过 `--timeout` 调整或用 `--timeout 0` 关闭总时限。
 
@@ -1529,6 +1539,32 @@ response triggers a GET readback; failed or mismatched verification returns
 an error, even after HTTP 200. PUT requests are never automatically retried.
 If a write or verification fails, inspect `ag-cli discussion view owner/repo 6`
 before retrying, because the update may already have been applied.
+
+### 创建与删除仓库讨论
+
+```bash
+# 创建讨论；分类填写名称，不包含展示用 emoji 或分类 ID
+ag-cli discussion create owner/repo --title "Roadmap" --category "Ideas" --body "Next steps"
+
+# 省略仓库时从 Git remote 推断；文件/stdin 保留 Markdown 原文
+ag-cli discussion create --title "Roadmap" --category "Ideas" --body-file discussion.md
+ag-cli discussion create --title "Roadmap" --category "Ideas" --body-file -
+
+# 删除前提示确认仓库与讨论编号；--yes 用于明确授权的非交互调用
+ag-cli discussion delete owner/repo 7
+ag-cli discussion delete 7 --yes
+```
+
+`discussion create` 和 `discussion delete` 均要求认证，显式 `owner/repo` 优先于 Git remote 推断。
+创建必须提供非空且非纯空白的标题、分类和正文；`--body` 与 `--body-file` 必须且只能选择一个。
+空文件、空 stdin、读取失败或参数无效时不会发起创建请求。有效正文不做 trim，保留 Unicode、Markdown 和末尾换行。
+创建使用 JSON 字段 `title`、`md_content`、`category_name`，接受 HTTP 200，仅在响应包含正整数编号时报告成功，不拼接未经服务端确认的 URL。
+若响应无效或缺少编号，创建可能已完成，请先使用 `discussion list` 检查，避免重复创建。
+
+删除编号必须为正整数，`007` 会规范化为 `7`。确认提示包含仓库和编号，仅 `y`、`yes`（不区分大小写）或 `--yes` 授权删除。
+空输入、EOF 或其他回答会取消且不发送请求。删除接受 HTTP 200 空响应，不尝试将空正文解码为 JSON。
+两个写操作均不自动重试或跟随重定向；失败后先检查远端状态，再决定是否重试。
+这两个命令只处理仓库 Discussion，不包含组织讨论、评论写操作或关闭/锁定等状态管理。
 
 ## 版本
 

@@ -189,3 +189,36 @@ func TestReleaseUploadURLJSON(t *testing.T) {
 		t.Fatalf("X-MD5 header = %q", got.Headers["X-MD5"])
 	}
 }
+
+func TestReleaseAssetIdentifierRoundTrip(t *testing.T) {
+	for _, tt := range []struct{ raw, want string }{
+		{`42`, "42"}, {`"file/a b"`, "file/a b"}, {`"0042"`, "0042"}, {`0`, ""}, {`null`, ""},
+	} {
+		t.Run(tt.raw, func(t *testing.T) {
+			var asset ReleaseAsset
+			if err := json.Unmarshal([]byte(`{"id":`+tt.raw+`,"name":"asset","type":"attach"}`), &asset); err != nil {
+				t.Fatal(err)
+			}
+			if asset.AttachmentID() != tt.want {
+				t.Fatalf("ID = %q", asset.AttachmentID())
+			}
+			encoded, err := json.Marshal(asset)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var roundTrip ReleaseAsset
+			if err := json.Unmarshal(encoded, &roundTrip); err != nil {
+				t.Fatal(err)
+			}
+			if roundTrip != asset {
+				t.Fatalf("round trip = %#v, want %#v", roundTrip, asset)
+			}
+		})
+	}
+	for _, raw := range []string{`true`, `[]`, `{}`, `1.5`} {
+		var asset ReleaseAsset
+		if err := json.Unmarshal([]byte(`{"id":`+raw+`}`), &asset); err == nil {
+			t.Fatalf("accepted %s", raw)
+		}
+	}
+}

@@ -31,6 +31,8 @@ func TestRegisteredCommands(t *testing.T) {
 		{[]string{"api"}, 1, 1, "raw", "conditional"},
 		{[]string{"pr", "comment", "create"}, 1, 2, "text", "write"},
 		{[]string{"discussion", "edit"}, 1, 2, "text", "write"},
+		{[]string{"discussion", "create"}, 0, 1, "text", "write"},
+		{[]string{"discussion", "delete"}, 1, 2, "text", "write"},
 	} {
 		t.Run(strings.Join(tc.path, "/"), func(t *testing.T) {
 			f := &cmdutil.Factory{
@@ -80,6 +82,21 @@ func TestRegisteredCommands(t *testing.T) {
 				}
 				if len(detail.FlagGroups) != 1 || detail.FlagGroups[0].Kind != "mutuallyExclusive" {
 					t.Fatal("missing body/body-file constraint")
+				}
+			}
+			if detail.Path == "ag-cli discussion create" {
+				for _, name := range []string{"title", "category"} {
+					i := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == name })
+					if i < 0 || !detail.Flags[i].Required {
+						t.Fatalf("missing required flag %s", name)
+					}
+				}
+				want := []commandschema.FlagGroup{
+					{Kind: "atLeastOneRequired", Flags: []string{"body", "body-file"}},
+					{Kind: "mutuallyExclusive", Flags: []string{"body", "body-file"}},
+				}
+				if !reflect.DeepEqual(detail.FlagGroups, want) {
+					t.Fatalf("create constraints = %+v", detail.FlagGroups)
 				}
 			}
 			if detail.Path == "ag-cli discussion edit" {
