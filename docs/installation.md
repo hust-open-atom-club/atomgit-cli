@@ -716,15 +716,30 @@ ag-cli version
 Bash 补全可通过 `bash-completion` 自动加载。
 以下操作假设已安装并启用 `bash-completion`。
 
+用户目录安装无需 sudo：
+
 ```shell
 # 创建补全目录
 mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
 
 # 安装补全文件
-ag-cli completion bash > "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag-cli"
+ag-cli completion bash | tee "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag-cli" >/dev/null
 
 # 移除补全文件
 rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag-cli"
+```
+
+也可安装到系统目录，只让文件写入操作使用 sudo：
+
+```shell
+# 创建补全目录
+sudo mkdir -p /etc/bash_completion.d
+
+# 安装补全文件
+ag-cli completion bash | sudo tee /etc/bash_completion.d/ag-cli >/dev/null
+
+# 移除补全文件
+sudo rm -f /etc/bash_completion.d/ag-cli
 ```
 
 如果使用 Homebrew 管理 `bash-completion`，也可以将补全文件安装到 Homebrew 的补全目录：
@@ -734,7 +749,7 @@ rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/ag-cli"
 mkdir -p "$(brew --prefix)/etc/bash_completion.d"
 
 # 安装补全文件
-ag-cli completion bash > "$(brew --prefix)/etc/bash_completion.d/ag-cli"
+ag-cli completion bash | tee "$(brew --prefix)/etc/bash_completion.d/ag-cli" >/dev/null
 
 # 移除补全文件
 rm -f "$(brew --prefix)/etc/bash_completion.d/ag-cli"

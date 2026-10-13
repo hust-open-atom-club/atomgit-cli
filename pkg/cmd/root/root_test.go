@@ -3,6 +3,7 @@ package root
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/commandschema"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	internalversion "atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 	versioncmd "atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/version"
@@ -53,6 +55,45 @@ func setVersionMetadata(t *testing.T) {
 		internalversion.Commit = oldC
 		internalversion.BuildDate = oldB
 	})
+}
+
+func TestBashCompletionHelpUsesTee(t *testing.T) {
+	for _, args := range [][]string{{"completion", "bash", "--help"}, {"help", "completion", "bash"}, {"schema", "completion", "bash"}, {"schema", "ag-cli", "completion", "bash"}} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			var out bytes.Buffer
+			cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, &out, &out)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cmd.SetArgs(args)
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			text := out.String()
+			if args[0] == "schema" {
+				var document commandschema.Document
+				if err := json.Unmarshal(out.Bytes(), &document); err != nil {
+					t.Fatal(err)
+				}
+				if document.Command == nil || document.Command.Path != "ag-cli completion bash" {
+					t.Fatalf("unexpected command: %+v", document.Command)
+				}
+				text = document.Command.LongDescription
+			}
+			for _, want := range []string{
+				"ag-cli completion bash | sudo tee /etc/bash_completion.d/ag-cli >/dev/null",
+				"ag-cli completion bash | tee \"$(brew --prefix)/etc/bash_completion.d/ag-cli\" >/dev/null",
+				"source <(ag-cli completion bash)",
+			} {
+				if !strings.Contains(text, want) {
+					t.Errorf("help does not contain %q", want)
+				}
+			}
+			if strings.Contains(text, "completion bash > ") {
+				t.Errorf("help still contains a direct redirection: %s", text)
+			}
+		})
+	}
 }
 
 func TestNewCmdRootRegistersCommands(t *testing.T) {

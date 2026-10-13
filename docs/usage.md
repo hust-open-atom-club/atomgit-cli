@@ -69,6 +69,7 @@ ag-cli schema pr comment create  # 嵌套命令
 - 无参数时，`commands` 给出按规范路径排序的目录（包含根命令）；指定路径时，`command` 给出详情。
   别名查询返回规范路径，不生成重复目录项。公开的弃用入口保留 `deprecated` 提示。
   隐藏命令及其子树、隐藏 flags 均排除；运行时 Cobra 添加的公开 help/completion 辅助入口会收录。
+  `ag-cli schema completion bash` 的安装示例与 `ag-cli completion bash --help` 保持一致。
 - 详情包括 `usage`、描述、示例、子命令和公开 `flags`。flag 的 `type` 为 pflag 类型名，
   `default` 为声明时的字符串表示（例如布尔值 `"false"`、列表 `"[]"`），不会读取运行时值或解析动态默认值。
   `noOptDefault` 表示省略参数值时的取值；`inherited` 和 `definedOn` 说明继承关系。
