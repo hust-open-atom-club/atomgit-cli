@@ -99,6 +99,22 @@ func TestPrimaryTokenPath(t *testing.T) {
 	}
 }
 
+func TestExecutableRenameKeepsCredentialPaths(t *testing.T) {
+	home := isolateConfig(t)
+	want := []string{
+		filepath.Join(home, ".config", "ag-cli", "token.json"),
+		filepath.Join(home, ".atomgit_personal_token.json"),
+	}
+	if got := getTokenFilePaths(); !equalStrings(got, want) {
+		t.Fatalf("credential paths changed: got %v, want %v", got, want)
+	}
+	writeCredentialsFile(t, want[0], StoredCredentials{AccessToken: "fixture-token", User: "alice"})
+	got, err := LoadStoredCredentials()
+	if err != nil || got.User != "alice" || got.AccessToken != "fixture-token" {
+		t.Fatal("existing credentials were not reused after executable rename")
+	}
+}
+
 func TestLoadStoredCredentials(t *testing.T) {
 	t.Run("primary", func(t *testing.T) {
 		home := isolateConfig(t)

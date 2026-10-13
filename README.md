@@ -1,4 +1,6 @@
-# AtomGit CLI (ag)
+# AtomGit CLI (ag-cli)
+
+新版本将命令名由 `ag` 改为 `ag-cli`，配置路径不变；已发布旧版本在更新前仍使用 `ag`。参阅[迁移说明](docs/installation.md#从-ag-迁移到-ag-cli)。
 
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-blue.svg)](LICENSE)
 [![npm](https://img.shields.io/npm/v/%40hust-open-atom-club%2Fatomgit-cli?logo=npm)](https://www.npmjs.com/package/@hust-open-atom-club/atomgit-cli)
@@ -36,7 +38,7 @@ English: [README.en.md](README.en.md)
 
 ## AI Agent Skills
 
-[AtomGit Skills](https://atomgit.com/hust-open-atom-club/atomgit-skills) 提供由 `ag` 驱动的 Codex Skills，覆盖 Issue、Pull Request、CLI 发布和 GitHub 镜像工作流。安装方式和完整清单见该仓库。
+[AtomGit Skills](https://atomgit.com/hust-open-atom-club/atomgit-skills) 提供由 `ag-cli` 驱动的 Codex Skills，覆盖 Issue、Pull Request、CLI 发布和 GitHub 镜像工作流。安装方式和完整清单见该仓库。
 
 ## 安装
 
@@ -111,18 +113,18 @@ sudo apt install atomgit-cli
 ### Go
 
 ```bash
-go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
+go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag-cli@latest
 ```
 
 关于更多安装、升级和卸载方式，以及 Shell 补全等说明，参阅[安装指南](docs/installation.md)。
 
 ## 配置
 
-首次使用时运行 `ag auth login` 完成 OAuth 登录；无浏览器环境（沙箱、容器、CI）可改用 `echo "$TOKEN" | ag auth login --with-token` 通过已有访问令牌登录。凭据、输出安全和仓库推断参阅[配置指南](docs/configuration.md)。
+首次使用时运行 `ag-cli auth login` 完成 OAuth 登录；无浏览器环境（沙箱、容器、CI）可改用 `echo "$TOKEN" | ag-cli auth login --with-token` 通过已有访问令牌登录。凭据、输出安全和仓库推断参阅[配置指南](docs/configuration.md)。
 
 ## 使用
 
-运行 `ag --help` 查看命令概览，或运行 `ag <command> --help` 查看具体命令的参数。完整示例和说明参阅[使用指南](docs/usage.md)，命令索引参阅[命令参考](docs/command-reference.md)。
+运行 `ag-cli --help` 查看命令概览，或运行 `ag-cli <command> --help` 查看具体命令的参数。完整示例和说明参阅[使用指南](docs/usage.md)，命令索引参阅[命令参考](docs/command-reference.md)。
 
 安装、认证、使用和故障排查中的常见问题请参阅[常见问题（FAQ）](docs/faq.md)。
 

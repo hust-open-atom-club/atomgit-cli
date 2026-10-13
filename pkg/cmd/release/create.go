@@ -25,8 +25,8 @@ func newCmdReleaseCreate(f *cmdutil.Factory) *cobra.Command {
 		Use:   "create [<owner>/<repo>] <tag>",
 		Short: "Create a release",
 		Long:  `Create a release for a repository identified by its tag. A non-empty release body is required by the AtomGit API.`,
-		Example: `  ag release create owner/repo v1.0.0 --name "First" --body "Initial release"
-  ag release create owner/repo v1.0.0-rc --prerelease --body-file notes.md`,
+		Example: `  ag-cli release create owner/repo v1.0.0 --name "First" --body "Initial release"
+  ag-cli release create owner/repo v1.0.0-rc --prerelease --body-file notes.md`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runReleaseCreate(cmd, f, opts, args)

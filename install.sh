@@ -1,5 +1,5 @@
 #!/bin/sh
-# AtomGit CLI (ag) — 一键安装
+# AtomGit CLI (ag-cli) — 一键安装
 # 仓库: https://atomgit.com/hust-open-atom-club/atomgit-cli
 #
 # 用法:
@@ -80,18 +80,18 @@ install_binary() {
   fi
 
   (cd "$tmpdir" && tar -xzf "$asset")
-  if [ ! -f "${tmpdir}/ag" ]; then
-    die "压缩包内未找到名为 ag 的可执行文件"
+  if [ ! -f "${tmpdir}/ag-cli" ]; then
+    die "压缩包内未找到名为 ag-cli 的可执行文件"
   fi
 
   dest=$(pick_install_dir)
   mkdir -p "$dest"
   if [ ! -w "$dest" ] && command -v sudo >/dev/null 2>&1; then
     echo "Installing to $dest (sudo) ..."
-    sudo install -m 0755 "${tmpdir}/ag" "${dest}/ag"
+    sudo install -m 0755 "${tmpdir}/ag-cli" "${dest}/ag-cli"
   else
     echo "Installing to $dest ..."
-    install -m 0755 "${tmpdir}/ag" "${dest}/ag"
+    install -m 0755 "${tmpdir}/ag-cli" "${dest}/ag-cli"
   fi
 
   case ":${PATH:-}:" in
@@ -102,8 +102,8 @@ install_binary() {
     ;;
   esac
 
-  "${dest}/ag" --help >/dev/null 2>&1 || true
-  echo "ag 已安装: ${dest}/ag"
+  "${dest}/ag-cli" --help >/dev/null 2>&1 || true
+  echo "ag-cli 已安装: ${dest}/ag-cli"
 }
 
 install_from_source() {
@@ -119,17 +119,17 @@ install_from_source() {
   dest=$(pick_install_dir)
   mkdir -p "$dest"
   echo "Building ..."
-  (cd "${tmpdir}/src" && go build -o "${tmpdir}/ag" ./cmd/ag)
+  (cd "${tmpdir}/src" && go build -o "${tmpdir}/ag-cli" ./cmd/ag-cli)
 
   if [ ! -w "$dest" ] && command -v sudo >/dev/null 2>&1; then
     echo "Installing to $dest (sudo) ..."
-    sudo install -m 0755 "${tmpdir}/ag" "${dest}/ag"
+    sudo install -m 0755 "${tmpdir}/ag-cli" "${dest}/ag-cli"
   else
     echo "Installing to $dest ..."
-    install -m 0755 "${tmpdir}/ag" "${dest}/ag"
+    install -m 0755 "${tmpdir}/ag-cli" "${dest}/ag-cli"
   fi
 
-  echo "ag 已安装: ${dest}/ag"
+  echo "ag-cli 已安装: ${dest}/ag-cli"
 }
 
 main() {

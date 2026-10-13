@@ -83,7 +83,7 @@ func TestIssuePRsJSONSchema(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
 		HttpClient: func() (*http.Client, error) {
-			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return issueResponse(http.StatusOK, `[{"id":1,"number":7,"title":"Fix bug","body":"desc","state":"open","html_url":"https://ex.test/pulls/7","url":"https://api.ex.test/pulls/7","created_at":"2026-01-01","updated_at":"2026-01-02"}]`), nil
 			})}, nil
 		},

@@ -264,7 +264,7 @@ func TestReplayChecksRequestsAndConsumption(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			resp.Body.Close()
+			resp.Body.Close() //nolint:errcheck // Replay validation is the assertion; Close only releases the fixture response.
 			if err := replay.Check(); err != nil {
 				t.Fatal(err)
 			}

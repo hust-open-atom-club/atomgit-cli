@@ -56,7 +56,7 @@ func newCmdRepoWebhookList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
 		Short:   "List repository webhooks",
-		Example: "  ag repo webhook list owner/repo --limit 50",
+		Example: "  ag-cli repo webhook list owner/repo --limit 50",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if limit <= 0 {
@@ -97,7 +97,7 @@ func newCmdRepoWebhookView(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "view [<owner>/<repo>] <id>",
 		Short:   "View a repository webhook",
-		Example: "  ag repo webhook view owner/repo 42",
+		Example: "  ag-cli repo webhook view owner/repo 42",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
@@ -143,7 +143,7 @@ func newCmdRepoWebhookCreate(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "create [<owner>/<repo>]",
 		Short:   "Create a repository webhook",
-		Example: "  ag repo webhook create owner/repo --url https://example.com/hook --events push,issues --secret-env WEBHOOK_SECRET",
+		Example: "  ag-cli repo webhook create owner/repo --url https://example.com/hook --events push,issues --secret-env WEBHOOK_SECRET",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			targetURL, err := validateWebhookURL(targetURL)
@@ -193,7 +193,7 @@ func newCmdRepoWebhookCreate(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			body := map[string]interface{}{"url": targetURL}
+			body := map[string]any{"url": targetURL}
 			applyWebhookEvents(body, eventValues)
 			if secretProvided {
 				body["password"] = secretValue
@@ -226,7 +226,7 @@ func newCmdRepoWebhookEdit(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "edit [<owner>/<repo>] <id>",
 		Short:   "Edit a repository webhook",
-		Example: "  ag repo webhook edit owner/repo 42 --events push,merge-requests",
+		Example: "  ag-cli repo webhook edit owner/repo 42 --events push,merge-requests",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !cmd.Flags().Changed("url") && !cmd.Flags().Changed("events") && !cmd.Flags().Changed("encryption") && !webhookSecretFlagsChanged(cmd) {
@@ -240,7 +240,7 @@ func newCmdRepoWebhookEdit(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			body := make(map[string]interface{})
+			body := make(map[string]any)
 			if cmd.Flags().Changed("url") {
 				targetURL, err = validateWebhookURL(targetURL)
 				if err != nil {
@@ -327,7 +327,7 @@ func newCmdRepoWebhookDelete(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete [<owner>/<repo>] <id>",
 		Short:   "Delete a repository webhook",
-		Example: "  ag repo webhook delete owner/repo 42 --yes",
+		Example: "  ag-cli repo webhook delete owner/repo 42 --yes",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
@@ -372,7 +372,7 @@ func newCmdRepoWebhookTest(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "test [<owner>/<repo>] <id>",
 		Short:   "Send a test payload to a repository webhook",
-		Example: "  ag repo webhook test owner/repo 42 --yes",
+		Example: "  ag-cli repo webhook test owner/repo 42 --yes",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
@@ -433,7 +433,7 @@ func getWebhook(client *api.Client, repository cmdutil.Repository, id int64) (ap
 	if err != nil {
 		return api.Webhook{}, fmt.Errorf("failed to get webhook #%d: %w", id, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Status and JSON decode errors are handled separately; Close only releases response resources.
 	if resp.StatusCode != http.StatusOK {
 		details := api.ReadErrorResponse(resp)
 		return api.Webhook{}, fmt.Errorf("failed to get webhook #%d: API request failed: %s (response body omitted to protect webhook secrets)", id, details.Status)
@@ -456,12 +456,12 @@ func listWebhooks(client *api.Client, repository cmdutil.Repository, limit int) 
 		}
 		if resp.StatusCode != http.StatusOK {
 			details := api.ReadErrorResponse(resp)
-			resp.Body.Close()
+			resp.Body.Close() //nolint:errcheck // Response error details were read before close; the webhook API error remains primary.
 			return nil, fmt.Errorf("API request failed: %s (response body omitted to protect webhook secrets)", details.Status)
 		}
 		var pageItems []api.Webhook
 		decodeErr := json.NewDecoder(resp.Body).Decode(&pageItems)
-		resp.Body.Close()
+		resp.Body.Close() //nolint:errcheck // JSON decode result is checked separately; Close only releases response resources.
 		if decodeErr != nil {
 			return nil, fmt.Errorf("decode webhook list response: %w", decodeErr)
 		}
@@ -476,7 +476,7 @@ func listWebhooks(client *api.Client, repository cmdutil.Repository, limit int) 
 	return items, nil
 }
 
-func mutateWebhook(client *api.Client, method, path string, body map[string]interface{}, result *api.Webhook) error {
+func mutateWebhook(client *api.Client, method, path string, body map[string]any, result *api.Webhook) error {
 	encoded, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("encode webhook request: %w", err)
@@ -485,7 +485,7 @@ func mutateWebhook(client *api.Client, method, path string, body map[string]inte
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Status and JSON decode errors are handled separately; Close only releases response resources.
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		details := api.ReadErrorResponse(resp)
 		return fmt.Errorf("API request failed: %s (response body omitted to protect webhook secrets)", details.Status)
@@ -529,7 +529,7 @@ func parseWebhookEvents(value string, allowNone bool) (map[string]bool, error) {
 		return nil, fmt.Errorf("at least one webhook event is required")
 	}
 	result := make(map[string]bool, len(webhookEventFields))
-	for _, part := range strings.Split(value, ",") {
+	for part := range strings.SplitSeq(value, ",") {
 		name := strings.ReplaceAll(strings.ToLower(strings.TrimSpace(part)), "_", "-")
 		if _, ok := webhookEventFields[name]; !ok {
 			return nil, fmt.Errorf("unsupported webhook event %q (expected push, tag-push, issues, note, or merge-requests)", strings.TrimSpace(part))
@@ -539,7 +539,7 @@ func parseWebhookEvents(value string, allowNone bool) (map[string]bool, error) {
 	return result, nil
 }
 
-func applyWebhookEvents(body map[string]interface{}, selected map[string]bool) {
+func applyWebhookEvents(body map[string]any, selected map[string]bool) {
 	for name, field := range webhookEventFields {
 		body[field] = selected[name]
 	}

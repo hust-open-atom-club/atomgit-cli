@@ -186,7 +186,7 @@ func TestRepositoryContentRejectsInvalidPathsBeforeRequest(t *testing.T) {
 }
 
 func TestListRepositoryContentEmptyDirectory(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `[]`)
 	})
@@ -201,7 +201,7 @@ func TestListRepositoryContentEmptyDirectory(t *testing.T) {
 }
 
 func TestGetRepositoryContentDecodesFile(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `{"name":"README.md","path":"README.md","sha":"abc123","size":42,"type":"file","encoding":"base64","content":"SGVsbG8gV29ybGQ="}`)
 	})
@@ -238,7 +238,7 @@ func TestListRepositoryContentDecodesDirectory(t *testing.T) {
 		{"name":"cmd","path":"cmd","sha":"aaa","size":0,"type":"dir"},
 		{"name":"README.md","path":"README.md","sha":"bbb","size":42,"type":"file"}
 	]`
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, body)
 	})
@@ -272,7 +272,7 @@ func TestGetRepositoryContentExactStatus200(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.statusCode)
 				if tt.statusCode == http.StatusOK {
 					w.Header().Set("Content-Type", "application/json")
@@ -303,7 +303,7 @@ func TestListRepositoryContentExactStatus200(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.statusCode)
 				if tt.statusCode == http.StatusOK {
 					w.Header().Set("Content-Type", "application/json")
@@ -402,7 +402,7 @@ func TestContentFunctionsNoRequestBody(t *testing.T) {
 
 func TestListRepositoryContentPreservesServerOrder(t *testing.T) {
 	body := `[{"name":"z","path":"z","sha":"1","size":0,"type":"file"},{"name":"a","path":"a","sha":"2","size":0,"type":"file"},{"name":"m","path":"m","sha":"3","size":0,"type":"file"}]`
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, body)
 	})
@@ -420,7 +420,7 @@ func TestListRepositoryContentPreservesServerOrder(t *testing.T) {
 }
 
 func TestListRepositoryContentEmptyArray(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `[]`)
 	})
@@ -439,7 +439,7 @@ func TestListRepositoryContentEmptyArray(t *testing.T) {
 
 func TestContentFunctionsAPIError(t *testing.T) {
 	t.Run("GetRepositoryContent reports API error", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			http.Error(w, "not found", http.StatusNotFound)
 		})
 
@@ -453,7 +453,7 @@ func TestContentFunctionsAPIError(t *testing.T) {
 	})
 
 	t.Run("ListRepositoryContent reports API error", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			http.Error(w, "forbidden", http.StatusForbidden)
 		})
 
@@ -465,7 +465,7 @@ func TestContentFunctionsAPIError(t *testing.T) {
 }
 
 func TestGetRepositoryContentInvalidJSON(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `not json`)
 	})
@@ -477,7 +477,7 @@ func TestGetRepositoryContentInvalidJSON(t *testing.T) {
 }
 
 func TestListRepositoryContentInvalidJSON(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `not json`)
 	})
@@ -502,7 +502,7 @@ func TestContentJSONFieldMapping(t *testing.T) {
 			"html_url":"https://atomgit.com/alice/demo/blob/main/sub/f.txt",
 			"download_url":"https://atomgit.com/alice/demo/raw/main/sub/f.txt"
 		}`
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, body)
 		})
@@ -545,7 +545,7 @@ func TestContentJSONFieldMapping(t *testing.T) {
 
 	t.Run("directory entry", func(t *testing.T) {
 		body := `[{"name":"src","path":"src","sha":"def456","size":0,"type":"dir"}]`
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, body)
 		})
@@ -577,7 +577,7 @@ func TestContentJSONFieldMapping(t *testing.T) {
 
 func TestGetRepositoryContentDirJSONDecoding(t *testing.T) {
 	body := `[{"name":"dir","path":"dir","sha":"abc","size":0,"type":"dir"}]`
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, body)
 	})
@@ -594,7 +594,7 @@ func TestGetRepositoryContentDirJSONDecoding(t *testing.T) {
 func TestGetRepositoryContentsPreservesRawVariants(t *testing.T) {
 	t.Run("file object", func(t *testing.T) {
 		body := `{"name":"f.txt","path":"f.txt","sha":"abc","size":1,"type":"file","encoding":"base64","content":"eA==","_links":{"self":"https://example.test/file"},"future_field":"kept"}`
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, body)
 		})
@@ -621,7 +621,7 @@ func TestGetRepositoryContentsPreservesRawVariants(t *testing.T) {
 	})
 
 	t.Run("empty directory array", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
 		})
@@ -643,7 +643,7 @@ func TestGetRepositoryContentsPreservesRawVariants(t *testing.T) {
 }
 
 func TestGetRepositoryContentsErrorContext(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = io.WriteString(w, `{"token":"secret-value","message":"missing"}`)
 	})
@@ -665,7 +665,7 @@ func TestGetRepositoryContentsErrorContext(t *testing.T) {
 func TestContentRequestCount(t *testing.T) {
 	t.Run("GetRepositoryContent makes exactly 1 request", func(t *testing.T) {
 		var count int
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			count++
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `{"name":"f.txt","path":"f.txt","sha":"abc","size":1,"type":"file","encoding":"base64","content":"eA=="}`)
@@ -682,7 +682,7 @@ func TestContentRequestCount(t *testing.T) {
 
 	t.Run("ListRepositoryContent makes exactly 1 request", func(t *testing.T) {
 		var count int
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			count++
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)

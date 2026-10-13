@@ -2,20 +2,33 @@
 
 本文档介绍 AtomGit CLI 的 GoReleaser 打包、npm 制品发布，以及 Homebrew tap、Nix package、WinGet、Scoop 和 AUR package 的维护流程。
 
+改名版本从 `cmd/ag-cli` 构建，发布归档内为 `ag-cli` / `ag-cli.exe`；归档文件名仍保持 `ag_<os>_<arch>.tar.gz` / `ag_windows_<arch>.zip`，npm 包名和版本同步流程不变。npm 主包仅注册 `ag-cli` 入口，不提供 `ag` 别名。发布前需协调下游维护人员同步二进制安装路径、补全文件、卸载清单及包元数据；本仓库不会自动修改这些外部清单。旧版用户的迁移步骤见[安装指南](installation.md#从-ag-迁移到-ag-cli)。
+
 ## 目录
 
-- [安全修复发布检查清单](#安全修复发布检查清单)
-- [GoReleaser 构建工具](#goreleaser-构建工具)
-- [发布打包](#发布打包)
-- [CI 验证时机](#ci-验证时机)
-- [自动发布 AtomGit Release](#自动发布-atomgit-release)
-- [发布到 npm registry](#发布到-npm-registry)
-- [维护 Homebrew tap](#维护-homebrew-tap)
-- [维护 Nix package](#维护-nix-package)
-- [维护 WinGet](#维护-winget)
-- [维护 Scoop](#维护-scoop)
-- [维护 OpenKylin package](#维护-openkylin-package)
-- [维护 AUR package](#维护-aur-package)
+- [发布指南](#发布指南)
+  - [目录](#目录)
+  - [安全修复发布检查清单](#安全修复发布检查清单)
+  - [CI 验证时机](#ci-验证时机)
+  - [GoReleaser 构建工具](#goreleaser-构建工具)
+  - [发布打包](#发布打包)
+  - [Manpage 生成与分发](#manpage-生成与分发)
+  - [自动发布 AtomGit Release](#自动发布-atomgit-release)
+  - [发布到 npm registry](#发布到-npm-registry)
+    - [AtomGit Actions：暂存后人工审批](#atomgit-actions暂存后人工审批)
+    - [Trusted Publishing](#trusted-publishing)
+  - [维护 Homebrew tap](#维护-homebrew-tap)
+  - [维护 Nix package](#维护-nix-package)
+  - [维护 WinGet](#维护-winget)
+  - [维护 Scoop](#维护-scoop)
+  - [维护 OpenKylin package](#维护-openkylin-package)
+    - [仓库结构](#仓库结构)
+    - [打包步骤](#打包步骤)
+    - [CI 与发布流程](#ci-与发布流程)
+  - [维护 AUR package](#维护-aur-package)
+    - [稳定版（atomgit-cli / atomgit-cli-bin）](#稳定版atomgit-cli--atomgit-cli-bin)
+    - [开发版（atomgit-cli-git）](#开发版atomgit-cli-git)
+    - [校验](#校验)
 
 ## 安全修复发布检查清单
 
@@ -41,7 +54,7 @@ push。PR 运行检出最新 head 提交，合并后的运行检出进入 `main`
 发布并优先修复或回退。
 
 `Fast quality gate` 先使用 Go 1.26.6 运行一次完整的 `go test ./...`，再切换到
-Go 1.26.8 执行格式检查、`go vet`、命令参考检查和本机构建。发布工具链下的完整
+Go 1.26.9 执行格式检查、`go vet`、`go fix -diff ./...`、命令参考检查和本机构建。发布工具链下的完整
 package 集合由 `go test -race ./...` 验证，因此门禁不再重复运行普通 `go test`。
 race、交叉编译、平台测试编译和漏洞扫描显式依赖门禁成功，并在门禁之后相互并行；
 npm 测试保持独立。各 Go job 通过显式 `cache` 步骤分别缓存 `~/go/pkg/mod`（模块和
@@ -111,14 +124,24 @@ make release VERSION="v${VERSION}"
 ```
 
 `go.mod` 的 `go` 行规定源码构建最低支持 Go 1.26.6，`toolchain` 行规定开发和正式
-发布建议使用 Go 1.26.8。`scripts/build-release.sh` 会读取、设置并回读 `toolchain`
+发布建议使用 Go 1.26.9。`scripts/build-release.sh` 会读取、设置并回读 `toolchain`
 中的精确版本，再让 GoReleaser 继承相同的 `GOTOOLCHAIN`；如果无法下载、验证或
 执行该工具链，发布会在生成制品前停止。
 
-`make vulncheck` 会使用同一版本构建 `CGO_ENABLED=0` 的实际 `ag` 二进制，并用固定
-版本的 `govulncheck` 以 binary 模式查询 `https://vuln.go.dev`。可达漏洞、工具下载
-失败、数据库不可用或扫描器错误都会使门禁失败；规范数据库中已经撤回的报告不计为
-漏洞。更新最低支持版本时修改 `go.mod` 的 `go` 行，并运行
+`make vulncheck` 会使用同一版本和 `CGO_ENABLED=0` 构建全部七个发布目标，并用固定
+版本的 `govulncheck` 查询 `https://vuln.go.dev`。每个二进制都会执行可达性扫描；任一
+目标发现可达漏洞都会使门禁失败。输出还包含一次 module 清单，以及 Linux、macOS、
+Windows 各一个代表架构的 package 清单，用于区分模块依赖、参与编译的包和实际可达
+符号。当前没有架构专用 Go 文件，因此 package 清单按 OS 去重，binary 门禁仍覆盖所有
+架构。module/package 级发现仅供排查，工具下载失败、数据库不可用、构建失败或扫描器
+错误始终使门禁失败；规范数据库中已经撤回的报告不计为漏洞。
+
+CI 在一个 Runner 中顺序处理七个目标，并复用每个已构建二进制完成工具链校验和扫描，
+避免按平台创建矩阵 job。可信流程也可以先生成同名制品，再运行
+`VULNCHECK_BUILD=0 VULNCHECK_BINARY_DIR=/path/to/binaries make vulncheck`；目录中必须
+包含 `ag-<goos>-<goarch>`，调用方必须保证它们来自当前提交并由发布工具链构建。独立的
+`Scheduled vulnerability scan` 每周一 03:17 UTC 扫描当时的 `main`，也可以手动触发；
+它不会缓存漏洞数据库。更新最低支持版本时修改 `go.mod` 的 `go` 行，并运行
 `make go-min-version test-min-go`；更新正式发布版本时修改 `toolchain` 行，并重新运行 `make go-version`、
 `make vulncheck` 和下文的发布验证。
 
@@ -155,6 +178,24 @@ npm tarball 不作为 AtomGit Release 附件上传，可在发布到 npm registr
 
 `scripts/build-release.sh` 始终使用 GoReleaser 的 `--skip=publish`，只在本地准备并验证制品，然后打印完整的附件 basename 清单。发布上传由下述 `make publish` 入口调用独立脚本完成；单独执行构建脚本不会创建 AtomGit Release 或上传附件。
 
+## Manpage 生成与分发
+
+手册是构建产物，不入库。`make docs-man` 从实际 Cobra 命令树生成 section 1 文件到 `dist/man/man1`；可用 `MAN_DIR` 指定其他目录。生成器不执行 Cobra 命令或认证钩子，不加载本机配置、凭据和别名，也不访问网络。它使用轻量 roff 渲染器，复用 Cobra 元数据，无需新增文档转换依赖。
+
+```bash
+make docs-man
+make docs-man-check
+go run ./scripts/generate-manpages --output dist/man/man1 --check
+```
+
+规则：仅为可见、未弃用的规范命令生成页面，隐藏/弃用命令及其子树均排除；别名列在规范页面中，不另建页面；不初始化运行时的 help/completion 辅助命令。隐藏选项排除，可见弃用选项保留并标注，弃用的短选项单独说明。父子 SEE ALSO 链接仅引用实际生成的页面；名称冲突会使生成失败。
+
+默认头部不包含版本与日期，不使用当前时间或用户目录。需要发布元数据时显式传入 `--version vX.Y.Z --date YYYY-MM-DD`；相同源码和参数产生相同结果。`--check` 检查全部页面内容、缺页和多余 `.1` 文件。生成器不会删除目录中的未知页面；命令删除或重命名后请使用新的空输出目录。发布脚本会重建专用 `dist/man` 构建目录。
+
+`scripts/build-release.sh` 使用既有的 tag 和可复现构建日期生成手册。GoReleaser 将 Linux/macOS 手册放入归档的 `share/man/man1`，Windows 不收录。归档名、安装脚本和根附件清单保持不变；手册由归档的 SHA-256 校验和覆盖。npm 从归档中只提取二进制，不将手册混入平台包；安装器暂不自动安装手册，用户和下游维护人员可按[安装指南](installation.md#unix-man-手册)自行安装。
+
+本地运行 `make docs-man-check`，验证命令覆盖、转义、导航和重复生成一致性；安装 `mandoc` 和 `man` 后，测试还会验证 roff 解析和临时前缀中的手册读取。当前不新增 CI job 或安装步骤。发布前须运行 `make release-snapshot VERSION=vX.Y.Z`，构建七个平台 snapshot；打包脚本调用 `scripts/check-release-manpages.js` 对每个 Unix 归档核对完整页面集合，任一缺页或多余页面均失败。`scripts/publish-atomgit-release.js` 也会拒绝缺少根页、auth login 或 pr create 手册的 Unix 归档。不要提交 `dist/` 或为此修改 Debian `CHANGELOG.md`。
+
 ## 自动发布 AtomGit Release
 
 正式 tag 所在提交准备好发布说明后，使用单一入口完成格式检查、Go 测试、构建、跨平台打包、附件上传和发布后回读验证：
@@ -174,7 +215,7 @@ make publish \
   PRERELEASE=1
 ```
 
-发布入口要求 tag 存在、指向当前提交且工作区干净，并通过 `ag` 的现有认证配置访问 AtomGit。CI 中应从 secret 写入权限受限的临时 token 文件，格式和位置见[配置与认证](configuration.md)；不得把 PAT 写入仓库、制品或日志。
+发布入口要求 tag 存在、指向当前提交且工作区干净，并通过 `ag-cli` 的现有认证配置访问 AtomGit。CI 中应从 secret 写入权限受限的临时 token 文件，格式和位置见[配置与认证](configuration.md)；不得把 PAT 写入仓库、制品或日志。
 
 自动化流程会验证固定的十个项目附件、归档内容、安装脚本版本和 SHA-256，然后创建或安全补齐 Release，并确认 AtomGit 自动生成的四个源码归档存在。重复执行时，已有附件必须下载后与本地 checksum 一致才会跳过；目标提交冲突、未知附件、同名内容不一致或 API/上传失败都会停止。上传中断后可用相同 tag、发布说明和 `dist/<tag>/` 制品重新执行命令，脚本会列出尚未完成的附件。已发布且内容冲突的附件不会被自动覆盖；需要人工确认 Release 状态后再决定回滚。
 
@@ -232,7 +273,7 @@ npm stage view <main-stage-id>
 npm stage approve <main-stage-id>
 ```
 
-主包审批完成后再次运行相同的 `npm run publish:npm` 命令。脚本会验证八个远端版本的 integrity/shasum，在隔离临时目录安装主包的精确版本，并通过 `npm exec --prefix` 调用 npm 生成的 `.bin/ag`（Windows 为 `ag.cmd`）执行 `ag version --json`；只有实际命令入口可执行、输出与本次 `vX.Y.Z` tag 一致，且 JSON 只包含 `version`、`commit` 和 `buildDate` 时才报告发布完成。
+主包审批完成后再次运行相同的 `npm run publish:npm` 命令。脚本会验证八个远端版本的 integrity/shasum，在隔离临时目录安装主包的精确版本，并通过 `npm exec --prefix` 调用 npm 生成的 `.bin/ag-cli`（Windows 为 `ag-cli.cmd`）执行 `ag-cli version --json`；只有实际命令入口可执行、输出与本次 `vX.Y.Z` tag 一致，且 JSON 只包含 `version`、`commit` 和 `buildDate` 时才报告发布完成。
 
 staged publishing 不能创建从未在 npm registry 发布过的新包。新增平台包的首个版本应在 npm 支持的 Trusted Publishing CI 中完成，不能通过降低包的 2FA 或 token 安全设置绕过限制。
 
@@ -262,11 +303,11 @@ npm run publish:npm -- vX.Y.Z dist/vX.Y.Z/npm --publish
 - `stable` 从上游仓库的最新正式 AtomGit Release 源码归档构建，并固定版本、源码 hash 和 `vendorHash`。
 - `latest` 直接从当前 flake revision 的源码构建，因此始终对应检出仓库的最新 commit；工作流只维护其 `vendorHash`。
 
-两个 package 都由 Nix 管理；共享构建参数暂时保留 `Source=nix` 注入，以便仍基于旧版源码的 `stable` 正确报告由 Nix 管理。源码移除发行来源字段后，该兼容参数不会改变版本输出。`default` 和兼容名称 `ag` 都指向 `stable`。
+两个 package 都由 Nix 管理；共享构建参数暂时保留 `Source=nix` 注入，以便仍基于旧版源码的 `stable` 正确报告由 Nix 管理。源码移除发行来源字段后，该兼容参数不会改变版本输出。`default` 和兼容名称 `ag`、`ag-cli` 都指向 `stable`。固定的 v0.7.3 stable 仍从 `cmd/ag` 构建并提供旧 `ag`，后续版本及 `latest` 使用 `cmd/ag-cli`。
 
 Nix package 使用 `go` 行声明的最低版本约束，并由锁定的 nixpkgs input 提供实际编译器；它不要求与官方 Release 使用的建议工具链补丁版本完全一致。更新 flake inputs 时仍需确认所有支持平台提供的 Go 版本不低于 1.26.6。
 
-`.gitcode/workflows/update-nix.yml` 在 `main`、`test`、`nix-update` 分支 push 时运行，也支持手动触发，并在 checkout 后的第一个 step 中通过 `scripts/guard-nix-update-context.sh` 再次校验仓库全名、完整 ref（`refs/heads/...`）与事件类型：手动触发会按所选分支上的 workflow 文件执行，因此不能只依赖 `on.push.branches` 过滤。该校验不放在 job 级 `if:` 中，因为 AtomGit 派发器目前无法在启动时求值含 `&&`/`||` 的复合条件，整个运行会在任何 step 开始前以“网络繁忙”错误失败；上下文值经步骤级 `env:` 表达式（`${{ atomgit.repository }}`、`${{ atomgit.ref }}`、`${{ atomgit.event_name }}`）注入 guard 脚本，因为 runner 实际注入的 `ATOMGIT_*` 环境变量值与文档声明不符。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；它通过 `nix-update --build` 和 stable 二进制版本元数据回读完成自身验证，再在内容变化时使用 `NIX_UPDATE_TOKEN` 通过 Contents API 写回当前目标分支（`scripts/update-nix-packages.sh` 与 `scripts/publish-nix-update.sh`）。工作流自身的 `ATOMGIT_TOKEN` 仅需只读（顶层 `permissions` 显式声明 `repository: read` 并关闭其余权限域）。
+`.gitcode/workflows/update-nix.yml` 在 `main`、`test`、`nix-update` 分支 push 时运行，也支持手动触发，并在 checkout 后的第一个 step 中通过 `scripts/guard-nix-update-context.sh` 再次校验仓库全名、完整 ref（`refs/heads/...`）与事件类型：手动触发会按所选分支上的 workflow 文件执行，因此不能只依赖 `on.push.branches` 过滤。该校验不放在 job 级 `if:` 中，因为 AtomGit 派发器目前无法在启动时求值含 `&&`/`||` 的复合条件，整个运行会在任何 step 开始前以“网络繁忙”错误失败；上下文值经步骤级 `env:` 表达式（`${{ atomgit.repository }}`、`${{ atomgit.ref }}`、`${{ atomgit.event_name }}`）注入 guard 脚本，因为 runner 实际注入的 `ATOMGIT_*` 环境变量值与文档声明不符。事件白名单兼容 AtomGit push 运行实际传入的 `Push`，同时保留 `push` 与 `workflow_dispatch`；其他事件或空值仍会被拒绝。工作流从 AtomGit Release API 读取 stable 版本，然后使用 nixpkgs 的 `nix-update` 更新 stable 的版本、源码 hash 和 `vendorHash`，并刷新当前 commit 对应的 latest `vendorHash`；它通过 `nix-update --build` 和 stable 二进制版本元数据回读完成自身验证，再在内容变化时使用 `NIX_UPDATE_TOKEN` 通过 Contents API 写回当前目标分支（`scripts/update-nix-packages.sh` 与 `scripts/publish-nix-update.sh`）。工作流自身的 `ATOMGIT_TOKEN` 仅需只读（顶层 `permissions` 显式声明 `repository: read` 并关闭其余权限域）。
 
 注意 workflow `permissions` 只约束自动令牌，不约束 `NIX_UPDATE_TOKEN` 这类独立 PAT：令牌身份、仓库范围和有效期必须在平台上单独最小化，并在疑似泄露时轮换。平台侧还需为 `main`、`test`、`nix-update` 启用分支保护，限制能推送这些分支和能手动触发 workflow 的成员；能修改特权 workflow 分支的人就能改变令牌的使用方式，这层边界无法仅靠 YAML 保证。
 
@@ -395,13 +436,13 @@ AUR（Arch User Repository）上维护了三个包，均由维护者 `moyigeek`�
 - [atomgit-cli-bin](https://aur.archlinux.org/packages/atomgit-cli-bin)：稳定版，直接使用 Release 预编译二进制。
 - [atomgit-cli-git](https://aur.archlinux.org/packages/atomgit-cli-git)：开发版，跟随上游 `main` 分支最新提交。
 
-三个包共用 `provides=('ag')`，并互相声明 `conflicts`，避免同时安装冲突。arch 覆盖 `x86_64`、`aarch64`、`loong64`。
+三个包当前共用 `provides=('ag')`，并互相声明 `conflicts`，避免同时安装冲突。arch 覆盖 `x86_64`、`aarch64`、`loong64`。发布改名版本时，需由维护人员将二进制路径、补全文件及 `provides` 同步为 `ag-cli`。
 
 ### 稳定版（atomgit-cli / atomgit-cli-bin）
 
 新版本发布后，更新对应 AUR 仓库的 PKGBUILD：
 
-- **atomgit-cli**：将 `pkgver` 更新为新版本号，并**必须**把 `_commit` 更新为新 tag `v${pkgver}` 指向的 commit，同时确认源码 `git+...#tag=v${pkgver}` 已指向同一 tag。PKGBUILD 会无条件把 `_commit` 注入 `internal/version.Commit`；若仅更新 `pkgver` 而漏更 `_commit`，新 tag 的源码仍可正常构建，但 `ag version` 会继续报告上一个版本的 SHA。注意：本地 AUR 仓库（如 `~/atomgit-cli`）不包含上游 tag，在其中执行 `git rev-list -n 1 "v${pkgver}"` 会报 `unknown revision`（exit 128）。请改用以下任一方式在新 tag 指向的上游仓库中取得目标 commit 后再写入 `_commit`：
+- **atomgit-cli**：将 `pkgver` 更新为新版本号，并**必须**把 `_commit` 更新为新 tag `v${pkgver}` 指向的 commit，同时确认源码 `git+...#tag=v${pkgver}` 已指向同一 tag。PKGBUILD 会无条件把 `_commit` 注入 `internal/version.Commit`；若仅更新 `pkgver` 而漏更 `_commit`，新 tag 的源码仍可正常构建，但 `ag-cli version` 会继续报告上一个版本的 SHA。注意：本地 AUR 仓库（如 `~/atomgit-cli`）不包含上游 tag，在其中执行 `git rev-list -n 1 "v${pkgver}"` 会报 `unknown revision`（exit 128）。请改用以下任一方式在新 tag 指向的上游仓库中取得目标 commit 后再写入 `_commit`：
   ```bash
   # 方式 A：远程查询（可在任意目录执行，无需克隆）
   git ls-remote https://atomgit.com/hust-open-atom-club/atomgit-cli.git "refs/tags/v${pkgver}" \
@@ -432,4 +473,4 @@ git push                            # 推送到 AUR
 
 ### 校验
 
-推送前应在本机用 `makepkg -f` 实际构建一次，确认能产出 `.pkg.tar.*` 包且 `ag version` 显示的版本符合预期。对于 `atomgit-cli`，还需精确核对 `ag version` 输出的 commit 与新 tag `v${pkgver}` 指向的 commit 完全一致。注意本地 AUR 仓库不包含上游 tag，不能在其中查询；请使用 `git ls-remote https://atomgit.com/hust-open-atom-club/atomgit-cli.git "refs/tags/v${pkgver}" | awk '{print $1}'`（任意目录），或在上游 atomgit-cli 检出中执行 `git rev-list -n 1 "v${pkgver}"` 取得参照值。若 `ag version` 仍显示上一个版本的 SHA，说明 `_commit` 未同步更新，必须修正后重新构建、再次校验通过，再推送 AUR。
+推送前应在本机用 `makepkg -f` 实际构建一次，确认能产出 `.pkg.tar.*` 包且 `ag-cli version` 显示的版本符合预期。对于 `atomgit-cli`，还需精确核对 `ag-cli version` 输出的 commit 与新 tag `v${pkgver}` 指向的 commit 完全一致。注意本地 AUR 仓库不包含上游 tag，不能在其中查询；请使用 `git ls-remote https://atomgit.com/hust-open-atom-club/atomgit-cli.git "refs/tags/v${pkgver}" | awk '{print $1}'`（任意目录），或在上游 atomgit-cli 检出中执行 `git rev-list -n 1 "v${pkgver}"` 取得参照值。若 `ag-cli version` 仍显示上一个版本的 SHA，说明 `_commit` 未同步更新，必须修正后重新构建、再次校验通过，再推送 AUR。

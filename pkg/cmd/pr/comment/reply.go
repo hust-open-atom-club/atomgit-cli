@@ -34,7 +34,7 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			// discussion_id is the thread identifier (a hex string), shown by
-			// `ag pr comment view` on the [discussion_id] header line.
+			// `ag-cli pr comment view` on the [discussion_id] header line.
 			discussionID := strings.TrimSpace(remaining[1])
 			if discussionID == "" {
 				return fmt.Errorf("discussion ID cannot be empty")

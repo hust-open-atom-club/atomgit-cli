@@ -1,0 +1,42 @@
+version: "2"
+linters:
+  default: standard
+  enable:
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - copyloopvar
+    - durationcheck
+    - errorlint
+    - gocheckcompilerdirectives
+    - gosec
+    - nolintlint
+    - revive
+
+  settings:
+    nolintlint:
+      require-specific: true
+      require-explanation: true
+      allow-unused: false
+
+  exclusions:
+    warn-unused: true
+
+    presets:
+      - comments # Defer documentation warnings.
+
+    rules:
+      - linters:
+          - errcheck # Allow common unchecked calls; keep file removal checks.
+        text: '(?i)Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|.*print(f|ln)?|os\.(Un)?Setenv). is not checked'
+      - path: '(internal/browser/browser\.go|pkg/cmd/auth/accounts\.go|pkg/cmd/auth/setup_git\.go|pkg/cmd/update/update\.go|pkg/cmdutil/repository\.go)'
+        linters:
+          - gosec # Allow intentional external commands (G204).
+        text: 'G204:'
+      - path: '(internal/config/aliases\.go|internal/config/config\.go|internal/config/filelock_unix\.go|internal/config/inspect\.go|pkg/cmd/release/upload\.go|pkg/cmd/run/log\.go|pkg/cmd/workflow/validate\.go|pkg/cmdutil/body\.go|pkg/cmdutil/download\.go)'
+        linters:
+          - gosec # Allow user-supplied file paths (G304).
+        text: 'G304:'
+      - path: _test\.go
+        linters:
+          - gosec # Defer security checks for test fixtures.

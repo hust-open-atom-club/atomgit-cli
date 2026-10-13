@@ -40,7 +40,7 @@ func (t *downloadTransport) RoundTrip(req *http.Request) (*http.Response, error)
 	return handler(req.Method, req.URL.EscapedPath(), req.URL.RawQuery, req.Header.Get("Accept"))
 }
 
-func downloadNotFoundHandler(method, escapedPath, rawQuery, accept string) (*http.Response, error) {
+func downloadNotFoundHandler(string, string, string, string) (*http.Response, error) {
 	return &http.Response{
 		StatusCode: http.StatusNotFound,
 		Status:     "404 Not Found",
@@ -330,7 +330,7 @@ func TestReleaseDownloadAssetScreeningRejections(t *testing.T) {
 			const tag = "v1.0.0"
 			releaseBody := releaseWithAssetsJSON(tag, tt.assets)
 			transport := &downloadTransport{
-				apiHandler: func(method, escapedPath, rawQuery, accept string) (*http.Response, error) {
+				apiHandler: func(string, string, string, string) (*http.Response, error) {
 					return downloadJSONResponse(http.StatusOK, releaseBody), nil
 				},
 			}
@@ -362,7 +362,7 @@ func TestReleaseDownloadReleaseNotFound(t *testing.T) {
 	output := filepath.Join(dir, "out.tar.gz")
 
 	transport := &downloadTransport{
-		apiHandler: func(method, escapedPath, rawQuery, accept string) (*http.Response, error) {
+		apiHandler: func(string, string, string, string) (*http.Response, error) {
 			return downloadJSONResponse(http.StatusNotFound, "not found"), nil
 		},
 	}

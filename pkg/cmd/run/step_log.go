@@ -27,12 +27,12 @@ func newCmdRunStepLog(f *cmdutil.Factory) *cobra.Command {
 		Short: "Fetch step-level logs for a workflow job",
 		Long: `Retrieve paginated AtomGit Actions step logs and write them as text.
 
-Use ag run view to discover step IDs. --output writes the complete log
+Use ag-cli run view to discover step IDs. --output writes the complete log
 atomically and refuses to replace an existing file unless --overwrite is set.`,
-		Example: `  ag run step-log owner/repo <run-id> <job-id> <step-id>
-  ag run step-log <run-id> <job-id> <step-id>
-  ag run step-log owner/repo <run-id> <job-id> <step-id> --output step.log
-  ag run step-log owner/repo <run-id> <job-id> <step-id> --output step.log --overwrite`,
+		Example: `  ag-cli run step-log owner/repo <run-id> <job-id> <step-id>
+  ag-cli run step-log <run-id> <job-id> <step-id>
+  ag-cli run step-log owner/repo <run-id> <job-id> <step-id> --output step.log
+  ag-cli run step-log owner/repo <run-id> <job-id> <step-id> --output step.log --overwrite`,
 		Args: cobra.RangeArgs(3, 4),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runStepLog(cmd, f, opts, args)

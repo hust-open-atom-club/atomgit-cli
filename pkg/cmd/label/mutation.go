@@ -19,7 +19,7 @@ func newCmdLabelCreate(f *cmdutil.Factory) *cobra.Command {
 		Use:     "create [<owner>/<repo>]",
 		Short:   "Create a repository label",
 		Long:    "Create a repository label. AtomGit API v5 accepts a name and color for label creation.",
-		Example: `  ag label create owner/repo --name bug --color "#ff0000"`,
+		Example: `  ag-cli label create owner/repo --name bug --color "#ff0000"`,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name = strings.TrimSpace(name)
@@ -65,7 +65,7 @@ func newCmdLabelEdit(f *cmdutil.Factory) *cobra.Command {
 		Use:     "edit [<owner>/<repo>] <name>",
 		Short:   "Edit a repository label",
 		Long:    "Edit a repository label. AtomGit API v5 accepts a new name and color for label updates.",
-		Example: `  ag label edit owner/repo bug --name defect --color "#d73a4a"`,
+		Example: `  ag-cli label edit owner/repo bug --name defect --color "#d73a4a"`,
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			nameChanged := cmd.Flags().Changed("name")

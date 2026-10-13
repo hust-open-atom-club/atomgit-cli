@@ -45,7 +45,27 @@ type DiscussionCommentLocation struct {
 // It carries the listing fields plus the Markdown body and category pins.
 type DiscussionDetail struct {
 	Discussion
-	MDContent string `json:"md_content"`
+	MDContent        string `json:"md_content"`
+	MDContentPresent bool   `json:"-"`
+}
+
+// UnmarshalJSON distinguishes an empty body from a missing body so edits
+// cannot accidentally clear content omitted by the server.
+func (d *DiscussionDetail) UnmarshalJSON(data []byte) error {
+	type plainDiscussionDetail DiscussionDetail
+	var decoded struct {
+		plainDiscussionDetail
+		MDContent *string `json:"md_content"`
+	}
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*d = DiscussionDetail(decoded.plainDiscussionDetail)
+	if decoded.MDContent != nil {
+		d.MDContent = *decoded.MDContent
+		d.MDContentPresent = true
+	}
+	return nil
 }
 
 // DiscussionComment is one comment (or, via the reply endpoint, one reply) in
@@ -75,6 +95,27 @@ func GetDiscussion(client *Client, owner, repo string, number int) (DiscussionDe
 	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number))
 	var detail DiscussionDetail
 	if err := client.doJSONRequest(http.MethodGet, path, nil, "", "application/json", discussionReadPolicy, &detail); err != nil {
+		return DiscussionDetail{}, err
+	}
+	return detail, nil
+}
+
+// UpdateDiscussion sends all editable fields once; an uncertain write must
+// be inspected rather than automatically replayed.
+func UpdateDiscussion(client *Client, owner, repo string, number int, request DiscussionEditRequest) (DiscussionDetail, error) {
+	body, err := json.Marshal(request)
+	if err != nil {
+		return DiscussionDetail{}, fmt.Errorf("encode discussion update: %w", err)
+	}
+	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number))
+	// Redirects can replay PUT independently of the API retry policy.
+	httpClient := *metadataHTTPClient(client.httpClient)
+	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	var detail DiscussionDetail
+	if err := client.doJSONRequestContext(client.requestContext(), &httpClient, http.MethodPut, path, bytes.NewReader(body), "application/json", "application/json",
+		RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: false}, &detail); err != nil {
 		return DiscussionDetail{}, err
 	}
 	return detail, nil

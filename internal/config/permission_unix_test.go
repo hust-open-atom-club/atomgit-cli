@@ -117,7 +117,7 @@ func TestValidateAndFixTokenFilePerm(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer f.Close()
+		defer f.Close() //nolint:errcheck // Test file has no buffered writes; Close only releases test resources.
 
 		info, err := f.Stat()
 		if err != nil {
@@ -149,7 +149,7 @@ func TestValidateAndFixTokenFilePerm(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer f.Close()
+		defer f.Close() //nolint:errcheck // Test file has no buffered writes; Close only releases test resources.
 
 		info, err := f.Stat()
 		if err != nil {
@@ -181,7 +181,7 @@ func TestValidateAndFixTokenFilePerm(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer f.Close()
+		defer f.Close() //nolint:errcheck // Test file has no buffered writes; Close only releases test resources.
 
 		info, err := f.Stat()
 		if err != nil {
@@ -192,8 +192,7 @@ func TestValidateAndFixTokenFilePerm(t *testing.T) {
 		if err == nil {
 			t.Fatal("validateAndFixTokenFilePerm() succeeded unexpectedly")
 		}
-		var tokenErr *TokenPermissionError
-		if !errors.As(err, &tokenErr) {
+		if _, ok := errors.AsType[*TokenPermissionError](err); !ok {
 			t.Fatalf("error is %T, want *TokenPermissionError: %v", err, err)
 		}
 	})

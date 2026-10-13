@@ -48,7 +48,7 @@ func TestAuthListRedactsTokensAndMarksActive(t *testing.T) {
 func TestAuthSwitchWithoutGitChangesActiveAccount(t *testing.T) {
 	saveAuthTestAccounts(t)
 	gitCalls := 0
-	factory := &cmdutil.Factory{GitConfig: func(args ...string) (string, error) {
+	factory := &cmdutil.Factory{GitConfig: func(...string) (string, error) {
 		gitCalls++
 		return "", nil
 	}}
@@ -277,7 +277,7 @@ func TestAuthLogoutActiveAccountRequiresExplicitSwitch(t *testing.T) {
 				_ = cmd.Flags().Set("account", "bob")
 			}
 			err := cmd.RunE(cmd, nil)
-			if err == nil || !strings.Contains(err.Error(), "ag auth switch <account>") {
+			if err == nil || !strings.Contains(err.Error(), "ag-cli auth switch <account>") {
 				t.Fatalf("error = %v", err)
 			}
 			accounts, active, loadErr := config.ListAccounts()

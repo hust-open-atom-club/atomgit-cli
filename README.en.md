@@ -1,4 +1,6 @@
-# AtomGit CLI (ag)
+# AtomGit CLI (ag-cli)
+
+The upcoming release renames `ag` to `ag-cli` without changing configuration paths. Previously published versions still use `ag` until upgraded. See the [migration guide](docs/installation.md#从-ag-迁移到-ag-cli).
 
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-blue.svg)](LICENSE)
 [![npm](https://img.shields.io/npm/v/%40hust-open-atom-club%2Fatomgit-cli?logo=npm)](https://www.npmjs.com/package/@hust-open-atom-club/atomgit-cli)
@@ -36,7 +38,7 @@ A command-line client for AtomGit, developed with reference to GitHub CLI (`gh`)
 
 ## AI Agent Skills
 
-[AtomGit Skills](https://atomgit.com/hust-open-atom-club/atomgit-skills) provides Codex Skills powered by `ag` for Issue, Pull Request, CLI release, and GitHub mirroring workflows. See that repository for installation instructions and the complete list.
+[AtomGit Skills](https://atomgit.com/hust-open-atom-club/atomgit-skills) provides Codex Skills powered by `ag-cli` for Issue, Pull Request, CLI release, and GitHub mirroring workflows. See that repository for installation instructions and the complete list.
 
 ## Installation
 
@@ -111,18 +113,18 @@ If you need to install the latest version from the `proposed` repository, please
 ### Go
 
 ```bash
-go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag@latest
+go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag-cli@latest
 ```
 
 For more about installation, upgrades, uninstallation, and shell completion, see the [installation guide](docs/installation.md).
 
 ## Configuration
 
-Run `ag auth login` for the initial OAuth login. In an environment without a browser, such as a sandbox, container, or CI job, use `echo "$TOKEN" | ag auth login --with-token` to authenticate with an existing access token. See the [configuration guide](docs/configuration.md) for credentials, output safety, and repository inference.
+Run `ag-cli auth login` for the initial OAuth login. In an environment without a browser, such as a sandbox, container, or CI job, use `echo "$TOKEN" | ag-cli auth login --with-token` to authenticate with an existing access token. See the [configuration guide](docs/configuration.md) for credentials, output safety, and repository inference.
 
 ## Usage
 
-Run `ag --help` for a command overview or `ag <command> --help` for command-specific options. See the [usage guide](docs/usage.md) for complete examples and explanations. The [command reference](docs/command-reference.md) lists every command and its options.
+Run `ag-cli --help` for a command overview or `ag-cli <command> --help` for command-specific options. See the [usage guide](docs/usage.md) for complete examples and explanations. The [command reference](docs/command-reference.md) lists every command and its options.
 
 See the [FAQ](docs/faq.md) for common installation, authentication, usage, and troubleshooting questions.
 

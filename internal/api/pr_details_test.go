@@ -28,7 +28,7 @@ func TestPullRequestDetailsCommits(t *testing.T) {
 	})
 
 	t.Run("non-200 status returns error", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			_, _ = io.WriteString(w, `{"message":"not found"}`)
 		})
@@ -39,7 +39,7 @@ func TestPullRequestDetailsCommits(t *testing.T) {
 	})
 
 	t.Run("201 status is rejected", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusCreated)
 			_, _ = io.WriteString(w, `[]`)
 		})
@@ -98,7 +98,7 @@ func TestPullRequestDetailsCommits(t *testing.T) {
 	})
 
 	t.Run("empty array response", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
 		})
@@ -112,7 +112,7 @@ func TestPullRequestDetailsCommits(t *testing.T) {
 	})
 
 	t.Run("single commit with all fields", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"sha":"abc1234567890","html_url":"https://atomgit.com/a/b/commit/abc1234","commit":{"message":"fix: resolve issue\n\nbody text","author":{"name":"Alice","email":"alice@example.com","date":"2024-06-15T10:30:00Z","login":"alice"}}}]`)
 		})
@@ -130,7 +130,7 @@ func TestPullRequestDetailsCommits(t *testing.T) {
 	})
 
 	t.Run("multiple commits preserve server order", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"sha":"third","html_url":"","commit":{"message":"c","author":{"name":"","email":"","date":""}}},{"sha":"second","html_url":"","commit":{"message":"b","author":{"name":"","email":"","date":""}}},{"sha":"first","html_url":"","commit":{"message":"a","author":{"name":"","email":"","date":""}}}]`)
 		})
@@ -144,7 +144,7 @@ func TestPullRequestDetailsCommits(t *testing.T) {
 	})
 
 	t.Run("null optional fields handled", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"sha":"abc","html_url":null,"commit":{"message":"msg","author":{"name":null,"email":null,"date":null}}}]`)
 		})
@@ -194,7 +194,7 @@ func TestPullRequestDetailsFiles(t *testing.T) {
 	})
 
 	t.Run("non-200 status returns error", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			_, _ = io.WriteString(w, `{"message":"not found"}`)
 		})
@@ -248,7 +248,7 @@ func TestPullRequestDetailsFiles(t *testing.T) {
 	})
 
 	t.Run("empty array response", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
 		})
@@ -262,7 +262,7 @@ func TestPullRequestDetailsFiles(t *testing.T) {
 	})
 
 	t.Run("null response returns empty slice", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `null`)
 		})
@@ -276,7 +276,7 @@ func TestPullRequestDetailsFiles(t *testing.T) {
 	})
 
 	t.Run("patch fallback fields", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"sha":"abc","filename":"old.go","status":"renamed","additions":0,"deletions":0,"too_large":false,"blob_url":"https://b","raw_url":"https://r","patch":{"old_path":"old.go","new_path":"new.go","added_lines":5,"removed_lines":3,"too_large":true}}]`)
 		})
@@ -291,7 +291,7 @@ func TestPullRequestDetailsFiles(t *testing.T) {
 	})
 
 	t.Run("multiple files preserve server order", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"sha":"a","filename":"second.go","status":"added"},{"sha":"b","filename":"first.go","status":"modified"}]`)
 		})
@@ -305,7 +305,7 @@ func TestPullRequestDetailsFiles(t *testing.T) {
 	})
 
 	t.Run("204 rejected", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 		})
 		_, err := ListPullRequestFiles(client, "owner", "repo", "42")
@@ -334,7 +334,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 	})
 
 	t.Run("non-200 status returns error", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			_, _ = io.WriteString(w, `{"message":"not found"}`)
 		})
@@ -388,7 +388,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 	})
 
 	t.Run("empty array response", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
 		})
@@ -402,7 +402,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 	})
 
 	t.Run("null response returns empty slice", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `null`)
 		})
@@ -416,7 +416,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 	})
 
 	t.Run("single reaction with all fields", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":"r42","user":{"login":"bob","name":"Bob"},"emoji":"heart","emoji_name":"heart"}]`)
 		})
@@ -431,7 +431,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 	})
 
 	t.Run("multiple reactions preserve server order", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":"r1","user":{"login":"a"},"emoji":"+1","emoji_name":"like"},{"id":"r2","user":{"login":"b"},"emoji":"-1","emoji_name":"dislike"}]`)
 		})
@@ -445,7 +445,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 	})
 
 	t.Run("204 rejected", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 		})
 		_, err := ListPullRequestReactions(client, "owner", "repo", "42", 30)
@@ -458,7 +458,7 @@ func TestPullRequestDetailsReactions(t *testing.T) {
 func TestPullRequestDetailsCommitsInvalidLimitBeforeAuth(t *testing.T) {
 	t.Run("zero limit fails without HTTP request", func(t *testing.T) {
 		var called bool
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			called = true
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
@@ -474,7 +474,7 @@ func TestPullRequestDetailsCommitsInvalidLimitBeforeAuth(t *testing.T) {
 
 	t.Run("negative limit fails without HTTP request", func(t *testing.T) {
 		var called bool
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			called = true
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
@@ -593,7 +593,7 @@ func TestPullRequestDetailsOperateLogs(t *testing.T) {
 	})
 
 	t.Run("empty array response", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
 		})
@@ -635,7 +635,7 @@ func TestPullRequestDetailsOperateLogs(t *testing.T) {
 	})
 
 	t.Run("non-200 status returns error", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusForbidden)
 			_, _ = io.WriteString(w, `{"message":"forbidden"}`)
 		})
@@ -646,7 +646,7 @@ func TestPullRequestDetailsOperateLogs(t *testing.T) {
 	})
 
 	t.Run("malformed JSON returns error", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":`)
 		})
@@ -676,7 +676,7 @@ func TestPullRequestDetailsOperateLogsInvalidLimit(t *testing.T) {
 	for _, limit := range []int{0, -1} {
 		t.Run(fmt.Sprintf("limit %d fails without HTTP request", limit), func(t *testing.T) {
 			var called bool
-			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 				called = true
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = io.WriteString(w, `[]`)
@@ -714,7 +714,7 @@ func TestPullRequestDetailsModifyHistory(t *testing.T) {
 	})
 
 	t.Run("empty array response", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
 		})
@@ -728,7 +728,7 @@ func TestPullRequestDetailsModifyHistory(t *testing.T) {
 	})
 
 	t.Run("null response returns empty slice", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `null`)
 		})
@@ -742,7 +742,7 @@ func TestPullRequestDetailsModifyHistory(t *testing.T) {
 	})
 
 	t.Run("limit truncates locally since endpoint is unpaginated", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":"1"},{"id":"2"},{"id":"3"}]`)
 		})
@@ -756,7 +756,7 @@ func TestPullRequestDetailsModifyHistory(t *testing.T) {
 	})
 
 	t.Run("non-200 status returns error", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusUnauthorized)
 			_, _ = io.WriteString(w, `{"message":"unauthorized"}`)
 		})
@@ -767,7 +767,7 @@ func TestPullRequestDetailsModifyHistory(t *testing.T) {
 	})
 
 	t.Run("malformed JSON returns error", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `not json`)
 		})
@@ -782,7 +782,7 @@ func TestPullRequestDetailsModifyHistoryInvalidLimit(t *testing.T) {
 	for _, limit := range []int{0, -1} {
 		t.Run(fmt.Sprintf("limit %d fails without HTTP request", limit), func(t *testing.T) {
 			var called bool
-			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 				called = true
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = io.WriteString(w, `[]`)
@@ -826,7 +826,7 @@ func TestPullRequestDetailsMethodEnforcement(t *testing.T) {
 
 func TestPullRequestDetailsResponseVariants(t *testing.T) {
 	t.Run("files empty array", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
 		})
@@ -840,7 +840,7 @@ func TestPullRequestDetailsResponseVariants(t *testing.T) {
 	})
 
 	t.Run("reactions single item", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":"r1","user":{"login":"a"},"emoji":"+1","emoji_name":"like"}]`)
 		})
@@ -854,7 +854,7 @@ func TestPullRequestDetailsResponseVariants(t *testing.T) {
 	})
 
 	t.Run("commits missing optional fields", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			raw := `[{"sha":"abc","html_url":"https://example.com","commit":{"message":"msg","author":{"name":"","email":"","date":""}}}]`
 			var items []json.RawMessage
@@ -876,7 +876,7 @@ func TestPullRequestDetailsResponseVariants(t *testing.T) {
 func TestPullRequestDetailsExactRequestCount(t *testing.T) {
 	t.Run("commits exact request count", func(t *testing.T) {
 		var count int
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			count++
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
@@ -892,7 +892,7 @@ func TestPullRequestDetailsExactRequestCount(t *testing.T) {
 
 	t.Run("files exact request count", func(t *testing.T) {
 		var count int
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			count++
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
@@ -908,7 +908,7 @@ func TestPullRequestDetailsExactRequestCount(t *testing.T) {
 
 	t.Run("reactions exact request count", func(t *testing.T) {
 		var count int
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			count++
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[]`)
@@ -925,7 +925,7 @@ func TestPullRequestDetailsExactRequestCount(t *testing.T) {
 
 func TestPullRequestOperateLogsRejectsNullAndInvalidRecords(t *testing.T) {
 	t.Run("null record rejected", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[null]`)
 		})
@@ -936,7 +936,7 @@ func TestPullRequestOperateLogsRejectsNullAndInvalidRecords(t *testing.T) {
 	})
 
 	t.Run("zero id rejected", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":0,"action":"foo"}]`)
 		})
@@ -947,7 +947,7 @@ func TestPullRequestOperateLogsRejectsNullAndInvalidRecords(t *testing.T) {
 	})
 
 	t.Run("bad record beyond limit still errors", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":1,"action":"ok"},null]`)
 		})
@@ -960,7 +960,7 @@ func TestPullRequestOperateLogsRejectsNullAndInvalidRecords(t *testing.T) {
 
 func TestPullRequestModifyHistoryRejectsNullAndInvalidRecords(t *testing.T) {
 	t.Run("null record rejected", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[null]`)
 		})
@@ -971,7 +971,7 @@ func TestPullRequestModifyHistoryRejectsNullAndInvalidRecords(t *testing.T) {
 	})
 
 	t.Run("empty id rejected", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":""}]`)
 		})
@@ -982,7 +982,7 @@ func TestPullRequestModifyHistoryRejectsNullAndInvalidRecords(t *testing.T) {
 	})
 
 	t.Run("whitespace id rejected", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":"   "}]`)
 		})
@@ -993,7 +993,7 @@ func TestPullRequestModifyHistoryRejectsNullAndInvalidRecords(t *testing.T) {
 	})
 
 	t.Run("bad record beyond limit still errors", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":"ok"},{"id":""}]`)
 		})
@@ -1006,7 +1006,7 @@ func TestPullRequestModifyHistoryRejectsNullAndInvalidRecords(t *testing.T) {
 
 func TestPullRequestReactionsRejectsNullAndInvalidRecords(t *testing.T) {
 	t.Run("null record rejected", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[null]`)
 		})
@@ -1017,7 +1017,7 @@ func TestPullRequestReactionsRejectsNullAndInvalidRecords(t *testing.T) {
 	})
 
 	t.Run("empty id rejected", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":""}]`)
 		})
@@ -1028,7 +1028,7 @@ func TestPullRequestReactionsRejectsNullAndInvalidRecords(t *testing.T) {
 	})
 
 	t.Run("bad record beyond limit still errors", func(t *testing.T) {
-		client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `[{"id":"ok"},null]`)
 		})
@@ -1095,7 +1095,7 @@ func TestPullRequestReactionsPagination(t *testing.T) {
 
 func TestPullRequestReactionsRejectsInvalidLaterPage(t *testing.T) {
 	calls := 0
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		calls++
 		w.Header().Set("Content-Type", "application/json")
 		if calls == 2 {

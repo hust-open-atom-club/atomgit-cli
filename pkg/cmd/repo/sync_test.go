@@ -21,7 +21,7 @@ func TestRepoSyncFastForwardsDefaultBranch(t *testing.T) {
 		case req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/upstream/demo/branches/main":
 			return forkResponse(http.StatusOK, `{"commit":{"sha":"new"}}`), nil
 		case req.Method == http.MethodPut && req.URL.Path == "/api/v5/repos/alice/demo/sync_repo":
-			var body map[string]interface{}
+			var body map[string]any
 			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 				t.Fatal(err)
 			}

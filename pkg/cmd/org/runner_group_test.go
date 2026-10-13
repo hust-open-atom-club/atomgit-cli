@@ -230,7 +230,7 @@ func TestRunnerGroupPaginationAndLimit(t *testing.T) {
 }
 
 func TestRunnerGroupPaginationRejectsIncompleteAndRepeatedPages(t *testing.T) {
-	_, err := collectRunnerGroupPages(200, func(group actions.RunnerGroup) string { return group.ID }, func(page, _ int) (int, []actions.RunnerGroup, error) {
+	_, err := collectRunnerGroupPages(200, func(group actions.RunnerGroup) string { return group.ID }, func(int, int) (int, []actions.RunnerGroup, error) {
 		return 2, []actions.RunnerGroup{{ID: "one"}}, nil
 	})
 	if err == nil || !strings.Contains(err.Error(), "incomplete pagination") {

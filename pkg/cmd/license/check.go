@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdCheck(f *cmdutil.Factory) *cobra.Command {
+func newCmdCheck(*cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "check <license>",
 		Short: "Check license compliance",
@@ -33,7 +33,7 @@ func newCmdCheck(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to check license: %w", err)
 			}
-			defer resp.Body.Close()
+			defer resp.Body.Close() //nolint:errcheck // Status determines the primary error; the response body is best-effort diagnostic text and Close only releases response resources.
 
 			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 				body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))

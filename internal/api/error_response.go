@@ -31,6 +31,7 @@ var (
 	// Credential-like response keys include common token, secret, password,
 	// and authorization variants such as access_token, apiToken, and
 	// client_secret.
+	//nolint:gosec // G101: Matches credential field names for redaction; contains no credential values.
 	credentialFieldPattern = `[A-Za-z0-9_.-]*(?:token|secret|password|passwd|authorization)[A-Za-z0-9_.-]*`
 	credentialFieldNameRE  = regexp.MustCompile(`(?i)^` + credentialFieldPattern + `$`)
 
@@ -128,11 +129,11 @@ func redactJSONCredentials(s string) string {
 	decoder := json.NewDecoder(strings.NewReader(s))
 	decoder.UseNumber()
 
-	var value interface{}
+	var value any
 	if err := decoder.Decode(&value); err != nil {
 		return s
 	}
-	var trailing interface{}
+	var trailing any
 	if err := decoder.Decode(&trailing); err != io.EOF {
 		return s
 	}
@@ -148,7 +149,7 @@ func redactJSONCredentials(s string) string {
 	return encoded
 }
 
-func encodeJSONValue(value interface{}) (string, error) {
+func encodeJSONValue(value any) (string, error) {
 	var encoded bytes.Buffer
 	encoder := json.NewEncoder(&encoded)
 	encoder.SetEscapeHTML(false)
@@ -158,9 +159,9 @@ func encodeJSONValue(value interface{}) (string, error) {
 	return strings.TrimSuffix(encoded.String(), "\n"), nil
 }
 
-func redactJSONValue(value interface{}, embeddedDepth int) (interface{}, bool) {
+func redactJSONValue(value any, embeddedDepth int) (any, bool) {
 	switch value := value.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		changed := false
 		for key, fieldValue := range value {
 			if isCredentialField(key) {
@@ -175,7 +176,7 @@ func redactJSONValue(value interface{}, embeddedDepth int) (interface{}, bool) {
 			}
 		}
 		return value, changed
-	case []interface{}:
+	case []any:
 		changed := false
 		for i, item := range value {
 			redacted, itemChanged := redactJSONValue(item, embeddedDepth)
@@ -210,7 +211,7 @@ func redactEmbeddedJSONCredentials(s string, depth int) string {
 
 		decoder := json.NewDecoder(strings.NewReader(s[i:]))
 		decoder.UseNumber()
-		var value interface{}
+		var value any
 		if err := decoder.Decode(&value); err != nil {
 			i++
 			continue

@@ -224,7 +224,7 @@ func youMarker(c *api.Comment, currentUser string) string {
 // every line with indent.
 func printBody(w io.Writer, body, indent string) {
 	body = convertHTMLToMarkdown(body)
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		fmt.Fprintf(w, "%s%s\n", indent, line)
 	}
 }

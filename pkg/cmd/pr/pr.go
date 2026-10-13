@@ -118,6 +118,11 @@ func resolvePRListScope(author, assignee, reviewRequested, reviewNeeded string) 
 	}
 }
 
+// prListStates are the states the AtomGit pull request list endpoints accept.
+// They are a wider set than the issue list states, so each command keeps its
+// own completion candidates instead of sharing one enum.
+var prListStates = []string{"open", "closed", "locked", "merged", "all"}
+
 func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
 		State           string
@@ -196,13 +201,14 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.State, "state", "s", "open", "Filter by state: open, closed, all")
+	cmd.Flags().StringVarP(&opts.State, "state", "s", "open", "Filter by state: open, closed, locked, merged, all")
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of PRs to list")
 	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output pull requests as JSON")
 	cmd.Flags().StringVar(&opts.Author, "author", "", "Filter by author: @me for PRs you created across all your repositories")
 	cmd.Flags().StringVar(&opts.Assignee, "assignee", "", "Filter by assignee: @me for PRs assigned to you across all your repositories")
 	cmd.Flags().StringVar(&opts.ReviewRequested, "review-requested", "", "Filter by requested approver: @me for PRs that need your approval across all your repositories")
 	cmd.Flags().StringVar(&opts.ReviewNeeded, "review-needed", "", "Filter by requested reviewer: @me for PRs that need your review across all your repositories")
+	cmdutil.RegisterValueCompletion(cmd, "state", prListStates)
 
 	return cmd
 }
@@ -423,11 +429,11 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 Assignees own follow-up work, approval reviewers approve the change, and
 testers verify it. These AtomGit roles are managed independently. Labels and
 milestones must already exist in the repository.`,
-		Example: `  ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature
-  ag pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature --draft
-  ag pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature
-  ag pr create owner/repo --title "Fix bug" --body-file - --base main --head feature
-  ag pr create owner/repo --title "Fix bug" --head feature --prune-branch`,
+		Example: `  ag-cli pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature
+  ag-cli pr create owner/repo --title "Fix bug" --body "Description" --base main --head feature --draft
+  ag-cli pr create owner/repo --title "Fix bug" --body-file description.md --base main --head feature
+  ag-cli pr create owner/repo --title "Fix bug" --body-file - --base main --head feature
+  ag-cli pr create owner/repo --title "Fix bug" --head feature --prune-branch`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.Title == "" {
@@ -499,7 +505,7 @@ milestones must already exist in the repository.`,
 				head = fmt.Sprintf("%s/%s:%s", headParts[0], repo, headParts[1])
 			}
 
-			body := map[string]interface{}{
+			body := map[string]any{
 				"title": opts.Title,
 				"body":  bodyText,
 				"base":  base,
@@ -560,6 +566,7 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
 		Title    string
 		Body     string
+		BodyFile string
 		Metadata prEditMetadataOptions
 	}
 
@@ -571,6 +578,10 @@ func newCmdPREdit(f *cmdutil.Factory) *cobra.Command {
 Assignees, approval reviewers, and testers are distinct AtomGit roles.
 Unspecified metadata is left unchanged; use --milestone none to clear the
 current milestone.`,
+		Example: `  ag-cli pr edit owner/repo 123 --title "Updated title"
+  ag-cli pr edit owner/repo 123 --body "Updated description"
+  ag-cli pr edit owner/repo 123 --body-file description.md
+  ag-cli pr edit owner/repo 123 --body-file -`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
@@ -583,22 +594,44 @@ current milestone.`,
 				return err
 			}
 
+			bodyChanged := cmd.Flags().Changed("body")
+			bodyFileChanged := cmd.Flags().Changed("body-file")
+			bodyRequested := bodyChanged || bodyFileChanged
+			var bodyText string
+			if bodyChanged && bodyFileChanged {
+				_, err = cmdutil.ReadBody(opts.Body, opts.BodyFile, bodyChanged, bodyFileChanged, cmd.InOrStdin())
+				return err
+			}
+			if bodyRequested && opts.BodyFile != "-" {
+				bodyText, err = cmdutil.ReadBody(opts.Body, opts.BodyFile, bodyChanged, bodyFileChanged, cmd.InOrStdin())
+				if err != nil {
+					return err
+				}
+			}
+
 			metadataRequested := opts.Metadata.requested(cmd)
-			body := map[string]interface{}{}
+			body := map[string]any{}
 			if opts.Title != "" {
 				body["title"] = opts.Title
 			}
-			if opts.Body != "" {
-				body["body"] = opts.Body
-			}
 
-			if len(body) == 0 && !metadataRequested {
+			if len(body) == 0 && !bodyRequested && !metadataRequested {
 				return fmt.Errorf("at least one PR field or collaboration metadata flag must be provided")
 			}
 
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return cmdutil.AuthenticationError(err)
+			}
+
+			if bodyRequested && opts.BodyFile == "-" {
+				bodyText, err = cmdutil.ReadBody(opts.Body, opts.BodyFile, bodyChanged, bodyFileChanged, cmd.InOrStdin())
+				if err != nil {
+					return err
+				}
+			}
+			if bodyRequested {
+				body["body"] = bodyText
 			}
 
 			client, err := f.NewAPIClient(token)
@@ -637,6 +670,7 @@ current milestone.`,
 
 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "New PR title")
 	cmd.Flags().StringVarP(&opts.Body, "body", "b", "", "New PR body")
+	cmd.Flags().StringVarP(&opts.BodyFile, "body-file", "F", "", "Read new PR body from file (use - for stdin)")
 	cmd.Flags().StringSliceVar(&opts.Metadata.AddAssignees, "add-assignee", nil, "Assignee login to add (repeat for multiple users)")
 	cmd.Flags().StringSliceVar(&opts.Metadata.RemoveAssignees, "remove-assignee", nil, "Assignee login to remove (repeat for multiple users)")
 	cmd.Flags().StringSliceVar(&opts.Metadata.AddReviewers, "add-reviewer", nil, "Approval reviewer login to add (repeat for multiple users)")
@@ -646,6 +680,7 @@ current milestone.`,
 	cmd.Flags().StringSliceVar(&opts.Metadata.AddLabels, "add-label", nil, "Label name to add (repeat for multiple labels)")
 	cmd.Flags().StringSliceVar(&opts.Metadata.RemoveLabels, "remove-label", nil, "Label name to remove (repeat for multiple labels)")
 	cmd.Flags().StringVar(&opts.Metadata.Milestone, "milestone", "", "Milestone number, exact title, or 'none' to clear")
+	cmd.MarkFlagsMutuallyExclusive("body", "body-file")
 
 	return cmd
 }
@@ -778,7 +813,7 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer resp.Body.Close()
+			defer resp.Body.Close() //nolint:errcheck // Status and streamed output copy errors are handled separately; Close only releases response resources.
 
 			if resp.StatusCode != http.StatusOK {
 				return api.NewHTTPError(resp)
@@ -807,7 +842,7 @@ func newCmdPRMerge(f *cmdutil.Factory) *cobra.Command {
 		Short: "Merge a pull request",
 		Long: `Merge a pull request.
 
-By default, ag creates a merge commit. Use --rebase to rebase the commits onto the base branch.
+By default, ag-cli creates a merge commit. Use --rebase to rebase the commits onto the base branch.
 `,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {

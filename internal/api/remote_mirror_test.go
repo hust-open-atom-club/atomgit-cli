@@ -130,7 +130,7 @@ func TestGetRepositoryRemoteMirrorRedactsStandaloneCredentials(t *testing.T) {
 }
 
 func TestRemoteMirrorErrorsRedactCredentialBearingURLs(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, `{"message":"failed to reach https://user:top-secret@example.com/repo.git?access_token=hidden#details"}`)
 	})

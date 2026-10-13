@@ -151,6 +151,17 @@ func (c *Client) WithContext(ctx context.Context) *Client {
 	return &clone
 }
 
+// WithRetryWriter returns a shallow copy that reports metadata rate-limit
+// waits to w. Streaming downloads are never retried for HTTP 429 responses.
+func (c *Client) WithRetryWriter(w io.Writer) *Client {
+	if c == nil {
+		return nil
+	}
+	clone := *c
+	clone.client = c.client.WithRetryWriter(w)
+	return &clone
+}
+
 func (c *Client) ListRuns(owner, repo string, opts ListRunsOptions) (RunListResponse, error) {
 	query := url.Values{}
 	setString(query, "event", opts.Event)
@@ -250,7 +261,7 @@ func (c *Client) DeleteArtifact(owner, repo, artifactID string) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", operation, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases the response resources; request and status errors are handled separately.
 
 	if resp.StatusCode != http.StatusNoContent {
 		return responseError(operation, resp)
@@ -385,7 +396,7 @@ func (c *Client) GetStepLog(owner, repo, runID, jobID string, request StepLogReq
 	return result, nil
 }
 
-func (c *Client) postJSON(operation, path string, payload, result interface{}) error {
+func (c *Client) postJSON(operation, path string, payload, result any) error {
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("%s: marshal payload: %w", operation, err)
@@ -395,7 +406,7 @@ func (c *Client) postJSON(operation, path string, payload, result interface{}) e
 	if err != nil {
 		return fmt.Errorf("%s: %w", operation, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusAccepted {
 		return responseError(operation, resp)
@@ -412,12 +423,12 @@ func (c *Client) postJSON(operation, path string, payload, result interface{}) e
 	return nil
 }
 
-func (c *Client) getJSON(operation, path string, result interface{}) error {
+func (c *Client) getJSON(operation, path string, result any) error {
 	resp, err := c.client.DoRequestRawWithAccept(http.MethodGet, path, "application/json")
 	if err != nil {
 		return fmt.Errorf("%s: %w", operation, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusOK {
 		return responseError(operation, resp)
@@ -435,7 +446,7 @@ func (c *Client) download(operation, path string) (*http.Response, error) {
 	}
 	if resp.StatusCode != http.StatusOK {
 		err := responseError(operation, resp)
-		resp.Body.Close()
+		resp.Body.Close() //nolint:errcheck // Closing only releases error response resources; responseError preserves the primary API error.
 		return nil, err
 	}
 	return resp, nil

@@ -12,6 +12,8 @@ pkgs.buildGoModule (
   mkAg {
     inherit commit buildDate;
     buildVersion = "v${version}";
+    # This pinned release predates the executable rename.
+    commandSubPackage = if version == "0.7.3" then "cmd/ag" else "cmd/ag-cli";
   }
   // {
     inherit version;

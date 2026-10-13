@@ -13,7 +13,7 @@ import (
 
 func TestDoctorBypassesCredentialInitialization(t *testing.T) {
 	if os.Getenv("AG_TEST_DOCTOR_HELPER") == "1" {
-		os.Args = []string{"ag", "--raw-output", os.Getenv("AG_TEST_DOCTOR_COMMAND"), "--json"}
+		os.Args = []string{"ag-cli", "--raw-output", os.Getenv("AG_TEST_DOCTOR_COMMAND"), "--json"}
 		main()
 		return
 	}
@@ -67,7 +67,7 @@ func TestDoctorBypassesCredentialInitialization(t *testing.T) {
 
 func TestMainDisplaysHelp(t *testing.T) {
 	if os.Getenv("AG_TEST_MAIN_HELPER") == "1" {
-		os.Args = []string{"ag", "--help"}
+		os.Args = []string{"ag-cli", "--help"}
 		main()
 		return
 	}

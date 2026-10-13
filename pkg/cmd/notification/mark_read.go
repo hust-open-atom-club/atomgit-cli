@@ -21,12 +21,12 @@ func newCmdNotificationMarkRead(f *cmdutil.Factory) *cobra.Command {
 		Short: "Mark repository notifications as read",
 		Long: `Mark notifications for a repository as read.
 
-Pass one or more notification IDs (as shown by "ag notification list") to
+Pass one or more notification IDs (as shown by "ag-cli notification list") to
 mark exactly those notifications, or pass --all to mark every unread
 notification in the repository. --all asks for confirmation unless --yes is
 supplied.`,
-		Example: `  ag notification mark-read owner/repo 292ecbec857e4f27b426d66f2157938c
-  ag notification mark-read --all --yes`,
+		Example: `  ag-cli notification mark-read owner/repo 292ecbec857e4f27b426d66f2157938c
+  ag-cli notification mark-read --all --yes`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Notification IDs are plain hex strings, so an argument

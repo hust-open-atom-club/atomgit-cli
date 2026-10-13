@@ -18,7 +18,7 @@ function resolveBinary(platform, arch, resolve = require.resolve) {
     throw new Error(`unsupported platform: ${platform}/${arch}`);
   }
 
-  const executable = platform === "win32" ? "ag.exe" : "ag";
+  const executable = platform === "win32" ? "ag-cli.exe" : "ag-cli";
   try {
     return resolve(`${packageName}/bin/${executable}`);
   } catch (error) {
@@ -41,7 +41,7 @@ function run(args, options = {}) {
     throw result.error;
   }
   if (result.signal) {
-    throw new Error(`ag terminated by signal ${result.signal}`);
+    throw new Error(`ag-cli terminated by signal ${result.signal}`);
   }
   return result.status === null ? 1 : result.status;
 }
@@ -50,7 +50,7 @@ if (require.main === module) {
   try {
     process.exitCode = run(process.argv.slice(2));
   } catch (error) {
-    console.error(`ag: ${error.message}`);
+    console.error(`ag-cli: ${error.message}`);
     process.exitCode = 1;
   }
 }

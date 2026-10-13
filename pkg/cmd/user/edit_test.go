@@ -100,7 +100,7 @@ func TestUserEditPartialUpdateAndExplicitClearing(t *testing.T) {
 func TestUserEditNoFlagsFailsBeforeConfigurationOrNetwork(t *testing.T) {
 	configErr := errors.New("configuration should not be read")
 	transportCalled := false
-	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := userRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		transportCalled = true
 		return nil, errors.New("network should not be used")
 	})
@@ -119,7 +119,7 @@ func TestUserEditNoFlagsFailsBeforeConfigurationOrNetwork(t *testing.T) {
 
 func TestUserEditWrapsAPIError(t *testing.T) {
 	requestErr := errors.New("connection reset")
-	transport := userRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := userRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return nil, requestErr
 	})
 	cmd := newCmdUserEdit(userFactory(userTestConfig{}, transport))
@@ -134,7 +134,7 @@ func TestUserEditWrapsAPIError(t *testing.T) {
 }
 
 func TestUserEditTextOutput(t *testing.T) {
-	factory := userEditTestFactory(t, func(w http.ResponseWriter, req *http.Request) {
+	factory := userEditTestFactory(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `{"id":"1","login":"alice","nickname":"Alice"}`)
 	})
@@ -153,7 +153,7 @@ func TestUserEditTextOutput(t *testing.T) {
 
 func TestUserEditJSONOutput(t *testing.T) {
 	response := `{"avatar":"https://example.com/a.png","nickname":"Alice","company":"Example","description":"Hello","email":"alice@example.com","github_account":"alice-gh","website":"https://example.com","location":"Wuhan","id":"1","login":"alice"}`
-	factory := userEditTestFactory(t, func(w http.ResponseWriter, req *http.Request) {
+	factory := userEditTestFactory(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, response)
 	})

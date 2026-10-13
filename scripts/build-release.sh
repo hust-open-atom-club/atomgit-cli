@@ -1,7 +1,7 @@
 #!/bin/sh
 # 使用 GoReleaser 生成预编译包到 dist/<版本>/：
-#   - Linux/macOS: ag_<os>_<arch>.tar.gz（包内可执行文件名为 ag）
-#   - Windows:     ag_windows_<arch>.zip（包内为 ag.exe）
+#   - Linux/macOS: ag_<os>_<arch>.tar.gz（包内可执行文件名为 ag-cli）
+#   - Windows:     ag_windows_<arch>.zip（包内为 ag-cli.exe）
 #   - npm:         七个平台二进制子包和一个主启动包，以及独立的 npm/checksums.txt
 #   - SHA-256:     checksums.txt 仅覆盖七个归档和两个安装脚本
 #
@@ -178,7 +178,7 @@ verify_injection() {
   verify_arch=$(go env GOHOSTARCH)
   echo "==> 校验版本注入: 构建 ${verify_os}/${verify_arch} 测试二进制 ..."
   GOOS="$verify_os" GOARCH="$verify_arch" CGO_ENABLED=0 \
-    go build -trimpath -ldflags="${LINK_FLAGS}" -o "$tmpbin" ./cmd/ag
+    go build -trimpath -ldflags="${LINK_FLAGS}" -o "$tmpbin" ./cmd/ag-cli
 
   # 文本输出 — 至少包含 TAG
   out=$("$tmpbin" version 2>&1)
@@ -288,6 +288,12 @@ echo ""
 echo "==> 校验 GoReleaser 配置 ..."
 "$GORELEASER" check
 
+# Rebuild all manuals from this command tree, with explicit release metadata.
+# The output is ignored build data; no credentials or CLI business hooks run.
+rm -rf "$ROOT/dist/man"
+go run ./scripts/generate-manpages --output "$ROOT/dist/man/man1" \
+  --version "$TAG" --date "${BUILD_DATE%%T*}"
+
 if [ "$RELEASE_MODE" = "snapshot" ]; then
   # 快照模式只在本地打包。AG_VERSION 保留项目已有的 vX.Y 等
   # 标签格式；快照内部版本去掉 v 前缀。
@@ -315,6 +321,7 @@ cp "$STAGING"/ag_windows_amd64.zip "$OUT/"
 cp "$STAGING"/ag_windows_arm64.zip "$OUT/"
 
 validate_archive_matrix "$OUT" "$ORDINARY_ARCHIVES"
+node scripts/check-release-manpages.js "$OUT" "$ROOT/dist/man/man1"
 
 rm -rf "$STAGING"
 

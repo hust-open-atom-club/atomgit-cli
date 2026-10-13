@@ -15,7 +15,7 @@ func ValidateRef(value, name string) (string, error) {
 	if value == "@" || strings.HasPrefix(value, ".") || strings.HasSuffix(value, ".") || strings.HasPrefix(value, "/") || strings.HasSuffix(value, "/") || strings.Contains(value, "..") || strings.Contains(value, "@{") || strings.Contains(value, "//") {
 		return "", fmt.Errorf("invalid %s %q", name, value)
 	}
-	for _, part := range strings.Split(value, "/") {
+	for part := range strings.SplitSeq(value, "/") {
 		if strings.HasPrefix(part, ".") || strings.HasSuffix(part, ".lock") {
 			return "", fmt.Errorf("invalid %s %q", name, value)
 		}

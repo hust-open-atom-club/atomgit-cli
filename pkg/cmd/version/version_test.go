@@ -31,7 +31,7 @@ func TestNewCmdVersion_Text(t *testing.T) {
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
-	want := "ag version v1.2.3 (commit: abc1234, built: 2026-07-24T00:00:00Z)\n"
+	want := "ag-cli version v1.2.3 (commit: abc1234, built: 2026-07-24T00:00:00Z)\n"
 	if got := buf.String(); got != want {
 		t.Errorf("output = %q, want %q", got, want)
 	}
@@ -48,28 +48,28 @@ func TestFormatTextOmitsUnknownMetadata(t *testing.T) {
 			info: version.Info{
 				Version: "v1.0.0", Commit: "abc1234", BuildDate: "2026-07-15T00:00:00Z",
 			},
-			want: "ag version v1.0.0 (commit: abc1234, built: 2026-07-15T00:00:00Z)\n",
+			want: "ag-cli version v1.0.0 (commit: abc1234, built: 2026-07-15T00:00:00Z)\n",
 		},
 		{
 			name: "commit only",
 			info: version.Info{
 				Version: "v1.0.0", Commit: "abc1234", BuildDate: "unknown",
 			},
-			want: "ag version v1.0.0 (commit: abc1234)\n",
+			want: "ag-cli version v1.0.0 (commit: abc1234)\n",
 		},
 		{
 			name: "build date only",
 			info: version.Info{
 				Version: "v1.0.0", Commit: "unknown", BuildDate: "2026-07-15T00:00:00Z",
 			},
-			want: "ag version v1.0.0 (built: 2026-07-15T00:00:00Z)\n",
+			want: "ag-cli version v1.0.0 (built: 2026-07-15T00:00:00Z)\n",
 		},
 		{
 			name: "no optional metadata",
 			info: version.Info{
 				Version: "v1.0.0", Commit: " UNKNOWN ", BuildDate: "",
 			},
-			want: "ag version v1.0.0\n",
+			want: "ag-cli version v1.0.0\n",
 		},
 	}
 
@@ -85,7 +85,7 @@ func TestFormatTextOmitsUnknownMetadata(t *testing.T) {
 func TestText_MatchesVersionCLIContract(t *testing.T) {
 	setVersionMetadata(t)
 
-	want := "ag version v1.2.3 (commit: abc1234, built: 2026-07-24T00:00:00Z)\n"
+	want := "ag-cli version v1.2.3 (commit: abc1234, built: 2026-07-24T00:00:00Z)\n"
 	if got := Text(); got != want {
 		t.Errorf("Text() = %q, want %q", got, want)
 	}

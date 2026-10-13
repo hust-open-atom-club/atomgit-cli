@@ -167,7 +167,7 @@ func TestRunnerListRejectsIncompleteOrRepeatedPages(t *testing.T) {
 
 	t.Run("repeated full page", func(t *testing.T) {
 		items := make([]string, 0, maxRunnersPerPage)
-		for i := 0; i < maxRunnersPerPage; i++ {
+		for i := range maxRunnersPerPage {
 			items = append(items, fmt.Sprintf(`{"id":"r%d"}`, i))
 		}
 		body := fmt.Sprintf(`{"total_count":200,"runners":[%s]}`, strings.Join(items, ","))
@@ -190,7 +190,7 @@ func TestRunnerListRejectsChangingTotalCount(t *testing.T) {
 		page, _ := strconv.Atoi(req.URL.Query().Get("page"))
 		if page == 1 {
 			items := make([]string, 0, maxRunnersPerPage)
-			for i := 0; i < maxRunnersPerPage; i++ {
+			for i := range maxRunnersPerPage {
 				items = append(items, fmt.Sprintf(`{"id":"r%d"}`, i))
 			}
 			return runnerResponse(req, http.StatusOK, fmt.Sprintf(`{"total_count":200,"runners":[%s]}`, strings.Join(items, ","))), nil

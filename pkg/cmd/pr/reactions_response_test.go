@@ -71,7 +71,7 @@ func TestPRReactionsInvalidRecordDoesNotEmitPartialOutput(t *testing.T) {
 		for _, mode := range []string{"text", "json"} {
 			t.Run(body+"/"+mode, func(t *testing.T) {
 				factory := &cmdutil.Factory{Config: prTestConfig{}, HttpClient: func() (*http.Client, error) {
-					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) { return prResponse(http.StatusOK, body), nil })}, nil
+					return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) { return prResponse(http.StatusOK, body), nil })}, nil
 				}}
 				cmd := newCmdPRReactions(factory)
 				if mode == "json" {

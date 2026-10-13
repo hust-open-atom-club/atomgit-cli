@@ -99,7 +99,7 @@ func (t *uploadTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 }
 
-func uploadNotFoundHandler(method, path, rawQuery string, body []byte) (*http.Response, error) {
+func uploadNotFoundHandler(string, string, string, []byte) (*http.Response, error) {
 	return &http.Response{
 		StatusCode: http.StatusNotFound,
 		Status:     "404 Not Found",
@@ -736,7 +736,7 @@ func TestReleaseUploadHTTPErrorFirstBatch(t *testing.T) {
 		{
 			name: "GET release 404",
 			args: []string{"alice/demo", "v1/rc", path},
-			apiHandler: func(method, escapedPath, rawQuery string, body []byte) (*http.Response, error) {
+			apiHandler: func(string, string, string, []byte) (*http.Response, error) {
 				return uploadJSONResponse(http.StatusNotFound, `{"message":"not found"}`), nil
 			},
 			wantError: []string{"failed to get release before uploading", "404"},
@@ -779,13 +779,15 @@ func TestReleaseUploadHTTPErrorFirstBatch(t *testing.T) {
 						releaseWithAssetsJSON("v1/rc", []uploadAsset{{ID: 42, Name: baseName, Type: "attach"}}),
 					), nil
 				case method == http.MethodGet && strings.HasPrefix(escapedPath, "/api/v5/repos/alice/demo/releases/"):
-					return uploadJSONResponse(http.StatusTooManyRequests, `{"message":"too many requests"}`), nil
+					resp := uploadJSONResponse(http.StatusTooManyRequests, `{"message":"too many requests"}`)
+					resp.Header.Set("Retry-After", "0")
+					return resp, nil
 				default:
 					return uploadNotFoundHandler(method, escapedPath, rawQuery, body)
 				}
 			},
 			wantError: []string{"failed to get upload url", "429"},
-			wantCalls: 2,
+			wantCalls: 4,
 			wantPUTs:  0,
 		},
 	}

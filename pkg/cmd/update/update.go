@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -34,7 +35,7 @@ const (
 	npmRegistry            = "https://registry.npmjs.org/"
 	releaseDownloadBaseURL = "https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download"
 	homebrewCoreFormula    = "atomgit-cli"
-	homebrewExecutableName = "ag"
+	homebrewExecutableName = "ag-cli"
 	maxChecksumBytes       = 1 << 20
 	maxWindowsArchiveBytes = 128 << 20
 	maxWindowsBinaryBytes  = 128 << 20
@@ -147,7 +148,7 @@ func newCmdUpdateWithDeps(f *cmdutil.Factory, deps updateDeps) *cobra.Command {
 }
 
 // NewCmdCheckUpdate preserves the legacy read-only command while users migrate
-// to "ag update --check".
+// to "ag-cli update --check".
 func NewCmdCheckUpdate(f *cmdutil.Factory) *cobra.Command {
 	return newCmdCheckUpdateWithDeps(f, defaultUpdateDeps())
 }
@@ -156,7 +157,7 @@ func newCmdCheckUpdateWithDeps(f *cmdutil.Factory, deps updateDeps) *cobra.Comma
 	return &cobra.Command{
 		Use:        "check-update",
 		Short:      "Check for a newer AtomGit CLI release",
-		Deprecated: `use "ag update --check" instead`,
+		Deprecated: `use "ag-cli update --check" instead`,
 		Args:       cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runUpdate(cmd, f, deps, true)
@@ -288,16 +289,23 @@ func installationDisplayName(installed installation) string {
 
 func publicAPIClient(f *cmdutil.Factory) (*api.Client, error) {
 	if f == nil || f.HttpClient == nil {
-		return api.NewClient("").WithContext(f.CommandContext()), nil
+		return api.NewClient("").WithContext(f.CommandContext()).WithRetryWriter(factoryErrorWriter(f)), nil
 	}
 	httpClient, err := f.HttpClient()
 	if err != nil {
 		return nil, fmt.Errorf("create update HTTP client: %w", err)
 	}
 	if httpClient == nil {
-		return api.NewClient("").WithContext(f.CommandContext()), nil
+		return api.NewClient("").WithContext(f.CommandContext()).WithRetryWriter(factoryErrorWriter(f)), nil
 	}
-	return api.NewClientWithHTTPClient("", httpClient).WithContext(f.CommandContext()), nil
+	return api.NewClientWithHTTPClient("", httpClient).WithContext(f.CommandContext()).WithRetryWriter(factoryErrorWriter(f)), nil
+}
+
+func factoryErrorWriter(f *cmdutil.Factory) io.Writer {
+	if f == nil {
+		return nil
+	}
+	return f.ErrorWriter
 }
 
 func selectLatestStableRelease(releases []api.Release) (string, error) {
@@ -355,7 +363,7 @@ func normalizeVersion(value string) string {
 func detectInstallation(ctx context.Context, deps updateDeps) (installation, error) {
 	executable, err := deps.executable()
 	if err != nil {
-		return installation{}, fmt.Errorf("resolve running ag executable: %w", err)
+		return installation{}, fmt.Errorf("resolve running ag-cli executable: %w", err)
 	}
 	executable = canonicalPath(executable, deps.evalSymlinks)
 
@@ -398,7 +406,7 @@ func detectHomebrewInstallation(ctx context.Context, deps updateDeps, executable
 		return installation{}, false
 	}
 	installedFormulae := make(map[string]bool)
-	for _, formula := range strings.Fields(result.stdout) {
+	for formula := range strings.FieldsSeq(result.stdout) {
 		installedFormulae[formula] = true
 	}
 	if !installedFormulae[homebrewCoreFormula] {
@@ -554,7 +562,7 @@ func updateViaNPM(cmd *cobra.Command, deps updateDeps, latest string) error {
 		}
 		if deps.goos != "windows" {
 			return fmt.Errorf(
-				"update AtomGit CLI via npm: %w; the npm command entry is no longer usable (%v); reinstall with: npm install -g %s@%s --registry=%s",
+				"update AtomGit CLI via npm: %w; the npm command entry is no longer usable (%w); reinstall with: npm install -g %s@%s --registry=%s",
 				installErr,
 				verification.err,
 				npmPackage,
@@ -587,7 +595,7 @@ func updateViaNPM(cmd *cobra.Command, deps updateDeps, latest string) error {
 		executable, cleanupWarnings, err := repairWindowsNPMLauncher(cmd.Context(), deps, prefix, latest)
 		if err != nil {
 			if installErr != nil {
-				return fmt.Errorf("npm update failed (%v) and command-entry repair failed: %w", installErr, err)
+				return fmt.Errorf("npm update failed (%w) and command-entry repair failed: %w", installErr, err)
 			}
 			return fmt.Errorf("npm update did not produce a working command entry and repair failed: %w", err)
 		}
@@ -641,7 +649,7 @@ func updateViaHomebrewCore(cmd *cobra.Command, deps updateDeps, installed instal
 	}
 	executable := filepath.Join(prefix, "bin", homebrewExecutableName)
 	if err := verifyInstalledVersion(cmd.Context(), deps, executable, latest); err != nil {
-		return fmt.Errorf(
+		return fmt.Errorf( //nolint:staticcheck // Homebrew is a product name and is intentionally capitalized in this user-facing error.
 			"Homebrew Core update completed but verification failed (the Formula may not provide %s yet): %w",
 			latest,
 			err,
@@ -733,6 +741,7 @@ func repairWindowsNPMLauncher(
 		return "", nil, fmt.Errorf("extract %s: %w", assetName, err)
 	}
 
+	//nolint:gosec // G301: Windows ACLs are not controlled by Unix mode bits.
 	if err := os.MkdirAll(prefix, 0o755); err != nil {
 		return "", nil, fmt.Errorf("create npm prefix %s: %w", prefix, err)
 	}
@@ -775,7 +784,7 @@ func repairWindowsNPMLauncher(
 	}
 	rollback := func(cause error) (string, []string, error) {
 		if err := os.Remove(target); err != nil && !errors.Is(err, os.ErrNotExist) {
-			cause = fmt.Errorf("%w; remove failed repaired command %s: %v", cause, target, err)
+			cause = fmt.Errorf("%w; remove failed repaired command %s: %w", cause, target, err)
 		}
 		return "", nil, rollbackLauncherBackups(backups, cause)
 	}
@@ -788,9 +797,9 @@ func repairWindowsNPMLauncher(
 	}
 
 	warnings := make([]string, 0)
-	for _, backup := range backups {
-		if err := os.Remove(backup.backup); err != nil && !errors.Is(err, os.ErrNotExist) {
-			warnings = append(warnings, fmt.Sprintf("could not remove old npm launcher backup %s: %v", backup.backup, err))
+	for _, launcher := range backups {
+		if err := os.Remove(launcher.backup); err != nil && !errors.Is(err, os.ErrNotExist) {
+			warnings = append(warnings, fmt.Sprintf("could not remove old npm launcher backup %s: %v", launcher.backup, err))
 		}
 	}
 	return target, warnings, nil
@@ -832,8 +841,8 @@ func backupExistingLaunchers(prefix string, paths []string) ([]launcherBackup, e
 
 func rollbackLauncherBackups(backups []launcherBackup, cause error) error {
 	rollbackErrors := make([]string, 0)
-	for index := len(backups) - 1; index >= 0; index-- {
-		if err := os.Rename(backups[index].backup, backups[index].original); err != nil {
+	for _, launcher := range slices.Backward(backups) {
+		if err := os.Rename(launcher.backup, launcher.original); err != nil {
 			rollbackErrors = append(rollbackErrors, err.Error())
 		}
 	}
@@ -853,7 +862,7 @@ func windowsReleaseAssetName(goarch string) (string, error) {
 }
 
 func checksumForAsset(contents []byte, assetName string) (string, error) {
-	for _, line := range strings.Split(string(contents), "\n") {
+	for line := range strings.SplitSeq(string(contents), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) != 2 {
 			continue
@@ -878,7 +887,7 @@ func extractWindowsBinary(archive []byte) ([]byte, error) {
 			continue
 		}
 		if entry.UncompressedSize64 > maxWindowsBinaryBytes {
-			return nil, fmt.Errorf("ag.exe is larger than %d bytes", maxWindowsBinaryBytes)
+			return nil, fmt.Errorf("ag-cli.exe is larger than %d bytes", maxWindowsBinaryBytes)
 		}
 		file, err := entry.Open()
 		if err != nil {
@@ -893,11 +902,11 @@ func extractWindowsBinary(archive []byte) ([]byte, error) {
 			return nil, closeErr
 		}
 		if len(binary) == 0 || int64(len(binary)) > maxWindowsBinaryBytes {
-			return nil, fmt.Errorf("ag.exe has invalid size %d", len(binary))
+			return nil, fmt.Errorf("ag-cli.exe has invalid size %d", len(binary))
 		}
 		return binary, nil
 	}
-	return nil, errors.New("ag.exe was not found in the Windows release archive")
+	return nil, errors.New("ag-cli.exe was not found in the Windows release archive")
 }
 
 func downloadUpdateAsset(ctx context.Context, rawURL string, limit int64) ([]byte, error) {
@@ -910,7 +919,7 @@ func downloadUpdateAsset(ctx context.Context, rawURL string, limit int64) ([]byt
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer response.Body.Close() //nolint:errcheck // Status and update asset read errors are handled separately; Close only releases response resources.
 	if response.StatusCode/100 != 2 {
 		return nil, fmt.Errorf("download update asset: %w", api.NewHTTPError(response))
 	}
@@ -933,9 +942,9 @@ func npmExecutablePath(root, goos, goarch string) (string, error) {
 	if goos == "windows" {
 		platform = "win32"
 	}
-	executable := "ag"
+	executable := "ag-cli"
 	if goos == "windows" {
-		executable = "ag.exe"
+		executable = "ag-cli.exe"
 	}
 	packageName := fmt.Sprintf("atomgit-cli-%s-%s", platform, arch)
 	return filepath.Join(root, "@hust-open-atom-club", packageName, "bin", executable), nil

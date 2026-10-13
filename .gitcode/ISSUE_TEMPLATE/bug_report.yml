@@ -12,7 +12,7 @@ body:
     id: version
     attributes:
       label: AtomGit CLI 版本
-      description: 请运行 `ag version`，并注明 CLI 的安装方式。
+      description: 请运行 `ag-cli version`，并注明 CLI 的安装方式。
       placeholder: "v0.1.0；通过包管理器安装"
     validations:
       required: true

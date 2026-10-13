@@ -89,7 +89,7 @@ func TestUserEventsValidationBeforeAuthentication(t *testing.T) {
 }
 
 func TestUserEventsRequiresAuthentication(t *testing.T) {
-	config := &eventCountingConfig{tokenErr: errors.New("not authenticated: run `ag auth login`")}
+	config := &eventCountingConfig{tokenErr: errors.New("not authenticated: run `ag-cli auth login`")}
 	var out bytes.Buffer
 	err := runEventsCommand(t, &cmdutil.Factory{Config: config}, nil, nil, &out)
 	if err == nil || !strings.Contains(err.Error(), "not authenticated") {
@@ -204,7 +204,7 @@ func TestUserEventsMultipleCursorsAndYearQuery(t *testing.T) {
 
 func TestUserEventsLimitStopsAfterSatisfied(t *testing.T) {
 	requests := 0
-	factory := namespaceTestFactory(t, func(w http.ResponseWriter, req *http.Request) {
+	factory := namespaceTestFactory(t, func(w http.ResponseWriter, _ *http.Request) {
 		requests++
 		w.Header().Set("Content-Type", "application/json")
 		switch requests {

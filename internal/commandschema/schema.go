@@ -117,7 +117,7 @@ func Describe(root *cobra.Command, path []string) (Document, error) {
 			}
 		}
 		if next == nil {
-			return Document{}, fmt.Errorf("unknown or hidden command path; run 'ag schema' to list public commands")
+			return Document{}, fmt.Errorf("unknown or hidden command path; run 'ag-cli schema' to list public commands")
 		}
 		cmd = next
 	}

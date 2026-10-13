@@ -195,10 +195,10 @@ func TestProtectionSetPreservesOmittedPermissionAndConfirms(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			writes := 0
 			transport := branchRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-				switch {
-				case req.Method == http.MethodGet:
+				switch req.Method {
+				case http.MethodGet:
 					return branchResponse(http.StatusOK, `[{"name":"release/*","committer_can_push":true,"maintainer_can_merge":true}]`), nil
-				case req.Method == http.MethodPut:
+				case http.MethodPut:
 					writes++
 					if req.URL.EscapedPath() != "/api/v5/repos/alice/demo/branches/release%2F%2A/setting" {
 						t.Fatalf("path = %s", req.URL.EscapedPath())

@@ -18,6 +18,7 @@ import (
 
 	internalapi "atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/browser"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 )
 
 // Defaults match AtomCode / AtomGit OAuth app (see project oauth reference); override with env.
@@ -27,9 +28,10 @@ const (
 	defaultRedirectPort = "8765"
 
 	authorizeURL = "https://atomgit.com/oauth/authorize"
-	tokenURL     = "https://atomgit.com/oauth/token"
-	userURL      = "https://atomgit.com/api/v5/user"
-	scopes       = "user_info projects workflow discussion"
+	//nolint:gosec // G101: Public OAuth token endpoint URL, not a credential.
+	tokenURL = "https://atomgit.com/oauth/token"
+	userURL  = "https://atomgit.com/api/v5/user"
+	scopes   = "user_info projects workflow discussion"
 )
 
 type tokenResponse struct {
@@ -41,11 +43,11 @@ type tokenResponse struct {
 
 // UserInfo is the AtomGit identity returned by GET /api/v5/user.
 type UserInfo struct {
-	ID        interface{} `json:"id"`
-	Login     string      `json:"login"`
-	Name      string      `json:"name"`
-	Email     string      `json:"email"`
-	AvatarURL string      `json:"avatar_url"`
+	ID        any    `json:"id"`
+	Login     string `json:"login"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	AvatarURL string `json:"avatar_url"`
 }
 
 func clientID() string {
@@ -232,12 +234,13 @@ func exchangeCode(ctx context.Context, id, secret, redir, code string) (*tokenRe
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("User-Agent", version.UserAgent())
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status, body read, and JSON decode errors are handled separately.
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, tokenEndpointError(resp)
 	}
@@ -279,12 +282,13 @@ func RefreshAccessToken(ctx context.Context, refreshToken string) (*RefreshedTok
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("User-Agent", version.UserAgent())
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status, body read, and JSON decode errors are handled separately.
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, tokenEndpointError(resp)
 	}
@@ -325,12 +329,13 @@ func FetchUserWithURL(ctx context.Context, url, accessToken string) (*UserInfo, 
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("User-Agent", version.UserAgent())
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status, body read, and JSON decode errors are handled separately.
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("user endpoint: %w", internalapi.NewHTTPError(resp))
 	}

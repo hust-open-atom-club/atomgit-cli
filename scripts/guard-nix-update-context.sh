@@ -35,7 +35,8 @@ case "$ref" in
 esac
 
 case "$event" in
-  push|workflow_dispatch) ;;
+  # AtomGit push runs report "Push"; retain the documented lowercase name.
+  push|Push|workflow_dispatch) ;;
   *)
     echo "Refusing to run for event '${event}'." >&2
     exit 1

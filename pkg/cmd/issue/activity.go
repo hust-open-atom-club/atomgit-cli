@@ -98,7 +98,7 @@ func newIssueInspection[T any](f *cmdutil.Factory, name, description string, lis
 	cmd := &cobra.Command{
 		Use: name + " [<owner>/<repo>] <number>", Short: description,
 		Long:    description + ".\n\n" + detail,
-		Example: fmt.Sprintf("  ag issue %s owner/repo 42\n  ag issue %s 42 --limit 100 --json", name, name),
+		Example: fmt.Sprintf("  ag-cli issue %s owner/repo 42\n  ag-cli issue %s 42 --limit 100 --json", name, name),
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.Limit <= 0 {

@@ -76,8 +76,8 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 				fmt.Fprintf(out, "[%d] @%s %s%s\n", comment.ID, comment.User.Login, timeStr, userMarker)
 
 				// Print body
-				bodyLines := strings.Split(comment.Body, "\n")
-				for _, line := range bodyLines {
+				bodyLines := strings.SplitSeq(comment.Body, "\n")
+				for line := range bodyLines {
 					fmt.Fprintf(out, "    %s\n", line)
 				}
 				fmt.Fprintln(out)

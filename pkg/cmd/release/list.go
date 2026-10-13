@@ -16,7 +16,7 @@ func newCmdReleaseList(f *cmdutil.Factory) *cobra.Command {
 		Use:     "list [<owner>/<repo>]",
 		Short:   "List repository releases",
 		Long:    `List releases for a repository, ordered most recent first.`,
-		Example: `  ag release list owner/repo --limit 50`,
+		Example: `  ag-cli release list owner/repo --limit 50`,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if limit <= 0 {
@@ -92,16 +92,20 @@ type releaseJSON struct {
 func releasesJSON(releases []api.Release) []releaseJSON {
 	result := make([]releaseJSON, len(releases))
 	for i, release := range releases {
-		result[i] = releaseJSON{
-			TagName:         release.TagName,
-			Name:            release.Name,
-			Status:          releaseStatus(release),
-			Draft:           release.Draft,
-			Prerelease:      release.Prerelease,
-			TargetCommitish: release.TargetCommitish,
-			CreatedAt:       release.CreatedAt,
-			Author:          release.Author.Login,
-		}
+		result[i] = releaseSummaryJSON(release)
 	}
 	return result
+}
+
+func releaseSummaryJSON(release api.Release) releaseJSON {
+	return releaseJSON{
+		TagName:         release.TagName,
+		Name:            release.Name,
+		Status:          releaseStatus(release),
+		Draft:           release.Draft,
+		Prerelease:      release.Prerelease,
+		TargetCommitish: release.TargetCommitish,
+		CreatedAt:       release.CreatedAt,
+		Author:          release.Author.Login,
+	}
 }

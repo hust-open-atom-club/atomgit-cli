@@ -12,7 +12,7 @@
 
 1. **Bug 报告**：请提供以下信息
    - 使用的操作系统和架构
-   - `ag version` 输出及安装方式
+   - `ag-cli version` 输出及安装方式
    - Go 版本（仅源码构建时，运行 `go version`）
    - 复现步骤
    - 期望行为 vs 实际行为
@@ -70,7 +70,7 @@
    (
      ag_build_dir="$(mktemp -d)"
      trap 'rm -rf "$ag_build_dir"' EXIT
-     go build -o "$ag_build_dir/ag" ./cmd/ag
+     go build -o "$ag_build_dir/ag-cli" ./cmd/ag-cli
    )
 
    # 运行 CI 使用的 Linux 竞态检测
@@ -141,16 +141,32 @@
    [AtomGit setup 工具支持列表](https://docs.gitcode.com/docs/help/home/org_project/pipeline/syntax-reference/setup-supported-tools/)
    和 [Go 工具链文档](https://go.dev/doc/toolchain)。
 
-   `make vulncheck` 使用 Go 1.26.8 构建实际发布形态的 `ag` 二进制，再用固定版本的
-   `govulncheck` 以 binary 模式扫描，并显式查询规范数据库 `https://vuln.go.dev`。
-   发现可达漏洞、工具下载失败、数据库不可用或扫描器报错都会使检查失败；规范数据库
-   中已经撤回的报告不计为漏洞。参见 [govulncheck 命令文档](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck)
-   和 [Go 漏洞数据库规范](https://go.dev/doc/security/vuln/database)。
+   `make vulncheck` 使用 Go 1.26.8、`CGO_ENABLED=0` 顺序构建 Linux
+   amd64/arm64/loong64、macOS amd64/arm64 和 Windows amd64/arm64 七个实际发布
+   二进制，再用固定版本的 `govulncheck` 对每个二进制执行可达性扫描。任一目标发现
+   可达漏洞都会使门禁失败。扫描还会输出一次 module 清单，以及 Linux、macOS 和
+   Windows 各一个代表架构的 package 清单，便于区分“模块存在”“包被编译”和
+   “符号可达”三种结果；当前仓库没有架构专用 Go 文件，因此 package 扫描无需在同一
+   OS 的每个架构上重复，但 binary 门禁仍覆盖全部七个目标。package 或 module 级发现
+   仅供排查，不会被误报为可达漏洞；工具下载失败、数据库不可用、构建失败或扫描器错误
+   始终使检查失败。规范数据库中已经撤回的报告不计为漏洞。参见
+   [govulncheck 命令文档](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck) 和
+   [Go 漏洞数据库规范](https://go.dev/doc/security/vuln/database)。
+
+   PR 和 push CI 的漏洞任务继续在质量门禁通过后运行，与 race、交叉编译和平台测试
+   编译并行；独立的 `Scheduled vulnerability scan` 每周一 03:17 UTC 扫描当时的
+   `main`，也支持手动触发。定时任务不缓存漏洞数据库，以便每次查询当前数据。为控制
+   Runner 成本，七个目标在一个 Runner 中顺序构建，每个二进制同时用于工具链校验和
+   binary 扫描，不创建七个矩阵 job。若可信的上游 job 已生成同名制品，可通过
+   `VULNCHECK_BUILD=0 VULNCHECK_BINARY_DIR=/path/to/binaries make vulncheck` 复用；目录
+   必须包含 `ag-<goos>-<goarch>`，且调用方负责保证制品来自当前提交和发布工具链。
 
    npm 测试使用假的 registry 和子进程注入，不得发布软件包、读取真实 npm token，
    也不得访问真实 registry。
 
    修改命令参数或输出时，请执行对应命令的 `--help` 冒烟检查；纯文档修改至少运行 `git diff --check`。命令树或命令元数据发生变化时，请运行 `make docs-reference` 更新自动生成的 `docs/command-reference.md`，并运行 `make docs-reference-check` 确认没有文档漂移。
+
+   Unix manpage 从同一棵 Cobra 命令树生成，但作为构建产物不入库。运行 `make docs-man`（可设置 `MAN_DIR`）和 `make docs-man-check`；安装 `mandoc` 后，Go 测试会检查所有页面的 roff 解析。发布变化还需通过 snapshot 的完整归档手册检查。规范名称、别名、隐藏/弃用命令与选项、显式版本/日期及离线生成规则见[发布指南](docs/releasing.md#manpage-生成与分发)，临时前缀和 `MANPATH` 验证方法见[安装指南](docs/installation.md#unix-man-手册)。不要提交 `dist/` 或更改 Debian changelog。
 
 5. **提交更改**
 
@@ -162,7 +178,7 @@
    git push -u origin HEAD
    ```
 
-   请只暂存本次贡献相关的文件，不要提交 `dist/`、本地 `ag` 二进制、覆盖率文件、IDE 文件或任何凭据。
+   请只暂存本次贡献相关的文件，不要提交 `dist/`、本地 `ag-cli` 二进制、覆盖率文件、IDE 文件或任何凭据。
 
    提交信息格式：
    - `feat:` 新功能
@@ -198,7 +214,7 @@
 
 ```text
 atomgit-cli/
-├── cmd/ag/                 # 可执行程序入口
+├── cmd/ag-cli/                 # 可执行程序入口
 ├── internal/               # API、配置、认证和版本等内部实现
 │   ├── agcmd/              # 根命令执行与退出码处理
 │   ├── api/                # AtomGit API v5 客户端
@@ -269,7 +285,7 @@ fixture 必须注明合成或脱敏采集来源。使用专用测试仓库采集
 详细格式、采集与审查步骤见 [API 契约测试](docs/api-contracts.md)。
 
 在线检查仅通过 `make test-contract-live` 显式启用，必须提供单独的测试账号 token 和测试仓库。
-它只发送 GET，不读取 `ag auth` 配置，不打印或保存响应正文，也不自动覆盖 fixture。
+它只发送 GET，不读取 `ag-cli auth` 配置，不打印或保存响应正文，也不自动覆盖 fixture。
 
 ### 代码风格
 
@@ -279,6 +295,23 @@ fixture 必须注明合成或脱敏采集来源。使用专用测试仓库采集
 - 错误信息应包含操作上下文，并使用 `%w` 包装底层错误
 - 业务错误从 Cobra 的 `RunE` 返回，不要在库代码中调用 `os.Exit` 或 `log.Fatal`
 - 不要在日志、错误或测试数据中泄露 access token、refresh token、client secret 等凭据
+
+### 代码质量
+
+使用 [golangci-lint v2](https://golangci-lint.run/) ，基于工作区中的现有配置检查本次修改，
+并评估报告的诊断是否需要修复。
+
+如果诊断经确认属于误报，或对应行为属于有明确理由的例外，需要进行豁免时，
+使用 `//nolint:<linter> // <reason>` 的格式抑制告警，并说明具体原因。
+
+例如：
+
+```go
+//nolint:gosec // G301: Windows ACLs are not controlled by Unix mode bits.
+```
+
+修改包含现有 `nolint` 豁免的代码时，应临时移除相关豁免，并使用项目配置重新运行 lint，
+以确认本次修改没有引入被现有 `nolint` 一并抑制的新诊断。
 
 ## 行为准则
 

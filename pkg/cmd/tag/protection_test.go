@@ -298,13 +298,13 @@ func TestProtectionSetPreservesOmittedAccessAndConfirms(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			writes := 0
 			transport := tagRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-				switch {
-				case req.Method == http.MethodGet:
+				switch req.Method {
+				case http.MethodGet:
 					if req.URL.EscapedPath() != "/api/v5/repos/alice/demo/protected_tags/v1.0.0" {
 						t.Fatalf("path = %s", req.URL.EscapedPath())
 					}
 					return tagProtectionResponse(http.StatusOK, `{"name":"v1.0.0","create_access_level":40}`), nil
-				case req.Method == http.MethodPut:
+				case http.MethodPut:
 					writes++
 					if req.URL.Path != "/api/v5/repos/alice/demo/protected_tags" {
 						t.Fatalf("path = %s", req.URL.Path)
@@ -349,10 +349,10 @@ func TestProtectionSetPreservesOmittedAccessAndConfirms(t *testing.T) {
 func TestProtectionSetPreservesCurrentAccessWhenFlagOmitted(t *testing.T) {
 	writes := 0
 	transport := tagRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-		switch {
-		case req.Method == http.MethodGet:
+		switch req.Method {
+		case http.MethodGet:
 			return tagProtectionResponse(http.StatusOK, `{"name":"v1.0.0","create_access_level":30}`), nil
-		case req.Method == http.MethodPut:
+		case http.MethodPut:
 			writes++
 			var body api.ProtectedTagRequest
 			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {

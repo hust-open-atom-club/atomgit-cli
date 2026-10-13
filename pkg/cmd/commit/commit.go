@@ -1,4 +1,4 @@
-// Package commit provides the ag commit command for listing, viewing,
+// Package commit provides the ag-cli commit command for listing, viewing,
 // comparing, and inspecting repository commits.
 package commit
 
@@ -406,7 +406,7 @@ func newCmdCommitText(f *cmdutil.Factory, format string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer body.Close()
+			defer body.Close() //nolint:errcheck // Commit body is read by io.Copy separately; Close only releases the streamed response.
 			if _, err := io.Copy(cmd.OutOrStdout(), body); err != nil {
 				return fmt.Errorf("stream commit %s output: %w", format, err)
 			}
@@ -456,15 +456,15 @@ func commandContext(cmd *cobra.Command) context.Context {
 }
 
 func parseComparison(value string) (string, string, error) {
-	separator := strings.Index(value, "...")
-	if separator < 0 || strings.Contains(value[separator+3:], "...") {
+	before, after, ok := strings.Cut(value, "...")
+	if !ok || strings.Contains(after, "...") {
 		return "", "", errors.New("comparison must use the form <base>...<head>")
 	}
-	base, err := cmdutil.ValidateRef(value[:separator], "base ref")
+	base, err := cmdutil.ValidateRef(before, "base ref")
 	if err != nil {
 		return "", "", err
 	}
-	head, err := cmdutil.ValidateRef(value[separator+3:], "head ref")
+	head, err := cmdutil.ValidateRef(after, "head ref")
 	if err != nil {
 		return "", "", err
 	}

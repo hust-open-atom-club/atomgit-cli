@@ -271,7 +271,7 @@ func TestListReposUserEndpointRequestsTypePersonal(t *testing.T) {
 }
 
 func TestListReposOwnerNotFound(t *testing.T) {
-	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusNotFound, `{}`), nil
 	})
 	client := api.NewClientWithHTTPClient("token", &http.Client{Transport: transport})
@@ -514,7 +514,7 @@ func TestRunCreateSelectsNamespaceAndBody(t *testing.T) {
 				if req.Method != http.MethodPost || req.URL.Path != tt.wantPath {
 					t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 				}
-				var body map[string]interface{}
+				var body map[string]any
 				if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 					t.Fatal(err)
 				}
@@ -563,7 +563,7 @@ func TestRunCreateClonesPublicAndPrivateRepositories(t *testing.T) {
 				if req.Method != http.MethodPost || req.URL.Path != tt.wantPath {
 					t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 				}
-				var body map[string]interface{}
+				var body map[string]any
 				if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 					t.Fatal(err)
 				}
@@ -815,12 +815,12 @@ func TestRepoCommandsReportAuthenticationErrors(t *testing.T) {
 
 func TestRepoViewReturnsCanonicalAuthenticationError(t *testing.T) {
 	factory := repoFactory(repoCommandConfig{
-		tokenErr: errors.New("not authenticated: run `ag auth login`"),
+		tokenErr: errors.New("not authenticated: run `ag-cli auth login`"),
 		user:     "alice",
 	}, nil)
 	cmd := newCmdRepoView(factory)
 	err := cmd.RunE(cmd, []string{"alice/demo"})
-	if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
+	if err == nil || err.Error() != "not authenticated: run `ag-cli auth login`" {
 		t.Fatalf("error = %v", err)
 	}
 }

@@ -49,7 +49,7 @@ func TestRunForkUpdatesAndVerifiesDescription(t *testing.T) {
 			if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/openEuler/kernel/forks" {
 				t.Fatalf("fork request = %s %s", req.Method, req.URL.Path)
 			}
-			var body map[string]interface{}
+			var body map[string]any
 			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 				t.Fatal(err)
 			}
@@ -65,7 +65,7 @@ func TestRunForkUpdatesAndVerifiesDescription(t *testing.T) {
 			if req.Method != http.MethodPatch || req.URL.Path != "/api/v5/repos/alice/kernel-audit" {
 				t.Fatalf("update request = %s %s", req.Method, req.URL.Path)
 			}
-			var body map[string]interface{}
+			var body map[string]any
 			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 				t.Fatal(err)
 			}
@@ -112,7 +112,7 @@ func TestRunForkUpdatesAndVerifiesDescription(t *testing.T) {
 
 func TestSetAndVerifyForkDescriptionDetectsMismatch(t *testing.T) {
 	call := 0
-	httpClient := &http.Client{Transport: forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	httpClient := &http.Client{Transport: forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		call++
 		if call == 1 {
 			return forkResponse(http.StatusOK, `{"description":"wanted"}`), nil
@@ -129,7 +129,7 @@ func TestSetAndVerifyForkDescriptionDetectsMismatch(t *testing.T) {
 
 func TestRunForkWithoutDescriptionOnlyForks(t *testing.T) {
 	requests := 0
-	httpClient := &http.Client{Transport: forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	httpClient := &http.Client{Transport: forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		requests++
 		return forkResponse(http.StatusCreated, `{"name":"kernel"}`), nil
 	})}

@@ -101,7 +101,7 @@ func TestNewCmdBranchRegistersSubcommandsAndHelp(t *testing.T) {
 		t.Fatal(err)
 	}
 	help := out.String()
-	for _, text := range []string{"list", "view", "create", "delete", "protection", "ag branch create owner/repo feature/foo --ref main"} {
+	for _, text := range []string{"list", "view", "create", "delete", "protection", "ag-cli branch create owner/repo feature/foo --ref main"} {
 		if !strings.Contains(help, text) {
 			t.Fatalf("help missing %q:\n%s", text, help)
 		}
@@ -168,7 +168,7 @@ func TestBranchListPaginatesHonorsLimitAndFormatsOutput(t *testing.T) {
 
 func TestBranchListJSONUsesStableFieldsAndLimit(t *testing.T) {
 	requests := 0
-	transport := branchRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := branchRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		requests++
 		return branchResponse(http.StatusOK, `[
 			{"name":"main\u001b[31m","protected":true,"default_branch":true,"can_push":true,"created_at":"2026-08-22T00:00:00Z","creator":{"login":"alice"},"commit":{"sha":"abcdef1234567890"}},

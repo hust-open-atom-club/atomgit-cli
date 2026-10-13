@@ -16,7 +16,7 @@ import (
 // fmt.Errorf("not authenticated: %w", err) yields a doubled
 // "not authenticated: not authenticated: …" message. AuthenticationError
 // instead returns the error unchanged in that case, so the user sees the
-// "run `ag auth login`" hint exactly once.
+// "run `ag-cli auth login`" hint exactly once.
 //
 // It recognises two equivalent shapes:
 //   - the config.ErrNotAuthenticated sentinel (errors.Is), and

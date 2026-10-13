@@ -30,6 +30,7 @@ func TestRegisteredCommands(t *testing.T) {
 		{[]string{"pr", "create"}, 0, 1, "text", "write"},
 		{[]string{"api"}, 1, 1, "raw", "conditional"},
 		{[]string{"pr", "comment", "create"}, 1, 2, "text", "write"},
+		{[]string{"discussion", "edit"}, 1, 2, "text", "write"},
 	} {
 		t.Run(strings.Join(tc.path, "/"), func(t *testing.T) {
 			f := &cmdutil.Factory{
@@ -72,7 +73,7 @@ func TestRegisteredCommands(t *testing.T) {
 					t.Fatalf("argument count metadata drift at %d", n)
 				}
 			}
-			if detail.Path == "ag pr create" {
+			if detail.Path == "ag-cli pr create" {
 				title := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == "title" })
 				if title < 0 || !detail.Flags[title].Required || detail.Flags[title].RequiredSource != "annotation" {
 					t.Fatal("missing manual required-title annotation")
@@ -81,8 +82,20 @@ func TestRegisteredCommands(t *testing.T) {
 					t.Fatal("missing body/body-file constraint")
 				}
 			}
+			if detail.Path == "ag-cli discussion edit" {
+				wantGroups := []commandschema.FlagGroup{
+					{Kind: "atLeastOneRequired", Flags: []string{"body", "body-file", "category", "title"}},
+					{Kind: "mutuallyExclusive", Flags: []string{"body", "body-file"}},
+				}
+				if !reflect.DeepEqual(detail.FlagGroups, wantGroups) {
+					t.Fatalf("edit constraints = %+v", detail.FlagGroups)
+				}
+				if !strings.Contains(strings.Join(detail.Notes, " "), "stdin") {
+					t.Fatal("missing body input metadata")
+				}
+			}
 			global := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == "raw-output" })
-			if global < 0 || !detail.Flags[global].Inherited || detail.Flags[global].DefinedOn != "ag" {
+			if global < 0 || !detail.Flags[global].Inherited || detail.Flags[global].DefinedOn != "ag-cli" {
 				t.Fatal("missing inherited flags")
 			}
 		})
@@ -128,7 +141,7 @@ func TestAllPublicCommandsCanBeDescribed(t *testing.T) {
 			}
 		}
 	}
-	for _, path := range [][]string{{"auth", "git-credential"}, {"missing"}, {"ag", "auth", "git-credential"}, {"ag", "missing"}, {"ag", "ag"}} {
+	for _, path := range [][]string{{"auth", "git-credential"}, {"missing"}, {"ag-cli", "auth", "git-credential"}, {"ag-cli", "missing"}, {"ag-cli", "ag-cli"}} {
 		_, err := commandschema.Describe(cmd, path)
 		if err == nil {
 			t.Fatal(fmt.Sprint("accepted hidden/unknown path ", path))

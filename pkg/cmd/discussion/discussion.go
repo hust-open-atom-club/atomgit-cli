@@ -14,11 +14,11 @@ import (
 func NewCmdDiscussion(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "discussion",
-		Short:        "View repository discussions",
-		Long:         "List AtomGit discussions for a repository",
+		Short:        "Manage repository discussions",
+		Long:         "List, view, and edit AtomGit discussions for a repository.",
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Help()
 		},
 	}
@@ -26,6 +26,7 @@ func NewCmdDiscussion(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdDiscussionList(f))
 	cmd.AddCommand(newCmdDiscussionView(f))
 	cmd.AddCommand(comment.NewCmdComment(f))
+	cmd.AddCommand(newCmdDiscussionEdit(f))
 	cmdutil.AddRepositoryContextHelp(cmd)
 	return cmd
 }

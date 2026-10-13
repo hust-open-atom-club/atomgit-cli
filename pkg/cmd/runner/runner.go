@@ -14,8 +14,8 @@ func NewCmdRunner(f *cmdutil.Factory) *cobra.Command {
 		Use:   "runner",
 		Short: "Inspect AtomGit Actions host runners",
 		Long:  "List repository-specific and shared AtomGit Actions host runners. These commands are read-only.",
-		Example: `  ag runner list owner/repo
-  ag runner shared owner/repo --json`,
+		Example: `  ag-cli runner list owner/repo
+  ag-cli runner shared owner/repo --json`,
 	}
 	cmd.AddCommand(newCmdList(f, false))
 	cmd.AddCommand(newCmdList(f, true))
@@ -26,14 +26,7 @@ func NewCmdRunner(f *cmdutil.Factory) *cobra.Command {
 const maxRunnersPerPage = 100
 
 func newActionsClient(f *cmdutil.Factory, token string) (*actions.Client, error) {
-	if f == nil || f.HttpClient == nil {
-		return actions.NewClient(token), nil
-	}
-	httpClient, err := f.HttpClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
-	}
-	return actions.NewClientWithHTTPClient(token, httpClient), nil
+	return f.NewActionsClient(token)
 }
 
 func requireToken(f *cmdutil.Factory) (string, error) {

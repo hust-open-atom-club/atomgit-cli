@@ -46,8 +46,8 @@ func newCmdIssuePRS(f *cmdutil.Factory) *cobra.Command {
 
 Concurrent updates to linked pull requests are not reflected until the next
 request.`,
-		Example: `  ag issue prs owner/repo 42
-  ag issue prs owner/repo 42 --json`,
+		Example: `  ag-cli issue prs owner/repo 42
+  ag-cli issue prs owner/repo 42 --json`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
@@ -113,10 +113,10 @@ With neither --add nor --remove, the command lists current related branch names.
 Concurrent branch-name updates from other clients can be overwritten by this
 command because the AtomGit API uses whole-list replacement. Review the current
 list before mutating branches that other tools may also manage.`,
-		Example: `  ag issue branches owner/repo 42
-  ag issue branches owner/repo 42 --json
-  ag issue branches owner/repo 42 --add feature/x
-  ag issue branches owner/repo 42 --remove main --yes`,
+		Example: `  ag-cli issue branches owner/repo 42
+  ag-cli issue branches owner/repo 42 --json
+  ag-cli issue branches owner/repo 42 --add feature/x
+  ag-cli issue branches owner/repo 42 --remove main --yes`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)

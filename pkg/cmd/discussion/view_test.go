@@ -121,7 +121,7 @@ func TestNewCmdDiscussionViewRegistersFlagsAndHelp(t *testing.T) {
 	if err := cmd.Help(); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"view [<owner>/<repo>] <number>", "--comments", "--json", "ag discussion view owner/repo 1"} {
+	for _, want := range []string{"view [<owner>/<repo>] <number>", "--comments", "--json", "ag-cli discussion view owner/repo 1"} {
 		if !strings.Contains(help.String(), want) {
 			t.Errorf("help missing %q:\n%s", want, help.String())
 		}
@@ -182,10 +182,10 @@ func TestDiscussionViewCommentsAndNestedReplies(t *testing.T) {
 	var replyPath string
 	factory := discussionFactory(discussionTestConfig{token: "token"}, func(req *http.Request) (*http.Response, error) {
 		requests++
-		switch {
-		case req.URL.Path == "/api/v5/repos/owner/repo/discuss/7":
+		switch req.URL.Path {
+		case "/api/v5/repos/owner/repo/discuss/7":
 			return discussionResponse(http.StatusOK, viewDetailFixture), nil
-		case req.URL.Path == "/api/v5/repos/owner/repo/discuss/7/comment":
+		case "/api/v5/repos/owner/repo/discuss/7/comment":
 			return discussionResponse(http.StatusOK, viewCommentsFixture), nil
 		default:
 			replyPath = req.URL.Path
@@ -319,10 +319,10 @@ func TestDiscussionViewPaginatesCommentsAndReplies(t *testing.T) {
 
 func TestDiscussionViewJSONIncludesComments(t *testing.T) {
 	factory := discussionFactory(discussionTestConfig{token: "token"}, func(req *http.Request) (*http.Response, error) {
-		switch {
-		case req.URL.Path == "/api/v5/repos/owner/repo/discuss/7":
+		switch req.URL.Path {
+		case "/api/v5/repos/owner/repo/discuss/7":
 			return discussionResponse(http.StatusOK, viewDetailFixture), nil
-		case req.URL.Path == "/api/v5/repos/owner/repo/discuss/7/comment":
+		case "/api/v5/repos/owner/repo/discuss/7/comment":
 			return discussionResponse(http.StatusOK, viewCommentsFixture), nil
 		default:
 			return discussionResponse(http.StatusOK, viewRepliesFixture), nil
@@ -469,7 +469,7 @@ func TestDiscussionViewNon2xxErrors(t *testing.T) {
 		{
 			name:  "comment failure",
 			flags: map[string]string{"comments": "true"},
-			handler: func(req *http.Request, calls int) (*http.Response, error) {
+			handler: func(_ *http.Request, calls int) (*http.Response, error) {
 				if calls == 1 {
 					return discussionResponse(http.StatusOK, viewDetailFixture), nil
 				}
@@ -480,7 +480,7 @@ func TestDiscussionViewNon2xxErrors(t *testing.T) {
 		{
 			name:  "reply failure",
 			flags: map[string]string{"comments": "true"},
-			handler: func(req *http.Request, calls int) (*http.Response, error) {
+			handler: func(_ *http.Request, calls int) (*http.Response, error) {
 				switch calls {
 				case 1:
 					return discussionResponse(http.StatusOK, viewDetailFixture), nil

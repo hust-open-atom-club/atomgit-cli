@@ -26,13 +26,13 @@ func (*recordingConfig) GetHost() string          { return "atomgit.com" }
 type notificationAuthErrorConfig struct{}
 
 func (notificationAuthErrorConfig) GetToken() (string, error) {
-	return "", errors.New("not authenticated: run `ag auth login`")
+	return "", errors.New("not authenticated: run `ag-cli auth login`")
 }
 func (notificationAuthErrorConfig) GetUser() (string, error) { return "alice", nil }
 func (notificationAuthErrorConfig) GetHost() string          { return "atomgit.com" }
 
 func TestNotificationCommandsPreserveCanonicalAuthenticationError(t *testing.T) {
-	const want = "not authenticated: run `ag auth login`"
+	const want = "not authenticated: run `ag-cli auth login`"
 
 	list := newCmdNotificationList(&cmdutil.Factory{Config: notificationAuthErrorConfig{}})
 	if err := list.RunE(list, []string{"owner/repo"}); err == nil || err.Error() != want {

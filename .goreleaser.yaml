@@ -1,12 +1,12 @@
 version: 2
 
-project_name: ag
+project_name: ag-cli
 dist: dist/.goreleaser
 
 builds:
-  - id: ag
-    main: ./cmd/ag
-    binary: ag
+  - id: ag-cli
+    main: ./cmd/ag-cli
+    binary: ag-cli
     env:
       - CGO_ENABLED=0
     goos:
@@ -32,9 +32,9 @@ builds:
       - -X atomgit.com/hust-open-atom-club/atomgit-cli/internal/version.BuildDate={{ .Env.AG_BUILD_DATE }}
 
 archives:
-  - id: ag
+  - id: ag-cli
     ids:
-      - ag
+      - ag-cli
     formats:
       - tar.gz
     format_overrides:
@@ -48,6 +48,15 @@ archives:
       mode: 0755
       mtime: "{{ .Env.AG_BUILD_DATE }}"
     files:
+      # Unmatched glob on Windows deliberately omits Unix manuals.
+      - src: '{{ if eq .Os "windows" }}dist/man/windows/*.1{{ else }}dist/man/man1/*.1{{ end }}'
+        dst: share/man/man1
+        strip_parent: true
+        info:
+          owner: root
+          group: root
+          mode: 0644
+          mtime: "{{ .Env.AG_BUILD_DATE }}"
       - src: LICENSE
         info:
           owner: root

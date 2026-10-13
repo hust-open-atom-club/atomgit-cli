@@ -3,6 +3,7 @@ package milestone
 import (
 	"fmt"
 	"io"
+	"maps"
 	"net/url"
 	"strconv"
 	"strings"
@@ -51,7 +52,7 @@ func newCmdMilestoneList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
 		Short:   "List repository milestones",
-		Example: "  ag milestone list owner/repo --state all --limit 50",
+		Example: "  ag-cli milestone list owner/repo --state all --limit 50",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := validateMilestoneListOptions(opts.State, opts.Sort, opts.Direction, opts.Limit); err != nil {
@@ -355,9 +356,7 @@ func milestoneUpdateBody(client *api.Client, repository cmdutil.Repository, numb
 		return nil, fmt.Errorf("milestone #%s is missing API-required title or due date", number)
 	}
 	body := map[string]string{"title": current.Title, "due_on": current.DueOn}
-	for key, value := range changes {
-		body[key] = value
-	}
+	maps.Copy(body, changes)
 	return body, nil
 }
 

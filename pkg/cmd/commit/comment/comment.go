@@ -1,4 +1,4 @@
-// Package comment provides the ag commit comment subcommands for listing,
+// Package comment provides the ag-cli commit comment subcommands for listing,
 // viewing, creating, editing, and deleting comments on repository commits.
 package comment
 

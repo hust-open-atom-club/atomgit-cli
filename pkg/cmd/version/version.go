@@ -22,9 +22,9 @@ func formatText(info version.Info) string {
 		details = append(details, "built: "+buildDate)
 	}
 	if len(details) == 0 {
-		return fmt.Sprintf("ag version %s\n", info.Version)
+		return fmt.Sprintf("ag-cli version %s\n", info.Version)
 	}
-	return fmt.Sprintf("ag version %s (%s)\n", info.Version, strings.Join(details, ", "))
+	return fmt.Sprintf("ag-cli version %s (%s)\n", info.Version, strings.Join(details, ", "))
 }
 
 func knownMetadata(value string) string {
@@ -44,7 +44,7 @@ func NewCmdVersion() *cobra.Command {
 		Use:   "version",
 		Short: "Show version information",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			if opts.JSON {
 				info := version.Get()
 				enc := json.NewEncoder(cmd.OutOrStdout())

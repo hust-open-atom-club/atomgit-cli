@@ -70,7 +70,7 @@ func TestIssueCollaborationCreate(t *testing.T) {
 func TestIssueCollaborationCreateAccepts200And201(t *testing.T) {
 	for _, status := range []int{http.StatusOK, http.StatusCreated} {
 		t.Run(fmt.Sprintf("%d", status), func(t *testing.T) {
-			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(status)
 				_, _ = io.WriteString(w, `{"number":"42","html_url":"https://atomgit.com/alice/demo/issues/42","title":"Test","state":"open"}`)
 			})
@@ -87,7 +87,7 @@ func TestIssueCollaborationCreateAccepts200And201(t *testing.T) {
 }
 
 func TestIssueCollaborationCreateRejects404(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = io.WriteString(w, `{"message":"repo not found"}`)
 	})
@@ -109,7 +109,7 @@ func TestIssueCollaborationEditAssignee(t *testing.T) {
 	}{
 		{name: "set assignee", assignee: "bob", clearAssignee: false, wantAssignee: "bob"},
 		{name: "clear assignee", assignee: "", clearAssignee: true, wantAssignee: ""},
-		{name: "set assignee with body", body: stringPointer("updated body"), assignee: "bob", wantAssignee: "bob", wantBody: "updated body"},
+		{name: "set assignee with body", body: new("updated body"), assignee: "bob", wantAssignee: "bob", wantBody: "updated body"},
 	}
 
 	for _, tt := range tests {
@@ -149,7 +149,7 @@ func TestIssueCollaborationEditAssignee(t *testing.T) {
 }
 
 func TestIssueCollaborationEditRejectsNon200(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = io.WriteString(w, `{"message":"bad"}`)
 	})
@@ -158,10 +158,6 @@ func TestIssueCollaborationEditRejectsNon200(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "API error") {
 		t.Fatalf("error = %v, want API error", err)
 	}
-}
-
-func stringPointer(value string) *string {
-	return &value
 }
 
 func TestIssueCollaborationLinkedPRs(t *testing.T) {
@@ -216,7 +212,7 @@ func TestIssueCollaborationLinkedPRs(t *testing.T) {
 }
 
 func TestIssueCollaborationLinkedPRsRejectsNon200(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 
@@ -325,7 +321,7 @@ func TestIssueCollaborationRelatedBranchesPutEncodesEmptyArray(t *testing.T) {
 }
 
 func TestIssueCollaborationRelatedBranchesPutRejectsNon200(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusConflict)
 		_, _ = io.WriteString(w, `{"message":"conflict"}`)
 	})
@@ -353,7 +349,7 @@ func TestIssueCollaborationEscapedIdentifiers(t *testing.T) {
 }
 
 func TestIssueCollaborationUncertainMutationError(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadGateway)
 	})
 
@@ -367,7 +363,7 @@ func TestIssueCollaborationUncertainMutationError(t *testing.T) {
 }
 
 func TestIssueCollaborationCreateRejectsWrongStatus(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 	})
 
@@ -381,7 +377,7 @@ func TestIssueCollaborationCreateRejectsWrongStatus(t *testing.T) {
 }
 
 func TestIssueCollaborationEditErrorWrapping(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		_, _ = io.WriteString(w, `{"message":"denied"}`)
 	})
@@ -396,7 +392,7 @@ func TestIssueCollaborationEditErrorWrapping(t *testing.T) {
 }
 
 func TestIssueCollaborationListLinkedPRsErrorWrapping(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 
@@ -410,7 +406,7 @@ func TestIssueCollaborationListLinkedPRsErrorWrapping(t *testing.T) {
 }
 
 func TestIssueCollaborationListBranchesErrorWrapping(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 

@@ -25,9 +25,9 @@ func newCmdReleaseEdit(f *cmdutil.Factory) *cobra.Command {
 		Use:   "edit [<owner>/<repo>] <tag>",
 		Short: "Edit a release",
 		Long:  `Edit an existing release identified by its tag.`,
-		Example: `  ag release edit owner/repo v1.0.0 --name "First Release"
-  ag release edit owner/repo v1.0.0 --latest --body-file notes.md
-  ag release edit owner/repo v1.0.0-rc --prerelease`,
+		Example: `  ag-cli release edit owner/repo v1.0.0 --name "First Release"
+  ag-cli release edit owner/repo v1.0.0 --latest --body-file notes.md
+  ag-cli release edit owner/repo v1.0.0-rc --prerelease`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runReleaseEdit(cmd, f, opts, args)

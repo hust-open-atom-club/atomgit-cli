@@ -24,6 +24,7 @@ func TestAPICommandEndToEnd(t *testing.T) {
 		want string
 	}{
 		{name: "basic GET", args: []string{"/user"}, want: `{"login":"alice"}`},
+		{name: "explicitly disabled dry run", args: []string{"/user", "--dry-run=false"}, want: `{"login":"alice"}`},
 		{name: "GET fields", args: []string{"/items", "-f", "q=中文 space", "-f", "empty="}, want: "get-fields"},
 		{name: "POST fields", args: []string{"/items", "-X", "POST", "-f", "name=demo"}, want: "POST"},
 		{name: "PATCH file", args: []string{"/items/1", "-X", "PATCH", "--input", inputFile}, want: "PATCH"},

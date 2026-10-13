@@ -271,8 +271,8 @@ func newCmdPRReactions(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reactions [<owner>/<repo>] <number>",
 		Short: "List reactions on a pull request",
-		Example: `  ag pr reactions owner/repo 42
-  ag pr reactions owner/repo 42 --limit 50 --json`,
+		Example: `  ag-cli pr reactions owner/repo 42
+  ag-cli pr reactions owner/repo 42 --limit 50 --json`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.limit <= 0 {
@@ -363,8 +363,8 @@ func newCmdPRActivity(f *cmdutil.Factory) *cobra.Command {
 
 The operate_logs endpoint supports pagination; --limit caps how many entries
 are fetched across pages.`,
-		Example: `  ag pr activity owner/repo 42
-  ag pr activity owner/repo 42 --limit 50 --json`,
+		Example: `  ag-cli pr activity owner/repo 42
+  ag-cli pr activity owner/repo 42 --limit 50 --json`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.limit <= 0 {
@@ -454,8 +454,8 @@ func newCmdPRHistory(f *cmdutil.Factory) *cobra.Command {
 
 The modify_history endpoint does not support pagination: the full response is
 fetched and then truncated to --limit.`,
-		Example: `  ag pr history owner/repo 42
-  ag pr history owner/repo 42 --limit 50 --json`,
+		Example: `  ag-cli pr history owner/repo 42
+  ag-cli pr history owner/repo 42 --limit 50 --json`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.limit <= 0 {

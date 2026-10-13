@@ -39,8 +39,7 @@ func NewSyncOpener() Opener {
 			return err
 		}
 		if err := cmd.Run(); err != nil {
-			var exitErr *exec.ExitError
-			if errors.As(err, &exitErr) {
+			if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 				return fmt.Errorf("browser exited with error: %w", exitErr)
 			}
 			return fmt.Errorf("browser opener: %w", err)

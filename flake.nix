@@ -27,6 +27,7 @@
         {
           inherit stable latest;
           ag = stable;
+          ag-cli = stable;
           default = stable;
         });
 

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,7 +35,7 @@ func newTestGitClient(t *testing.T, results map[string]mockResult) (*git.Client,
 	var calls []gitCall
 	var mu sync.Mutex
 
-	fn := func(ctx context.Context, name string, args ...string) *exec.Cmd {
+	fn := func(_ context.Context, name string, args ...string) *exec.Cmd {
 		mu.Lock()
 		defer mu.Unlock()
 		allArgs := append([]string{name}, args...)
@@ -88,7 +89,7 @@ func newTestGitClient(t *testing.T, results map[string]mockResult) (*git.Client,
 }
 
 // TestCheckoutGitHelper is the sentinel test for the re-execution mock pattern.
-func TestCheckoutGitHelper(t *testing.T) {
+func TestCheckoutGitHelper(*testing.T) {
 	if os.Getenv("AG_CHECKOUT_GIT_HELPER") != "1" {
 		return
 	}
@@ -130,7 +131,7 @@ func TestRunCheckout_SameRepoPR(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -177,7 +178,7 @@ func TestRunCheckout_SameRepoPR_NoMatchingRemote_Error(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -220,7 +221,7 @@ func TestRunCheckout_ForkPR(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, forkPR()), nil
 		}),
 	})
@@ -282,7 +283,7 @@ func TestRunCheckout_ForkPR_ExistingRemote(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, forkPR()), nil
 		}),
 	})
@@ -320,7 +321,7 @@ func TestRunCheckout_DirtyTree(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -352,7 +353,7 @@ func TestRunCheckout_DirtyTreeForce(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -389,7 +390,7 @@ func TestRunCheckout_BranchExistsSameSHA(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -434,7 +435,7 @@ func TestRunCheckout_BranchExistsDifferentSHA(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -466,7 +467,7 @@ func TestRunCheckout_BranchExistsDifferentSHA_Force(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -512,7 +513,7 @@ func TestRunCheckout_CustomBranch(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -539,7 +540,7 @@ func TestRunCheckout_PRFetchError(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, nil)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(404, `{"message":"not found"}`), nil
 		}),
 	})
@@ -568,7 +569,7 @@ func TestRunCheckout_FetchError(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -600,7 +601,7 @@ func TestRunCheckout_Output(t *testing.T) {
 	gitClient, _ := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -628,7 +629,7 @@ func TestRunCheckout_InvalidBranchName(t *testing.T) {
 	gitClient, _ := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -662,7 +663,7 @@ func TestRunCheckout_DeletedFork(t *testing.T) {
 	gitClient, _ := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, deletedForkPR()), nil
 		}),
 	})
@@ -687,7 +688,7 @@ func TestRunCheckout_Detach(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -744,7 +745,7 @@ func TestRunCheckout_RecurseSubmodules(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -787,7 +788,7 @@ func TestRunCheckout_ForceFetch(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -837,7 +838,7 @@ func TestRunCheckout_DefaultBranchCollision(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, body), nil
 		}),
 	})
@@ -877,7 +878,7 @@ func TestRunCheckout_Detach_WhenBranchExists(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -920,7 +921,7 @@ func TestRunCheckout_Force_ReuseBranch(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -936,11 +937,8 @@ func TestRunCheckout_Force_ReuseBranch(t *testing.T) {
 	foundForce := false
 	for _, call := range *calls {
 		if call.Args[1] == "checkout" {
-			for _, arg := range call.Args[2:] {
-				if arg == "--force" {
-					foundForce = true
-					break
-				}
+			if slices.Contains(call.Args[2:], "--force") {
+				foundForce = true
 			}
 		}
 	}
@@ -967,7 +965,7 @@ func TestRunCheckout_RecurseSubmodules_WhenBranchExists(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -1033,7 +1031,7 @@ func TestRunCheckout_RemoteCleanup_FetchFailure(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, forkPR()), nil
 		}),
 	})
@@ -1076,7 +1074,7 @@ func TestRunCheckout_RemoteCleanup_Success(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, forkPR()), nil
 		}),
 	})
@@ -1115,7 +1113,7 @@ func TestRunCheckout_RemoteNameConflict(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, forkPR()), nil
 		}),
 	})
@@ -1155,7 +1153,7 @@ func TestRunCheckout_ForkPR_UnrelatedRepo_Rejected(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, forkPR()), nil
 		}),
 	})
@@ -1203,7 +1201,7 @@ func TestRunCheckout_ForkPR_CheckoutFailure_KeepsRemote(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, forkPR()), nil
 		}),
 	})
@@ -1242,7 +1240,7 @@ func TestRunCheckout_ForkPR_SubmoduleFailure_KeepsRemote(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, forkPR()), nil
 		}),
 	})
@@ -1312,7 +1310,7 @@ func TestRunCheckout_UpstreamIdentifierValidation(t *testing.T) {
 
 			body := tc.prJSON
 			apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-				Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 					return prResponse(200, body), nil
 				}),
 			})
@@ -1356,7 +1354,7 @@ func TestRunCheckout_DetachForce(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil
 		}),
 	})
@@ -1405,7 +1403,7 @@ func TestRunCheckout_ExplicitBranchNotRenamed(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, body), nil
 		}),
 	})
@@ -1450,7 +1448,7 @@ func TestRunCheckout_SHAEqualFold(t *testing.T) {
 	gitClient, calls := newTestGitClient(t, results)
 
 	apiClient := api.NewClientWithHTTPClient("token", &http.Client{
-		Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return prResponse(200, sameRepoPR()), nil // SHA is lowercase
 		}),
 	})

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -34,10 +35,8 @@ func validateChoice(name, value string, choices []string) error {
 	if value == "" {
 		return nil
 	}
-	for _, choice := range choices {
-		if value == choice {
-			return nil
-		}
+	if slices.Contains(choices, value) {
+		return nil
 	}
 	return fmt.Errorf("invalid %s: %q (must be one of %s)", name, value, strings.Join(choices, ", "))
 }
@@ -49,7 +48,7 @@ func NewCmdSearch(f *cmdutil.Factory) *cobra.Command {
 		Long:         "Search AtomGit repositories, issues, and users. Pull request search is not supported.",
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Help()
 		},
 	}

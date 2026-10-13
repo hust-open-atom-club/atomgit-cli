@@ -69,7 +69,7 @@ func TestUploadReleaseAssetRejectsNilBody(t *testing.T) {
 
 func TestUploadReleaseAssetRejectsNilContext(t *testing.T) {
 	upload := ReleaseUploadURL{URL: "https://store.example.com/upload"}
-	err := UploadReleaseAsset(nil, newUploadClient(t, nil), upload, bytes.NewReader([]byte("payload")))
+	err := UploadReleaseAsset(nil, newUploadClient(t, nil), upload, bytes.NewReader([]byte("payload"))) //nolint:staticcheck // nil context is intentional: this test verifies input validation.
 	if err == nil || !strings.Contains(err.Error(), "context") {
 		t.Fatalf("error = %v, want context error", err)
 	}
@@ -100,9 +100,9 @@ func TestUploadReleaseAssetRejectsUnsafeTargetBeforeReadingBody(t *testing.T) {
 		{name: "missing host", url: "https:///upload"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			var transportCalls int32
+			var transportCalls atomic.Int32
 			transport := funcRoundTrip(func(*http.Request) (*http.Response, error) {
-				atomic.AddInt32(&transportCalls, 1)
+				transportCalls.Add(1)
 				return nil, errors.New("unexpected transport call")
 			})
 			body := &untouchedReadSeeker{}
@@ -116,7 +116,7 @@ func TestUploadReleaseAssetRejectsUnsafeTargetBeforeReadingBody(t *testing.T) {
 			if err == nil || !strings.Contains(err.Error(), "HTTPS") {
 				t.Fatalf("error = %v, want HTTPS validation error", err)
 			}
-			if got := atomic.LoadInt32(&transportCalls); got != 0 {
+			if got := transportCalls.Load(); got != 0 {
 				t.Fatalf("transport calls = %d, want 0", got)
 			}
 			if body.readCalls != 0 || body.seekCalls != 0 {
@@ -127,9 +127,9 @@ func TestUploadReleaseAssetRejectsUnsafeTargetBeforeReadingBody(t *testing.T) {
 }
 
 func TestUploadReleaseAssetDoesNotRetryAmbiguousZeroByteUpload(t *testing.T) {
-	var calls int32
+	var calls atomic.Int32
 	transport := funcRoundTrip(func(req *http.Request) (*http.Response, error) {
-		atomic.AddInt32(&calls, 1)
+		calls.Add(1)
 		_ = req.Body.Close()
 		return nil, errors.New("response lost")
 	})
@@ -144,15 +144,15 @@ func TestUploadReleaseAssetDoesNotRetryAmbiguousZeroByteUpload(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "remote state may be unknown") {
 		t.Fatalf("error = %v, want ambiguous remote-state error", err)
 	}
-	if got := atomic.LoadInt32(&calls); got != 1 {
+	if got := calls.Load(); got != 1 {
 		t.Fatalf("transport calls = %d, want 1", got)
 	}
 }
 
 func TestUploadReleaseAssetStopsWhenContextExpires(t *testing.T) {
-	var calls int32
+	var calls atomic.Int32
 	transport := funcRoundTrip(func(req *http.Request) (*http.Response, error) {
-		atomic.AddInt32(&calls, 1)
+		calls.Add(1)
 		<-req.Context().Done()
 		_ = req.Body.Close()
 		return nil, req.Context().Err()
@@ -170,7 +170,7 @@ func TestUploadReleaseAssetStopsWhenContextExpires(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "canceled") {
 		t.Fatalf("error = %v, want cancellation error", err)
 	}
-	if got := atomic.LoadInt32(&calls); got != 1 {
+	if got := calls.Load(); got != 1 {
 		t.Fatalf("transport calls = %d, want 1", got)
 	}
 }
@@ -272,9 +272,9 @@ func TestUploadReleaseAssetRejectsRedirects(t *testing.T) {
 		http.StatusPermanentRedirect,
 	} {
 		t.Run(fmt.Sprintf("%d_%s", statusCode, http.StatusText(statusCode)), func(t *testing.T) {
-			var targetCalls int32
-			target := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				atomic.AddInt32(&targetCalls, 1)
+			var targetCalls atomic.Int32
+			target := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				targetCalls.Add(1)
 				w.WriteHeader(http.StatusOK)
 			}))
 			defer target.Close()
@@ -300,7 +300,7 @@ func TestUploadReleaseAssetRejectsRedirects(t *testing.T) {
 			if !strings.Contains(err.Error(), fmt.Sprintf("%d", statusCode)) {
 				t.Fatalf("error %q does not contain status %d", err.Error(), statusCode)
 			}
-			if got := atomic.LoadInt32(&targetCalls); got != 0 {
+			if got := targetCalls.Load(); got != 0 {
 				t.Fatalf("redirect target calls = %d, want 0", got)
 			}
 		})
@@ -314,10 +314,10 @@ func TestUploadReleaseAssetRetriesOneNetworkError(t *testing.T) {
 	}
 	wantBody := []byte("retry-payload")
 
-	var calls int32
+	var calls atomic.Int32
 	var body []byte
 	transport := funcRoundTrip(func(req *http.Request) (*http.Response, error) {
-		n := atomic.AddInt32(&calls, 1)
+		n := calls.Add(1)
 		if n == 1 {
 			_ = req.Body.Close()
 			return nil, errors.New("connection reset by peer")
@@ -337,7 +337,7 @@ func TestUploadReleaseAssetRetriesOneNetworkError(t *testing.T) {
 	if err := UploadReleaseAsset(context.Background(), client, upload, bytes.NewReader(wantBody)); err != nil {
 		t.Fatalf("UploadReleaseAsset: %v", err)
 	}
-	if got := atomic.LoadInt32(&calls); got != 2 {
+	if got := calls.Load(); got != 2 {
 		t.Fatalf("transport calls = %d, want 2", got)
 	}
 	if !bytes.Equal(body, wantBody) {
@@ -349,10 +349,10 @@ func TestUploadReleaseAssetWaitsForRequestBodyCloseBeforeRetry(t *testing.T) {
 	upload := ReleaseUploadURL{URL: "https://store.example.com/upload"}
 	wantBody := []byte("async-close-retry-payload")
 
-	var calls int32
+	var calls atomic.Int32
 	firstBodyClosed := make(chan struct{})
 	transport := funcRoundTrip(func(req *http.Request) (*http.Response, error) {
-		switch n := atomic.AddInt32(&calls, 1); n {
+		switch n := calls.Add(1); n {
 		case 1:
 			go func(body io.ReadCloser) {
 				time.Sleep(300 * time.Millisecond)
@@ -386,7 +386,7 @@ func TestUploadReleaseAssetWaitsForRequestBodyCloseBeforeRetry(t *testing.T) {
 	if err := UploadReleaseAsset(context.Background(), client, upload, bytes.NewReader(wantBody)); err != nil {
 		t.Fatalf("UploadReleaseAsset: %v", err)
 	}
-	if got := atomic.LoadInt32(&calls); got != 2 {
+	if got := calls.Load(); got != 2 {
 		t.Fatalf("transport calls = %d, want 2", got)
 	}
 }
@@ -404,17 +404,17 @@ func TestUploadReleaseAssetRetriesRealFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck // Test opens the upload source read-only; Close only releases test resources.
 
 	upload := ReleaseUploadURL{
 		URL:     "https://store.example.com/upload?policy=abc",
 		Headers: map[string]string{"Content-Type": "application/octet-stream"},
 	}
 
-	var calls int32
+	var calls atomic.Int32
 	var body []byte
 	transport := funcRoundTrip(func(req *http.Request) (*http.Response, error) {
-		n := atomic.AddInt32(&calls, 1)
+		n := calls.Add(1)
 		if n == 1 {
 			_ = req.Body.Close()
 			return nil, errors.New("connection reset by peer")
@@ -434,7 +434,7 @@ func TestUploadReleaseAssetRetriesRealFile(t *testing.T) {
 	if err := UploadReleaseAsset(context.Background(), client, upload, file); err != nil {
 		t.Fatalf("UploadReleaseAsset: %v", err)
 	}
-	if got := atomic.LoadInt32(&calls); got != 2 {
+	if got := calls.Load(); got != 2 {
 		t.Fatalf("transport calls = %d, want 2", got)
 	}
 	if !bytes.Equal(body, wantBody) {
@@ -449,9 +449,9 @@ func TestUploadReleaseAssetDoesNotRetryHTTPError(t *testing.T) {
 	}
 	wantBody := []byte("http-error-payload")
 
-	var calls int32
+	var calls atomic.Int32
 	transport := funcRoundTrip(func(req *http.Request) (*http.Response, error) {
-		atomic.AddInt32(&calls, 1)
+		calls.Add(1)
 		if req.Body != nil {
 			_, _ = io.ReadAll(req.Body)
 			_ = req.Body.Close()
@@ -470,7 +470,7 @@ func TestUploadReleaseAssetDoesNotRetryHTTPError(t *testing.T) {
 	if !strings.Contains(err.Error(), "500") {
 		t.Fatalf("error %q does not contain status 500", err.Error())
 	}
-	if got := atomic.LoadInt32(&calls); got != 1 {
+	if got := calls.Load(); got != 1 {
 		t.Fatalf("transport calls = %d, want 1 (no HTTP retry)", got)
 	}
 }
@@ -530,9 +530,9 @@ func TestDeleteReleaseAttachmentSanitizesHTTPError(t *testing.T) {
 }
 
 func TestDeleteReleaseAttachmentDoesNotRetryTransportError(t *testing.T) {
-	var calls int32
-	client := NewClientWithHTTPClient("token", &http.Client{Transport: funcRoundTrip(func(req *http.Request) (*http.Response, error) {
-		atomic.AddInt32(&calls, 1)
+	var calls atomic.Int32
+	client := NewClientWithHTTPClient("token", &http.Client{Transport: funcRoundTrip(func(*http.Request) (*http.Response, error) {
+		calls.Add(1)
 		return nil, errors.New("response lost")
 	})})
 
@@ -540,13 +540,13 @@ func TestDeleteReleaseAttachmentDoesNotRetryTransportError(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "response lost") {
 		t.Fatalf("error = %v, want response-lost context", err)
 	}
-	if got := atomic.LoadInt32(&calls); got != 1 {
+	if got := calls.Load(); got != 1 {
 		t.Fatalf("transport calls = %d, want 1", got)
 	}
 }
 
 func TestDeleteReleaseAttachmentRejectsNonPositiveID(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(_ http.ResponseWriter, r *http.Request) {
 		t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
 	})
 	for _, id := range []int64{0, -1, -42} {
@@ -581,7 +581,7 @@ func TestDownloadReleaseAttachmentSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DownloadReleaseAttachment: %v", err)
 	}
-	defer rc.Close()
+	defer rc.Close() //nolint:errcheck // Test reads the streamed attachment separately; Close only releases test resources.
 
 	got, err := io.ReadAll(rc)
 	if err != nil {
@@ -603,7 +603,7 @@ func TestDownloadReleaseAttachmentSuccess(t *testing.T) {
 }
 
 func TestDownloadReleaseAttachmentDoesNotUseMetadataTimeout(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("first-"))
 		if flusher, ok := w.(http.Flusher); ok {
 			flusher.Flush()
@@ -621,7 +621,7 @@ func TestDownloadReleaseAttachmentDoesNotUseMetadataTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DownloadReleaseAttachment: %v", err)
 	}
-	defer body.Close()
+	defer body.Close() //nolint:errcheck // Test reads the streamed attachment separately; Close only releases test resources.
 	got, err := io.ReadAll(body)
 	if err != nil {
 		t.Fatalf("read download: %v", err)
@@ -635,7 +635,7 @@ func TestDownloadReleaseAttachmentRejectsNonOKAndClosesBody(t *testing.T) {
 	for _, status := range []int{http.StatusNoContent, http.StatusPartialContent, http.StatusNotFound} {
 		t.Run(fmt.Sprintf("status_%d", status), func(t *testing.T) {
 			tracker := &closeTracker{rc: io.NopCloser(strings.NewReader("response body"))}
-			transport := funcRoundTrip(func(req *http.Request) (*http.Response, error) {
+			transport := funcRoundTrip(func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: status,
 					Status:     fmt.Sprintf("%d %s", status, http.StatusText(status)),
@@ -668,7 +668,7 @@ func TestDownloadReleaseAttachmentSanitizesHTTPError(t *testing.T) {
 
 	body, err := DownloadReleaseAttachment(context.Background(), client, "owner", "repo", "v1.0", "asset.bin")
 	if body != nil {
-		body.Close()
+		body.Close() //nolint:errcheck // Unexpected response body is test cleanup; the assertion below reports the failure.
 		t.Fatalf("body = %v, want nil", body)
 	}
 	assertSanitizedReleaseError(t, err, secret)
@@ -698,9 +698,9 @@ func assertSanitizedReleaseError(t *testing.T, err error, secrets ...string) {
 }
 
 func TestDownloadReleaseAttachmentStopsWhenContextExpires(t *testing.T) {
-	var calls int32
+	var calls atomic.Int32
 	transport := funcRoundTrip(func(req *http.Request) (*http.Response, error) {
-		atomic.AddInt32(&calls, 1)
+		calls.Add(1)
 		<-req.Context().Done()
 		return nil, req.Context().Err()
 	})
@@ -715,7 +715,7 @@ func TestDownloadReleaseAttachmentStopsWhenContextExpires(t *testing.T) {
 	if body != nil {
 		t.Fatalf("body = %v, want nil", body)
 	}
-	if got := atomic.LoadInt32(&calls); got != 1 {
+	if got := calls.Load(); got != 1 {
 		t.Fatalf("transport calls = %d, want 1", got)
 	}
 }
@@ -727,10 +727,10 @@ func TestUploadReleaseAssetExhaustsRetryOnRepeatedInterruption(t *testing.T) {
 	}
 	wantBody := []byte("repeated-interruption-payload")
 
-	var calls int32
+	var calls atomic.Int32
 	var body []byte
 	transport := funcRoundTrip(func(req *http.Request) (*http.Response, error) {
-		n := atomic.AddInt32(&calls, 1)
+		n := calls.Add(1)
 		if n == 1 {
 			_ = req.Body.Close()
 			return nil, errors.New("first interruption: connection reset by peer")
@@ -752,7 +752,7 @@ func TestUploadReleaseAssetExhaustsRetryOnRepeatedInterruption(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error after exhausting retry, got nil")
 	}
-	if got := atomic.LoadInt32(&calls); got != 2 {
+	if got := calls.Load(); got != 2 {
 		t.Fatalf("transport calls = %d, want 2", got)
 	}
 	if !bytes.Equal(body, wantBody) {

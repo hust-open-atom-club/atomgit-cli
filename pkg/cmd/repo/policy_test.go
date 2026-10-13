@@ -184,7 +184,7 @@ func TestPolicyInvalidInputDoesNotRequest(t *testing.T) {
 		{"view", "team/demo", "extra"}, {"edit", "team/demo", "extra", "--section", "permission", "--mode", "1"},
 	} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
-			f := policyFactory(t, func(r *http.Request) (int, string) { t.Fatal("unexpected request"); return 500, "" })
+			f := policyFactory(t, func(*http.Request) (int, string) { t.Fatal("unexpected request"); return 500, "" })
 			if _, _, err := executePolicy(t, f, "", args...); err == nil {
 				t.Fatal("expected validation error")
 			}
@@ -204,7 +204,7 @@ func TestPolicyErrors(t *testing.T) {
 				{"empty", 200, ""}, {"null", 200, "null"}, {"array", 200, "[]"}, {"missing fields", 200, `{}`}, {"malformed", 200, `{"`},
 			} {
 				t.Run(section+"/"+action+"/"+tc.name, func(t *testing.T) {
-					f := policyFactory(t, func(r *http.Request) (int, string) { return tc.status, tc.body })
+					f := policyFactory(t, func(*http.Request) (int, string) { return tc.status, tc.body })
 					args := []string{action, "team/demo", "--section", section, "--json"}
 					if action == "edit" {
 						args = append(args, "--yes")
@@ -287,7 +287,7 @@ func TestPolicyRegistrationAndStableText(t *testing.T) {
 	if err != nil || cmd.Name() != "edit" || cmd.Flags().Lookup("section") == nil {
 		t.Fatalf("missing policy registration: %v", err)
 	}
-	f := policyFactory(t, func(r *http.Request) (int, string) { return 200, `{"memberMgntMode":2}` })
+	f := policyFactory(t, func(*http.Request) (int, string) { return 200, `{"memberMgntMode":2}` })
 	out, _, err := executePolicy(t, f, "", "view", "team/demo", "--section", "permission")
 	if err != nil {
 		t.Fatal(err)

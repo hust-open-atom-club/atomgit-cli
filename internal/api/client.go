@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -22,10 +23,12 @@ const (
 )
 
 type Client struct {
-	baseURL    string
-	token      string
-	httpClient *http.Client
-	ctx        context.Context
+	baseURL         string
+	token           string
+	httpClient      *http.Client
+	ctx             context.Context
+	retryWriter     io.Writer
+	rateLimitPolicy rateLimitRetryPolicy
 }
 
 const defaultMetadataTimeout = 30 * time.Second
@@ -86,10 +89,11 @@ func NewClientWithBaseURL(token, baseURL string, httpClient *http.Client) *Clien
 		}
 	}
 	return &Client{
-		baseURL:    strings.TrimRight(baseURL, "/"),
-		token:      token,
-		httpClient: httpClient,
-		ctx:        context.Background(),
+		baseURL:         strings.TrimRight(baseURL, "/"),
+		token:           token,
+		httpClient:      httpClient,
+		ctx:             context.Background(),
+		rateLimitPolicy: defaultRateLimitPolicy(),
 	}
 }
 
@@ -104,6 +108,17 @@ func (c *Client) WithContext(ctx context.Context) *Client {
 	}
 	clone := *c
 	clone.ctx = ctx
+	return &clone
+}
+
+// WithRetryWriter returns a shallow copy that reports rate-limit waits to w.
+// A nil writer keeps retries silent, which is useful for library consumers.
+func (c *Client) WithRetryWriter(w io.Writer) *Client {
+	if c == nil {
+		return nil
+	}
+	clone := *c
+	clone.retryWriter = w
 	return &clone
 }
 
@@ -203,11 +218,13 @@ func (c *Client) doRequestWithPolicy(
 		contentType,
 		accept,
 		canRetry,
+		true,
 	)
 }
 
 // doRequestWithPolicyContext is doRequestWithPolicy with caller-controlled
-// cancellation for streaming operations.
+// cancellation. allowRateLimitRetry must remain false for streaming responses
+// whose bodies cannot be safely replayed.
 func (c *Client) doRequestWithPolicyContext(
 	ctx context.Context,
 	httpClient *http.Client,
@@ -215,6 +232,7 @@ func (c *Client) doRequestWithPolicyContext(
 	body io.Reader,
 	contentType, accept string,
 	canRetry bool,
+	allowRateLimitRetry bool,
 ) (*http.Response, error) {
 	if ctx == nil {
 		return nil, fmt.Errorf("request context is nil")
@@ -236,23 +254,42 @@ func (c *Client) doRequestWithPolicyContext(
 	}
 
 	requestURL := c.baseURL + path
-	const retryDelay = 200 * time.Millisecond
+	rateLimitEligible := allowRateLimitRetry && canRetry && (method == http.MethodGet || method == http.MethodHead)
+	requestCtx := ctx
+	var cancel context.CancelFunc
+	policy := c.rateLimitPolicy.withDefaults()
+	retryDeadline := time.Time{}
+	maxAttempts := 1
+	if canRetry {
+		maxAttempts = 2
+	}
+	if rateLimitEligible {
+		requestCtx, cancel = context.WithTimeout(ctx, policy.budget)
+		retryBudget := policy.budget
+		if parentDeadline, ok := ctx.Deadline(); ok {
+			retryBudget = min(retryBudget, max(time.Until(parentDeadline), 0))
+		}
+		retryDeadline = policy.now().Add(retryBudget)
+		maxAttempts = max(maxAttempts, policy.maxAttempts)
+	}
 
-	for attempt := 1; ; attempt++ {
+	networkRetried := false
+	rateLimitRetries := 0
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		var bodyReader io.Reader
 		if bodyBytes != nil {
 			bodyReader = bytes.NewReader(bodyBytes)
 		}
 
-		req, err := http.NewRequestWithContext(ctx, method, requestURL, bodyReader)
+		req, err := http.NewRequestWithContext(requestCtx, method, requestURL, bodyReader)
 		if err != nil {
-			return nil, err
+			return finishRateLimitedRequest(nil, err, cancel)
 		}
 
 		if c.token != "" {
 			req.Header.Set("Authorization", "Bearer "+c.token)
 		}
-		req.Header.Set("User-Agent", "AtomCode-CLI/"+version.Get().Version)
+		req.Header.Set("User-Agent", version.UserAgent())
 		if contentType != "" {
 			req.Header.Set("Content-Type", contentType)
 		}
@@ -261,25 +298,47 @@ func (c *Client) doRequestWithPolicyContext(
 		}
 
 		resp, err := httpClient.Do(req)
-		// 首次失败 + 幂等方法 + 网络错误 → 短睡后重试一次
-		if err != nil && canRetry && attempt == 1 && ctx.Err() == nil {
-			select {
-			case <-time.After(retryDelay):
-			case <-ctx.Done():
-				return nil, ctx.Err()
+		if err != nil && canRetry && !networkRetried && attempt < maxAttempts && requestCtx.Err() == nil {
+			networkRetried = true
+			if err := waitForRetry(requestCtx, networkRetryDelay); err != nil {
+				return finishRateLimitedRequest(nil, err, cancel)
 			}
 			continue
 		}
-		return resp, err
+		if err != nil {
+			return finishRateLimitedRequest(resp, err, cancel)
+		}
+		if !rateLimitEligible || resp.StatusCode != http.StatusTooManyRequests || attempt >= maxAttempts {
+			return finishRateLimitedRequest(resp, nil, cancel)
+		}
+
+		delay, valid := parseRetryAfter(resp.Header.Get("Retry-After"), policy.now())
+		if !valid {
+			delay = policy.fallbackDelay(rateLimitRetries)
+		}
+		remaining := retryDeadline.Sub(policy.now())
+		if remaining <= 0 || delay >= remaining {
+			return finishRateLimitedRequest(resp, nil, cancel)
+		}
+
+		closeRetryResponse(resp)
+		if c.retryWriter != nil {
+			fmt.Fprintf(c.retryWriter, "Rate limited by AtomGit; retrying in %s (attempt %d/%d).\n", delay, attempt+1, maxAttempts)
+		}
+		if err := policy.wait(requestCtx, delay); err != nil {
+			return finishRateLimitedRequest(nil, err, cancel)
+		}
+		rateLimitRetries++
 	}
+	return finishRateLimitedRequest(nil, fmt.Errorf("request retry attempts exhausted"), cancel)
 }
 
-func (c *Client) Get(path string, result interface{}) error {
+func (c *Client) Get(path string, result any) error {
 	resp, err := c.doRequest("GET", path, nil)
 	if err != nil {
 		return fmt.Errorf("API request GET %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return NewHTTPError(resp)
@@ -288,7 +347,7 @@ func (c *Client) Get(path string, result interface{}) error {
 	return decodeJSONResponse(http.MethodGet, path, resp.Body, result)
 }
 
-func (c *Client) Post(path string, body, result interface{}) error {
+func (c *Client) Post(path string, body, result any) error {
 	var bodyReader io.Reader
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
@@ -302,7 +361,7 @@ func (c *Client) Post(path string, body, result interface{}) error {
 	if err != nil {
 		return fmt.Errorf("API request POST %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return NewHTTPError(resp)
@@ -315,13 +374,13 @@ func (c *Client) Post(path string, body, result interface{}) error {
 }
 
 // PostForm sends an application/x-www-form-urlencoded POST request.
-func (c *Client) PostForm(path string, fields url.Values, result interface{}) error {
+func (c *Client) PostForm(path string, fields url.Values, result any) error {
 	body := strings.NewReader(fields.Encode())
 	resp, err := c.doRequestWithContentType(http.MethodPost, path, body, "application/x-www-form-urlencoded")
 	if err != nil {
 		return fmt.Errorf("API request POST %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return NewHTTPError(resp)
@@ -336,13 +395,13 @@ func (c *Client) PostForm(path string, fields url.Values, result interface{}) er
 // PutForm sends an application/x-www-form-urlencoded PUT request. Some
 // endpoints (for example marking notifications read) only accept form-encoded
 // bodies and reject the JSON encoding used by Put.
-func (c *Client) PutForm(path string, fields url.Values, result interface{}) error {
+func (c *Client) PutForm(path string, fields url.Values, result any) error {
 	body := strings.NewReader(fields.Encode())
 	resp, err := c.doRequestWithContentType(http.MethodPut, path, body, "application/x-www-form-urlencoded")
 	if err != nil {
 		return fmt.Errorf("API request PUT %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusOK {
 		return NewHTTPError(resp)
@@ -354,7 +413,7 @@ func (c *Client) PutForm(path string, fields url.Values, result interface{}) err
 	return decodeJSONResponse(http.MethodPut, path, resp.Body, result)
 }
 
-func (c *Client) Put(path string, body, result interface{}) error {
+func (c *Client) Put(path string, body, result any) error {
 	var bodyReader io.Reader
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
@@ -368,7 +427,7 @@ func (c *Client) Put(path string, body, result interface{}) error {
 	if err != nil {
 		return fmt.Errorf("API request PUT %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusOK {
 		return NewHTTPError(resp)
@@ -380,7 +439,7 @@ func (c *Client) Put(path string, body, result interface{}) error {
 	return nil
 }
 
-func (c *Client) Patch(path string, body, result interface{}) error {
+func (c *Client) Patch(path string, body, result any) error {
 	var bodyReader io.Reader
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
@@ -394,7 +453,7 @@ func (c *Client) Patch(path string, body, result interface{}) error {
 	if err != nil {
 		return fmt.Errorf("API request PATCH %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return NewHTTPError(resp)
@@ -409,7 +468,7 @@ func (c *Client) Patch(path string, body, result interface{}) error {
 }
 
 // PatchForm sends a multipart/form-data PATCH request.
-func (c *Client) PatchForm(path string, fields map[string]string, result interface{}) error {
+func (c *Client) PatchForm(path string, fields map[string]string, result any) error {
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 	for key, value := range fields {
@@ -425,7 +484,7 @@ func (c *Client) PatchForm(path string, fields map[string]string, result interfa
 	if err != nil {
 		return fmt.Errorf("API request PATCH %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if resp.StatusCode != http.StatusOK {
 		return NewHTTPError(resp)
@@ -442,7 +501,7 @@ func (c *Client) Delete(path string) error {
 	if err != nil {
 		return fmt.Errorf("API request DELETE %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; request and status errors are handled separately.
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		return NewHTTPError(resp)
@@ -451,7 +510,7 @@ func (c *Client) Delete(path string) error {
 	return nil
 }
 
-func (c *Client) DeleteWithBody(path string, body interface{}) error {
+func (c *Client) DeleteWithBody(path string, body any) error {
 	var bodyReader io.Reader
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
@@ -465,7 +524,7 @@ func (c *Client) DeleteWithBody(path string, body interface{}) error {
 	if err != nil {
 		return fmt.Errorf("API request DELETE %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; request and status errors are handled separately.
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		return NewHTTPError(resp)
@@ -511,10 +570,11 @@ func (c *Client) DoRequestRawStreamingWithAccept(method, path, accept string) (*
 		"",
 		accept,
 		isIdempotent(method),
+		false,
 	)
 }
 
-func decodeJSONResponse(method, path string, body io.Reader, result interface{}) error {
+func decodeJSONResponse(method, path string, body io.Reader, result any) error {
 	if err := json.NewDecoder(body).Decode(result); err != nil {
 		return fmt.Errorf("API request %s %s: decode response: %w", method, path, err)
 	}
@@ -539,19 +599,15 @@ func NewHTTPError(resp *http.Response) error {
 // RequestPolicy configures how a single API request is dispatched.
 // AllowedStatuses is the exact set of HTTP status codes treated as success;
 // any other status produces a bounded, redacted API error. CanRetry controls
-// whether the request is retried once on a network error.
+// whether the request may retry. Network failures are retried once; metadata
+// GET/HEAD requests may also use the bounded HTTP 429 policy.
 type RequestPolicy struct {
 	AllowedStatuses []int
 	CanRetry        bool
 }
 
 func statusAllowed(code int, allowed []int) bool {
-	for _, a := range allowed {
-		if a == code {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(allowed, code)
 }
 
 // doJSONRequest performs an HTTP request with caller-selected retry policy
@@ -559,22 +615,22 @@ func statusAllowed(code int, allowed []int) bool {
 // Domain integrations use this primitive instead of the legacy helpers so
 // they can request only their contracted 200 or 201 status and disable retry
 // for state-sensitive operations such as related-branch PUT.
-func (c *Client) doJSONRequest(method, path string, body io.Reader, contentType, accept string, policy RequestPolicy, result interface{}) error {
+func (c *Client) doJSONRequest(method, path string, body io.Reader, contentType, accept string, policy RequestPolicy, result any) error {
 	return c.doJSONRequestContext(c.requestContext(), c.httpClient, method, path, body, contentType, accept, policy, result)
 }
 
 // doJSONRequestContext is doJSONRequest with caller-controlled cancellation
 // and an explicit HTTP client.
-func (c *Client) doJSONRequestContext(ctx context.Context, httpClient *http.Client, method, path string, body io.Reader, contentType, accept string, policy RequestPolicy, result interface{}) error {
+func (c *Client) doJSONRequestContext(ctx context.Context, httpClient *http.Client, method, path string, body io.Reader, contentType, accept string, policy RequestPolicy, result any) error {
 	if len(policy.AllowedStatuses) == 0 {
 		return fmt.Errorf("API request %s %s: allowed statuses cannot be empty", method, path)
 	}
 
-	resp, err := c.doRequestWithPolicyContext(ctx, metadataHTTPClient(httpClient), method, path, body, contentType, accept, policy.CanRetry)
+	resp, err := c.doRequestWithPolicyContext(ctx, metadataHTTPClient(httpClient), method, path, body, contentType, accept, policy.CanRetry, true)
 	if err != nil {
 		return fmt.Errorf("API request %s %s: %w", method, path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and JSON decode errors are handled separately.
 
 	if !statusAllowed(resp.StatusCode, policy.AllowedStatuses) {
 		return NewHTTPError(resp)

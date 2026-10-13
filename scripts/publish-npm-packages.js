@@ -193,14 +193,14 @@ function validateMainPackage(packageInfo, version) {
   if (manifest.version !== version) {
     throw new Error(`${manifest.name} version ${manifest.version} does not match ${version}`);
   }
-  if (manifest.bin?.ag !== "bin/ag.js") {
-    throw new Error(`${manifest.name} must expose bin/ag.js as the ag executable`);
+  if (manifest.bin?.["ag-cli"] !== "bin/ag-cli.js" || Object.keys(manifest.bin).length !== 1) {
+    throw new Error(`${manifest.name} must expose bin/ag-cli.js as the ag-cli executable`);
   }
   assertExactFiles(manifest.name, entries, [
     "package/LICENSE",
     "package/README.en.md",
     "package/README.md",
-    "package/bin/ag.js",
+    "package/bin/ag-cli.js",
     "package/package.json",
   ]);
 }
@@ -226,7 +226,7 @@ function validatePlatformPackage(packageInfo, expectedPlatform, version) {
         `os=${manifest.os[0]} and cpu=${manifest.cpu[0]}`,
     );
   }
-  const executable = expectedOS === "win32" ? "ag.exe" : "ag";
+  const executable = expectedOS === "win32" ? "ag-cli.exe" : "ag-cli";
   const executablePath = `package/bin/${executable}`;
   assertExactFiles(manifest.name, entries, [
     "package/LICENSE",
@@ -670,12 +670,12 @@ async function smokeTestPublishedPackage(plan, options) {
       "--prefix",
       installDir,
       "--",
-      "ag",
+      "ag-cli",
       "version",
       "--json",
     ]);
     if (versionResult.status !== 0) {
-      throw npmFailure(`installed ${packageSpec} failed to execute ag version`, versionResult, options.env);
+      throw npmFailure(`installed ${packageSpec} failed to execute ag-cli version`, versionResult, options.env);
     }
 
     let versionInfo;
@@ -806,7 +806,7 @@ async function publishArtifacts(plan, options = {}) {
       const mainSpec = `${plan.mainPackage.manifest.name}@${plan.version}`;
       logger(`Installing ${mainSpec} for an isolated version smoke test...`);
       await smokeTestPublishedPackage(plan, runtime);
-      logger(`Installed ${mainSpec} and verified ag version v${plan.version}.`);
+      logger(`Installed ${mainSpec} and verified ag-cli version v${plan.version}.`);
       logger(`npm publication complete for ${plan.version}.`);
       return { published: [], staged, skipped, pending };
     }
@@ -875,7 +875,7 @@ async function publishArtifacts(plan, options = {}) {
 
   logger(`Installing ${mainSpec} for an isolated version smoke test...`);
   await smokeTestPublishedPackage(plan, runtime);
-  logger(`Installed ${mainSpec} and verified ag version v${plan.version}.`);
+  logger(`Installed ${mainSpec} and verified ag-cli version v${plan.version}.`);
 
   logger(`npm publication complete for ${plan.version}.`);
   return { published, staged: [], skipped, pending: [] };

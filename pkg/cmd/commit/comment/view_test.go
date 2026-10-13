@@ -82,7 +82,7 @@ func TestViewRejectsNonCommitAndMissingComments(t *testing.T) {
 
 	t.Run("invalid id", func(t *testing.T) {
 		cfg := &testConfig{}
-		transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
 			return nil, errNoRequests
 		})
 		cmd := newCmdView(newFactory(t, cfg, transport))

@@ -23,11 +23,11 @@ func newCmdPRReview(f *cmdutil.Factory) *cobra.Command {
 		Short: "Approve a pull request review",
 		Long: `Approve a pull request using AtomGit's formal review API.
 
-AtomGit currently exposes approval as the only review action. Use ag pr comment
+AtomGit currently exposes approval as the only review action. Use ag-cli pr comment
 create to leave an ordinary comment; request-changes reviews are not supported
 by the public API.`,
-		Example: `  ag pr review owner/repo 42 --approve
-  ag pr review owner/repo 42 --approve --force`,
+		Example: `  ag-cli pr review owner/repo 42 --approve
+  ag-cli pr review owner/repo 42 --approve --force`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !opts.Approve {

@@ -132,7 +132,7 @@ func TestIssueAuditValidatesBeforeLimit(t *testing.T) {
 		{"reactions", `[{"id":"r"},null]`, func(c *Client) error { _, e := ListIssueReactions(c, "a", "b", "7", 1); return e }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, tc.body) }))
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { fmt.Fprint(w, tc.body) }))
 			defer server.Close()
 			c := NewClientWithBaseURL("", server.URL, server.Client())
 			if err := tc.call(c); err == nil {
@@ -144,7 +144,7 @@ func TestIssueAuditValidatesBeforeLimit(t *testing.T) {
 
 func TestIssueReactionsRejectsInvalidLaterPage(t *testing.T) {
 	calls := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		calls++
 		if calls == 2 {
 			fmt.Fprint(w, "[null]")

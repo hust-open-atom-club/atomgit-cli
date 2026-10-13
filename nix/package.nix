@@ -5,10 +5,12 @@
   buildVersion,
   commit,
   buildDate ? "unknown",
+  commandSubPackage ? "cmd/ag-cli",
 }:
 {
   pname = "ag";
-  subPackages = [ "cmd/ag" ];
+  subPackages = [ commandSubPackage ];
+  meta.mainProgram = builtins.baseNameOf commandSubPackage;
   proxyVendor = true;
   env.GOPROXY = "https://goproxy.cn";
   ldflags = [

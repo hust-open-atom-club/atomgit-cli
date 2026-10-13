@@ -49,7 +49,7 @@ func TestListRepositoryForksPaginatesAndHonorsLimit(t *testing.T) {
 
 func TestListRepositoryForksStopsAtShortPage(t *testing.T) {
 	requests := 0
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		requests++
 		if err := json.NewEncoder(w).Encode([]repositoryForkResponse{{FullName: "alice/fork-1"}}); err != nil {
 			t.Fatal(err)
@@ -66,7 +66,7 @@ func TestListRepositoryForksStopsAtShortPage(t *testing.T) {
 }
 
 func TestListRepositoryForksMapsLiveResponseShape(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`[{
 			"id":10658715,
 			"full_name":"moyigeek/atomgit-cli",
@@ -117,7 +117,7 @@ func TestListRepositoryForksRejectsInvalidLimit(t *testing.T) {
 }
 
 func TestListRepositoryForksPropagatesAPIError(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		_, _ = w.Write([]byte(`{"message":"forbidden"}`))
 	})

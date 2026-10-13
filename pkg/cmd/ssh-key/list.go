@@ -25,10 +25,10 @@ func newCmdSSHKeyList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List SSH keys registered with your AtomGit account",
-		Example: `  ag ssh-key list
-  ag ssh-key list --limit 200`,
+		Example: `  ag-cli ssh-key list
+  ag-cli ssh-key list --limit 200`,
 		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runList(cmd.OutOrStdout(), f, opts)
 		},
 	}

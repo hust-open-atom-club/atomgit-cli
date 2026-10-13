@@ -115,7 +115,7 @@ func TestSearchRepositoriesNormalizesDescriptionWhitespace(t *testing.T) {
 		return &cmdutil.Factory{
 			Config: searchTestConfig{token: "token"},
 			HttpClient: func() (*http.Client, error) {
-				return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 					body := `[{"full_name":"hust-open-atom-club/atomgit-cli","stargazers_count":1,"description":"AtomGit CLI\r\ncommand-line\ttool"}]`
 					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
 				})}, nil
@@ -318,7 +318,7 @@ func TestSearchIssuesFormatsRepositoryNumberAndTitle(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: searchTestConfig{token: "token"},
 		HttpClient: func() (*http.Client, error) {
-			return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 				body := `[{"number":7,"title":"Fix memory leak","state":"open","repository":{"full_name":"alice/demo"}}]`
 				return &http.Response{
 					StatusCode: http.StatusOK,
@@ -419,7 +419,7 @@ func TestSearchIssuesDeduplicatesOverlappingPages(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: searchTestConfig{token: "token"},
 		HttpClient: func() (*http.Client, error) {
-			return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 				requests++
 				var numbers []int
 				switch requests {

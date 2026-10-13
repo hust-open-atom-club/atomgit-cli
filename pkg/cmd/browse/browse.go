@@ -195,12 +195,12 @@ func resolveNumber(client *api.Client, owner, repo string, num int) (string, err
 	if err != nil {
 		return "", fmt.Errorf("failed to check issue #%d: %w", num, err)
 	}
-	defer issueResp.Body.Close()
+	defer issueResp.Body.Close() //nolint:errcheck // Status determines issue lookup; Close only releases response resources.
 	if issueResp.StatusCode == http.StatusOK {
 		return browser.BuildIssueURL(owner, repo, num), nil
 	}
 	// Drain body for connection reuse before issuing the PR check
-	io.Copy(io.Discard, issueResp.Body)
+	io.Copy(io.Discard, issueResp.Body) //nolint:errcheck // Draining a rejected issue response is best-effort connection reuse; status determines the result.
 	if issueResp.StatusCode != http.StatusNotFound {
 		return "", fmt.Errorf("unexpected status checking issue #%d: %s", num, api.SanitizeErrorText(issueResp.Status))
 	}
@@ -210,11 +210,11 @@ func resolveNumber(client *api.Client, owner, repo string, num int) (string, err
 	if err != nil {
 		return "", fmt.Errorf("failed to check PR #%d: %w", num, err)
 	}
-	defer prResp.Body.Close()
+	defer prResp.Body.Close() //nolint:errcheck // Status determines pull request lookup; Close only releases response resources.
 	if prResp.StatusCode == http.StatusOK {
 		return browser.BuildPRURL(owner, repo, num), nil
 	}
-	io.Copy(io.Discard, prResp.Body)
+	io.Copy(io.Discard, prResp.Body) //nolint:errcheck // Draining a rejected pull request response is best-effort connection reuse; status determines the result.
 	if prResp.StatusCode != http.StatusNotFound {
 		return "", fmt.Errorf("unexpected status checking PR #%d: %s", num, api.SanitizeErrorText(prResp.Status))
 	}

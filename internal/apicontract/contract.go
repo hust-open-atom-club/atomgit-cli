@@ -1,5 +1,5 @@
 // Package apicontract provides offline fixtures and bounded response validation
-// for API contract tests. It is not used by the ag runtime.
+// for API contract tests. It is not used by the ag-cli runtime.
 package apicontract
 
 import (
@@ -169,7 +169,7 @@ func (f Fixture) URL(owner, repo string, query map[string]string) (string, error
 	if strings.ContainsAny(path, "{}?%#\\") {
 		return "", errors.New("invalid path pattern")
 	}
-	for _, part := range strings.Split(path, "/") {
+	for part := range strings.SplitSeq(path, "/") {
 		if part == "." || part == ".." {
 			return "", errors.New("invalid path segment")
 		}
@@ -280,7 +280,7 @@ func (s Shape) validate(v any, path string) error {
 			kind = "integer"
 		}
 	}
-	if !slices.Contains(s.Types, kind) && !(kind == "integer" && slices.Contains(s.Types, "number")) {
+	if !slices.Contains(s.Types, kind) && (kind != "integer" || !slices.Contains(s.Types, "number")) {
 		return fmt.Errorf("%s: incompatible JSON type", path)
 	}
 	switch x := v.(type) {

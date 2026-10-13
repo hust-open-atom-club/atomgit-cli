@@ -32,11 +32,11 @@ func newCmdUserEdit(f *cmdutil.Factory) *cobra.Command {
 Only flags explicitly provided are sent to AtomGit. Pass an empty string to
 clear a supported field. This command does not upload avatar files, verify
 email addresses, or rename the account login.`,
-		Example: `  ag user edit --nickname "Alice" --company "Example Inc."
-  ag user edit --description "" --location "Wuhan"
-  ag user edit --website "https://example.com" --json`,
+		Example: `  ag-cli user edit --nickname "Alice" --company "Example Inc."
+  ag-cli user edit --description "" --location "Wuhan"
+  ag-cli user edit --website "https://example.com" --json`,
 		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			request, err := buildUserEditRequest(cmd, opts)
 			if err != nil {
 				return err

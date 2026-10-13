@@ -72,9 +72,9 @@ function sha256(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
-async function validateArchive(filePath) {
+async function validateArchive(filePath, expectedManPages) {
   const fileName = path.basename(filePath);
-  const expectedBinary = fileName.endsWith(".zip") ? "ag.exe" : "ag";
+  const expectedBinary = fileName.endsWith(".zip") ? "ag-cli.exe" : "ag-cli";
   let entries;
   if (fileName.endsWith(".zip")) {
     entries = new Set(new AdmZip(filePath).getEntries().filter((entry) => !entry.isDirectory).map((entry) => entry.entryName));
@@ -91,6 +91,17 @@ async function validateArchive(filePath) {
   }
   for (const required of [expectedBinary, "LICENSE"]) {
     if (!entries.has(required)) throw new Error(`${fileName} does not contain ${required}`);
+  }
+  if (!fileName.endsWith(".zip")) {
+    const manuals = [...entries].filter((entry) => entry.startsWith("share/man/man1/"));
+    for (const name of expectedManPages || ["ag-cli.1", "ag-cli-auth-login.1", "ag-cli-pr-create.1"]) {
+      if (!entries.has(`share/man/man1/${name}`)) {
+        throw new Error(`${fileName} does not contain share/man/man1/${name}`);
+      }
+    }
+    if (expectedManPages) {
+      assertExactFiles(manuals.sort(), expectedManPages.map((name) => `share/man/man1/${name}`).sort(), `${fileName} manpage`);
+    }
   }
   if ([...entries].some((entry) => entry.includes("..") || path.posix.isAbsolute(entry))) {
     throw new Error(`${fileName} contains an unsafe archive path`);
@@ -144,7 +155,7 @@ function redact(value, env = process.env) {
 }
 
 function defaultRunAg(args, options = {}) {
-  const binary = process.env.AG_RELEASE_CLI || "ag";
+  const binary = process.env.AG_RELEASE_CLI || "ag-cli";
   const result = spawnSync(binary, args, {
     encoding: options.raw ? null : "utf8",
     env: process.env,
@@ -337,4 +348,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { inspectArtifacts, parseArguments, parseChecksums, publishRelease, redact, sha256 };
+module.exports = { inspectArtifacts, parseArguments, parseChecksums, publishRelease, redact, sha256, validateArchive, REQUIRED_ARCHIVES };

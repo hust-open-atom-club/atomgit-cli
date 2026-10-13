@@ -53,9 +53,9 @@ AtomGit. Local Git remotes are never modified.
 AtomGit requires the account password when the source repository is owned by
 an organization. It is read without echo from an interactive terminal, or from
 standard input when --password-stdin is combined with --yes.`,
-		Example: `  ag repo transfer owner/repo --to target-organization
-  ag repo transfer owner/repo --to target-organization --yes
-  printf '%s\n' "$PASSWORD" | ag repo transfer source-organization/repo --to target-organization --yes --password-stdin`,
+		Example: `  ag-cli repo transfer owner/repo --to target-organization
+  ag-cli repo transfer owner/repo --to target-organization --yes
+  printf '%s\n' "$PASSWORD" | ag-cli repo transfer source-organization/repo --to target-organization --yes --password-stdin`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
@@ -163,7 +163,6 @@ func runRepositoryTransfer(cmd *cobra.Command, client *api.Client, repository cm
 			return err
 		}
 		response, err := api.TransferOrganizationRepository(client, repository.Owner, repository.Name, destination, password)
-		password = ""
 		if err != nil {
 			return handleTransferRequestError(out, client, repository, source.ID, destination, repository.Name, fmt.Sprintf("failed to transfer organization repository %s to %s", repository, destination), err)
 		}
@@ -209,18 +208,17 @@ func resolveTransferDestination(client *api.Client, destination string) (string,
 }
 
 func handleTransferRequestError(out io.Writer, client *api.Client, repository cmdutil.Repository, sourceID int64, destination, name, httpErrorContext string, transferErr error) error {
-	var httpErr *api.HTTPError
-	if errors.As(transferErr, &httpErr) {
+	if _, ok := errors.AsType[*api.HTTPError](transferErr); ok {
 		return fmt.Errorf("%s: %w", httpErrorContext, transferErr)
 	}
 
 	transferred, readBackErr := readBackTransferredRepository(client, destination, name)
 	if readBackErr != nil {
-		return fmt.Errorf("transfer request for %s may have completed, but its final state is unknown: the transfer result could not be read (%v), and destination read-back for %s/%s failed: %w", repository, transferErr, destination, name, readBackErr)
+		return fmt.Errorf("transfer request for %s may have completed, but its final state is unknown: the transfer result could not be read (%w), and destination read-back for %s/%s failed: %w", repository, transferErr, destination, name, readBackErr)
 	}
 	fullName, repositoryURL, verifyErr := verifiedTransferredIdentity(transferred, sourceID, destination, name)
 	if verifyErr != nil {
-		return fmt.Errorf("transfer request for %s may have completed, but its final state is unknown: the transfer result could not be read (%v), and destination read-back was ambiguous: %w", repository, transferErr, verifyErr)
+		return fmt.Errorf("transfer request for %s may have completed, but its final state is unknown: the transfer result could not be read (%w), and destination read-back was ambiguous: %w", repository, transferErr, verifyErr)
 	}
 	reportTransferredRepository(out, fullName, repositoryURL, true)
 	return nil

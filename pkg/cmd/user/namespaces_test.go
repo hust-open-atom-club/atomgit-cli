@@ -160,7 +160,7 @@ func TestUserNamespacesValidationBeforeAuthentication(t *testing.T) {
 }
 
 func TestUserNamespacesRequiresAuthentication(t *testing.T) {
-	config := &namespaceCountingConfig{tokenErr: errors.New("not authenticated: run `ag auth login`")}
+	config := &namespaceCountingConfig{tokenErr: errors.New("not authenticated: run `ag-cli auth login`")}
 	var out bytes.Buffer
 	err := runNamespacesCommand(t, &cmdutil.Factory{Config: config}, nil, &out)
 	if err == nil || !strings.Contains(err.Error(), "not authenticated") {

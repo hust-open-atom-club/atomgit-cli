@@ -43,7 +43,10 @@ nix-update stable --flake --version "$stable_version" --build
 nix-update latest --flake --version=skip --build
 
 stable_out=$(nix build --no-link --print-out-paths .#stable | tail -n 1)
-version_json=$("$stable_out/bin/ag" version --json)
+stable_binary="$stable_out/bin/ag-cli"
+# The pinned v0.7.3 release still provides the old executable.
+if [ ! -x "$stable_binary" ]; then stable_binary="$stable_out/bin/ag"; fi
+version_json=$("$stable_binary" version --json)
 printf '%s\n' "$version_json"
 printf '%s' "$version_json" | jq -e \
   --arg version "v$stable_version" \

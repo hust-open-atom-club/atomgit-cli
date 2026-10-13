@@ -234,7 +234,7 @@ func TestResolveCloneAuth(t *testing.T) {
 		{name: "unauthenticated clone stays anonymous", cloneURL: "https://atomgit.com/owner/repo.git"},
 		{
 			name:     "missing token stays anonymous",
-			tokenErr: errors.New("not authenticated: run `ag auth login`"),
+			tokenErr: errors.New("not authenticated: run `ag-cli auth login`"),
 			user:     "alice",
 			cloneURL: "https://atomgit.com/owner/repo.git",
 		},
@@ -265,7 +265,7 @@ func TestResolveCloneAuth(t *testing.T) {
 
 func TestRunCloneWithCommandAttachesAuthToGit(t *testing.T) {
 	var captured *exec.Cmd
-	command := func(_ string, args ...string) *exec.Cmd {
+	command := func(string, ...string) *exec.Cmd {
 		cmd := exec.Command(os.Args[0], "-test.run=TestCloneCommandHelper")
 		cmd.Env = append(os.Environ(),
 			"AG_CLONE_HELPER=success",
@@ -285,8 +285,8 @@ func TestRunCloneWithCommandAttachesAuthToGit(t *testing.T) {
 
 	env := map[string]string{}
 	for _, kv := range captured.Env {
-		if i := strings.IndexByte(kv, '='); i >= 0 {
-			env[kv[:i]] = kv[i+1:]
+		if before, after, ok := strings.Cut(kv, "="); ok {
+			env[before] = after
 		}
 	}
 	if env["GIT_CONFIG_COUNT"] != "100" {
@@ -393,8 +393,8 @@ func TestWithCloneAuthEnvPreservesInheritedGitConfig(t *testing.T) {
 			got := withCloneAuthEnv(tt.env, creds)
 			envMap := map[string]string{}
 			for _, kv := range got {
-				if i := strings.IndexByte(kv, '='); i >= 0 {
-					envMap[kv[:i]] = kv[i+1:]
+				if before, after, ok := strings.Cut(kv, "="); ok {
+					envMap[before] = after
 				}
 			}
 			for key, want := range tt.wantEnv {
@@ -428,7 +428,7 @@ func TestRunCloneWithoutAuthKeepsGitEnvironment(t *testing.T) {
 	}
 }
 
-func TestCloneCommandHelper(t *testing.T) {
+func TestCloneCommandHelper(*testing.T) {
 	switch os.Getenv("AG_CLONE_HELPER") {
 	case "success":
 		os.Exit(0)

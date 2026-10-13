@@ -25,7 +25,7 @@ func TestNewCmdSSHKey(t *testing.T) {
 				t.Fatalf("%s --%s flag was not registered", name, flag)
 			}
 		}
-		if name != "add" && !strings.Contains(child.Example, "ag ssh-key "+name) {
+		if name != "add" && !strings.Contains(child.Example, "ag-cli ssh-key "+name) {
 			t.Fatalf("%s example = %q", name, child.Example)
 		}
 	}

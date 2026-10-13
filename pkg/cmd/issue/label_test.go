@@ -3,6 +3,7 @@ package issue
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -108,9 +109,9 @@ func TestIssueLabelRejectsInvalidInput(t *testing.T) {
 		{name: "missing labels", args: []string{"alice/demo", "7"}, wantError: "labels are required"},
 		{name: "empty label", args: []string{"alice/demo", "7", "   "}, wantError: "label cannot be empty"},
 		{name: "empty item", args: []string{"alice/demo", "7", "bug, ,feat"}, wantError: "label cannot be empty"},
-		{name: "both operations", args: []string{"alice/demo", "7"}, add: stringPointer("bug"), remove: stringPointer("feat"), wantError: "cannot be used together"},
-		{name: "positional with flag", args: []string{"alice/demo", "7", "bug"}, add: stringPointer("feat"), wantError: "positional labels cannot be used"},
-		{name: "empty add flag", args: []string{"alice/demo", "7"}, add: stringPointer(""), wantError: "label cannot be empty"},
+		{name: "both operations", args: []string{"alice/demo", "7"}, add: new("bug"), remove: new("feat"), wantError: "cannot be used together"},
+		{name: "positional with flag", args: []string{"alice/demo", "7", "bug"}, add: new("feat"), wantError: "positional labels cannot be used"},
+		{name: "empty add flag", args: []string{"alice/demo", "7"}, add: new(""), wantError: "label cannot be empty"},
 	}
 
 	for _, tt := range tests {
@@ -227,6 +228,17 @@ func TestIssueLabelReportsAPIErrors(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), "failed to restore previously removed labels") || !strings.Contains(err.Error(), "rollback failed") {
 			t.Fatalf("error = %v", err)
 		}
+		var wrapped interface{ Unwrap() []error }
+		if !errors.As(err, &wrapped) {
+			t.Fatalf("error %T does not preserve both rollback and label-removal failures", err)
+		}
+		causes := wrapped.Unwrap()
+		if len(causes) != 2 {
+			t.Fatalf("wrapped causes = %d, want 2", len(causes))
+		}
+		if !strings.Contains(causes[0].Error(), "label not found") || !strings.Contains(causes[1].Error(), "rollback failed") {
+			t.Fatalf("wrapped causes = %q and %q, want label-removal and rollback failures", causes[0], causes[1])
+		}
 		if requests != 3 {
 			t.Fatalf("requests = %d, want 3", requests)
 		}
@@ -252,8 +264,4 @@ func assertStringSlice(t *testing.T, got, want []string) {
 			t.Fatalf("slice = %#v, want %#v", got, want)
 		}
 	}
-}
-
-func stringPointer(value string) *string {
-	return &value
 }

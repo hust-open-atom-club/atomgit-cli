@@ -17,7 +17,7 @@ func newCmdAuthList() *cobra.Command {
 		Use:   "list",
 		Short: "List saved AtomGit accounts",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			accounts, active, err := config.ListAccounts()
 			if errors.Is(err, config.ErrTokenNotFound) {
 				if jsonOutput {
@@ -93,7 +93,7 @@ func newCmdAuthSwitch(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				if rollback != nil {
 					if rollbackErr := rollback(); rollbackErr != nil {
-						return fmt.Errorf("switch account: %v; additionally failed to restore Git identity: %w", err, rollbackErr)
+						return fmt.Errorf("switch account: %w; additionally failed to restore Git identity: %w", err, rollbackErr)
 					}
 				}
 				return err

@@ -10,7 +10,8 @@ import (
 )
 
 func TestNewSignalContextUsesPlatformSignalsWithoutRealDelivery(t *testing.T) {
-	parent := context.WithValue(context.Background(), struct{}{}, "parent")
+	type signalContextTestKey struct{}
+	parent := context.WithValue(context.Background(), signalContextTestKey{}, "parent")
 	wantSignals := terminationSignals()
 	var gotParent context.Context
 	var gotSignals []os.Signal

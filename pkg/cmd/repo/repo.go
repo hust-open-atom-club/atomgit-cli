@@ -42,7 +42,7 @@ func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "repo",
 		Short: "Manage repositories",
-		Long:  "Create, clone, edit, fork, sync, transfer, view, browse contents, and manage repository collaborators and webhooks. Use `ag repo fork list` to inspect existing forks; `ag repo fork` creates a fork.\n\nFor repository-scoped commands, OWNER/REPO may be omitted and inferred from the current Git repository.",
+		Long:  "Create, clone, edit, fork, sync, transfer, view, browse contents, and manage repository collaborators and webhooks. Use `ag-cli repo fork list` to inspect existing forks; `ag-cli repo fork` creates a fork.\n\nFor repository-scoped commands, OWNER/REPO may be omitted and inferred from the current Git repository.",
 	}
 
 	cmd.AddCommand(newCmdRepoList(f))
@@ -76,10 +76,10 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 		Use:   "list [<owner>]",
 		Short: "List repositories",
 		Long:  "List repositories for the authenticated user, a specified user, or an organization. A specified owner is checked as a user first and retried as an organization only when the user is not found.",
-		Example: `  ag repo list
-  ag repo list alice
-  ag repo list my-organization --limit 100
-  ag repo list alice --json`,
+		Example: `  ag-cli repo list
+  ag-cli repo list alice
+  ag-cli repo list my-organization --limit 100
+  ag-cli repo list alice --json`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			owner := ""

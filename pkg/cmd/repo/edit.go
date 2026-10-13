@@ -36,19 +36,19 @@ used. --visibility, --public, and --private are mutually exclusive.
 This command does not change the repository path, owner, homepage, LFS state,
 module switches, merge policies, or other unsupported GitHub CLI settings.`,
 		Example: `  # Update the current Git repository
-  ag repo edit --description "New description"
+  ag-cli repo edit --description "New description"
 
   # Update an explicitly selected repository
-  ag repo edit owner/repo --description "New description"
+  ag-cli repo edit owner/repo --description "New description"
 
   # Clear a description without changing other settings
-  ag repo edit owner/repo --description ""
+  ag-cli repo edit owner/repo --description ""
 
   # Update several settings
-  ag repo edit owner/repo --name "New name" --default-branch main --visibility private
+  ag-cli repo edit owner/repo --name "New name" --default-branch main --visibility private
 
   # Skip confirmation for a visibility update
-  ag repo edit owner/repo --public --yes`,
+  ag-cli repo edit owner/repo --public --yes`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			request, consequential, err := buildRepoEditRequest(cmd, opts)
@@ -115,8 +115,8 @@ module switches, merge policies, or other unsupported GitHub CLI settings.`,
 	return cmd
 }
 
-func buildRepoEditRequest(cmd *cobra.Command, opts *EditOptions) (map[string]interface{}, bool, error) {
-	request := make(map[string]interface{})
+func buildRepoEditRequest(cmd *cobra.Command, opts *EditOptions) (map[string]any, bool, error) {
+	request := make(map[string]any)
 	consequential := false
 
 	if cmd.Flags().Changed("name") {
@@ -200,7 +200,7 @@ func validateRepositoryEditName(name string) error {
 	return nil
 }
 
-func confirmRepoEdit(in io.Reader, out io.Writer, owner, repo string, request map[string]interface{}) (bool, error) {
+func confirmRepoEdit(in io.Reader, out io.Writer, owner, repo string, request map[string]any) (bool, error) {
 	var changes []string
 	if name, ok := request["name"].(string); ok {
 		changes = append(changes, fmt.Sprintf("name to %q", name))

@@ -2,6 +2,7 @@ package run
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -32,10 +33,10 @@ func newCmdRunList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list [<owner>/<repo>]",
 		Short: "List workflow runs",
-		Example: `  ag run list owner/repo
-  ag run list
-  ag run list owner/repo --branch main --status failed
-  ag run list owner/repo --event push --workflow-name CI --limit 50`,
+		Example: `  ag-cli run list owner/repo
+  ag-cli run list
+  ag-cli run list owner/repo --branch main --status failed
+  ag-cli run list owner/repo --event push --workflow-name CI --limit 50`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, _, err := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
@@ -204,10 +205,8 @@ func normalizeRunStatus(value string) (string, error) {
 	if value == "" {
 		return "", nil
 	}
-	for _, allowed := range []string{"COMPLETED", "RUNNING", "FAILED", "CANCELED", "IGNORED", "PAUSED", "SUSPEND"} {
-		if value == allowed {
-			return value, nil
-		}
+	if slices.Contains([]string{"COMPLETED", "RUNNING", "FAILED", "CANCELED", "IGNORED", "PAUSED", "SUSPEND"}, value) {
+		return value, nil
 	}
 	return "", fmt.Errorf("invalid status %q (expected completed, running, failed, canceled, ignored, paused, or suspend)", value)
 }

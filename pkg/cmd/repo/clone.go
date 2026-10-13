@@ -33,16 +33,16 @@ The repository argument can be:
 - Owner/repo format: owner/repo
 - Just repo name (uses current user as owner)`,
 		Example: `  # Clone using full URL
-  ag repo clone https://atomgit.com/shinwell_hu/my-project
+  ag-cli repo clone https://atomgit.com/shinwell_hu/my-project
 
   # Clone using owner/repo format
-  ag repo clone shinwell_hu/my-project
+  ag-cli repo clone shinwell_hu/my-project
 
   # Clone to specific directory
-  ag repo clone shinwell_hu/my-project my-project-local
+  ag-cli repo clone shinwell_hu/my-project my-project-local
 
   # Clone specific branch
-  ag repo clone shinwell_hu/my-project --branch develop`,
+  ag-cli repo clone shinwell_hu/my-project --branch develop`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repoURL := args[0]

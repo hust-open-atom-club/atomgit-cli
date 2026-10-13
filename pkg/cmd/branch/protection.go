@@ -45,7 +45,7 @@ func newCmdProtectionList(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list [<owner>/<repo>]",
 		Short:   "List protected branch rules",
-		Example: "  ag branch protection list owner/repo --limit 50",
+		Example: "  ag-cli branch protection list owner/repo --limit 50",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if limit <= 0 {
@@ -121,10 +121,10 @@ operation to everyone. Existing rules preserve any permission whose flag is
 omitted; new rules require both --push and --merge. Updating an existing rule
 requires confirmation unless --yes is supplied. AtomGit requires every role or
 user allowed to push to also be explicitly allowed to merge.`,
-		Example: `  ag branch protection set owner/repo main --push admin --merge admin
-  ag branch protection set owner/repo main --push maintainer --merge maintainer
-  ag branch protection set owner/repo "release/*" --push "develop;alice" --merge "develop;alice"
-  ag branch protection set owner/repo main --push "" --yes`,
+		Example: `  ag-cli branch protection set owner/repo main --push admin --merge admin
+  ag-cli branch protection set owner/repo main --push maintainer --merge maintainer
+  ag-cli branch protection set owner/repo "release/*" --push "develop;alice" --merge "develop;alice"
+  ag-cli branch protection set owner/repo main --push "" --yes`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := resolveRepositoryArgs(f, args, 1)
@@ -308,7 +308,7 @@ func validateProtectionPattern(value string) (string, error) {
 	if pattern != value || strings.HasPrefix(pattern, "/") || strings.HasSuffix(pattern, "/") || strings.Contains(pattern, "//") {
 		return "", fmt.Errorf("invalid branch or wildcard pattern %q", value)
 	}
-	for _, part := range strings.Split(pattern, "/") {
+	for part := range strings.SplitSeq(pattern, "/") {
 		if part == "." || part == ".." {
 			return "", fmt.Errorf("invalid branch or wildcard pattern %q", value)
 		}
@@ -332,12 +332,12 @@ func validateProtectionPermission(value string) error {
 		return nil
 	}
 	seen := make(map[string]struct{})
-	for _, token := range strings.Split(value, ";") {
+	for token := range strings.SplitSeq(value, ";") {
 		if token == "" || token != strings.TrimSpace(token) {
 			return fmt.Errorf("permissions must be non-empty semicolon-separated values without spaces")
 		}
 		for _, r := range token {
-			if !(unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' || r == '-' || r == '.') {
+			if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' && r != '-' && r != '.' {
 				return fmt.Errorf("unsupported role or username %q", token)
 			}
 		}

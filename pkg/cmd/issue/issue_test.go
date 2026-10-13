@@ -26,7 +26,7 @@ func (issueTestConfig) GetHost() string           { return "atomgit.com" }
 type issueAuthErrorConfig struct{ issueTestConfig }
 
 func (issueAuthErrorConfig) GetToken() (string, error) {
-	return "", errors.New("not authenticated: run `ag auth login`")
+	return "", errors.New("not authenticated: run `ag-cli auth login`")
 }
 
 type issueRoundTripFunc func(*http.Request) (*http.Response, error)
@@ -70,7 +70,7 @@ func TestNewCmdIssueRegistersSubcommands(t *testing.T) {
 			t.Fatalf("edit flag %q was not registered", name)
 		}
 	}
-	if !strings.Contains(edit.Example, "ag issue edit") {
+	if !strings.Contains(edit.Example, "ag-cli issue edit") {
 		t.Fatalf("edit command example = %q", edit.Example)
 	}
 }
@@ -84,12 +84,12 @@ func TestIssueCreateBodyInput(t *testing.T) {
 		wantBody  string
 		wantError string
 	}{
-		{name: "inline body", body: issueStringPointer("inline\nbody"), wantBody: "inline\nbody"},
-		{name: "UTF-8 file with trailing newlines", bodyFile: issueStringPointer("file"), wantBody: "标题\n\n正文\n"},
-		{name: "empty file", bodyFile: issueStringPointer("empty"), wantBody: ""},
-		{name: "stdin", bodyFile: issueStringPointer("-"), stdin: "stdin body\n\n", wantBody: "stdin body\n\n"},
-		{name: "conflicting flags", body: issueStringPointer("inline"), bodyFile: issueStringPointer("-"), wantError: "mutually exclusive"},
-		{name: "missing file", bodyFile: issueStringPointer("missing"), wantError: "failed to read body file"},
+		{name: "inline body", body: new("inline\nbody"), wantBody: "inline\nbody"},
+		{name: "UTF-8 file with trailing newlines", bodyFile: new("file"), wantBody: "标题\n\n正文\n"},
+		{name: "empty file", bodyFile: new("empty"), wantBody: ""},
+		{name: "stdin", bodyFile: new("-"), stdin: "stdin body\n\n", wantBody: "stdin body\n\n"},
+		{name: "conflicting flags", body: new("inline"), bodyFile: new("-"), wantError: "mutually exclusive"},
+		{name: "missing file", bodyFile: new("missing"), wantError: "failed to read body file"},
 	}
 
 	for _, tt := range tests {
@@ -103,7 +103,7 @@ func TestIssueCreateBodyInput(t *testing.T) {
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/issues" {
 							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 						}
-						var body map[string]interface{}
+						var body map[string]any
 						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 							t.Fatal(err)
 						}
@@ -160,10 +160,6 @@ func TestIssueCreateBodyInput(t *testing.T) {
 	}
 }
 
-func issueStringPointer(value string) *string {
-	return &value
-}
-
 func TestIssueListInfersRepositoryAndHonorsLimit(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
@@ -195,7 +191,7 @@ func TestIssueListInfersRepositoryAndHonorsLimit(t *testing.T) {
 func TestIssueListReturnsCanonicalAuthenticationError(t *testing.T) {
 	cmd := newCmdIssueList(&cmdutil.Factory{Config: issueAuthErrorConfig{}})
 	err := cmd.RunE(cmd, []string{"alice/demo"})
-	if err == nil || err.Error() != "not authenticated: run `ag auth login`" {
+	if err == nil || err.Error() != "not authenticated: run `ag-cli auth login`" {
 		t.Fatalf("error = %v", err)
 	}
 }
@@ -331,7 +327,7 @@ func TestIssueReopenFailsWhenStateRemainsClosedAfterUpdate(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
 		HttpClient: func() (*http.Client, error) {
-			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				call++
 				switch call {
 				case 1:
@@ -510,7 +506,7 @@ func TestIssueCloseFailsWhenStateRemainsOpen(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
 		HttpClient: func() (*http.Client, error) {
-			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				requests++
 				switch requests {
 				case 1:
@@ -601,7 +597,7 @@ func TestIssueCreateAssignee(t *testing.T) {
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/issues" {
 							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
 						}
-						var body map[string]interface{}
+						var body map[string]any
 						if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 							t.Fatal(err)
 						}
@@ -688,7 +684,7 @@ func TestIssueCloseReopenRejectInvalidNumberBeforeAuth(t *testing.T) {
 			var requests int
 			factory.HttpClient = func() (*http.Client, error) {
 				requests++
-				return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 					return issueResponse(200, `{}`), nil
 				})}, nil
 			}

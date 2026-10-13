@@ -40,7 +40,8 @@ func newCmdAuthWithDeps(f *cmdutil.Factory, deps loginDeps) *cobra.Command {
 	cmd.AddCommand(newCmdAuthToken(f))
 	cmd.AddCommand(newCmdAuthGitCredential(f))
 	for _, child := range cmd.Commands() {
-		if child.Name() == "login" {
+		if child.Name() == "login" || child.Name() == "status" {
+			// status inspects credentials without migration or writes.
 			// login migrates legacy credentials itself, only after the new
 			// credentials have been validated, so a failed login never
 			// rewrites the credential store.
@@ -73,7 +74,7 @@ func newCmdAuthLogout() *cobra.Command {
 An active account can only be removed when it is the last saved account;
 otherwise switch to another account first. Use --all to remove every account.`,
 		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			out := cmd.OutOrStdout()
 			if all {
 				removed, err := config.ClearCredentials()
@@ -139,14 +140,14 @@ func newCmdAuthLoginWithDeps(f *cmdutil.Factory, deps loginDeps) *cobra.Command 
 		Use:   "login",
 		Short: "Log in with AtomGit OAuth (opens browser, saves token.json)",
 		Args:  cobra.ExactArgs(0),
-		Long: `Opens a browser to authorize ag against atomgit.com, then writes
+		Long: `Opens a browser to authorize ag-cli against atomgit.com, then writes
 access_token and user to the XDG config path (see README). With --with-token,
 skips the browser and reads an existing access token (PAT or OAuth token)
 from standard input instead — useful in sandboxes, containers, and CI where
 no browser is available:
 
-    echo "$TOKEN" | ag auth login --with-token
-    ag auth login --with-token < token.txt
+    echo "$TOKEN" | ag-cli auth login --with-token
+    ag-cli auth login --with-token < token.txt
 
 Piped or redirected input is read to EOF without any prompt; in an
 interactive terminal a single hidden prompt is shown. The token is validated
@@ -167,7 +168,7 @@ do not change the active account.`,
 						skipped = "token login"
 					}
 					fmt.Fprintf(out, "✓ Already logged in as %s — skipping %s.\n", user, skipped)
-					fmt.Fprintln(out, "  Use `ag auth refresh` if this account has a refresh token, `ag auth logout` to sign out, or `ag auth login --force` to authenticate again.")
+					fmt.Fprintln(out, "  Use `ag-cli auth refresh` if this account has a refresh token, `ag-cli auth logout` to sign out, or `ag-cli auth login --force` to authenticate again.")
 					return nil
 				}
 			}
@@ -257,7 +258,7 @@ do not change the active account.`,
 			fmt.Fprintf(out, "  Token saved to %s\n", path)
 			if store.Active != cred.Key() {
 				fmt.Fprintf(out, "  Active account remains %s\n", store.Active)
-				fmt.Fprintf(out, "  Run `ag auth switch %s` to use this account\n", cred.Key())
+				fmt.Fprintf(out, "  Run `ag-cli auth switch %s` to use this account\n", cred.Key())
 			}
 			return nil
 		},
@@ -301,7 +302,7 @@ func newCmdAuthRefresh() *cobra.Command {
 		Use:   "refresh",
 		Short: "Refresh the access token using the stored refresh_token",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
 			ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 			defer cancel()
@@ -309,12 +310,12 @@ func newCmdAuthRefresh() *cobra.Command {
 			cred, err := config.LoadStoredCredentials()
 			if err != nil {
 				if errors.Is(err, config.ErrTokenNotFound) {
-					return fmt.Errorf("not authenticated: run `ag auth login`")
+					return fmt.Errorf("not authenticated: run `ag-cli auth login`")
 				}
 				return err
 			}
 			if cred.RefreshToken == "" {
-				return fmt.Errorf("no refresh_token stored for %s; this account was likely logged in via `ag auth login --with-token`, which cannot be refreshed — sign in again with a new token (`echo \"$TOKEN\" | ag auth login --with-token --force`) or run `ag auth login --force` for browser OAuth", cred.User)
+				return fmt.Errorf("no refresh_token stored for %s; this account was likely logged in via `ag-cli auth login --with-token`, which cannot be refreshed — sign in again with a new token (`echo \"$TOKEN\" | ag-cli auth login --with-token --force`) or run `ag-cli auth login --force` for browser OAuth", cred.User)
 			}
 
 			tok, err := oauth.RefreshAccessToken(ctx, cred.RefreshToken)
@@ -344,49 +345,13 @@ func newCmdAuthRefresh() *cobra.Command {
 	}
 }
 
-func newCmdAuthStatus(f *cmdutil.Factory) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "status",
-		Short: "View authentication status",
-		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := f.Config.GetToken()
-			if err != nil {
-				// GetToken already returns "not authenticated: run `ag auth login`"
-				// for a missing token; returning it unchanged avoids a duplicated
-				// "not authenticated: not authenticated:" prefix.
-				return err
-			}
-
-			user, err := f.Config.GetUser()
-			if err != nil {
-				fmt.Fprintln(cmd.OutOrStdout(), "✗ Token found but user not configured")
-				return nil
-			}
-
-			// Mask token for display
-			maskedToken := token
-			if len(token) > 8 {
-				maskedToken = token[:4] + "****" + token[len(token)-4:]
-			}
-
-			out := cmd.OutOrStdout()
-			fmt.Fprintf(out, "✓ Logged in to atomgit.com as %s\n", user)
-			fmt.Fprintf(out, "  Token: %s\n", maskedToken)
-			return nil
-		},
-	}
-
-	return cmd
-}
-
 func newCmdAuthToken(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "token",
 		Short: "Print the authentication token",
 		Long:  `Display the authentication token used for AtomGit API requests.`,
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return err

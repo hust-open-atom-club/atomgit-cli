@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -20,6 +21,9 @@ type Factory struct {
 	Context            func() context.Context
 	BrowserOpener      browser.Opener
 	RepositoryResolver RepositoryResolver
+	// ErrorWriter receives transient API retry notices. Root commands install
+	// their sanitized stderr writer here; nil keeps library-style clients quiet.
+	ErrorWriter io.Writer
 	// GitConfig runs Git configuration operations for auth identity sync.
 	GitConfig func(args ...string) (string, error)
 }
@@ -38,28 +42,35 @@ func (f *Factory) CommandContext() context.Context {
 // available, falling back to a default client otherwise.
 func (f *Factory) NewAPIClient(token string) (*api.Client, error) {
 	if f == nil || f.HttpClient == nil {
-		return api.NewClient(token).WithContext(f.CommandContext()), nil
+		return api.NewClient(token).WithContext(f.CommandContext()).WithRetryWriter(factoryErrorWriter(f)), nil
 	}
 
 	httpClient, err := f.HttpClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
 	}
-	return api.NewClientWithHTTPClient(token, httpClient).WithContext(f.CommandContext()), nil
+	return api.NewClientWithHTTPClient(token, httpClient).WithContext(f.CommandContext()).WithRetryWriter(factoryErrorWriter(f)), nil
 }
 
 // NewActionsClient creates an Actions client bound to the active command
 // context while preserving any injected HTTP transport.
 func (f *Factory) NewActionsClient(token string) (*actions.Client, error) {
 	if f == nil || f.HttpClient == nil {
-		return actions.NewClient(token).WithContext(f.CommandContext()), nil
+		return actions.NewClient(token).WithContext(f.CommandContext()).WithRetryWriter(factoryErrorWriter(f)), nil
 	}
 
 	httpClient, err := f.HttpClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
 	}
-	return actions.NewClientWithHTTPClient(token, httpClient).WithContext(f.CommandContext()), nil
+	return actions.NewClientWithHTTPClient(token, httpClient).WithContext(f.CommandContext()).WithRetryWriter(factoryErrorWriter(f)), nil
+}
+
+func factoryErrorWriter(f *Factory) io.Writer {
+	if f == nil {
+		return nil
+	}
+	return f.ErrorWriter
 }
 
 // AuthenticatedAPIClient builds a v5 API client using stored credentials.

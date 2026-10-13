@@ -236,3 +236,23 @@ func TestInstallDownloadFallbackNeverReplacesExistingDestination(t *testing.T) {
 		t.Fatalf("destination = %q, %v; want old payload", data, readErr)
 	}
 }
+
+func TestInstallDownloadFallbackPreservesBothErrors(t *testing.T) {
+	directory := t.TempDir()
+	temporary := filepath.Join(directory, "missing-download.tmp")
+	destination := filepath.Join(directory, "download.zip")
+	linkErr := errors.New("hard links unsupported")
+
+	err := installDownload(temporary, destination, false, func(string, string) error {
+		return linkErr
+	}, os.Rename)
+	if err == nil {
+		t.Fatal("installDownload() error = nil, want copy failure")
+	}
+	if !errors.Is(err, linkErr) {
+		t.Errorf("error %q does not wrap hard-link failure", err)
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("error %q does not wrap copy source failure", err)
+	}
+}

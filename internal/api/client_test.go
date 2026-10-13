@@ -15,6 +15,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -181,11 +183,11 @@ func TestClientContextCancelsStalledJSONBody(t *testing.T) {
 }
 
 func TestClientRetryBackoffObservesCancellation(t *testing.T) {
-	var calls int32
+	var calls atomic.Int32
 	firstAttempt := make(chan struct{})
 	client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
 		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
-			if atomic.AddInt32(&calls, 1) == 1 {
+			if calls.Add(1) == 1 {
 				close(firstAttempt)
 			}
 			return nil, errors.New("temporary network failure")
@@ -210,7 +212,7 @@ func TestClientRetryBackoffObservesCancellation(t *testing.T) {
 	case <-time.After(150 * time.Millisecond):
 		t.Fatal("retry backoff delayed cancellation")
 	}
-	if got := atomic.LoadInt32(&calls); got != 1 {
+	if got := calls.Load(); got != 1 {
 		t.Fatalf("request calls = %d, want 1", got)
 	}
 }
@@ -223,8 +225,8 @@ func TestGetSendsHeadersAndDecodesResponse(t *testing.T) {
 		if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
 			t.Fatalf("Authorization = %q", got)
 		}
-		if got := r.Header.Get("User-Agent"); !strings.HasPrefix(got, "AtomCode-CLI/") {
-			t.Fatalf("User-Agent = %q", got)
+		if got := r.Header.Get("User-Agent"); got != version.UserAgent() {
+			t.Fatalf("User-Agent = %q, want %q", got, version.UserAgent())
 		}
 		if got := r.Header.Get("Accept"); got != "application/json" {
 			t.Fatalf("Accept = %q", got)
@@ -267,7 +269,7 @@ func TestRawRequestSupportsCustomAcceptAndEmptyToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Test reads the raw response separately; Close only releases test response resources.
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
@@ -310,8 +312,8 @@ func TestDoRequestRawWithBody(t *testing.T) {
 				if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
 					t.Fatalf("Authorization = %q", got)
 				}
-				if got := r.Header.Get("User-Agent"); !strings.HasPrefix(got, "AtomCode-CLI/") {
-					t.Fatalf("User-Agent = %q", got)
+				if got := r.Header.Get("User-Agent"); got != version.UserAgent() {
+					t.Fatalf("User-Agent = %q, want %q", got, version.UserAgent())
 				}
 				w.WriteHeader(http.StatusAccepted)
 			})
@@ -320,7 +322,7 @@ func TestDoRequestRawWithBody(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer resp.Body.Close()
+			defer resp.Body.Close() //nolint:errcheck // Test only asserts request/response metadata; Close only releases test response resources.
 			if resp.StatusCode != http.StatusAccepted {
 				t.Fatalf("status = %d", resp.StatusCode)
 			}
@@ -351,7 +353,7 @@ func TestDoRequestRawWithBodyReplaysBodyOnRetry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // Test only asserts retry metadata; Close only releases test response resources.
 	if atomic.LoadInt32(&calls) != 2 {
 		t.Fatalf("calls = %d", calls)
 	}
@@ -372,15 +374,15 @@ func TestMethodsEncodeBodies(t *testing.T) {
 		name       string
 		method     string
 		statusCode int
-		call       func(*Client, interface{}) error
+		call       func(*Client, any) error
 	}{
-		{name: "post", method: http.MethodPost, statusCode: http.StatusCreated, call: func(c *Client, result interface{}) error {
+		{name: "post", method: http.MethodPost, statusCode: http.StatusCreated, call: func(c *Client, result any) error {
 			return c.Post("/resource", map[string]string{"value": "post"}, result)
 		}},
-		{name: "put", method: http.MethodPut, statusCode: http.StatusOK, call: func(c *Client, result interface{}) error {
+		{name: "put", method: http.MethodPut, statusCode: http.StatusOK, call: func(c *Client, result any) error {
 			return c.Put("/resource", map[string]string{"value": "put"}, result)
 		}},
-		{name: "patch", method: http.MethodPatch, statusCode: http.StatusOK, call: func(c *Client, result interface{}) error {
+		{name: "patch", method: http.MethodPatch, statusCode: http.StatusOK, call: func(c *Client, result any) error {
 			return c.Patch("/resource", map[string]string{"value": "patch"}, result)
 		}},
 	}
@@ -655,7 +657,7 @@ func TestMethodsReturnAPIError(t *testing.T) {
 }
 
 func TestMethodsRejectUnencodableBody(t *testing.T) {
-	badBody := map[string]interface{}{"channel": make(chan int)}
+	badBody := map[string]any{"channel": make(chan int)}
 	client := NewClient("token")
 
 	for name, call := range map[string]func() error{
@@ -680,7 +682,7 @@ func newRetryTestClient(t *testing.T, failFirst int) (*Client, *int32) {
 	client := NewClient("test-token")
 	client.baseURL = "https://example.test"
 	client.httpClient = &http.Client{
-		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 			n := atomic.AddInt32(&calls, 1)
 			if int(n) <= failFirst {
 				return nil, errors.New("connection reset by peer")
@@ -825,7 +827,7 @@ func TestDoJSONRequestRejectsEmptyJSONBody(t *testing.T) {
 func TestDoJSONRequestRejectsEmptyAllowedStatuses(t *testing.T) {
 	var calls int32
 	client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
-		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 			atomic.AddInt32(&calls, 1)
 			return nil, errors.New("request should not be sent")
 		}),
@@ -843,11 +845,11 @@ func TestDoJSONRequestRejectsEmptyAllowedStatuses(t *testing.T) {
 
 func TestDoJSONRequestRetryPolicy(t *testing.T) {
 	t.Run("CanRetry false does not retry on network error", func(t *testing.T) {
-		var calls int32
+		var calls atomic.Int32
 		originalErr := errors.New("network failure")
 		client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
-			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				atomic.AddInt32(&calls, 1)
+			Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+				calls.Add(1)
 				return nil, originalErr
 			}),
 		})
@@ -864,16 +866,16 @@ func TestDoJSONRequestRetryPolicy(t *testing.T) {
 		if !errors.Is(err, originalErr) {
 			t.Fatalf("error does not preserve cause: %v", err)
 		}
-		if n := atomic.LoadInt32(&calls); n != 1 {
+		if n := calls.Load(); n != 1 {
 			t.Fatalf("calls = %d, want 1 (no retry)", n)
 		}
 	})
 
 	t.Run("CanRetry true retries once on network error", func(t *testing.T) {
-		var calls int32
+		var calls atomic.Int32
 		client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
-			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				n := atomic.AddInt32(&calls, 1)
+			Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+				n := calls.Add(1)
 				if n == 1 {
 					return nil, errors.New("network failure")
 				}
@@ -891,7 +893,7 @@ func TestDoJSONRequestRetryPolicy(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if n := atomic.LoadInt32(&calls); n != 2 {
+		if n := calls.Load(); n != 2 {
 			t.Fatalf("calls = %d, want 2 (1 fail + 1 retry)", n)
 		}
 	})
@@ -1085,7 +1087,7 @@ func TestAPIErrorRedactsCredentialInMultiplyEmbeddedJSONMessages(t *testing.T) {
 func TestSanitizeErrorTextRedactsCredentialAtEmbeddedJSONDepthLimit(t *testing.T) {
 	const secret = "depth-limit-json-secret-123"
 	nested := `{"access_token":"` + secret + `"}`
-	for i := 0; i < maxEmbeddedJSONDepth; i++ {
+	for range maxEmbeddedJSONDepth {
 		encoded, err := json.Marshal(map[string]string{"message": "wrapped " + nested})
 		if err != nil {
 			t.Fatal(err)
@@ -1219,7 +1221,7 @@ func TestAPIErrorPreservesBodyReadFailure(t *testing.T) {
 func TestAPIErrorWrapsTransportError(t *testing.T) {
 	originalErr := errors.New("connection reset by peer")
 	client := NewClientWithBaseURL("token", "https://example.test", &http.Client{
-		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 			return nil, originalErr
 		}),
 	})

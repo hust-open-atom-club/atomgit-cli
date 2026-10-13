@@ -319,7 +319,7 @@ func TestNotificationListJSONFlow(t *testing.T) {
 }
 
 func TestNotificationListHugeLimitDoesNotPanic(t *testing.T) {
-	factory := newFlowFactory(func(req *http.Request) (*http.Response, error) {
+	factory := newFlowFactory(func(*http.Request) (*http.Response, error) {
 		return cannedJSON(http.StatusOK, `{"total":0,"list":[]}`), nil
 	})
 
@@ -335,7 +335,7 @@ func TestNotificationListHugeLimitDoesNotPanic(t *testing.T) {
 }
 
 func TestNotificationListHumanFlow(t *testing.T) {
-	factory := newFlowFactory(func(req *http.Request) (*http.Response, error) {
+	factory := newFlowFactory(func(*http.Request) (*http.Response, error) {
 		return cannedJSON(http.StatusOK, flowNotificationsJSON), nil
 	})
 

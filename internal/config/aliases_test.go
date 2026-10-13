@@ -161,7 +161,7 @@ func TestConcurrentAliasUpdates(t *testing.T) {
 	const n = 24
 	var wg sync.WaitGroup
 	errCh := make(chan error, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -189,7 +189,7 @@ func TestConcurrentAliasUpdates(t *testing.T) {
 	if len(aliases) != n {
 		t.Errorf("len(aliases) = %d, want %d (concurrent updates lost)", len(aliases), n)
 	}
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if _, ok := aliases[fmt.Sprintf("alias-%03d", i)]; !ok {
 			t.Errorf("alias-%03d missing after concurrent saves", i)
 		}

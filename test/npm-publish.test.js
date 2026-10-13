@@ -29,7 +29,7 @@ const {
 
 const PLATFORM_FIXTURES = PLATFORM_PACKAGES.map((target) => ({
   ...target,
-  executable: target.os === "win32" ? "ag.exe" : "ag",
+  executable: target.os === "win32" ? "ag-cli.exe" : "ag-cli",
 }));
 
 function hash(buffer, algorithm, encoding) {
@@ -120,15 +120,15 @@ async function createArtifactSet(t, options = {}) {
       {
         name: MAIN_PACKAGE_NAME,
         version,
-        bin: { ag: "bin/ag.js" },
-        files: ["bin/ag.js"],
+        bin: options.mainBin || { "ag-cli": "bin/ag-cli.js" },
+        files: ["bin/ag-cli.js"],
         optionalDependencies,
       },
       {
         LICENSE: "license",
         "README.en.md": "english readme",
         "README.md": "readme",
-        "bin/ag.js": "launcher",
+        "bin/ag-cli.js": "launcher",
       },
     ),
   );
@@ -339,6 +339,13 @@ test("rejects a self-consistent but incomplete supported platform set", async (t
   );
 });
 
+test("rejects main packages exposing the old ag command", async (t) => {
+  for (const mainBin of [{ ag: "bin/ag-cli.js" }, { ag: "bin/ag-cli.js", "ag-cli": "bin/ag-cli.js" }]) {
+    const fixture = await createArtifactSet(t, { mainBin });
+    await assert.rejects(inspectArtifacts(fixture), /must expose bin\/ag-cli.js as the ag-cli executable/);
+  }
+});
+
 test("rejects a non-Windows platform binary without an executable bit", async (t) => {
   const nonWindows = PLATFORM_FIXTURES.find((platform) => platform.os !== "win32");
   const fixture = await createArtifactSet(t, {
@@ -346,7 +353,7 @@ test("rejects a non-Windows platform binary without an executable bit", async (t
   });
   await assert.rejects(
     inspectArtifacts(fixture),
-    new RegExp(`${nonWindows.name} entry package/bin/ag must be executable`),
+    new RegExp(`${nonWindows.name} entry package/bin/ag-cli must be executable`),
   );
 });
 
@@ -528,14 +535,14 @@ test("rerunning staged mode after approval performs the final smoke test", async
   assert.equal(registry.calls.some(([command]) => command === "install"), true);
   const execCall = registry.calls.find(([command]) => command === "exec");
   assert.deepEqual(execCall.slice(0, 3), ["exec", "--yes=false", "--prefix"]);
-  assert.deepEqual(execCall.slice(-3), ["ag", "version", "--json"]);
+  assert.deepEqual(execCall.slice(-3), ["ag-cli", "version", "--json"]);
 });
 
 test("fails when the installed npm command entry cannot execute", async () => {
   const plan = publicationPlan();
   const registry = registryRunner(plan, {
     existing: plan.packages.map(({ manifest }) => manifest.name),
-    commandFailure: "installed ag command is not executable",
+    commandFailure: "installed ag-cli command is not executable",
   });
 
   await assert.rejects(
@@ -544,7 +551,7 @@ test("fails when the installed npm command entry cannot execute", async () => {
       runNpm: registry.run,
       verifyAttempts: 1,
     }),
-    /failed to execute ag version/,
+    /failed to execute ag-cli version/,
   );
   assert.equal(registry.calls.some(([command]) => command === "exec"), true);
 });
@@ -573,7 +580,7 @@ test("resumes partial publication and always publishes the main package last", a
   assert.equal(registry.calls.some(([command]) => command === "install"), true);
   assert.deepEqual(
     registry.calls.find(([command]) => command === "exec").slice(-3),
-    ["ag", "version", "--json"],
+    ["ag-cli", "version", "--json"],
   );
 });
 
