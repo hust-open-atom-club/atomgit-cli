@@ -103,13 +103,16 @@ func contentTypeMismatchError(repository cmdutil.Repository, path, ref, actualTy
 func newCmdRepoContent(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "content",
-		Short: "Browse repository contents",
-		Long:  "List directories and view files without modifying repository contents.",
+		Short: "Browse and modify repository contents",
+		Long:  "List directories, view files, and create, update, or delete one file.",
 		Args:  cobra.NoArgs,
 	}
 
 	cmd.AddCommand(newCmdRepoContentList(f))
 	cmd.AddCommand(newCmdRepoContentView(f))
+	cmd.AddCommand(newCmdRepoContentCreate(f))
+	cmd.AddCommand(newCmdRepoContentUpdate(f))
+	cmd.AddCommand(newCmdRepoContentDelete(f))
 	cmdutil.AddRepositoryContextHelp(cmd)
 	return cmd
 }

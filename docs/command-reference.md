@@ -147,8 +147,11 @@
 - [ag-cli repo collaborator list](#ag-cli-repo-collaborator-list) — List repository collaborators
 - [ag-cli repo collaborator remove](#ag-cli-repo-collaborator-remove) — Remove a direct repository collaborator
 - [ag-cli repo collaborator view](#ag-cli-repo-collaborator-view) — View a repository collaborator's effective permission
-- [ag-cli repo content](#ag-cli-repo-content) — Browse repository contents
+- [ag-cli repo content](#ag-cli-repo-content) — Browse and modify repository contents
+- [ag-cli repo content create](#ag-cli-repo-content-create) — Create a repository file
+- [ag-cli repo content delete](#ag-cli-repo-content-delete) — Delete a repository file
 - [ag-cli repo content list](#ag-cli-repo-content-list) — List a repository directory
+- [ag-cli repo content update](#ag-cli-repo-content-update) — Update a repository file
 - [ag-cli repo content view](#ag-cli-repo-content-view) — View a repository file
 - [ag-cli repo create](#ag-cli-repo-create) — Create a new repository
 - [ag-cli repo delete](#ag-cli-repo-delete) — Delete a repository
@@ -3550,9 +3553,9 @@ ag-cli repo collaborator view owner/repo octocat
 
 Usage: `ag-cli repo content`
 
-Browse repository contents
+Browse and modify repository contents
 
-List directories and view files without modifying repository contents.
+List directories, view files, and create, update, or delete one file.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -3562,6 +3565,74 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | --- | --- | --- | --- |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli repo content create
+
+Usage: `ag-cli repo content create [<owner>/<repo>] <path> --branch <branch> --message <message> (--file <path> | --file -) [flags]`
+
+Create a repository file
+
+Create one file through the AtomGit contents API.
+
+The file bytes are read from --file or stdin and sent as Base64. Bytes are not
+trimmed or re-encoded as text. An empty file is valid. This command does not
+read the destination first and does not update an existing file.
+
+--branch is required so the write cannot fall back to the repository default
+branch. The request is not retried.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--branch` | Branch to modify (required) | `` | local |
+| `--file` | Read raw file bytes from a path, or - for stdin | `` | local |
+| `--message` | Commit message (required) | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli repo content create owner/repo docs/guide.md --branch main --message "Add guide" --file guide.md
+ag-cli repo content create README.md --branch main --message "Add README" --file -
+```
+
+
+## ag-cli repo content delete
+
+Usage: `ag-cli repo content delete [<owner>/<repo>] <path> --branch <branch> --message <message> --sha <blob-sha> [flags]`
+
+Delete a repository file
+
+Delete one file through the AtomGit contents API.
+
+--sha is the current file Blob SHA, not a commit SHA. Confirmation happens
+before authentication unless --yes is set. Cancelling sends no request. A
+conflicting SHA fails without reading a newer SHA or retrying.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--branch` | Branch to modify (required) | `` | local |
+| `--message` | Commit message (required) | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--sha` | Current file Blob SHA | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip confirmation prompt | `false` | local |
+
+### Example
+
+```bash
+ag-cli repo content delete owner/repo docs/guide.md --branch main --message "Remove guide" --sha abcdef1234567890abcdef1234567890abcdef12
+ag-cli repo content delete README.md --branch main --message "Remove README" --sha abcdef1234567890abcdef1234567890abcdef12 --yes
+```
 
 
 ## ag-cli repo content list
@@ -3590,6 +3661,39 @@ ag-cli repo content list
 ag-cli repo content list docs
 ag-cli repo content list owner/repo .
 ag-cli repo content list owner/repo docs/guides --ref v1.0.0 --json
+```
+
+
+## ag-cli repo content update
+
+Usage: `ag-cli repo content update [<owner>/<repo>] <path> --branch <branch> --message <message> --sha <blob-sha> (--file <path> | --file -) [flags]`
+
+Update a repository file
+
+Replace one file through the AtomGit contents API.
+
+--sha is the current file Blob SHA, not a commit SHA. A conflicting SHA fails
+without reading a newer SHA or retrying the write. The file bytes are read
+from --file or stdin and are not trimmed or re-encoded as text.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--branch` | Branch to modify (required) | `` | local |
+| `--file` | Read raw file bytes from a path, or - for stdin | `` | local |
+| `--message` | Commit message (required) | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--sha` | Current file Blob SHA | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli repo content update owner/repo docs/guide.md --branch main --message "Update guide" --sha abcdef1234567890abcdef1234567890abcdef12 --file guide.md
+ag-cli repo content update README.md --branch main --message "Update README" --sha abcdef1234567890abcdef1234567890abcdef12 --file -
 ```
 
 

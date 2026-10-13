@@ -1,11 +1,14 @@
 package api
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestGetRepositoryContentPathConstruction(t *testing.T) {
@@ -696,4 +699,151 @@ func TestContentRequestCount(t *testing.T) {
 			t.Fatalf("request count = %d, want 1", count)
 		}
 	})
+}
+
+func TestRepositoryContentWritesUseDocumentedRequests(t *testing.T) {
+	blob := "0123456789abcdef0123456789abcdef01234567"
+	raw := []byte{0, 255, '\n'}
+	encoded := base64.StdEncoding.EncodeToString(raw)
+	tests := []struct {
+		name    string
+		method  string
+		call    func(*Client) (RepositoryContentChange, error)
+		want    string
+		body    string
+		wantSHA string
+	}{
+		{
+			name:   "create",
+			method: http.MethodPost,
+			call: func(client *Client) (RepositoryContentChange, error) {
+				return CreateRepositoryContent(client, "alice", "demo", "docs/我的 文件.txt", "feature/x", "add file", raw)
+			},
+			want:    `{"content":"` + encoded + `","message":"add file","branch":"feature/x"}`,
+			body:    `{"commit":{"sha":"commit-sha","message":"add file"}}`,
+			wantSHA: "",
+		},
+		{
+			name:   "update",
+			method: http.MethodPut,
+			call: func(client *Client) (RepositoryContentChange, error) {
+				return UpdateRepositoryContent(client, "alice", "demo", "docs/我的 文件.txt", "feature/x", "edit file", blob, []byte{})
+			},
+			want:    `{"content":"","message":"edit file","sha":"` + blob + `","branch":"feature/x"}`,
+			body:    `{"commit":{"sha":"commit-sha"},"content":{"name":"我的 文件.txt","sha":"new-blob","type":"file"}}`,
+			wantSHA: "new-blob",
+		},
+		{
+			name:   "delete",
+			method: http.MethodDelete,
+			call: func(client *Client) (RepositoryContentChange, error) {
+				return DeleteRepositoryContent(client, "alice", "demo", "docs/我的 文件.txt", "feature/x", "remove file", blob)
+			},
+			want: `{"message":"remove file","sha":"` + blob + `","branch":"feature/x"}`,
+			body: `{"commit":{"sha":"commit-sha","message":"remove file"}}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var calls int
+			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				calls++
+				if r.Method != tt.method || r.URL.EscapedPath() != "/repos/alice/demo/contents/docs/%E6%88%91%E7%9A%84%20%E6%96%87%E4%BB%B6.txt" {
+					t.Fatalf("request = %s %s", r.Method, r.URL.EscapedPath())
+				}
+				if r.Header.Get("Content-Type") != "application/json" {
+					t.Fatalf("content type = %q", r.Header.Get("Content-Type"))
+				}
+				body, err := io.ReadAll(r.Body)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(body) != tt.want {
+					t.Fatalf("body = %s", body)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = io.WriteString(w, tt.body)
+			})
+			change, err := tt.call(client)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if calls != 1 || change.Commit == nil || change.Commit.SHA != "commit-sha" {
+				t.Fatalf("calls = %d change = %#v", calls, change)
+			}
+			gotSHA := ""
+			if change.Content != nil {
+				gotSHA = change.Content.SHA
+			}
+			if gotSHA != tt.wantSHA {
+				t.Fatalf("content sha = %q", gotSHA)
+			}
+		})
+	}
+}
+
+func TestRepositoryContentWriteDoesNotFollowRedirectOrRetry(t *testing.T) {
+	for _, status := range []int{http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect, http.StatusPermanentRedirect} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			var calls int
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls++
+				if r.URL.Path == "/followed" {
+					w.WriteHeader(http.StatusOK)
+					_, _ = io.WriteString(w, `{"commit":{"sha":"followed"}}`)
+					return
+				}
+				w.Header().Set("Location", "/followed")
+				w.WriteHeader(status)
+				_, _ = io.WriteString(w, `{"commit":{"sha":"ignored"}}`)
+			}))
+			t.Cleanup(server.Close)
+			var redirects int
+			httpClient := &http.Client{
+				Timeout:       time.Second,
+				CheckRedirect: func(*http.Request, []*http.Request) error { redirects++; return nil },
+			}
+			client := NewClientWithBaseURL("token", server.URL, httpClient)
+			_, err := UpdateRepositoryContent(client, "alice", "demo", "README.md", "main", "edit", "0123456789abcdef0123456789abcdef01234567", []byte("x"))
+			if err == nil || calls != 1 || !strings.Contains(err.Error(), http.StatusText(status)) {
+				t.Fatalf("calls = %d err = %v", calls, err)
+			}
+			if err := httpClient.CheckRedirect(nil, nil); err != nil || redirects != 1 {
+				t.Fatal("shared redirect policy changed")
+			}
+		})
+	}
+	t.Run("zero timeout", func(t *testing.T) {
+		var calls int
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			calls++
+			if r.URL.Path == "/followed" {
+				t.Fatal("followed redirect")
+			}
+			w.Header().Set("Location", "/followed")
+			w.WriteHeader(http.StatusTemporaryRedirect)
+		}))
+		t.Cleanup(server.Close)
+		client := NewClientWithBaseURL("token", server.URL, &http.Client{})
+		_, err := DeleteRepositoryContent(client, "alice", "demo", "README.md", "main", "remove", "0123456789abcdef0123456789abcdef01234567")
+		if err == nil || calls != 1 {
+			t.Fatalf("calls = %d err = %v", calls, err)
+		}
+	})
+}
+
+func TestRepositoryContentWriteReportsConflictOnce(t *testing.T) {
+	var calls int
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if r.Method != http.MethodPut {
+			t.Fatalf("method = %s", r.Method)
+		}
+		w.WriteHeader(http.StatusConflict)
+		_, _ = io.WriteString(w, `{"message":"sha mismatch"}`)
+	})
+	_, err := UpdateRepositoryContent(client, "alice", "demo", "README.md", "main", "edit", "0123456789abcdef0123456789abcdef01234567", []byte("x"))
+	if err == nil || !strings.Contains(err.Error(), "sha mismatch") || !strings.Contains(err.Error(), "not retried") || calls != 1 {
+		t.Fatalf("calls = %d err = %v", calls, err)
+	}
 }
