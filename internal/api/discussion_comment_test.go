@@ -154,9 +154,17 @@ func TestFindDiscussionCommentPagesAndNestedReply(t *testing.T) {
 				_, _ = io.WriteString(w, "["+strings.Join(items, ",")+"]")
 				return
 			}
-			_, _ = io.WriteString(w, `[{"id":"later","reply_total":0}]`)
+			if page == "2" {
+				_, _ = io.WriteString(w, `[{"id":"later","reply_total":0}]`)
+				return
+			}
+			_, _ = io.WriteString(w, `[]`)
 		case r.URL.EscapedPath() == "/repos/alice/demo/discuss/7/comment/parent%201/reply":
-			_, _ = io.WriteString(w, `[{"id":"reply 9","reply_total":0}]`)
+			if r.URL.Query().Get("page") == "1" {
+				_, _ = io.WriteString(w, `[{"id":"reply 9","reply_total":0}]`)
+				return
+			}
+			_, _ = io.WriteString(w, `[]`)
 		default:
 			t.Fatalf("unexpected path %s", r.URL.EscapedPath())
 		}
@@ -174,15 +182,84 @@ func TestFindDiscussionCommentPagesAndNestedReply(t *testing.T) {
 	}
 }
 
+func TestFindDiscussionCommentContinuesAfterShortPage(t *testing.T) {
+	var pages []string
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.EscapedPath() {
+		case "/repos/alice/demo/discuss/7":
+			_, _ = io.WriteString(w, `{"number":7,"comment_total":1}`)
+		case "/repos/alice/demo/discuss/7/comment":
+			page := r.URL.Query().Get("page")
+			pages = append(pages, page)
+			switch page {
+			case "1":
+				_, _ = io.WriteString(w, `[{"id":"first","reply_total":0}]`)
+			case "2":
+				_, _ = io.WriteString(w, `[{"id":"target","reply_total":0}]`)
+			default:
+				_, _ = io.WriteString(w, `[]`)
+			}
+		default:
+			t.Fatalf("unexpected path %s", r.URL.EscapedPath())
+		}
+	})
+
+	located, err := FindDiscussionComment(client, "alice", "demo", 7, "target")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !located.TopLevel || located.Comment.ID != "target" {
+		t.Fatalf("location = %#v", located)
+	}
+	if strings.Join(pages, ",") != "1,2,3" {
+		t.Fatalf("pages = %#v", pages)
+	}
+}
+
+func TestDiscussionCommentWritesDoNotFollowRedirects(t *testing.T) {
+	for _, status := range []int{http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect, http.StatusPermanentRedirect} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			calls, redirects := 0, 0
+			httpClient := &http.Client{
+				CheckRedirect: func(*http.Request, []*http.Request) error { redirects++; return nil },
+				Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+					calls++
+					return &http.Response{StatusCode: status, Header: http.Header{"Location": {"https://api.atomgit.com/api/v5/other"}}, Body: io.NopCloser(strings.NewReader(`{}`)), Request: req}, nil
+				}),
+			}
+			client := NewClientWithHTTPClient("fake-token", httpClient)
+			_, err := CreateDiscussionComment(client, "alice", "demo", 7, "body")
+			if !IsHTTPStatus(err, status) || calls != 1 || redirects != 0 {
+				t.Fatalf("create err = %v, calls = %d, redirects = %d", err, calls, redirects)
+			}
+			calls = 0
+			if err := DeleteDiscussionComment(client, "alice", "demo", 7, "target"); !IsHTTPStatus(err, status) || calls != 1 || redirects != 0 {
+				t.Fatalf("delete err = %v, calls = %d, redirects = %d", err, calls, redirects)
+			}
+			if err := httpClient.CheckRedirect(nil, nil); err != nil || redirects != 1 {
+				t.Fatal("shared HTTP client redirect policy changed")
+			}
+		})
+	}
+}
+
 func TestRequireTopLevelDiscussionCommentRejectsReply(t *testing.T) {
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.EscapedPath() {
 		case "/repos/alice/demo/discuss/7":
 			_, _ = io.WriteString(w, `{"number":7,"comment_total":1}`)
 		case "/repos/alice/demo/discuss/7/comment":
-			_, _ = io.WriteString(w, `[{"id":"parent","reply_total":1}]`)
+			if r.URL.Query().Get("page") == "1" {
+				_, _ = io.WriteString(w, `[{"id":"parent","reply_total":1}]`)
+				return
+			}
+			_, _ = io.WriteString(w, `[]`)
 		case "/repos/alice/demo/discuss/7/comment/parent/reply":
-			_, _ = io.WriteString(w, `[{"id":"child","reply_total":0}]`)
+			if r.URL.Query().Get("page") == "1" {
+				_, _ = io.WriteString(w, `[{"id":"child","reply_total":0}]`)
+				return
+			}
+			_, _ = io.WriteString(w, `[]`)
 		default:
 			t.Fatalf("unexpected path %s", r.URL.EscapedPath())
 		}
@@ -200,7 +277,11 @@ func TestFindDiscussionCommentMissingDoesNotImplySuccess(t *testing.T) {
 		case "/repos/alice/demo/discuss/7":
 			_, _ = io.WriteString(w, `{"number":7,"comment_total":1}`)
 		case "/repos/alice/demo/discuss/7/comment":
-			_, _ = io.WriteString(w, `[{"id":"other","reply_total":0}]`)
+			if r.URL.Query().Get("page") == "1" {
+				_, _ = io.WriteString(w, `[{"id":"other","reply_total":0}]`)
+				return
+			}
+			_, _ = io.WriteString(w, `[]`)
 		default:
 			t.Fatalf("unexpected path %s", r.URL.EscapedPath())
 		}

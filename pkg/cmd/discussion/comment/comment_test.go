@@ -170,9 +170,15 @@ func TestDiscussionCommentReplyRejectsWrongParent(t *testing.T) {
 		case "/api/v5/repos/alice/demo/discuss/7":
 			return discussionCommentResponse(http.StatusOK, `{"number":7,"comment_total":1}`), nil
 		case "/api/v5/repos/alice/demo/discuss/7/comment":
-			return discussionCommentResponse(http.StatusOK, `[{"id":"parent","reply_total":1}]`), nil
+			if req.URL.Query().Get("page") == "1" {
+				return discussionCommentResponse(http.StatusOK, `[{"id":"parent","reply_total":1}]`), nil
+			}
+			return discussionCommentResponse(http.StatusOK, `[]`), nil
 		case "/api/v5/repos/alice/demo/discuss/7/comment/parent/reply":
-			return discussionCommentResponse(http.StatusOK, `[{"id":"child","reply_total":0}]`), nil
+			if req.URL.Query().Get("page") == "1" {
+				return discussionCommentResponse(http.StatusOK, `[{"id":"child","reply_total":0}]`), nil
+			}
+			return discussionCommentResponse(http.StatusOK, `[]`), nil
 		default:
 			t.Fatalf("path = %s", req.URL.Path)
 			return nil, nil
@@ -201,7 +207,10 @@ func TestDiscussionCommentReplyPostsAfterParentCheck(t *testing.T) {
 			return discussionCommentResponse(http.StatusOK, `{"number":7}`), nil
 		case "/api/v5/repos/alice/demo/discuss/7/comment":
 			if req.Method == http.MethodGet {
-				return discussionCommentResponse(http.StatusOK, `[{"id":"parent.id","reply_total":0}]`), nil
+				if req.URL.Query().Get("page") == "1" {
+					return discussionCommentResponse(http.StatusOK, `[{"id":"parent.id","reply_total":0}]`), nil
+				}
+				return discussionCommentResponse(http.StatusOK, `[]`), nil
 			}
 			t.Fatal("create was not expected")
 			return nil, nil
@@ -226,6 +235,7 @@ func TestDiscussionCommentReplyPostsAfterParentCheck(t *testing.T) {
 	}
 	if strings.Join(methods, ",") != strings.Join([]string{
 		"GET /api/v5/repos/alice/demo/discuss/7",
+		"GET /api/v5/repos/alice/demo/discuss/7/comment",
 		"GET /api/v5/repos/alice/demo/discuss/7/comment",
 		"POST /api/v5/repos/alice/demo/discuss/7/comment/parent.id/reply",
 	}, ",") {
@@ -252,7 +262,10 @@ func TestDiscussionCommentEditFindsTargetOnSecondPage(t *testing.T) {
 				}
 				return discussionCommentResponse(http.StatusOK, string(encoded)), nil
 			}
-			return discussionCommentResponse(http.StatusOK, `[{"id":"target","reply_total":0}]`), nil
+			if req.URL.Query().Get("page") == "2" {
+				return discussionCommentResponse(http.StatusOK, `[{"id":"target","reply_total":0}]`), nil
+			}
+			return discussionCommentResponse(http.StatusOK, `[]`), nil
 		case req.Method == http.MethodPut && req.URL.Path == "/api/v5/repos/alice/demo/discuss/7/comment/target":
 			raw, _ := io.ReadAll(req.Body)
 			if string(raw) != `{"md_content":"edited"}` {
@@ -288,7 +301,10 @@ func TestDiscussionCommentEditRejectsForeignComment(t *testing.T) {
 		case "/api/v5/repos/alice/demo/discuss/7":
 			return discussionCommentResponse(http.StatusOK, `{"number":7}`), nil
 		case "/api/v5/repos/alice/demo/discuss/7/comment":
-			return discussionCommentResponse(http.StatusOK, `[{"id":"other","reply_total":0}]`), nil
+			if req.URL.Query().Get("page") == "1" {
+				return discussionCommentResponse(http.StatusOK, `[{"id":"other","reply_total":0}]`), nil
+			}
+			return discussionCommentResponse(http.StatusOK, `[]`), nil
 		default:
 			t.Fatalf("path = %s", req.URL.Path)
 			return nil, nil
@@ -321,7 +337,10 @@ func TestDiscussionCommentDeleteConfirmation(t *testing.T) {
 				case req.URL.Path == "/api/v5/repos/alice/demo/discuss/7":
 					return discussionCommentResponse(http.StatusOK, `{"number":7}`), nil
 				case req.URL.Path == "/api/v5/repos/alice/demo/discuss/7/comment" && req.Method == http.MethodGet:
-					return discussionCommentResponse(http.StatusOK, `[{"id":"target","reply_total":0}]`), nil
+					if req.URL.Query().Get("page") == "1" {
+						return discussionCommentResponse(http.StatusOK, `[{"id":"target","reply_total":0}]`), nil
+					}
+					return discussionCommentResponse(http.StatusOK, `[]`), nil
 				case req.Method == http.MethodDelete:
 					deletes++
 					if req.URL.Path != "/api/v5/repos/alice/demo/discuss/7/comment/target" {
@@ -356,9 +375,15 @@ func TestDiscussionCommentDeleteNestedReplyAndEmptyBody(t *testing.T) {
 		case "/api/v5/repos/alice/demo/discuss/7":
 			return discussionCommentResponse(http.StatusOK, `{"number":7,"comment_total":1}`), nil
 		case "/api/v5/repos/alice/demo/discuss/7/comment":
-			return discussionCommentResponse(http.StatusOK, `[{"id":"parent","reply_total":1}]`), nil
+			if req.URL.Query().Get("page") == "1" {
+				return discussionCommentResponse(http.StatusOK, `[{"id":"parent","reply_total":1}]`), nil
+			}
+			return discussionCommentResponse(http.StatusOK, `[]`), nil
 		case "/api/v5/repos/alice/demo/discuss/7/comment/parent/reply":
-			return discussionCommentResponse(http.StatusOK, `[{"id":"child.id","reply_total":0}]`), nil
+			if req.URL.Query().Get("page") == "1" {
+				return discussionCommentResponse(http.StatusOK, `[{"id":"child.id","reply_total":0}]`), nil
+			}
+			return discussionCommentResponse(http.StatusOK, `[]`), nil
 		case "/api/v5/repos/alice/demo/discuss/7/comment/child.id":
 			if req.Method != http.MethodDelete {
 				t.Fatalf("method = %s", req.Method)
@@ -385,7 +410,10 @@ func TestDiscussionCommentDeleteDoesNotReportFailedWriteAsSuccess(t *testing.T) 
 		case "/api/v5/repos/alice/demo/discuss/7":
 			return discussionCommentResponse(http.StatusOK, `{"number":7}`), nil
 		case "/api/v5/repos/alice/demo/discuss/7/comment":
-			return discussionCommentResponse(http.StatusOK, `[{"id":"target","reply_total":0}]`), nil
+			if req.URL.Query().Get("page") == "1" {
+				return discussionCommentResponse(http.StatusOK, `[{"id":"target","reply_total":0}]`), nil
+			}
+			return discussionCommentResponse(http.StatusOK, `[]`), nil
 		case "/api/v5/repos/alice/demo/discuss/7/comment/target":
 			return discussionCommentResponse(http.StatusForbidden, `{"message":"missing permission"}`), nil
 		default:

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 )
@@ -109,16 +110,22 @@ func UpdateDiscussion(client *Client, owner, repo string, number int, request Di
 	}
 	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number))
 	// Redirects can replay PUT independently of the API retry policy.
-	httpClient := *metadataHTTPClient(client.httpClient)
-	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error {
-		return http.ErrUseLastResponse
-	}
 	var detail DiscussionDetail
-	if err := client.doJSONRequestContext(client.requestContext(), &httpClient, http.MethodPut, path, bytes.NewReader(body), "application/json", "application/json",
+	if err := doDiscussionWrite(client, http.MethodPut, path, bytes.NewReader(body),
 		RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: false}, &detail); err != nil {
 		return DiscussionDetail{}, err
 	}
 	return detail, nil
+}
+
+// doDiscussionWrite disables redirect following. Go otherwise replays the
+// original method and body, including DELETE, outside the retry policy.
+func doDiscussionWrite(client *Client, method, path string, body io.Reader, policy RequestPolicy, result any) error {
+	httpClient := *metadataHTTPClient(client.httpClient)
+	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	return client.doJSONRequestContext(client.requestContext(), &httpClient, method, path, body, "application/json", "application/json", policy, result)
 }
 
 // ListDiscussionComments fetches every comment in a discussion thread. total
@@ -186,7 +193,7 @@ func UpdateDiscussionComment(client *Client, owner, repo string, number int, com
 // is not an error.
 func DeleteDiscussionComment(client *Client, owner, repo string, number int, commentID string) error {
 	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", commentID)
-	if err := client.doJSONRequest(http.MethodDelete, path, nil, "", "application/json", discussionDeletePolicy, nil); err != nil {
+	if err := doDiscussionWrite(client, http.MethodDelete, path, nil, discussionDeletePolicy, nil); err != nil {
 		return fmt.Errorf("delete discussion comment %s: %w", commentID, err)
 	}
 	return nil
@@ -198,7 +205,7 @@ func writeDiscussionComment(client *Client, method, path, body string) (Discussi
 		return DiscussionComment{}, err
 	}
 	var comment DiscussionComment
-	if err := client.doJSONRequest(method, path, bytes.NewReader(payload), "application/json", "application/json", discussionWritePolicy, &comment); err != nil {
+	if err := doDiscussionWrite(client, method, path, bytes.NewReader(payload), discussionWritePolicy, &comment); err != nil {
 		return DiscussionComment{}, err
 	}
 	return comment, nil
@@ -250,19 +257,35 @@ func RequireTopLevelDiscussionComment(client *Client, owner, repo string, number
 	return located.Comment, nil
 }
 
-// Membership scans keep going until a short page. comment_total and
+// Membership scans continue until an empty page. A short page is not terminal:
+// the server may ignore per_page or cap a page below 100. comment_total and
 // reply_total are hints for the read commands; a stale total must not hide a
 // comment and allow a write against the wrong discussion.
 func listAllDiscussionComments(client *Client, owner, repo string, number int) ([]DiscussionComment, error) {
 	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment")
-	return getPaginatedWithPolicy[DiscussionComment](client, defaultMaxPerPage*maxUntilEmptyRequestPages, discussionReadPolicy, func(page, perPage int) string {
-		return pageQuery(path, page, perPage)
+	return listDiscussionPages(client, func(page int) string {
+		return pageQuery(path, page, defaultMaxPerPage)
 	})
 }
 
 func listAllDiscussionReplies(client *Client, owner, repo string, number int, commentID string) ([]DiscussionComment, error) {
 	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", commentID, "reply")
-	return getPaginatedWithPolicy[DiscussionComment](client, defaultMaxPerPage*maxUntilEmptyRequestPages, discussionReadPolicy, func(page, perPage int) string {
-		return pageQuery(path, page, perPage)
+	return listDiscussionPages(client, func(page int) string {
+		return pageQuery(path, page, defaultMaxPerPage)
 	})
+}
+
+func listDiscussionPages(client *Client, pagePath func(page int) string) ([]DiscussionComment, error) {
+	items := make([]DiscussionComment, 0)
+	for page := 1; page <= maxUntilEmptyRequestPages; page++ {
+		var pageItems []DiscussionComment
+		if err := client.doJSONRequest(http.MethodGet, pagePath(page), nil, "", "application/json", discussionReadPolicy, &pageItems); err != nil {
+			return nil, err
+		}
+		if len(pageItems) == 0 {
+			return items, nil
+		}
+		items = append(items, pageItems...)
+	}
+	return nil, fmt.Errorf("discussion comment pagination reached the maximum of %d pages", maxUntilEmptyRequestPages)
 }

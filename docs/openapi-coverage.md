@@ -87,7 +87,7 @@
 | AI Hub | deferred | partner | 不把目录中的模块名称当作已支持端点；明确移交并验证契约后再立项 | docs（仅官方目录）；[#124](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/124)，具体契约未验证 |
 | PR request-changes / 正式拒绝审查 | unverified | project | 当前正式 review 只支持 approve；未确认公开 API 契约前不模拟服务端审查状态 | source；[review 实现](../pkg/cmd/pr/review.go)，不猜测未文档化端点 |
 | 通用 ag-cli api 的 v8 访问 | deferred | project | 当前固定 v5；如新增版本选择，须单独明确认证、路径和状态码策略 | source,mock；[API 命令](../pkg/cmd/api/api.go)，v8 现经专用 Actions 命令访问 |
-| Other Discussion write commands | deferred | project | Repository edit is implemented; creation, deletion, state changes, comment/reply writes, and organization discussion management remain outside the dedicated command scope | source,mock; [#162](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/162), [documented edit API](https://docs.atomgit.com/en/docs/apis/put-api-v-5-repos-owner-repo-discuss-number/) |
+| Other Discussion write commands | deferred | project | 讨论编辑和评论创建/回复/编辑/删除已实现；讨论创建、删除、状态变更和组织讨论管理仍不在专用命令范围内 | source,mock；[#162](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/162)、[#165](https://atomgit.com/hust-open-atom-club/atomgit-cli/issues/165)、[讨论更新接口](https://docs.atomgit.com/en/docs/apis/put-api-v-5-repos-owner-repo-discuss-number/) |
 
 ### Issues #113–#122 对账
 
