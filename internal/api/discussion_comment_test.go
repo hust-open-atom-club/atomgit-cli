@@ -181,8 +181,8 @@ func TestFindDiscussionCommentPagesAndNestedReply(t *testing.T) {
 	if located.TopLevel || located.ParentID != "parent 1" || located.Comment.ID != "reply 9" {
 		t.Fatalf("location = %#v", located)
 	}
-	if len(paths) < 4 || !strings.Contains(paths[2], "page=2") {
-		t.Fatalf("paths = %#v", paths)
+	if len(paths) != 3 || !strings.Contains(paths[1], "/comment?page=1") || !strings.Contains(paths[2], "parent%201/reply?page=1") || strings.Contains(paths[2], "page=2") {
+		t.Fatalf("paths = %#v, want the parent comment page and only its matching reply page", paths)
 	}
 }
 
@@ -204,6 +204,10 @@ func TestFindDiscussionCommentContinuesAfterShortPage(t *testing.T) {
 				_, _ = io.WriteString(w, `[]`)
 			}
 		default:
+			if strings.HasSuffix(r.URL.EscapedPath(), "/reply") {
+				_, _ = io.WriteString(w, `[]`)
+				return
+			}
 			t.Fatalf("unexpected path %s", r.URL.EscapedPath())
 		}
 	})
@@ -215,8 +219,8 @@ func TestFindDiscussionCommentContinuesAfterShortPage(t *testing.T) {
 	if !located.TopLevel || located.Comment.ID != "target" {
 		t.Fatalf("location = %#v", located)
 	}
-	if strings.Join(pages, ",") != "1,2,3" {
-		t.Fatalf("pages = %#v", pages)
+	if strings.Join(pages, ",") != "1,2" {
+		t.Fatalf("pages = %#v, want the short page and the matching page only", pages)
 	}
 }
 
@@ -250,8 +254,8 @@ func TestFindDiscussionCommentIgnoresStaleReplyTotal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if located.TopLevel || located.ParentID != "parent" || located.Comment.ID != "hidden-reply" || replyPages != 2 {
-		t.Fatalf("location = %#v, reply pages = %d", located, replyPages)
+	if located.TopLevel || located.ParentID != "parent" || located.Comment.ID != "hidden-reply" || replyPages != 1 {
+		t.Fatalf("location = %#v, reply pages = %d, want the matching reply page only", located, replyPages)
 	}
 }
 
@@ -347,5 +351,135 @@ func TestFindDiscussionCommentStopsWhenLookupFails(t *testing.T) {
 	_, err := FindDiscussionComment(client, "alice", "demo", 7, "missing")
 	if !IsHTTPStatus(err, http.StatusNotFound) {
 		t.Fatalf("error = %v, want 404", err)
+	}
+}
+
+func TestFindDiscussionCommentStopsWhenTargetIsOnFirstPage(t *testing.T) {
+	gets := 0
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		gets++
+		switch r.URL.EscapedPath() {
+		case "/repos/alice/demo/discuss/7":
+			_, _ = io.WriteString(w, `{"number":7}`)
+		case "/repos/alice/demo/discuss/7/comment":
+			if r.URL.Query().Get("page") != "1" {
+				t.Fatalf("page = %s, want only the matching first page", r.URL.Query().Get("page"))
+			}
+			_, _ = io.WriteString(w, `[{"id":"target","reply_total":0},{"id":"later","reply_total":0}]`)
+		default:
+			t.Fatalf("unexpected path %s", r.URL.EscapedPath())
+		}
+	})
+
+	located, err := FindDiscussionComment(client, "alice", "demo", 7, "target")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !located.TopLevel || located.Comment.ID != "target" || gets != 2 {
+		t.Fatalf("location = %#v, gets = %d, want the discussion and the matching comment page", located, gets)
+	}
+}
+
+func TestFindDiscussionCommentStopsBeforePageCapWhenTargetIsFound(t *testing.T) {
+	gets := 0
+	commentPages := 0
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		gets++
+		switch r.URL.EscapedPath() {
+		case "/repos/alice/demo/discuss/7":
+			_, _ = io.WriteString(w, `{"number":7}`)
+		case "/repos/alice/demo/discuss/7/comment":
+			commentPages++
+			page := r.URL.Query().Get("page")
+			if page != "1" {
+				t.Fatalf("comment page = %s, want to stop on the full page containing the target", page)
+			}
+			items := make([]string, 100)
+			for i := range items {
+				items[i] = fmt.Sprintf(`{"id":"c-%03d","reply_total":0}`, i)
+			}
+			items[0] = `{"id":"target","reply_total":0}`
+			_, _ = io.WriteString(w, "["+strings.Join(items, ",")+"]")
+		default:
+			t.Fatalf("unexpected path %s", r.URL.EscapedPath())
+		}
+	})
+
+	located, err := FindDiscussionComment(client, "alice", "demo", 7, "target")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !located.TopLevel || located.Comment.ID != "target" || gets != 2 || commentPages != 1 {
+		t.Fatalf("location = %#v, gets = %d, comment pages = %d", located, gets, commentPages)
+	}
+}
+
+func TestFindDiscussionReplyStopsBeforePageCapWhenTargetIsFound(t *testing.T) {
+	gets := 0
+	replyPages := 0
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		gets++
+		switch r.URL.EscapedPath() {
+		case "/repos/alice/demo/discuss/7":
+			_, _ = io.WriteString(w, `{"number":7}`)
+		case "/repos/alice/demo/discuss/7/comment":
+			if r.URL.Query().Get("page") != "1" {
+				t.Fatalf("comment page = %s", r.URL.Query().Get("page"))
+			}
+			_, _ = io.WriteString(w, `[{"id":"parent","reply_total":0}]`)
+		case "/repos/alice/demo/discuss/7/comment/parent/reply":
+			replyPages++
+			page := r.URL.Query().Get("page")
+			if page != "1" {
+				t.Fatalf("reply page = %s, want to stop on the full page containing the target", page)
+			}
+			items := make([]string, 100)
+			for i := range items {
+				items[i] = fmt.Sprintf(`{"id":"r-%03d","reply_total":0}`, i)
+			}
+			items[0] = `{"id":"nested","reply_total":0}`
+			_, _ = io.WriteString(w, "["+strings.Join(items, ",")+"]")
+		default:
+			t.Fatalf("unexpected path %s", r.URL.EscapedPath())
+		}
+	})
+
+	located, err := FindDiscussionComment(client, "alice", "demo", 7, "nested")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if located.TopLevel || located.ParentID != "parent" || located.Comment.ID != "nested" || gets != 3 || replyPages != 1 {
+		t.Fatalf("location = %#v, gets = %d, reply pages = %d", located, gets, replyPages)
+	}
+}
+
+func TestFindDiscussionCommentKeepsPageCapWhenTargetIsMissing(t *testing.T) {
+	commentPages := 0
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.EscapedPath() {
+		case "/repos/alice/demo/discuss/7":
+			_, _ = io.WriteString(w, `{"number":7}`)
+		case "/repos/alice/demo/discuss/7/comment":
+			commentPages++
+			items := make([]string, 100)
+			for i := range items {
+				items[i] = fmt.Sprintf(`{"id":"c-%d-%03d","reply_total":0}`, commentPages, i)
+			}
+			_, _ = io.WriteString(w, "["+strings.Join(items, ",")+"]")
+		default:
+			if strings.HasSuffix(r.URL.EscapedPath(), "/reply") {
+				_, _ = io.WriteString(w, `[]`)
+				return
+			}
+			t.Fatalf("unexpected path %s", r.URL.EscapedPath())
+		}
+	})
+
+	_, err := FindDiscussionComment(client, "alice", "demo", 7, "missing")
+	if err == nil || !strings.Contains(err.Error(), "discussion comment pagination reached the maximum of 100 pages") {
+		t.Fatalf("error = %v", err)
+	}
+	if commentPages != 100 {
+		t.Fatalf("comment pages = %d, want the cap before any reply scan", commentPages)
 	}
 }

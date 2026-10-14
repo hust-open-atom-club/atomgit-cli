@@ -1495,7 +1495,7 @@ ag-cli discussion comment delete hust-open-atom-club/atomgit-cli 1 abc123
 ag-cli discussion comment delete hust-open-atom-club/atomgit-cli 1 abc123 --yes
 ```
 
-创建、回复和编辑都发送 JSON `md_content`，成功状态为 HTTP 200，且不会自动重试。编辑和删除会先分页查找该讨论的顶层评论及其一层回复；找不到目标时不发送写请求。删除成功时允许空响应。点赞和采纳不在这些命令范围内。
+创建、回复和编辑都发送 JSON `md_content`，成功状态为 HTTP 200，且不会自动重试。编辑、删除和回复会按页查找该讨论的顶层评论，并在同一页内查找一层回复；找到目标后立即停止，不再读取后续页。短页不会被当作结束。只有确认目标不存在时才不发送写请求；目标仍未出现且分页达到上限时，查找失败，同样不发送写请求。删除成功时允许空响应。点赞和采纳不在这些命令范围内。
 
 ### Edit a discussion
 

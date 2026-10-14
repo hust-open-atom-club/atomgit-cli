@@ -228,34 +228,50 @@ func writeDiscussionComment(client *Client, method, path, body string) (Discussi
 }
 
 // FindDiscussionComment walks a discussion's top-level comments and their
-// one-level replies until commentID is found. A missing comment is
-// ErrDiscussionCommentNotFound; lookup failures are returned unchanged so a
-// caller can refuse to write.
+// one-level replies until commentID is found. Each comment page is checked
+// before its replies, and a match returns before any later page is read. A
+// missing comment is ErrDiscussionCommentNotFound; lookup failures are
+// returned unchanged so a caller can refuse to write.
 func FindDiscussionComment(client *Client, owner, repo string, number int, commentID string) (DiscussionCommentLocation, error) {
 	if _, err := GetDiscussion(client, owner, repo, number); err != nil {
 		return DiscussionCommentLocation{}, err
 	}
-	comments, err := listAllDiscussionComments(client, owner, repo, number)
+	var located DiscussionCommentLocation
+	var found bool
+	comments := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment")
+	err := eachDiscussionPage(client, comments, func(page []DiscussionComment) (bool, error) {
+		for _, comment := range page {
+			if comment.ID == commentID {
+				located = DiscussionCommentLocation{Comment: comment, TopLevel: true}
+				found = true
+				return true, nil
+			}
+		}
+		for _, comment := range page {
+			replies := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", comment.ID, "reply")
+			err := eachDiscussionPage(client, replies, func(replyPage []DiscussionComment) (bool, error) {
+				for _, reply := range replyPage {
+					if reply.ID == commentID {
+						located = DiscussionCommentLocation{Comment: reply, ParentID: comment.ID}
+						found = true
+						return true, nil
+					}
+				}
+				return false, nil
+			})
+			if err != nil || found {
+				return found, err
+			}
+		}
+		return false, nil
+	})
 	if err != nil {
 		return DiscussionCommentLocation{}, err
 	}
-	for _, comment := range comments {
-		if comment.ID == commentID {
-			return DiscussionCommentLocation{Comment: comment, TopLevel: true}, nil
-		}
+	if !found {
+		return DiscussionCommentLocation{}, fmt.Errorf("comment %s on discussion #%d: %w", commentID, number, ErrDiscussionCommentNotFound)
 	}
-	for _, comment := range comments {
-		replies, err := listAllDiscussionReplies(client, owner, repo, number, comment.ID)
-		if err != nil {
-			return DiscussionCommentLocation{}, err
-		}
-		for _, reply := range replies {
-			if reply.ID == commentID {
-				return DiscussionCommentLocation{Comment: reply, ParentID: comment.ID}, nil
-			}
-		}
-	}
-	return DiscussionCommentLocation{}, fmt.Errorf("comment %s on discussion #%d: %w", commentID, number, ErrDiscussionCommentNotFound)
+	return located, nil
 }
 
 // RequireTopLevelDiscussionComment finds commentID and rejects replies.
@@ -270,35 +286,24 @@ func RequireTopLevelDiscussionComment(client *Client, owner, repo string, number
 	return located.Comment, nil
 }
 
-// Membership scans continue until an empty page. A short page is not terminal:
-// the server may ignore per_page or cap a page below 100. comment_total and
-// reply_total are display hints; a stale count must not hide a comment or
-// reply and allow a write against the wrong discussion.
-func listAllDiscussionComments(client *Client, owner, repo string, number int) ([]DiscussionComment, error) {
-	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment")
-	return listDiscussionPages(client, func(page int) string {
-		return pageQuery(path, page, defaultMaxPerPage)
-	})
-}
-
-func listAllDiscussionReplies(client *Client, owner, repo string, number int, commentID string) ([]DiscussionComment, error) {
-	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", commentID, "reply")
-	return listDiscussionPages(client, func(page int) string {
-		return pageQuery(path, page, defaultMaxPerPage)
-	})
-}
-
-func listDiscussionPages(client *Client, pagePath func(page int) string) ([]DiscussionComment, error) {
-	items := make([]DiscussionComment, 0)
+// Membership scans continue until an empty page or the target is found. A
+// short page is not terminal: the server may ignore per_page or cap a page
+// below 100. comment_total and reply_total are display hints; a stale count
+// must not hide a comment or reply and allow a write against the wrong
+// discussion. The page cap applies only when the target is still missing.
+func eachDiscussionPage(client *Client, path string, visit func([]DiscussionComment) (bool, error)) error {
 	for page := 1; page <= maxUntilEmptyRequestPages; page++ {
 		var pageItems []DiscussionComment
-		if err := client.doJSONRequest(http.MethodGet, pagePath(page), nil, "", "application/json", discussionReadPolicy, &pageItems); err != nil {
-			return nil, err
+		if err := client.doJSONRequest(http.MethodGet, pageQuery(path, page, defaultMaxPerPage), nil, "", "application/json", discussionReadPolicy, &pageItems); err != nil {
+			return err
 		}
 		if len(pageItems) == 0 {
-			return items, nil
+			return nil
 		}
-		items = append(items, pageItems...)
+		stop, err := visit(pageItems)
+		if err != nil || stop {
+			return err
+		}
 	}
-	return nil, fmt.Errorf("discussion comment pagination reached the maximum of %d pages", maxUntilEmptyRequestPages)
+	return fmt.Errorf("discussion comment pagination reached the maximum of %d pages", maxUntilEmptyRequestPages)
 }
