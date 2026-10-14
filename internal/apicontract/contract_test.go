@@ -268,7 +268,12 @@ func TestReplayChecksRequestsAndConsumption(t *testing.T) {
 			if err := replay.Check(); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := replay.RoundTrip(req); err == nil {
+			extraResp, err := replay.RoundTrip(req)
+			if extraResp != nil {
+				defer extraResp.Body.Close()
+				t.Fatal("extra request returned a response")
+			}
+			if err == nil {
 				t.Fatal("extra request accepted")
 			}
 		})
