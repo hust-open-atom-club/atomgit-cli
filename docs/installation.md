@@ -468,6 +468,17 @@ sudo apt purge atomgit-cli
 > [!IMPORTANT]
 >
 > AtomGit CLI 尚未推送至 Fedora 官方仓库，目前仅可通过项目维护者提供的 [COPR 仓库](https://copr.fedorainfracloud.org/coprs/cubelitblade/atomgit-cli/) 安装。
+> 
+> 支持情况如下：
+> 
+> | 发行版    | x86_64 | aarch64 | ppc64le | s390x | riscv64     | i386 |
+> | --------- | ------ | ------- | ------- | ----- | ----------- | ---- |
+> | Fedora 43 | ✓      | ✓       | ✓       | ✓     | ✗           | ✓    |
+> | Fedora 44 | ✓      | ✓       | ✓       | ✓     | ✗           | ✓    |
+> | Fedora 45 | ✓      | ✓       | ✓       | ✓     | ✓           | ✓    |
+> | Rawhide   | ✓      | ✓       | ✓       | ✓     | ✓           | ✓    |
+>
+>  （✓ 支持；✗ 因依赖受阻而不支持）
 
 Fedora 用户可通过以下 COPR 仓库安装 AtomGit CLI：
 
@@ -484,11 +495,6 @@ sudo dnf remove atomgit-cli
 sudo dnf copr remove cubelitblade/atomgit-cli
 ```
 
-> [!NOTE]
->
-> 目前已完成 **Fedora 44**（x86_64 / aarch64）的完整构建测试，其他发行版（如 Fedora 43/45、EPEL 9/10 等）因上游仓库中 Go 版本或依赖包尚未达到要求，暂未纳入正式支持范围。
->
-> 我们正在积极关注 Fedora / EPEL 仓库的更新动态，待条件满足后将扩展支持列表。如需在其他发行版上使用，可参考其它安装方式。
 
 ## AtomGit Release 安装
 
