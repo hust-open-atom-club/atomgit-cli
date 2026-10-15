@@ -534,10 +534,10 @@ func TestActionsStreamingDownloadStopsOnContextCancellation(t *testing.T) {
 	defer resp.Body.Close() //nolint:errcheck // Cancellation read result is asserted separately; Close only releases test response resources.
 
 	result := make(chan error, 1)
-	go func() {
-		_, err := io.ReadAll(resp.Body)
+	go func(body io.Reader) {
+		_, err := io.ReadAll(body)
 		result <- err
-	}()
+	}(resp.Body)
 	<-readStarted
 	cancel()
 	select {

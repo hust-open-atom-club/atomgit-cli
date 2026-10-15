@@ -163,7 +163,7 @@ func TestReleaseDownloadSuccessInfersRepoAndEscapesPath(t *testing.T) {
 	const payload = "release-binary-payload"
 
 	transport := &downloadTransport{
-		apiHandler: setupDownloadReleaseHandler("v1/rc", "dir/app one.zip", 42, http.StatusOK, payload),
+		apiHandler: setupDownloadReleaseHandler("v1/rc", "dir/app one.zip", 42, http.StatusOK, payload), //nolint:bodyclose // Returns a handler; responses are created later by RoundTrip and closed by the API client or download command.
 	}
 	cmd := newCmdReleaseDownload(newDownloadFactory(transport))
 	var out bytes.Buffer
@@ -221,7 +221,7 @@ func TestReleaseDownloadOverwriteReplacesExistingFile(t *testing.T) {
 	const payload = "new-payload"
 
 	transport := &downloadTransport{
-		apiHandler: setupDownloadReleaseHandler("v1.0.0", "app.tar.gz", 7, http.StatusOK, payload),
+		apiHandler: setupDownloadReleaseHandler("v1.0.0", "app.tar.gz", 7, http.StatusOK, payload), //nolint:bodyclose // Returns a handler; responses are created later by RoundTrip and closed by the API client or download command.
 	}
 	cmd := newCmdReleaseDownload(newDownloadFactory(transport))
 	var out bytes.Buffer
