@@ -1,6 +1,6 @@
 # 安装指南
 
-AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、WinGet、Scoop、Nix、AUR 或 Go 安装，也可以通过 AtomGit Release 自动或手动安装，或从源码构建。
+AtomGit CLI 支持 macOS、Linux 和 Windows，可通过 npm、Homebrew、WinGet、Scoop、Nix、AUR / archlinuxcn 或 Go 安装，也可以通过 AtomGit Release 自动或手动安装，或从源码构建。
 
 ## 目录
 
@@ -370,7 +370,48 @@ nix run git+https://atomgit.com/hust-open-atom-club/atomgit-cli#latest -- versio
 
 ## AUR / Arch Linux 安装
 
-AUR 是用户仓库，并非 Arch 官方仓库；安装与使用按 AUR 规则自行承担风险。三个包由项目维护者 `moyigeek` 在 AUR 维护并随 Release 更新。如果使用 Arch Linux 或基于 Arch Linux 的发行版，可以直接使用 AUR 仓库中的包进行安装。AUR 中提供了三个包，可按需选择：
+Arch Linux 或基于 Arch Linux 的发行版可通过两种渠道安装，两者均非 Arch 官方仓库，但 `atomgit-cli` 均由项目维护者 `moyigeek` 维护并随 Release 更新：
+
+- **archlinuxcn**：面向中文用户的第三方社区仓库，提供从源码构建的 `x86_64` 预编译包，免编译，随 `pacman -Syu` 滚动更新；通过 lilac 自动跟随上游最新 Release 构建，适合中文用户日常使用的首选渠道。
+- **AUR**：用户仓库，通过 `yay` / `paru` 等辅助工具安装，可选源码版、预编译二进制版或开发版，支持 `x86_64`、`aarch64` 和 `loong64`，安装与使用按 AUR 规则自行承担风险。
+
+### 使用 archlinuxcn 仓库安装
+
+首次使用需按 [archlinuxcn 官方使用说明](https://www.archlinuxcn.org/archlinux-cn-repo-and-mirror)配置仓库：在 `/etc/pacman.conf` 中添加（国内建议改用镜像站），然后导入 GPG 密钥环：
+
+```ini
+[archlinuxcn]
+Server = https://repo.archlinuxcn.org/$arch
+```
+
+```bash
+sudo pacman -Sy archlinuxcn-keyring
+```
+
+安装 AtomGit CLI：
+
+```bash
+sudo pacman -S atomgit-cli
+```
+
+> [!NOTE]
+> archlinuxcn 官方仅支持 Arch Linux；Manjaro 等衍生发行版请改用 AUR 或其他渠道。非 x86_64 架构（`aarch64`、`loong64`）同样请使用 AUR。
+
+升级随系统滚动更新一起完成：
+
+```bash
+sudo pacman -Syu
+```
+
+卸载：
+
+```bash
+sudo pacman -R atomgit-cli
+```
+
+### 使用 AUR 辅助工具安装
+
+如需其他架构（`aarch64`、`loong64`）、Release 预编译二进制或开发版，可通过 AUR 辅助工具安装。AUR 是用户仓库，并非 Arch 官方仓库，安装与使用按 AUR 规则自行承担风险。AUR 中提供了三个包，可按需选择：
 
 ```bash
 # 二进制安装（免编译，稳定版）

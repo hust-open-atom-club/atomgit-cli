@@ -31,6 +31,7 @@
 - Scoop：`scoop bucket add hust-open-atom-club https://github.com/hust-open-atom-club/ScoopBucket && scoop install atomgit-cli`（仅 Windows）
 - Nix / NixOS：`nix profile install nixpkgs#atomgit-cli`（`nixos-unstable` 已收录）
 - AUR / Arch Linux：`yay -S atomgit-cli`、`yay -S atomgit-cli-bin` 或 `yay -S atomgit-cli-git`（三个包由项目维护者 `moyigeek` 在 AUR 维护并随 Release 更新；AUR 是用户仓库，并非 Arch 官方仓库，安装与使用按 AUR 规则自行承担风险）
+- archlinuxcn / Arch Linux：配置[仓库](https://www.archlinuxcn.org/archlinux-cn-repo-and-mirror)并安装 `archlinuxcn-keyring` 后 `sudo pacman -S atomgit-cli`（x86_64 预编译包，由项目维护者以 `moyi@archlinuxcn.org` 身份维护，通过 lilac 自动跟随最新 Release 构建；archlinuxcn 是第三方社区仓库，并非 Arch 官方仓库）
 - Go：`go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag-cli@latest`（需 Go 1.26.6 或更高版本）
 - AtomGit Release：使用 `install.sh` / `install.ps1` 自动安装，或从 [Release 页面](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)手动下载对应平台的归档
 
@@ -45,7 +46,8 @@
 - **Homebrew**：macOS 或 Linux 上通过项目维护的 tap 安装，由 Homebrew 管理升级。
 - **WinGet / Scoop**：Windows 用户可直接使用系统包管理器安装与升级。
 - **Nix / NixOS**：NixOS 用户或已使用 Nix 的系统，包已进入 `nixos-unstable`。
-- **Arch Linux / AUR**：Arch Linux 或使用 AUR 的系统可选稳定源码版 `atomgit-cli`、稳定二进制版 `atomgit-cli-bin`（免编译）或开发版 `atomgit-cli-git`（跟随 main 分支最新提交）。AUR 是用户仓库，并非 Arch 官方仓库；三个包由项目维护者 `moyigeek` 维护并随 Release 更新，安装与使用按 AUR 规则自行承担风险。
+- **Arch Linux / archlinuxcn**：x86_64 Arch Linux 中文用户的首选渠道：配置第三方社区仓库 archlinuxcn 后 `sudo pacman -S atomgit-cli`，免编译安装从源码构建的预编译包，随 `pacman -Syu` 滚动更新；由项目维护者维护并自动跟随最新 Release。archlinuxcn 并非 Arch 官方仓库。
+- **Arch Linux / AUR**：使用 AUR 的系统可选稳定源码版 `atomgit-cli`、稳定二进制版 `atomgit-cli-bin`（免编译）或开发版 `atomgit-cli-git`（跟随 main 分支最新提交），支持 `x86_64`、`aarch64` 和 `loong64`。AUR 是用户仓库，并非 Arch 官方仓库；三个包由项目维护者 `moyigeek` 维护并随 Release 更新，安装与使用按 AUR 规则自行承担风险。
 - **`go install`**：适合 Go 开发者；从模块代理构建，`ag-cli version` 中 commit 和构建时间可能为 `unknown`。
 - **AtomGit Release**：通过 `install.sh` / `install.ps1` 自动安装或手动下载归档，不依赖 Node.js、包管理器或 Go 工具链。
 
@@ -91,7 +93,8 @@ Go 模块代理提供的源码包不包含 `.git` 目录，因此通过 `go inst
 - WinGet：`winget upgrade HUSTOpenAtomClub.AtomGitCLI`
 - Scoop：`scoop update atomgit-cli`
 - Nix：`nix profile upgrade`（升级 profile 中使用未锁定 flake 引用安装的全部包）；NixOS 系统级安装则通过 `nixos-rebuild switch` 跟随系统升级
-- AUR：`yay -S atomgit-cli`、`yay -S atomgit-cli-bin` 或 `yay -S atomgit-cli-git`（注意：更推荐使用 `yay -Syu` 进行滚动更新，由于滚动发行版的特性，部分更新可能会有兼容问题）
+- archlinuxcn：`sudo pacman -Syu` 随系统滚动更新
+- AUR：`yay -S atomgit-cli`、`yay -S atomgit-cli-bin` 或 `yay -S atomgit-cli-git`（注意：更推荐使用 `yay -Syu` 进行滚动更新，由于滚动发行版的特性，部分更新可能会有兼容问题；`yay -Syu` 会同时覆盖 archlinuxcn 仓库包与 AUR 包）
 
 `ag-cli update` 识别 npm 或 Homebrew Core 后会提供两个选择：立即通过对应包管理器更新，或 `Skip`（仅跳过本次）。首次输入直接回车或尚未输入内容时到达 EOF 会默认更新；无效答案后到达 EOF 会报错且不会更新。
 
@@ -99,7 +102,7 @@ Windows 上 npm 可能无法覆盖正在运行的 `ag-cli.exe`。如果 npm 破�
 
 ### 为什么不应混用不同的安装来源？
 
-不同安装来源由各自的工具管理升级：npm 用 `npm update`、Homebrew 用 `brew upgrade`、WinGet 用 `winget upgrade`、Scoop 用 `scoop update`、Nix 用 `nix profile upgrade`。混用多个来源会在 `PATH` 中留下多份 `ag-cli` 二进制，实际调用的是 `PATH` 顺序中最先出现的那一份，升级时可能改到"看不见"的另一份，导致 `ag-cli version` 与预期不一致。建议固定使用一种安装来源，并始终用它升级。
+不同安装来源由各自的工具管理升级：npm 用 `npm update`、Homebrew 用 `brew upgrade`、WinGet 用 `winget upgrade`、Scoop 用 `scoop update`、Nix 用 `nix profile upgrade`、Arch Linux 仓库包用 `pacman -Syu`。混用多个来源会在 `PATH` 中留下多份 `ag-cli` 二进制，实际调用的是 `PATH` 顺序中最先出现的那一份，升级时可能改到"看不见"的另一份，导致 `ag-cli version` 与预期不一致。建议固定使用一种安装来源，并始终用它升级。
 
 ### 安装到了哪个目录？提示目录不在 PATH？
 

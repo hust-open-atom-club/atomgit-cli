@@ -85,6 +85,14 @@ scoop install atomgit-cli
 nix profile install nixpkgs#atomgit-cli
 ```
 
+### archlinuxcn
+
+The archlinuxcn community repository, aimed at users in mainland China, provides prebuilt x86_64 packages built from source (it is not an official Arch Linux repository). It is maintained by the project maintainer and automatically tracks the latest release. After enabling the repository and installing `archlinuxcn-keyring` per the [official archlinuxcn instructions](https://www.archlinuxcn.org/archlinux-cn-repo-and-mirror):
+
+```bash
+sudo pacman -S atomgit-cli
+```
+
 ### AUR / Arch Linux
 
 `atomgit-cli` is available in the Arch User Repository (AUR). Use `yay` or `paru` to choose a stable source package, a stable prebuilt binary, or a development package.
