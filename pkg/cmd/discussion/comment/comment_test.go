@@ -456,3 +456,47 @@ func TestDiscussionCommentCreateReportsAPIFailure(t *testing.T) {
 		t.Fatalf("stdout = %q err = %v", stdout, err)
 	}
 }
+
+func TestDiscussionCommentIncompleteReplyLookupPreventsWrites(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		newCmd func(*cmdutil.Factory) *cobra.Command
+		args   []string
+	}{
+		{"edit", newCmdEdit, []string{"--body", "edited"}},
+		{"delete", newCmdDelete, []string{"--yes"}},
+		{"reply", newCmdReply, []string{"--body", "reply"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			writes, replyPages := 0, 0
+			factory := discussionCommentFactory(discussionCommentConfig{token: "token"}, func(req *http.Request) (*http.Response, error) {
+				if req.Method != http.MethodGet {
+					writes++
+					t.Fatalf("unexpected write: %s %s", req.Method, req.URL)
+				}
+				switch req.URL.Path {
+				case "/api/v5/repos/alice/demo/discuss/7":
+					return discussionCommentResponse(http.StatusOK, `{"number":7}`), nil
+				case "/api/v5/repos/alice/demo/discuss/7/comment":
+					if req.URL.Query().Get("page") == "1" {
+						return discussionCommentResponse(http.StatusOK, `[{"id":"parent"}]`), nil
+					}
+					return discussionCommentResponse(http.StatusOK, `[]`), nil
+				case "/api/v5/repos/alice/demo/discuss/7/comment/parent/reply":
+					replyPages++
+					return discussionCommentResponse(http.StatusOK, fmt.Sprintf(`[{"id":"unrelated-%d"}]`, replyPages)), nil
+				default:
+					t.Fatalf("unexpected request: %s", req.URL)
+					return nil, nil
+				}
+			})
+			args := append([]string{"alice/demo", "7", "missing"}, tt.args...)
+			cmd := tt.newCmd(factory)
+			cmd.SilenceUsage = true
+			stdout, _, err := executeComment(t, cmd, args, "")
+			if err == nil || !strings.Contains(err.Error(), "maximum of 100 pages") || writes != 0 || stdout != "" || replyPages != 100 {
+				t.Fatalf("error = %v, writes = %d, stdout = %q, reply pages = %d", err, writes, stdout, replyPages)
+			}
+		})
+	}
+}

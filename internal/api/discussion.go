@@ -229,15 +229,17 @@ func writeDiscussionComment(client *Client, method, path, body string) (Discussi
 
 // FindDiscussionComment walks a discussion's top-level comments and their
 // one-level replies until commentID is found. Each comment page is checked
-// before its replies, and a match returns before any later page is read. A
-// missing comment is ErrDiscussionCommentNotFound; lookup failures are
-// returned unchanged so a caller can refuse to write.
+// before its replies, and a match returns before any later page is read.
+// Failed reply scans do not block later comments or reply lists. If no match
+// is found, lookup failures are returned so a caller can refuse to write;
+// only a complete search returns ErrDiscussionCommentNotFound.
 func FindDiscussionComment(client *Client, owner, repo string, number int, commentID string) (DiscussionCommentLocation, error) {
 	if _, err := GetDiscussion(client, owner, repo, number); err != nil {
 		return DiscussionCommentLocation{}, err
 	}
 	var located DiscussionCommentLocation
 	var found bool
+	var replyErr error
 	comments := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment")
 	err := eachDiscussionPage(client, comments, func(page []DiscussionComment) (bool, error) {
 		for _, comment := range page {
@@ -259,8 +261,11 @@ func FindDiscussionComment(client *Client, owner, repo string, number int, comme
 				}
 				return false, nil
 			})
-			if err != nil || found {
-				return found, err
+			if found {
+				return true, nil
+			}
+			if err != nil && replyErr == nil {
+				replyErr = err
 			}
 		}
 		return false, nil
@@ -269,6 +274,9 @@ func FindDiscussionComment(client *Client, owner, repo string, number int, comme
 		return DiscussionCommentLocation{}, err
 	}
 	if !found {
+		if replyErr != nil {
+			return DiscussionCommentLocation{}, replyErr
+		}
 		return DiscussionCommentLocation{}, fmt.Errorf("comment %s on discussion #%d: %w", commentID, number, ErrDiscussionCommentNotFound)
 	}
 	return located, nil

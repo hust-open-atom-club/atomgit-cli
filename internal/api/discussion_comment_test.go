@@ -483,3 +483,81 @@ func TestFindDiscussionCommentKeepsPageCapWhenTargetIsMissing(t *testing.T) {
 		t.Fatalf("comment pages = %d, want the cap before any reply scan", commentPages)
 	}
 }
+
+func TestFindDiscussionCommentContinuesAfterUnrelatedReplyFailure(t *testing.T) {
+	for _, failure := range []string{"page cap", "forbidden"} {
+		for _, target := range []string{"top-level", "later reply", "missing"} {
+			t.Run(failure+"/"+target, func(t *testing.T) {
+				commentPages, replyPages := 0, 0
+				client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+					switch r.URL.Path {
+					case "/repos/alice/demo/discuss/7":
+						_, _ = io.WriteString(w, `{"number":7}`)
+					case "/repos/alice/demo/discuss/7/comment":
+						commentPages++
+						switch r.URL.Query().Get("page") {
+						case "1":
+							items := make([]DiscussionComment, 100)
+							for i := range items {
+								items[i].ID = fmt.Sprintf("parent-%d", i)
+							}
+							items[0].ReplyTotal = 10000
+							_ = json.NewEncoder(w).Encode(items)
+						case "2":
+							_, _ = io.WriteString(w, `[{"id":"top-level"}]`)
+						default:
+							_, _ = io.WriteString(w, `[]`)
+						}
+					case "/repos/alice/demo/discuss/7/comment/parent-0/reply":
+						replyPages++
+						if failure == "forbidden" {
+							http.Error(w, "forbidden", http.StatusForbidden)
+							return
+						}
+						items := make([]DiscussionComment, 100)
+						for i := range items {
+							items[i].ID = fmt.Sprintf("unrelated-%d-%d", replyPages, i)
+						}
+						_ = json.NewEncoder(w).Encode(items)
+					case "/repos/alice/demo/discuss/7/comment/top-level/reply":
+						if r.URL.Query().Get("page") == "1" {
+							_, _ = io.WriteString(w, `[{"id":"later reply"}]`)
+						} else {
+							_, _ = io.WriteString(w, `[]`)
+						}
+					default:
+						if !strings.HasSuffix(r.URL.Path, "/reply") {
+							t.Fatalf("unexpected request: %s", r.URL)
+						}
+						_, _ = io.WriteString(w, `[]`)
+					}
+				})
+				located, err := FindDiscussionComment(client, "alice", "demo", 7, target)
+				if target == "missing" {
+					if err == nil || errors.Is(err, ErrDiscussionCommentNotFound) {
+						t.Fatalf("error = %v, want incomplete lookup failure", err)
+					}
+					if failure == "forbidden" && !IsHTTPStatus(err, http.StatusForbidden) {
+						t.Fatalf("error = %v, want original 403", err)
+					}
+					if failure == "page cap" && !strings.Contains(err.Error(), "maximum of 100 pages") {
+						t.Fatalf("error = %v, want pagination cap", err)
+					}
+				} else if err != nil || located.Comment.ID != target || located.TopLevel != (target == "top-level") {
+					t.Fatalf("location = %#v, error = %v", located, err)
+				}
+				wantPages := 2
+				if target == "missing" {
+					wantPages = 3
+				}
+				wantReplies := 100
+				if failure == "forbidden" {
+					wantReplies = 1
+				}
+				if commentPages != wantPages || replyPages != wantReplies {
+					t.Fatalf("comment pages = %d, reply pages = %d", commentPages, replyPages)
+				}
+			})
+		}
+	}
+}
