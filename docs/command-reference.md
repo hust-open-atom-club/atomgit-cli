@@ -48,6 +48,11 @@
 - [ag-cli commit patch](#ag-cli-commit-patch) — Show a commit's patch
 - [ag-cli commit view](#ag-cli-commit-view) — View a commit
 - [ag-cli discussion](#ag-cli-discussion) — Manage repository discussions
+- [ag-cli discussion comment](#ag-cli-discussion-comment) — Manage discussion comments
+- [ag-cli discussion comment create](#ag-cli-discussion-comment-create) — Create a comment on a discussion
+- [ag-cli discussion comment delete](#ag-cli-discussion-comment-delete) — Delete a discussion comment
+- [ag-cli discussion comment edit](#ag-cli-discussion-comment-edit) — Edit a discussion comment
+- [ag-cli discussion comment reply](#ag-cli-discussion-comment-reply) — Reply to a discussion comment
 - [ag-cli discussion create](#ag-cli-discussion-create) — Create a repository discussion
 - [ag-cli discussion delete](#ag-cli-discussion-delete) — Delete a repository discussion
 - [ag-cli discussion edit](#ag-cli-discussion-edit) — Edit a repository discussion
@@ -1100,6 +1105,146 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | --- | --- | --- | --- |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli discussion comment
+
+Usage: `ag-cli discussion comment`
+
+Manage discussion comments
+
+Create, reply to, edit, and delete comments on repository discussions.
+
+Comment identifiers stay opaque strings. Edit and delete confirm that the
+comment belongs to the given discussion before writing. Reply targets must be
+top-level comments; replies are only one level deep.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli discussion comment create
+
+Usage: `ag-cli discussion comment create [<owner>/<repo>] <number> (--body <text> | --body-file <path-or->) [flags]`
+
+Create a comment on a discussion
+
+Create a top-level Markdown comment on a repository discussion.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read body text from file (use - for stdin) | `` | local |
+| `-b, --body` | Comment body text | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag discussion comment create owner/repo 1 --body "Looks good"
+ag discussion comment create owner/repo 1 --body-file comment.md
+ag discussion comment create 1 --body-file -
+```
+
+
+## ag-cli discussion comment delete
+
+Usage: `ag-cli discussion comment delete [<owner>/<repo>] <number> <comment-id> [flags]`
+
+Delete a discussion comment
+
+Delete a discussion comment or reply.
+
+The comment is confirmed to belong to the given discussion before deletion.
+Asks for confirmation unless --yes is supplied. Cancelling does not send the
+delete request.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip deletion confirmation | `false` | local |
+
+### Example
+
+```bash
+ag discussion comment delete owner/repo 1 abc123
+ag discussion comment delete owner/repo 1 abc123 --yes
+```
+
+
+## ag-cli discussion comment edit
+
+Usage: `ag-cli discussion comment edit [<owner>/<repo>] <number> <comment-id> (--body <text> | --body-file <path-or->) [flags]`
+
+Edit a discussion comment
+
+Replace the Markdown body of a discussion comment or reply.
+
+The comment is confirmed to belong to the given discussion before the update
+is sent. A comment that cannot be found is left unchanged.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read new body text from file (use - for stdin) | `` | local |
+| `-b, --body` | New comment body text | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag discussion comment edit owner/repo 1 abc123 --body "Updated"
+ag discussion comment edit 1 reply.id --body-file note.md
+```
+
+
+## ag-cli discussion comment reply
+
+Usage: `ag-cli discussion comment reply [<owner>/<repo>] <number> <comment-id> (--body <text> | --body-file <path-or->) [flags]`
+
+Reply to a discussion comment
+
+Reply to a top-level comment on a repository discussion.
+
+The parent comment is confirmed to belong to the discussion before the reply
+is posted. Replying to a reply is rejected.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read body text from file (use - for stdin) | `` | local |
+| `-b, --body` | Reply body text | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag discussion comment reply owner/repo 1 abc123 --body "Agreed"
+ag discussion comment reply 1 abc123 --body-file reply.md
+```
 
 
 ## ag-cli discussion create

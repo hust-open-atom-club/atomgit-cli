@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +13,33 @@ import (
 var discussionReadPolicy = RequestPolicy{
 	AllowedStatuses: []int{http.StatusOK},
 	CanRetry:        true,
+}
+
+var (
+	discussionWritePolicy = RequestPolicy{
+		AllowedStatuses: []int{http.StatusOK},
+		CanRetry:        false,
+	}
+	discussionDeletePolicy = RequestPolicy{
+		AllowedStatuses: []int{http.StatusOK, http.StatusNoContent},
+		CanRetry:        false,
+	}
+)
+
+// ErrDiscussionCommentNotFound reports that a comment or reply ID was not
+// found in the specified discussion. The write endpoints accept any comment
+// ID in the path, so callers must confirm membership before mutating.
+var ErrDiscussionCommentNotFound = errors.New("comment does not belong to discussion")
+
+// ErrDiscussionReplyParent reports that a reply was requested against a
+// comment that is itself a reply. Replies are only one level deep.
+var ErrDiscussionReplyParent = errors.New("reply parent must be a top-level discussion comment")
+
+// DiscussionCommentLocation is where a comment was found inside one discussion.
+type DiscussionCommentLocation struct {
+	Comment  DiscussionComment
+	TopLevel bool
+	ParentID string
 }
 
 // DiscussionDetail is a single discussion as returned by the detail endpoint.
@@ -82,12 +110,8 @@ func UpdateDiscussion(client *Client, owner, repo string, number int, request Di
 	}
 	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number))
 	// Redirects can replay PUT independently of the API retry policy.
-	httpClient := *metadataHTTPClient(client.httpClient)
-	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error {
-		return http.ErrUseLastResponse
-	}
 	var detail DiscussionDetail
-	if err := client.doJSONRequestContext(client.requestContext(), &httpClient, http.MethodPut, path, bytes.NewReader(body), "application/json", "application/json",
+	if err := doDiscussionWrite(client, http.MethodPut, path, bytes.NewReader(body), "application/json",
 		RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: false}, &detail); err != nil {
 		return DiscussionDetail{}, err
 	}
@@ -101,20 +125,23 @@ func CreateDiscussion(client *Client, owner, repo string, request DiscussionCrea
 		return DiscussionDetail{}, fmt.Errorf("encode discussion creation: %w", err)
 	}
 	var detail DiscussionDetail
-	err = discussionWrite(client, http.MethodPost, RepositoryPath(owner, repo, "discuss"), bytes.NewReader(body), "application/json", &detail)
+	err = doDiscussionWrite(client, http.MethodPost, RepositoryPath(owner, repo, "discuss"), bytes.NewReader(body), "application/json", discussionWritePolicy, &detail)
 	return detail, err
 }
 
 // DeleteDiscussion accepts the documented empty HTTP 200 response.
 func DeleteDiscussion(client *Client, owner, repo string, number int) error {
-	return discussionWrite(client, http.MethodDelete, RepositoryPath(owner, repo, "discuss", strconv.Itoa(number)), nil, "", nil)
+	return doDiscussionWrite(client, http.MethodDelete, RepositoryPath(owner, repo, "discuss", strconv.Itoa(number)), nil, "", discussionWritePolicy, nil)
 }
 
-// discussionWrite disables both retries and redirect replay for mutations.
-func discussionWrite(client *Client, method, path string, body io.Reader, contentType string, result any) error {
+// doDiscussionWrite disables redirect following. Go otherwise replays the
+// original method and body, including DELETE, outside the retry policy.
+func doDiscussionWrite(client *Client, method, path string, body io.Reader, contentType string, policy RequestPolicy, result any) error {
 	httpClient := *metadataHTTPClient(client.httpClient)
-	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
-	return client.doJSONRequestContext(client.requestContext(), &httpClient, method, path, body, contentType, "application/json", RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: false}, result)
+	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	return client.doJSONRequestContext(client.requestContext(), &httpClient, method, path, body, contentType, "application/json", policy, result)
 }
 
 // ListDiscussionComments fetches every comment in a discussion thread. total
@@ -142,4 +169,149 @@ func ListDiscussionReplies(client *Client, owner, repo string, number int, comme
 	return getPaginatedWithPolicy[DiscussionComment](client, total, discussionReadPolicy, func(page, perPage int) string {
 		return pageQuery(path, page, perPage)
 	})
+}
+
+type discussionCommentBody struct {
+	MDContent string `json:"md_content"`
+}
+
+// CreateDiscussionComment posts a top-level Markdown comment on a discussion.
+func CreateDiscussionComment(client *Client, owner, repo string, number int, body string) (DiscussionComment, error) {
+	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment")
+	comment, err := writeDiscussionComment(client, http.MethodPost, path, body)
+	if err != nil {
+		return DiscussionComment{}, fmt.Errorf("create discussion comment: %w", err)
+	}
+	return comment, nil
+}
+
+// ReplyDiscussionComment posts a reply to a top-level comment of a discussion.
+func ReplyDiscussionComment(client *Client, owner, repo string, number int, commentID, body string) (DiscussionComment, error) {
+	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", commentID, "reply")
+	comment, err := writeDiscussionComment(client, http.MethodPost, path, body)
+	if err != nil {
+		return DiscussionComment{}, fmt.Errorf("reply to discussion comment %s: %w", commentID, err)
+	}
+	return comment, nil
+}
+
+// UpdateDiscussionComment replaces the Markdown body of a comment or reply.
+func UpdateDiscussionComment(client *Client, owner, repo string, number int, commentID, body string) (DiscussionComment, error) {
+	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", commentID)
+	comment, err := writeDiscussionComment(client, http.MethodPut, path, body)
+	if err != nil {
+		return DiscussionComment{}, fmt.Errorf("update discussion comment %s: %w", commentID, err)
+	}
+	return comment, nil
+}
+
+// DeleteDiscussionComment removes a comment or reply. A successful empty body
+// is not an error.
+func DeleteDiscussionComment(client *Client, owner, repo string, number int, commentID string) error {
+	path := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", commentID)
+	if err := doDiscussionWrite(client, http.MethodDelete, path, nil, "", discussionDeletePolicy, nil); err != nil {
+		return fmt.Errorf("delete discussion comment %s: %w", commentID, err)
+	}
+	return nil
+}
+
+func writeDiscussionComment(client *Client, method, path, body string) (DiscussionComment, error) {
+	payload, err := json.Marshal(discussionCommentBody{MDContent: body})
+	if err != nil {
+		return DiscussionComment{}, err
+	}
+	var comment DiscussionComment
+	if err := doDiscussionWrite(client, method, path, bytes.NewReader(payload), "application/json", discussionWritePolicy, &comment); err != nil {
+		return DiscussionComment{}, err
+	}
+	return comment, nil
+}
+
+// FindDiscussionComment walks a discussion's top-level comments and their
+// one-level replies until commentID is found. Each comment page is checked
+// before its replies, and a match returns before any later page is read.
+// Failed reply scans do not block later comments or reply lists. If no match
+// is found, lookup failures are returned so a caller can refuse to write;
+// only a complete search returns ErrDiscussionCommentNotFound.
+func FindDiscussionComment(client *Client, owner, repo string, number int, commentID string) (DiscussionCommentLocation, error) {
+	if _, err := GetDiscussion(client, owner, repo, number); err != nil {
+		return DiscussionCommentLocation{}, err
+	}
+	var located DiscussionCommentLocation
+	var found bool
+	var replyErr error
+	comments := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment")
+	err := eachDiscussionPage(client, comments, func(page []DiscussionComment) (bool, error) {
+		for _, comment := range page {
+			if comment.ID == commentID {
+				located = DiscussionCommentLocation{Comment: comment, TopLevel: true}
+				found = true
+				return true, nil
+			}
+		}
+		for _, comment := range page {
+			replies := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", comment.ID, "reply")
+			err := eachDiscussionPage(client, replies, func(replyPage []DiscussionComment) (bool, error) {
+				for _, reply := range replyPage {
+					if reply.ID == commentID {
+						located = DiscussionCommentLocation{Comment: reply, ParentID: comment.ID}
+						found = true
+						return true, nil
+					}
+				}
+				return false, nil
+			})
+			if found {
+				return true, nil
+			}
+			if err != nil && replyErr == nil {
+				replyErr = err
+			}
+		}
+		return false, nil
+	})
+	if err != nil {
+		return DiscussionCommentLocation{}, err
+	}
+	if !found {
+		if replyErr != nil {
+			return DiscussionCommentLocation{}, replyErr
+		}
+		return DiscussionCommentLocation{}, fmt.Errorf("comment %s on discussion #%d: %w", commentID, number, ErrDiscussionCommentNotFound)
+	}
+	return located, nil
+}
+
+// RequireTopLevelDiscussionComment finds commentID and rejects replies.
+func RequireTopLevelDiscussionComment(client *Client, owner, repo string, number int, commentID string) (DiscussionComment, error) {
+	located, err := FindDiscussionComment(client, owner, repo, number, commentID)
+	if err != nil {
+		return DiscussionComment{}, err
+	}
+	if !located.TopLevel {
+		return DiscussionComment{}, fmt.Errorf("comment %s on discussion #%d: %w", commentID, number, ErrDiscussionReplyParent)
+	}
+	return located.Comment, nil
+}
+
+// Membership scans continue until an empty page or the target is found. A
+// short page is not terminal: the server may ignore per_page or cap a page
+// below 100. comment_total and reply_total are display hints; a stale count
+// must not hide a comment or reply and allow a write against the wrong
+// discussion. The page cap applies only when the target is still missing.
+func eachDiscussionPage(client *Client, path string, visit func([]DiscussionComment) (bool, error)) error {
+	for page := 1; page <= maxUntilEmptyRequestPages; page++ {
+		var pageItems []DiscussionComment
+		if err := client.doJSONRequest(http.MethodGet, pageQuery(path, page, defaultMaxPerPage), nil, "", "application/json", discussionReadPolicy, &pageItems); err != nil {
+			return err
+		}
+		if len(pageItems) == 0 {
+			return nil
+		}
+		stop, err := visit(pageItems)
+		if err != nil || stop {
+			return err
+		}
+	}
+	return fmt.Errorf("discussion comment pagination reached the maximum of %d pages", maxUntilEmptyRequestPages)
 }

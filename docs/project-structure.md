@@ -56,7 +56,7 @@ atomgit-cli/
 │       ├── auth/               # 登录、刷新和凭据管理
 │       ├── branch/             # 分支管理
 │       ├── browse/             # 在浏览器中打开 AtomGit 资源
-│       ├── discussion/         # 仓库讨论查询、创建、编辑与删除
+│       ├── discussion/         # 仓库讨论查询、创建、编辑、删除与评论写入
 │       ├── issue/              # Issue 与 Issue 评论
 │       ├── label/              # 标签管理
 │       ├── license/            # License 检查
