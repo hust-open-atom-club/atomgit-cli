@@ -377,7 +377,7 @@ Arch Linux 或基于 Arch Linux 的发行版可通过两种渠道安装，两者
 
 ### 使用 archlinuxcn 仓库安装
 
-首次使用需按 [archlinuxcn 官方使用说明](https://www.archlinuxcn.org/archlinux-cn-repo-and-mirror)配置仓库：在 `/etc/pacman.conf` 中添加（国内建议改用镜像站），然后导入 GPG 密钥环：
+首次使用需按 [archlinuxcn 官方使用说明](https://www.archlinuxcn.org/archlinux-cn-repo-and-mirror)配置仓库：在 `/etc/pacman.conf` 中添加（国内建议改用镜像站）。然后先执行完整系统升级——Arch Linux 不支持部分升级，不要只刷新索引就安装软件——并导入 GPG 密钥环：
 
 ```ini
 [archlinuxcn]
@@ -385,7 +385,8 @@ Server = https://repo.archlinuxcn.org/$arch
 ```
 
 ```bash
-sudo pacman -Sy archlinuxcn-keyring
+sudo pacman -Syu
+sudo pacman -S archlinuxcn-keyring
 ```
 
 安装 AtomGit CLI：
