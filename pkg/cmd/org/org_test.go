@@ -209,7 +209,7 @@ func TestOrgListValidationBeforeRequest(t *testing.T) {
 	}
 
 	cmd = newCmdOrgList(orgFactory(orgTestConfig{tokenErr: config.ErrNotAuthenticated}, transport))
-	if err := cmd.RunE(cmd, nil); err != config.ErrNotAuthenticated {
+	if err := cmd.RunE(cmd, nil); err != config.ErrNotAuthenticated { //nolint:errorlint // This fixture expects the canonical authentication sentinel itself, not a wrapper.
 		t.Fatalf("error = %v, want canonical authentication error", err)
 	}
 	if requests != 0 {

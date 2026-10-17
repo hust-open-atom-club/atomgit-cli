@@ -45,7 +45,7 @@ func TestSchemaDoesNotInitializeConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := loadCommandConfig(selected, f, func() (config.Config, error) { return nil, want }); err != want {
+	if err := loadCommandConfig(selected, f, func() (config.Config, error) { return nil, want }); err != want { //nolint:errorlint // The loader error must pass through unchanged; a wrapper would violate this identity contract.
 		t.Fatal("ordinary startup no longer loads config")
 	}
 }

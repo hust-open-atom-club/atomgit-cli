@@ -163,7 +163,7 @@ func TestPRCreateAuthenticatesBeforeReadingBodyFromStdin(t *testing.T) {
 	cmd.SetIn(failingReader{})
 
 	err := cmd.RunE(cmd, []string{"owner/repo"})
-	if err != config.ErrNotAuthenticated {
+	if err != config.ErrNotAuthenticated { //nolint:errorlint // This fixture expects the canonical authentication sentinel itself, not a wrapper.
 		t.Fatalf("error = %v, want authentication before stdin read", err)
 	}
 }
