@@ -209,8 +209,8 @@ func TestRedactShortTokensUnconditionally(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := errors.New(tt.msg)
 			redacted := redact(err, tt.token)
-			if redacted == err {
-				t.Fatalf("redact(%q, %q) returned original error; short tokens must be redacted", tt.msg, tt.token)
+			if _, ok := errors.AsType[*redactedError](redacted); !ok || !errors.Is(redacted, err) {
+				t.Fatalf("redact(%q, %q) = %v, want redacted wrapper preserving the original cause", tt.msg, tt.token, redacted)
 			}
 			if strings.Contains(redacted.Error(), tt.token) {
 				t.Fatalf("redact(%q, %q) still contains token: %q", tt.msg, tt.token, redacted.Error())
@@ -224,7 +224,7 @@ func TestRedactShortTokensUnconditionally(t *testing.T) {
 
 func TestRedactEmptyTokenReturnsOriginal(t *testing.T) {
 	err := errors.New("some error")
-	if got := redact(err, ""); got != err {
+	if got := redact(err, ""); got != err { //nolint:errorlint // An empty token must return the original error object without wrapping.
 		t.Fatalf("redact with empty token changed the error: %v", got)
 	}
 }

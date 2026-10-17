@@ -55,7 +55,7 @@ func TestMilestoneRegistersSubcommandsAndFlags(t *testing.T) {
 
 func TestMilestoneReturnsCanonicalAuthenticationError(t *testing.T) {
 	_, err := authenticatedClient(&cmdutil.Factory{Config: milestoneTestConfig{tokenErr: config.ErrNotAuthenticated}})
-	if err != config.ErrNotAuthenticated {
+	if err != config.ErrNotAuthenticated { //nolint:errorlint // This fixture expects the canonical authentication sentinel itself, not a wrapper.
 		t.Fatalf("error = %v, want canonical authentication error", err)
 	}
 }
@@ -67,7 +67,7 @@ func TestMilestoneDeleteAuthenticatesBeforeConfirmation(t *testing.T) {
 	cmd.SetOut(&output)
 
 	err := cmd.RunE(cmd, []string{"alice/demo", "7"})
-	if err != config.ErrNotAuthenticated {
+	if err != config.ErrNotAuthenticated { //nolint:errorlint // This fixture expects the canonical authentication sentinel itself, not a wrapper.
 		t.Fatalf("error = %v, want canonical authentication error", err)
 	}
 	if output.Len() != 0 {

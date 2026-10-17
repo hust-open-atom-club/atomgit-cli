@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -25,7 +26,7 @@ func run(args []string, out io.Writer) error {
 	date := flags.String("date", "", "explicit header date in YYYY-MM-DD format")
 	check := flags.Bool("check", false, "check every existing manual against the command tree")
 	if err := flags.Parse(args); err != nil {
-		if err == flag.ErrHelp {
+		if errors.Is(err, flag.ErrHelp) {
 			return nil
 		}
 		return err

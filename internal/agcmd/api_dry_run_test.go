@@ -44,7 +44,7 @@ func TestAPIDryRunSkipsConfigOnlyWhenEnabled(t *testing.T) {
 				if err != nil || calls != 0 || factory.Config != nil {
 					t.Fatalf("dry run loaded config: %v, calls=%d", err, calls)
 				}
-			} else if err != want || calls != 1 {
+			} else if err != want || calls != 1 { //nolint:errorlint // The loader error must pass through unchanged; a wrapper would violate this identity contract.
 				t.Fatalf("real mode bypassed config: %v, calls=%d", err, calls)
 			}
 		})

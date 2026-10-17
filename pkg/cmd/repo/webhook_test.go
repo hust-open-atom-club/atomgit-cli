@@ -340,7 +340,7 @@ func TestRepoWebhookAuthenticatesBeforeReadingSecretFromStdin(t *testing.T) {
 			cmd := tt.new(factory)
 			tt.configure(cmd)
 			cmd.SetIn(webhookFailingReader{})
-			if err := cmd.RunE(cmd, tt.args); err != config.ErrNotAuthenticated {
+			if err := cmd.RunE(cmd, tt.args); err != config.ErrNotAuthenticated { //nolint:errorlint // This fixture expects the canonical authentication sentinel itself, not a wrapper.
 				t.Fatalf("error = %v, want authentication before stdin read", err)
 			}
 		})

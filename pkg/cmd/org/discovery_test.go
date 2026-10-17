@@ -3,6 +3,7 @@ package org
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -227,7 +228,7 @@ func TestOrgDiscoveryValidatesBeforeAuthenticationAndRequest(t *testing.T) {
 			if tt.flag != "" {
 				_ = cmd.Flags().Set("limit", tt.flag)
 			}
-			if err := cmd.RunE(cmd, tt.args); err == nil || err == config.ErrNotAuthenticated {
+			if err := cmd.RunE(cmd, tt.args); err == nil || errors.Is(err, config.ErrNotAuthenticated) {
 				t.Fatalf("error = %v, want validation error", err)
 			}
 		})

@@ -172,7 +172,7 @@ func TestConcurrentAliasUpdates(t *testing.T) {
 				"ALIAS_HELPER_NAME="+name,
 			)
 			if out, err := cmd.CombinedOutput(); err != nil {
-				errCh <- fmt.Errorf("helper for %s failed: %v: %s", name, err, out)
+				errCh <- fmt.Errorf("helper for %s failed: %w: %s", name, err, out)
 			}
 		}(i)
 	}

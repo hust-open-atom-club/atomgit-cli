@@ -233,7 +233,7 @@ func TestWorkflowRunErrors(t *testing.T) {
 		cmd.SetArgs([]string{"run", "owner/repo", "wf-123"})
 
 		err := cmd.Execute()
-		if err != config.ErrNotAuthenticated {
+		if err != config.ErrNotAuthenticated { //nolint:errorlint // This fixture expects the canonical authentication sentinel itself, not a wrapper.
 			t.Fatalf("error = %v, want canonical authentication error", err)
 		}
 	})
