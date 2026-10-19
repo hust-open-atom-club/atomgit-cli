@@ -31,7 +31,7 @@
 - Scoop：`scoop bucket add hust-open-atom-club https://github.com/hust-open-atom-club/ScoopBucket && scoop install atomgit-cli`（仅 Windows）
 - Nix / NixOS：`nix profile install nixpkgs#atomgit-cli`（`nixos-unstable` 已收录）
 - AUR / Arch Linux：`yay -S atomgit-cli`、`yay -S atomgit-cli-bin` 或 `yay -S atomgit-cli-git`（三个包由项目维护者 `moyigeek` 在 AUR 维护并随 Release 更新；AUR 是用户仓库，并非 Arch 官方仓库，安装与使用按 AUR 规则自行承担风险）
-- archlinuxcn / Arch Linux：配置[仓库](https://www.archlinuxcn.org/archlinux-cn-repo-and-mirror)并安装 `archlinuxcn-keyring` 后 `sudo pacman -S atomgit-cli`（x86_64 预编译包，由项目维护者以 `moyi@archlinuxcn.org` 身份维护，通过 lilac 自动跟随最新 Release 构建；archlinuxcn 是第三方社区仓库，并非 Arch 官方仓库）
+- archlinuxcn / Arch Linux：配置[仓库](https://www.archlinuxcn.org/archlinux-cn-repo-and-mirror)后依次执行 `sudo pacman -Sy archlinuxcn-keyring`、`sudo pacman -Syu atomgit-cli`（x86_64 预编译包，由项目维护者以 `moyi@archlinuxcn.org` 身份维护，通过 lilac 自动跟随最新 Release 构建；archlinuxcn 是第三方社区仓库，并非 Arch 官方仓库）
 - Go：`go install atomgit.com/hust-open-atom-club/atomgit-cli/cmd/ag-cli@latest`（需 Go 1.26.6 或更高版本）
 - AtomGit Release：使用 `install.sh` / `install.ps1` 自动安装，或从 [Release 页面](https://atomgit.com/hust-open-atom-club/atomgit-cli/releases)手动下载对应平台的归档
 
@@ -46,7 +46,7 @@
 - **Homebrew**：macOS 或 Linux 上通过项目维护的 tap 安装，由 Homebrew 管理升级。
 - **WinGet / Scoop**：Windows 用户可直接使用系统包管理器安装与升级。
 - **Nix / NixOS**：NixOS 用户或已使用 Nix 的系统，包已进入 `nixos-unstable`。
-- **Arch Linux / archlinuxcn**：x86_64 Arch Linux 中文用户的首选渠道：配置第三方社区仓库 archlinuxcn 后 `sudo pacman -S atomgit-cli`，免编译安装从源码构建的预编译包，随 `pacman -Syu` 滚动更新；由项目维护者维护并自动跟随最新 Release。archlinuxcn 并非 Arch 官方仓库。
+- **Arch Linux / archlinuxcn**：x86_64 Arch Linux 中文用户的首选渠道：配置第三方社区仓库 archlinuxcn 后 `sudo pacman -Syu atomgit-cli`，免编译安装从源码构建的预编译包，随 `pacman -Syu` 滚动更新；由项目维护者维护并自动跟随最新 Release。archlinuxcn 并非 Arch 官方仓库。
 - **Arch Linux / AUR**：使用 AUR 的系统可选稳定源码版 `atomgit-cli`、稳定二进制版 `atomgit-cli-bin`（免编译）或开发版 `atomgit-cli-git`（跟随 main 分支最新提交），支持 `x86_64`、`aarch64` 和 `loong64`。AUR 是用户仓库，并非 Arch 官方仓库；三个包由项目维护者 `moyigeek` 维护并随 Release 更新，安装与使用按 AUR 规则自行承担风险。
 - **`go install`**：适合 Go 开发者；从模块代理构建，`ag-cli version` 中 commit 和构建时间可能为 `unknown`。
 - **AtomGit Release**：通过 `install.sh` / `install.ps1` 自动安装或手动下载归档，不依赖 Node.js、包管理器或 Go 工具链。
