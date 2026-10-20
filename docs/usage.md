@@ -486,6 +486,69 @@ ag-cli org runner-group namespaces hust-open-atom-club <group-id> --json
 
 `ag-cli org runner-group` 使用 Actions API v8，只读检查组织级 Runner Group；它与 `ag-cli runner list/shared` 查看仓库直接配置或共享的主机 Runner 不同。`list`、`runners`、`runner-sets` 和 `namespaces` 默认最多返回 30 条并要求 `--limit` 为正数；文本输出包含组织和 Group ID，JSON 保留对应官方响应的固定 snake_case 字段。权限不足、Group 不存在或分页响应不完整时命令会明确失败，不会把部分数据当作完整结果。`namespaces` 会先查询 Group 详情，确认其存在且可访问，再读取共享仓库；不存在时返回非零退出码，存在但没有共享仓库时仍正常返回空列表。
 
+### Organization discussion writes
+
+```bash
+# Create a discussion in an explicit organization
+ag-cli org discussion create my-org --title "Roadmap" --category "Ideas" --body "Next steps"
+ag-cli org discussion create my-org --title "Roadmap" --category "Ideas" --body-file discussion.md
+ag-cli org discussion create my-org --title "Roadmap" --category "Ideas" --body-file -
+
+# Edit selected fields and preserve the others
+ag-cli org discussion edit my-org 7 --title "Updated roadmap"
+ag-cli org discussion edit my-org 7 --body-file discussion.md --category "Ideas"
+
+# Create a comment or reply to a top-level comment
+ag-cli org discussion comment create my-org 7 --body "Looks good"
+ag-cli org discussion comment create my-org 7 --body-file -
+ag-cli org discussion comment reply my-org 7 abc123 --body-file reply.md
+
+# Edit or delete a comment or reply
+ag-cli org discussion comment edit my-org 7 abc123 --body "Updated comment"
+ag-cli org discussion comment delete my-org 7 abc123
+ag-cli org discussion comment delete my-org 7 abc123 --yes
+
+# Delete the discussion after confirmation, or explicitly skip confirmation
+ag-cli org discussion delete my-org 7
+ag-cli org discussion delete my-org 7 --yes
+```
+
+All these commands require authentication and an explicit organization path.
+The organization is never inferred from Git remotes. Discussion numbers must
+be positive integers; comment and reply IDs are opaque strings and cannot be
+substituted for discussion numbers.
+
+Discussion creation requires a nonempty title, category name, and Markdown
+body. Use the category name without its display emoji or ID. `--body` and
+`--body-file` are mutually exclusive; `--body-file -` reads stdin. Comment
+creation, replies, and comment edits require a nonempty body as well. Empty
+or whitespace-only input is rejected before authentication or API requests.
+Accepted Markdown is sent unchanged, including whitespace and trailing newlines.
+
+Discussion editing requires at least one of `--title`, `--category`, `--body`,
+or `--body-file`. The current discussion is read before the update so omitted
+fields retain their values. An explicit empty `--body`, file, or stdin requests
+clearing the Markdown body; the server may reject it under its validation rules.
+Empty titles and category names are rejected. Success requires matching the
+returned discussion identity and updated fields; an incomplete or mismatched
+response triggers a GET readback, and failed verification returns an error.
+
+Comment replies, edits, and deletes first verify that the target belongs to the
+given organization discussion. Replies must target top-level comments. The
+lookup follows comment pages and one level of replies, stops when the target
+is found, and rejects missing targets or incomplete pagination before writing.
+Both delete commands prompt with the organization, discussion number, and
+comment ID where applicable. Only `y`, `yes`, or `--yes` authorizes deletion;
+empty input, EOF, and other answers cancel without sending a delete request.
+
+These operations use the API v5 `/orgs/{org}/discuss` endpoint family and accept
+HTTP 200; delete responses may be empty. Writes are never automatically retried
+or redirected. If a write or its verification fails, inspect the discussion on
+AtomGit before retrying because the change may already have been applied.
+This command group covers discussion and comment writes; state changes, likes,
+answer acceptance, and organization discussion list/view commands are outside
+its scope.
+
 ## 组织看板 (kanban)
 
 ```bash
