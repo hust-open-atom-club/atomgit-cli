@@ -1,6 +1,6 @@
 # 发布指南
 
-本文档介绍 AtomGit CLI 的 GoReleaser 打包、npm 制品发布，以及 Homebrew tap、Nix package、WinGet、Scoop 和 AUR package 的维护流程。
+本文档介绍 AtomGit CLI 的 GoReleaser 打包、npm 制品发布，以及 Homebrew tap、Nix package、WinGet、Scoop、OpenKylin、AUR package 和 archlinuxcn package 的维护流程。
 
 改名版本从 `cmd/ag-cli` 构建，发布归档内为 `ag-cli` / `ag-cli.exe`；归档文件名仍保持 `ag_<os>_<arch>.tar.gz` / `ag_windows_<arch>.zip`，npm 包名和版本同步流程不变。npm 主包仅注册 `ag-cli` 入口，不提供 `ag` 别名。发布前需协调下游维护人员同步二进制安装路径、补全文件、卸载清单及包元数据；本仓库不会自动修改这些外部清单。旧版用户的迁移步骤见[安装指南](installation.md#从-ag-迁移到-ag-cli)。
 
@@ -29,6 +29,7 @@
     - [稳定版（atomgit-cli / atomgit-cli-bin）](#稳定版atomgit-cli--atomgit-cli-bin)
     - [开发版（atomgit-cli-git）](#开发版atomgit-cli-git)
     - [校验](#校验)
+  - [维护 archlinuxcn package](#维护-archlinuxcn-package)
 
 ## 安全修复发布检查清单
 
@@ -38,7 +39,7 @@
 - [ ] 准备新的修复版本；按本文流程验证源码、平台制品、安装脚本和校验和，不覆盖旧版本或移动已发布 tag。
 - [ ] 在 AtomGit Release 说明中发布安全公告，列明受影响/修复版本、修复提交、升级或缓解步骤、各渠道状态；如已有临时缓解公告，补充相互链接。不要包含秘密材料或未经协调的详细利用步骤。
 - [ ] AtomGit Release 验证后发布同版本的七个 npm 平台包和主包，完成审批、完整性回读及隔离安装验证；不能将 staged/pending 状态标为发布成功。
-- [ ] 通知并逐项跟踪 Homebrew Core、项目 Tap、Scoop、WinGet、Nix/NixOS、OpenKylin 和 AUR。稳定包核对修复版本或回移补丁，开发快照核对包含修复的 commit；检查自动更新结果及实际包内容，不仅检查 PR 已创建。各渠道维护步骤见下文。
+- [ ] 通知并逐项跟踪 Homebrew Core、项目 Tap、Scoop、WinGet、Nix/NixOS、OpenKylin、AUR 和 archlinuxcn。稳定包核对修复版本或回移补丁，开发快照核对包含修复的 commit；检查自动更新结果及实际包内容，不仅检查 PR 已创建。各渠道维护步骤见下文。
 - [ ] 按披露计划同步 GitHub mirror 的提交和 tag；若同步 Release，则核对公告及附件与 AtomGit 一致。镜像不承载 Issue/PR 协作，报告渠道仍为安全策略中的私密邮箱。
 - [ ] 在公告中记录每个渠道的版本/commit、通知或更新链接、验证日期及状态（待通知、待发布、已验证或不受影响），明确未完成项及替代安装/缓解途径；不等待所有下游完成才告知用户风险。
 - [ ] 向报告者反馈公开公告和修复结果；持续跟踪下游未完成项。若涉及发布凭据或用户凭据暴露，另行完成撤销/轮换，不能用升级替代此步骤。
@@ -474,3 +475,11 @@ git push                            # 推送到 AUR
 ### 校验
 
 推送前应在本机用 `makepkg -f` 实际构建一次，确认能产出 `.pkg.tar.*` 包且 `ag-cli version` 显示的版本符合预期。对于 `atomgit-cli`，还需精确核对 `ag-cli version` 输出的 commit 与新 tag `v${pkgver}` 指向的 commit 完全一致。注意本地 AUR 仓库不包含上游 tag，不能在其中查询；请使用 `git ls-remote https://atomgit.com/hust-open-atom-club/atomgit-cli.git "refs/tags/v${pkgver}" | awk '{print $1}'`（任意目录），或在上游 atomgit-cli 检出中执行 `git rev-list -n 1 "v${pkgver}"` 取得参照值。若 `ag-cli version` 仍显示上一个版本的 SHA，说明 `_commit` 未同步更新，必须修正后重新构建、再次校验通过，再推送 AUR。
+
+## 维护 archlinuxcn package
+
+`atomgit-cli` 已由项目维护者以打包者身份（`moyigeek`，`moyi@archlinuxcn.org`）提交至面向中文用户的 [archlinuxcn 第三方社区仓库](https://www.archlinuxcn.org/archlinux-cn-repo-and-mirror)；archlinuxcn 并非 Arch 官方仓库。打包定义托管在 GitHub 的 [archlinuxcn/repo](https://github.com/archlinuxcn/repo/tree/master/archlinuxcn/atomgit-cli) 中，构建逻辑与本仓库解耦：
+
+- 与 AUR 稳定版相同，从上游 GitHub 镜像的 `v${pkgver}` tag 源码构建，在 `build()` 中注入版本、commit 和构建日期，并生成手册页；产物安装 `/usr/bin/ag-cli`（`provides`/`conflicts` 均为 `ag-cli`）。archlinuxcn 目前仅提供 `x86_64` 构建。
+- 版本跟进由 lilac 自动完成：`update_on` 监听上游最新 Release，发现新版本后自动执行 `update_pkgver_and_pkgrel`、在干净 chroot 中构建并提交，**无需随每个版本手工更新**。
+- 发布新版本后只需在 [archlinuxcn 编译机状态](https://build.archlinuxcn.org/)确认对应包构建成功、仓库中出现新版本即可。构建失败或需要调整打包方式时才修改打包定义（改动 PKGBUILD / `lilac.yaml` 后同样由 lilac 重建）。

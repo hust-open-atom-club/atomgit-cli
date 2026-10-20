@@ -85,6 +85,14 @@ scoop install atomgit-cli
 nix profile install nixpkgs#atomgit-cli
 ```
 
+### archlinuxcn
+
+面向中文用户的 archlinuxcn 社区仓库（非 Arch 官方仓库）提供从源码构建的 x86_64 预编译包，由项目维护者维护并自动跟随最新 Release。按 [archlinuxcn 使用说明](https://www.archlinuxcn.org/archlinux-cn-repo-and-mirror)添加仓库并安装 `archlinuxcn-keyring` 后，完整升级系统并安装：
+
+```bash
+sudo pacman -Syu atomgit-cli
+```
+
 ### Aur / Archlinux
 
 目前atomgit 已经上传到aur 中，用户可以用yay/paru自行选择从二进制、源码或开发版安装
