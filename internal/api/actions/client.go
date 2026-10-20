@@ -107,6 +107,19 @@ func (e *HTTPError) Unwrap() error {
 	return e.ReadError
 }
 
+// JobNotFoundError records the job API's normal empty response. Err retains the
+// decoding cause without letting it replace the missing-job classification.
+type JobNotFoundError struct {
+	JobID string
+	Err   error
+}
+
+func (e *JobNotFoundError) Error() string {
+	return fmt.Sprintf("get workflow run job: job %s not found (API returned an empty response)", e.JobID)
+}
+
+func (e *JobNotFoundError) Unwrap() error { return e.Err }
+
 func NewClient(token string) *Client {
 	return NewClientWithHTTPClient(token, nil)
 }
@@ -212,8 +225,9 @@ func (c *Client) GetJob(owner, repo, runID, jobID string) (Job, error) {
 	if err := c.getJSON("get workflow run job", path, &result); err != nil {
 		// AtomGit currently returns 200 with an empty body when a job does not
 		// exist, so translate the resulting decoder EOF into a useful error.
-		if errors.Is(err, io.EOF) {
-			return Job{}, fmt.Errorf("get workflow run job: job %s not found (API returned an empty response)", jobID)
+		_, readFailed := errors.AsType[*baseapi.ResponseReadError](err)
+		if errors.Is(err, io.EOF) && !readFailed {
+			return Job{}, &JobNotFoundError{JobID: jobID, Err: err}
 		}
 		return Job{}, err
 	}
@@ -399,7 +413,13 @@ func (c *Client) GetStepLog(owner, repo, runID, jobID string, request StepLogReq
 func (c *Client) postJSON(operation, path string, payload, result any) error {
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("%s: marshal payload: %w", operation, err)
+		return fmt.Errorf(
+			"%s: API request POST %s: marshal payload: %w; cause: %w",
+			operation,
+			path,
+			baseapi.ErrRequestPreparation,
+			err,
+		)
 	}
 
 	resp, err := c.client.DoRequestRawWithBody(http.MethodPost, path, bodyBytes, "application/json", "application/json")
@@ -414,8 +434,9 @@ func (c *Client) postJSON(operation, path string, payload, result any) error {
 	if result == nil || resp.StatusCode == http.StatusNoContent {
 		return nil
 	}
-	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
-		if errors.Is(err, io.EOF) && resp.StatusCode != http.StatusOK {
+	if err := baseapi.DecodeJSONResponse(http.MethodPost, path, resp.Body, result); err != nil {
+		_, readFailed := errors.AsType[*baseapi.ResponseReadError](err)
+		if errors.Is(err, io.EOF) && !readFailed && resp.StatusCode != http.StatusOK {
 			return nil
 		}
 		return fmt.Errorf("%s: decode response: %w", operation, err)
@@ -433,7 +454,7 @@ func (c *Client) getJSON(operation, path string, result any) error {
 	if resp.StatusCode != http.StatusOK {
 		return responseError(operation, resp)
 	}
-	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+	if err := baseapi.DecodeJSONResponse(http.MethodGet, path, resp.Body, result); err != nil {
 		return fmt.Errorf("%s: decode response: %w", operation, err)
 	}
 	return nil

@@ -5,14 +5,14 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
 
-func newCmdCheck(*cmdutil.Factory) *cobra.Command {
+func newCmdCheck(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "check <license>",
 		Short: "Check license compliance",
@@ -29,21 +29,38 @@ func newCmdCheck(*cmdutil.Factory) *cobra.Command {
 
 			// Make HTTP GET request with timeout
 			client := &http.Client{Timeout: 30 * time.Second}
-			resp, err := client.Get(fullURL)
+			if f.HttpClient != nil {
+				injected, err := f.HttpClient()
+				if err != nil {
+					return fmt.Errorf("prepare license check: %w: %w", api.ErrRequestPreparation, err)
+				}
+				if injected == nil {
+					return fmt.Errorf("prepare license check: %w: HTTP client is nil", api.ErrRequestPreparation)
+				}
+				configuredClient := *injected
+				client = &configuredClient
+				if client.Timeout == 0 {
+					client.Timeout = 30 * time.Second
+				}
+			}
+			req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, fullURL, nil)
 			if err != nil {
-				return fmt.Errorf("failed to check license: %w", err)
+				return fmt.Errorf("prepare license check: %w: %w", api.ErrRequestPreparation, err)
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				return fmt.Errorf("failed to check license: %w", &api.RequestExecutionError{Err: err})
 			}
 			defer resp.Body.Close() //nolint:errcheck // Status determines the primary error; the response body is best-effort diagnostic text and Close only releases response resources.
 
 			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-				body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-				return fmt.Errorf("license check failed: %s - %s", resp.Status, strings.TrimSpace(string(body)))
+				return fmt.Errorf("license check failed: %w", api.NewHTTPError(resp))
 			}
 
 			// Read response body
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				return fmt.Errorf("failed to read response: %w", err)
+				return fmt.Errorf("failed to read response: %w", &api.ResponseReadError{Err: err})
 			}
 
 			// Check if body is empty
