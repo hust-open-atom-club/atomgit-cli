@@ -100,6 +100,9 @@
 - [ag-cli notification list](#ag-cli-notification-list) — List repository notifications
 - [ag-cli notification mark-read](#ag-cli-notification-mark-read) — Mark repository notifications as read
 - [ag-cli org](#ag-cli-org) — Manage organizations
+- [ag-cli org discussion](#ag-cli-org-discussion) — Read organization discussions
+- [ag-cli org discussion list](#ag-cli-org-discussion-list) — List organization discussions
+- [ag-cli org discussion view](#ag-cli-org-discussion-view) — View an organization discussion
 - [ag-cli org list](#ag-cli-org-list) — List organizations for the authenticated user
 - [ag-cli org members](#ag-cli-org-members) — List organization members
 - [ag-cli org repos](#ag-cli-org-repos) — List organization repositories
@@ -2384,7 +2387,7 @@ Usage: `ag-cli org`
 
 Manage organizations
 
-List organizations associated with your AtomGit account and inspect organization details, members, repositories, and Actions runner groups.
+List organizations associated with your AtomGit account and inspect organization details, members, repositories, discussions, and Actions runner groups.
 
 ### Flags
 
@@ -2392,6 +2395,75 @@ List organizations associated with your AtomGit account and inspect organization
 | --- | --- | --- | --- |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli org discussion
+
+Usage: `ag-cli org discussion`
+
+Read organization discussions
+
+List and view discussions for an explicitly specified AtomGit organization.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli org discussion list
+
+Usage: `ag-cli org discussion list <org> [flags]`
+
+List organization discussions
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--json` | Output discussions as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of discussions to list | `30` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli org discussion list my-organization
+ag-cli org discussion list my-organization --limit 100
+ag-cli org discussion list my-organization --json
+```
+
+
+## ag-cli org discussion view
+
+Usage: `ag-cli org discussion view <org> <number> [flags]`
+
+View an organization discussion
+
+View a single organization discussion with its Markdown body.
+
+With --comments, fetch comments and their nested replies in server order.
+Hidden, deleted, and empty bodies are shown as explicit placeholders.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--comments` | Also fetch and show the comment thread | `false` | local |
+| `--json` | Output the discussion as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli org discussion view my-organization 1
+ag-cli org discussion view my-organization 1 --comments
+ag-cli org discussion view my-organization 1 --comments --json
+```
 
 
 ## ag-cli org list

@@ -486,6 +486,43 @@ ag-cli org runner-group namespaces hust-open-atom-club <group-id> --json
 
 `ag-cli org runner-group` 使用 Actions API v8，只读检查组织级 Runner Group；它与 `ag-cli runner list/shared` 查看仓库直接配置或共享的主机 Runner 不同。`list`、`runners`、`runner-sets` 和 `namespaces` 默认最多返回 30 条并要求 `--limit` 为正数；文本输出包含组织和 Group ID，JSON 保留对应官方响应的固定 snake_case 字段。权限不足、Group 不存在或分页响应不完整时命令会明确失败，不会把部分数据当作完整结果。`namespaces` 会先查询 Group 详情，确认其存在且可访问，再读取共享仓库；不存在时返回非零退出码，存在但没有共享仓库时仍正常返回空列表。
 
+### Organization discussions
+
+```bash
+# List discussions for an explicit organization (default: at most 30)
+ag-cli org discussion list hust-open-atom-club
+ag-cli org discussion list hust-open-atom-club --limit 100 --json
+
+# View a discussion with its Markdown body
+ag-cli org discussion view hust-open-atom-club 1
+
+# Include comments and their nested replies
+ag-cli org discussion view hust-open-atom-club 1 --comments
+ag-cli org discussion view hust-open-atom-club 1 --comments --json
+```
+
+`org discussion` uses the API v5 `/orgs/{org}/discuss` endpoints. The organization
+path is required and is never inferred from Git remotes. Without a login, the
+commands attempt public access; when logged in, they use the configured
+credentials. Permission and missing-resource errors return a nonzero exit code.
+
+`list` follows API pagination up to the positive `--limit` value. Text output
+includes the discussion number, title, category, author, status, comment count,
+and update time. `--json` uses the same discussion fields as repository
+`discussion list`; an empty list is `[]`.
+
+`view` requires a positive discussion number. It prints the Markdown body and
+uses the same text and JSON format as repository `discussion view`. With
+`--comments`, it reads all comments and nested replies in server order, even
+when the API omits counts or returns stale counts. Deleted, hidden, and empty
+bodies are shown as `[deleted]`, `[hidden]`, and `[no content]`. The JSON `comments`
+field is omitted without `--comments`, and is `[]` when comments were requested
+but none exist. Pagination stops at an empty page or the list limit. Repeated
+pages without new entries, scans exceeding 100 pages per collection, and failed
+comment or reply requests return an error without printing a partial thread.
+These commands only read organization discussions; organization
+discussion writes and state management are not supported.
+
 ## 组织看板 (kanban)
 
 ```bash
