@@ -445,3 +445,33 @@ func TestRunnerJobHistoryOutputUsesSanitizingWriter(t *testing.T) {
 		t.Fatalf("output was not safely escaped: %q", output.String())
 	}
 }
+
+func TestRunnerJobHistoryRejectsInvalidEmptyResponses(t *testing.T) {
+	for _, body := range []string{
+		`null`,
+		`{}`,
+		`{"message":"upstream failure"}`,
+		`{"page_num":1,"page_size":30,"total":0,"page_count":2,"content":[]}`,
+		`{"page_num":0,"page_size":30,"total":0,"page_count":0,"content":[]}`,
+		`{"page_num":1,"page_size":0,"total":0,"page_count":0,"content":[]}`,
+	} {
+		for _, jsonOutput := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/json=%v", body, jsonOutput), func(t *testing.T) {
+				transport := orgRoundTripFunc(func(*http.Request) (*http.Response, error) {
+					return orgResponse(http.StatusOK, body), nil
+				})
+				args := []string{"team"}
+				if jsonOutput {
+					args = append(args, "--json")
+				}
+				output, err := executeRunnerJobHistoryCommand(t, orgFactory(orgTestConfig{}, transport), args...)
+				if err == nil || !strings.Contains(err.Error(), "pagination") {
+					t.Fatalf("error = %v, want pagination error", err)
+				}
+				if strings.Contains(output, "No runner job history") || strings.Contains(output, `"job_history"`) {
+					t.Fatalf("invalid response produced success output: %s", output)
+				}
+			})
+		}
+	}
+}

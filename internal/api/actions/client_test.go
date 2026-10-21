@@ -2,9 +2,11 @@ package actions
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -1051,5 +1053,40 @@ func TestListOrganizationRunnerJobHistoryNormalizesNullContent(t *testing.T) {
 	}
 	if result.Content == nil || len(result.Content) != 0 {
 		t.Fatalf("content = %#v, want non-nil empty slice", result.Content)
+	}
+}
+
+func TestListOrganizationRunnerJobHistoryRejectsInvalidEnvelope(t *testing.T) {
+	valid := map[string]any{"page_num": 1, "page_size": 30, "total": 0, "page_count": 0, "content": []any{}}
+	bodies := map[string]string{"null": "null", "empty object": "{}", "error object": `{"message":"upstream failure"}`}
+	for field := range valid {
+		for _, null := range []bool{false, true} {
+			if field == "content" && null {
+				continue // Explicit null content is a supported empty list.
+			}
+			body := make(map[string]any)
+			maps.Copy(body, valid)
+			if null {
+				body[field] = nil
+			} else {
+				delete(body, field)
+			}
+			data, err := json.Marshal(body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			bodies[fmt.Sprintf("%s null=%v", field, null)] = string(data)
+		}
+	}
+	for name, body := range bodies {
+		t.Run(name, func(t *testing.T) {
+			client := NewClientWithHTTPClient("secret", &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return response(req, http.StatusOK, body), nil
+			})})
+			_, err := client.ListOrganizationRunnerJobHistory("team", ListJobHistoryOptions{Page: 1, PerPage: 30})
+			if err == nil || !strings.Contains(err.Error(), "invalid pagination response") {
+				t.Fatalf("error = %v, want invalid pagination response", err)
+			}
+		})
 	}
 }

@@ -144,8 +144,14 @@ func collectJobHistoryPages(limit int, fetch func(page, perPage int) (actions.Jo
 		if response.Total < 0 || response.PageSize < 0 || response.PageCount < 0 {
 			return nil, fmt.Errorf("inconsistent pagination: API returned negative metadata (total %d, page_size %d, page_count %d)", response.Total, response.PageSize, response.PageCount)
 		}
-		if response.PageNum != 0 && response.PageNum != page {
+		if response.PageNum != page {
 			return nil, fmt.Errorf("inconsistent pagination: requested page %d but API returned page_num %d", page, response.PageNum)
+		}
+		if response.PageSize == 0 {
+			return nil, fmt.Errorf("inconsistent pagination: API returned page_size 0")
+		}
+		if response.Total == 0 && response.PageCount != 0 {
+			return nil, fmt.Errorf("inconsistent pagination: API reports total 0 but page_count %d", response.PageCount)
 		}
 		if expectedTotal < 0 {
 			expectedTotal = response.Total

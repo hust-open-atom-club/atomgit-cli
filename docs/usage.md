@@ -493,7 +493,7 @@ ag-cli org runner-job-history hust-open-atom-club \
 
 `ag-cli org runner-group` 使用 Actions API v8，只读检查组织级 Runner Group；它与 `ag-cli runner list/shared` 查看仓库直接配置或共享的主机 Runner 不同。`list`、`runners`、`runner-sets` 和 `namespaces` 默认最多返回 30 条并要求 `--limit` 为正数；文本输出包含组织和 Group ID，JSON 保留对应官方响应的固定 snake_case 字段。权限不足、Group 不存在或分页响应不完整时命令会明确失败，不会把部分数据当作完整结果。`namespaces` 会先查询 Group 详情，确认其存在且可访问，再读取共享仓库；不存在时返回非零退出码，存在但没有共享仓库时仍正常返回空列表。
 
-`ag-cli org runner-job-history` 使用 Actions API v8 查询组织级 Runner 资源的 Job 执行历史，只读，不提供取消或重跑操作。`--limit` 默认 30 且必须为正数；文本输出包含 job run/job ID、名称、状态、runs_on、pipeline 名称与 run ID、组织/仓库 namespace ID、开始/完成时间和 duration，JSON 条目保留官方 snake_case 字段，`total_count` 为应用 `--limit` 后的条目数。时间筛选使用 `YYYY-MM-DD HH:mm:ss`；官方未定义时区，CLI 原样发送且不做时区转换。`duration` 的官方文档未定义单位，CLI 输出原始整数；缺失的开始或完成时间在文本中显示为 `-`。空历史正常返回；权限不足、组织不存在或分页不完整/矛盾时命令明确失败。
+`ag-cli org runner-job-history` 使用 Actions API v8 查询组织级 Runner 资源的 Job 执行历史，只读，不提供取消或重跑操作。`--limit` 默认 30 且必须为正数；文本输出包含 job run/job ID、名称、状态、runs_on、pipeline 名称与 run ID、组织/仓库 namespace ID、开始/完成时间和 duration，JSON 条目保留官方 snake_case 字段，`total_count` 为应用 `--limit` 后的条目数。时间筛选使用 `YYYY-MM-DD HH:mm:ss`；官方未定义时区，CLI 原样发送且不做时区转换。`duration` 的官方文档未定义单位，CLI 输出原始整数；缺失的开始或完成时间在文本中显示为 `-`。空历史正常返回；缺失必需分页字段的响应（包括 `null`、空对象或错误对象）、权限不足、组织不存在或分页不完整/矛盾时命令明确失败。
 
 ## 组织看板 (kanban)
 
