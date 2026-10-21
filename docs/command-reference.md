@@ -109,6 +109,7 @@
 - [ag-cli org runner-group runner-sets](#ag-cli-org-runner-group-runner-sets) — List Kubernetes runner sets in an organization runner group
 - [ag-cli org runner-group runners](#ag-cli-org-runner-group-runners) — List host runners in an organization runner group
 - [ag-cli org runner-group view](#ag-cli-org-runner-group-view) — View an organization runner group
+- [ag-cli org runner-job-history](#ag-cli-org-runner-job-history) — List organization runner job execution history
 - [ag-cli org view](#ag-cli-org-view) — View an organization
 - [ag-cli pr](#ag-cli-pr) — Manage pull requests
 - [ag-cli pr activity](#ag-cli-pr-activity) — List the operation log of a pull request
@@ -2384,7 +2385,7 @@ Usage: `ag-cli org`
 
 Manage organizations
 
-List organizations associated with your AtomGit account and inspect organization details, members, repositories, and Actions runner groups.
+List organizations associated with your AtomGit account and inspect organization details, members, repositories, Actions runner groups, and runner job history.
 
 ### Flags
 
@@ -2581,6 +2582,34 @@ View an organization runner group
 ```bash
 ag-cli org runner-group view my-organization group-id
 ag-cli org runner-group view my-organization group-id --json
+```
+
+
+## ag-cli org runner-job-history
+
+Usage: `ag-cli org runner-job-history <org> [flags]`
+
+List organization runner job execution history
+
+List the read-only execution history of organization-level AtomGit Actions runner resources. This command does not cancel or retry jobs. Time filters use the API's YYYY-MM-DD HH:mm:ss format and are sent without timezone conversion; the API documentation does not define a timezone. The duration field is returned as the API's raw integer because its unit is not documented.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--json` | Output runner job history as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--start-time-begin` | Filter by job start time, from (YYYY-MM-DD HH:mm:ss) | `` | local |
+| `--start-time-end` | Filter by job start time, to (YYYY-MM-DD HH:mm:ss) | `` | local |
+| `-L, --limit` | Maximum number of job history entries to list | `30` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli org runner-job-history my-organization
+ag-cli org runner-job-history my-organization --limit 100
+ag-cli org runner-job-history my-organization --start-time-begin "2026-10-01 00:00:00" --start-time-end "2026-10-31 23:59:59" --json
 ```
 
 

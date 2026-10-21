@@ -65,6 +65,13 @@ type ListJobsOptions struct {
 	PerPage int
 }
 
+type ListJobHistoryOptions struct {
+	Page           int
+	PerPage        int
+	StartTimeBegin string
+	StartTimeEnd   string
+}
+
 type HTTPError struct {
 	Operation  string
 	StatusCode int
@@ -383,6 +390,24 @@ func (c *Client) ListOrganizationRunnerGroupSharedNamespaces(organization, group
 	}
 	if result.SharedNamespaces == nil {
 		result.SharedNamespaces = make([]SharedNamespace, 0)
+	}
+	return result, nil
+}
+
+func (c *Client) ListOrganizationRunnerJobHistory(organization string, opts ListJobHistoryOptions) (JobHistoryListResponse, error) {
+	query := url.Values{}
+	setPositiveInt(query, "page", opts.Page)
+	setPositiveInt(query, "per_page", opts.PerPage)
+	setString(query, "start_time_begin", opts.StartTimeBegin)
+	setString(query, "start_time_end", opts.StartTimeEnd)
+
+	var result JobHistoryListResponse
+	path := organizationPath(organization) + "/actions/runner-resources/job-history" + encodeQuery(query)
+	if err := c.getJSON("list organization runner job history", path, &result); err != nil {
+		return JobHistoryListResponse{}, err
+	}
+	if result.Content == nil {
+		result.Content = make([]JobHistory, 0)
 	}
 	return result, nil
 }
