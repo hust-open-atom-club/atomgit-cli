@@ -160,6 +160,8 @@ func TestRunnerJobHistoryValidatesBeforeAuthentication(t *testing.T) {
 		{name: "limit zero", args: []string{"team", "--limit", "0"}, want: "must be positive"},
 		{name: "limit negative", args: []string{"team", "--limit", "-1"}, want: "must be positive"},
 		{name: "invalid begin", args: []string{"team", "--start-time-begin", "2026-10-01"}, want: "invalid --start-time-begin"},
+		{name: "non-padded begin", args: []string{"team", "--start-time-begin", "2026-1-2 3:4:5"}, want: "invalid --start-time-begin"},
+		{name: "fractional begin", args: []string{"team", "--start-time-begin", "2026-01-02 03:04:05.000"}, want: "invalid --start-time-begin"},
 		{name: "invalid end", args: []string{"team", "--start-time-end", "2026-10-01T00:00:00"}, want: "invalid --start-time-end"},
 		{name: "reversed", args: []string{"team", "--start-time-begin", "2026-10-31 00:00:00", "--start-time-end", "2026-10-01 00:00:00"}, want: "must not be after"},
 	}
@@ -189,9 +191,15 @@ func TestRunnerJobHistoryPaginationAndLimit(t *testing.T) {
 		case 1:
 			start, count = 0, 100
 		case 2:
-			start, count = 100, 20
+			start, count = 100, 50
 		default:
 			t.Fatalf("unexpected page %d", page)
+		}
+		if page < 1 || perPage != 100 {
+			t.Fatalf("page %d per_page = %d, want 100", page, perPage)
+		}
+		if start != (page-1)*perPage {
+			t.Fatalf("page %d start = %d, want %d", page, start, (page-1)*perPage)
 		}
 		items := make([]actions.JobHistory, count)
 		for index := range items {
@@ -210,8 +218,8 @@ func TestRunnerJobHistoryPaginationAndLimit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fmt.Sprint(perPageRequests) != "[100 20]" {
-		t.Fatalf("per_page requests = %v, want [100 20]", perPageRequests)
+	if fmt.Sprint(perPageRequests) != "[100 100]" {
+		t.Fatalf("per_page requests = %v, want [100 100]", perPageRequests)
 	}
 	if !strings.Contains(output, `"total_count": 120`) || !strings.Contains(output, `"run-119"`) || strings.Contains(output, `"run-120"`) {
 		t.Fatalf("output = %s", output)
@@ -335,6 +343,9 @@ func TestCollectJobHistoryPages(t *testing.T) {
 				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 					t.Fatalf("error = %v, want %q", err, tt.wantErr)
 				}
+				if tt.limit == 0 && called {
+					t.Fatal("fetch was called for an invalid limit")
+				}
 				return
 			}
 			if err != nil {
@@ -342,9 +353,6 @@ func TestCollectJobHistoryPages(t *testing.T) {
 			}
 			if len(items) != tt.wantItems {
 				t.Fatalf("items = %d, want %d", len(items), tt.wantItems)
-			}
-			if tt.limit == 0 && called {
-				t.Fatal("fetch was called for an invalid limit")
 			}
 		})
 	}

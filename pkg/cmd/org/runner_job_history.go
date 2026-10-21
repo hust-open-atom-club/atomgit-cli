@@ -118,7 +118,7 @@ func normalizeJobHistoryTime(flag, value string) (string, time.Time, bool, error
 		return "", time.Time{}, false, nil
 	}
 	parsed, err := time.Parse(jobHistoryTimeLayout, value)
-	if err != nil {
+	if err != nil || parsed.Format(jobHistoryTimeLayout) != value {
 		return "", time.Time{}, false, fmt.Errorf("invalid %s: %q (must be YYYY-MM-DD HH:mm:ss)", flag, value)
 	}
 	return value, parsed, true, nil
@@ -128,15 +128,15 @@ func collectJobHistoryPages(limit int, fetch func(page, perPage int) (actions.Jo
 	if limit <= 0 {
 		return nil, fmt.Errorf("invalid limit: %d (must be positive)", limit)
 	}
-	items := make([]actions.JobHistory, 0, min(limit, maxJobHistoryPerPage))
+	// Page numbers are relative to per_page. Keep this constant across requests
+	// so each page continues at the same offset; truncate to limit only after
+	// receiving the page.
+	perPage := min(maxJobHistoryPerPage, limit)
+	items := make([]actions.JobHistory, 0, perPage)
 	seenItems := make(map[string]struct{})
 	seenPages := make(map[string]struct{})
 	expectedTotal := -1
 	for page := 1; ; page++ {
-		perPage := min(maxJobHistoryPerPage, limit-len(items))
-		if perPage <= 0 {
-			return items, nil
-		}
 		response, err := fetch(page, perPage)
 		if err != nil {
 			return nil, err
