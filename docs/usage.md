@@ -486,68 +486,42 @@ ag-cli org runner-group namespaces hust-open-atom-club <group-id> --json
 
 `ag-cli org runner-group` 使用 Actions API v8，只读检查组织级 Runner Group；它与 `ag-cli runner list/shared` 查看仓库直接配置或共享的主机 Runner 不同。`list`、`runners`、`runner-sets` 和 `namespaces` 默认最多返回 30 条并要求 `--limit` 为正数；文本输出包含组织和 Group ID，JSON 保留对应官方响应的固定 snake_case 字段。权限不足、Group 不存在或分页响应不完整时命令会明确失败，不会把部分数据当作完整结果。`namespaces` 会先查询 Group 详情，确认其存在且可访问，再读取共享仓库；不存在时返回非零退出码，存在但没有共享仓库时仍正常返回空列表。
 
-### Organization discussion writes
+### 组织讨论写操作
 
 ```bash
-# Create a discussion in an explicit organization
+# 在显式指定的组织中创建讨论
 ag-cli org discussion create my-org --title "Roadmap" --category "Ideas" --body "Next steps"
 ag-cli org discussion create my-org --title "Roadmap" --category "Ideas" --body-file discussion.md
 ag-cli org discussion create my-org --title "Roadmap" --category "Ideas" --body-file -
 
-# Edit selected fields and preserve the others
+# 只修改指定字段，保留其他字段
 ag-cli org discussion edit my-org 7 --title "Updated roadmap"
 ag-cli org discussion edit my-org 7 --body-file discussion.md --category "Ideas"
 
-# Create a comment or reply to a top-level comment
+# 创建评论或回复一级评论
 ag-cli org discussion comment create my-org 7 --body "Looks good"
 ag-cli org discussion comment create my-org 7 --body-file -
 ag-cli org discussion comment reply my-org 7 abc123 --body-file reply.md
 
-# Edit or delete a comment or reply
+# 编辑或删除评论及回复
 ag-cli org discussion comment edit my-org 7 abc123 --body "Updated comment"
 ag-cli org discussion comment delete my-org 7 abc123
 ag-cli org discussion comment delete my-org 7 abc123 --yes
 
-# Delete the discussion after confirmation, or explicitly skip confirmation
+# 确认后删除讨论，或显式跳过确认
 ag-cli org discussion delete my-org 7
 ag-cli org discussion delete my-org 7 --yes
 ```
 
-All these commands require authentication and an explicit organization path.
-The organization is never inferred from Git remotes. Discussion numbers must
-be positive integers; comment and reply IDs are opaque strings and cannot be
-substituted for discussion numbers.
+这些命令均要求认证并显式指定组织路径，不会从 Git remote 推断组织。讨论编号必须为正整数；评论和回复 ID 按字符串原样处理，不能用来代替讨论编号。
 
-Discussion creation requires a nonempty title, category name, and Markdown
-body. Use the category name without its display emoji or ID. `--body` and
-`--body-file` are mutually exclusive; `--body-file -` reads stdin. Comment
-creation, replies, and comment edits require a nonempty body as well. Empty
-or whitespace-only input is rejected before authentication or API requests.
-Accepted Markdown is sent unchanged, including whitespace and trailing newlines.
+创建讨论时，标题、分类名称和 Markdown 正文均不能为空。分类使用不含展示 emoji 的名称，而非 ID。`--body` 与 `--body-file` 互斥，`--body-file -` 从标准输入读取。创建评论、回复和编辑评论也要求非空正文；空内容或仅含空白的输入会在认证和 API 请求前被拒绝。有效 Markdown 按原样发送，保留空白和末尾换行。
 
-Discussion editing requires at least one of `--title`, `--category`, `--body`,
-or `--body-file`. The current discussion is read before the update so omitted
-fields retain their values. An explicit empty `--body`, file, or stdin requests
-clearing the Markdown body; the server may reject it under its validation rules.
-Empty titles and category names are rejected. Success requires matching the
-returned discussion identity and updated fields; an incomplete or mismatched
-response triggers a GET readback, and failed verification returns an error.
+编辑讨论时，至少指定 `--title`、`--category`、`--body` 或 `--body-file` 中的一项。命令会先读取当前讨论，保留未指定字段的值。显式传入空 `--body`、空文件或空标准输入表示请求清空 Markdown 正文，服务端仍可能根据自身规则拒绝；标题和分类名称不能为空。更新后会核对返回的讨论身份和修改字段；响应不完整或不匹配时，通过 GET 回读校验，校验失败则返回错误。
 
-Comment replies, edits, and deletes first verify that the target belongs to the
-given organization discussion. Replies must target top-level comments. The
-lookup follows comment pages and one level of replies, stops when the target
-is found, and rejects missing targets or incomplete pagination before writing.
-Both delete commands prompt with the organization, discussion number, and
-comment ID where applicable. Only `y`, `yes`, or `--yes` authorizes deletion;
-empty input, EOF, and other answers cancel without sending a delete request.
+回复、编辑和删除评论前，会先确认目标属于指定组织讨论。回复只能指向一级评论。查询会遍历评论分页及一层回复，找到目标后停止；目标不存在或分页不完整时不会写入。删除讨论或评论时，会显示组织、讨论编号及适用的评论 ID，要求确认。只有 `y`、`yes` 或 `--yes` 会执行删除；空输入、EOF 或其他回答均取消操作，不发送删除请求。
 
-These operations use the API v5 `/orgs/{org}/discuss` endpoint family and accept
-HTTP 200; delete responses may be empty. Writes are never automatically retried
-or redirected. If a write or its verification fails, inspect the discussion on
-AtomGit before retrying because the change may already have been applied.
-This command group covers discussion and comment writes; state changes, likes,
-answer acceptance, and organization discussion list/view commands are outside
-its scope.
+这些操作使用 API v5 `/orgs/{org}/discuss` 系列端点，接受 HTTP 200，删除响应可以为空。写请求不会自动重试或跟随重定向。写入或校验失败时，改动可能已经生效，应先在 AtomGit 查看讨论状态再决定是否重试。本命令组覆盖讨论及评论写操作，不包含状态变更、点赞、采纳和组织讨论列表/详情命令。
 
 ## 组织看板 (kanban)
 
