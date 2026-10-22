@@ -486,42 +486,26 @@ ag-cli org runner-group namespaces hust-open-atom-club <group-id> --json
 
 `ag-cli org runner-group` 使用 Actions API v8，只读检查组织级 Runner Group；它与 `ag-cli runner list/shared` 查看仓库直接配置或共享的主机 Runner 不同。`list`、`runners`、`runner-sets` 和 `namespaces` 默认最多返回 30 条并要求 `--limit` 为正数；文本输出包含组织和 Group ID，JSON 保留对应官方响应的固定 snake_case 字段。权限不足、Group 不存在或分页响应不完整时命令会明确失败，不会把部分数据当作完整结果。`namespaces` 会先查询 Group 详情，确认其存在且可访问，再读取共享仓库；不存在时返回非零退出码，存在但没有共享仓库时仍正常返回空列表。
 
-### Organization discussions
+### 组织讨论
 
 ```bash
-# List discussions for an explicit organization (default: at most 30)
+# 列出指定组织的讨论（默认最多 30 条）
 ag-cli org discussion list hust-open-atom-club
 ag-cli org discussion list hust-open-atom-club --limit 100 --json
 
-# View a discussion with its Markdown body
+# 查看讨论详情及 Markdown 正文
 ag-cli org discussion view hust-open-atom-club 1
 
-# Include comments and their nested replies
+# 同时读取评论及其嵌套回复
 ag-cli org discussion view hust-open-atom-club 1 --comments
 ag-cli org discussion view hust-open-atom-club 1 --comments --json
 ```
 
-`org discussion` uses the API v5 `/orgs/{org}/discuss` endpoints. The organization
-path is required and is never inferred from Git remotes. Without a login, the
-commands attempt public access; when logged in, they use the configured
-credentials. Permission and missing-resource errors return a nonzero exit code.
+`org discussion` 使用 API v5 的 `/orgs/{org}/discuss` 端点。必须显式指定组织路径，不会从 Git remote 推断。未登录时尝试公开访问，已登录时使用配置的凭据。权限不足或资源不存在时返回非零退出码。
 
-`list` follows API pagination up to the positive `--limit` value. Text output
-includes the discussion number, title, category, author, status, comment count,
-and update time. `--json` uses the same discussion fields as repository
-`discussion list`; an empty list is `[]`.
+`list` 按 API 分页读取，最多返回 `--limit` 指定的条数，且 `--limit` 必须为正数。文本输出包含讨论编号、标题、分类、作者、状态、评论数和更新时间。`--json` 使用与仓库 `discussion list` 相同的讨论字段；空列表输出为 `[]`。
 
-`view` requires a positive discussion number. It prints the Markdown body and
-uses the same text and JSON format as repository `discussion view`. With
-`--comments`, it reads all comments and nested replies in server order, even
-when the API omits counts or returns stale counts. Deleted, hidden, and empty
-bodies are shown as `[deleted]`, `[hidden]`, and `[no content]`. The JSON `comments`
-field is omitted without `--comments`, and is `[]` when comments were requested
-but none exist. Pagination stops at an empty page or the list limit. Repeated
-pages without new entries, scans exceeding 100 pages per collection, and failed
-comment or reply requests return an error without printing a partial thread.
-These commands only read organization discussions; organization
-discussion writes and state management are not supported.
+`view` 要求讨论编号为正数，输出 Markdown 正文，文本和 JSON 格式与仓库 `discussion view` 一致。指定 `--comments` 时，按服务端顺序读取全部评论及嵌套回复，即使 API 未提供数量或返回的数量已过期也会继续读取。已删除、隐藏和空正文分别显示为 `[deleted]`、`[hidden]` 和 `[no content]`。未指定 `--comments` 时，JSON 省略 `comments` 字段；请求评论但结果为空时，该字段为 `[]`。遇到空页或达到列表条数上限时停止分页；重复页没有新条目、单个集合扫描超过 100 页、评论或回复请求失败时，命令会返回错误，不会输出部分评论线程。这些命令仅支持读取组织讨论，不支持组织讨论写入和状态管理。
 
 ## 组织看板 (kanban)
 
