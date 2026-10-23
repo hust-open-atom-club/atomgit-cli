@@ -116,6 +116,8 @@ ag-cli doctor owner/repo --live --json
 
 ## 认证
 
+例如，`ag-cli api /user` 找不到凭据时，会输出 `No credentials are configured.` 及 `ag-cli auth login` 登录提示，并返回非零退出码。
+
 ```bash
 # 浏览器 OAuth 登录并写入令牌文件
 ag-cli auth login
