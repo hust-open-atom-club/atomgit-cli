@@ -448,7 +448,7 @@ func TestDiscussionCommentRejectsBadIDsBeforeAuth(t *testing.T) {
 }
 
 func TestDiscussionCommentCreateReportsAPIFailure(t *testing.T) {
-	factory := discussionCommentFactory(discussionCommentConfig{token: "token"}, func(req *http.Request) (*http.Response, error) {
+	factory := discussionCommentFactory(discussionCommentConfig{token: "token"}, func(_ *http.Request) (*http.Response, error) {
 		return discussionCommentResponse(http.StatusNotFound, `{"message":"missing discussion"}`), nil
 	})
 	stdout, _, err := executeComment(t, newCmdCreate(factory), []string{"alice/demo", "7", "--body", "x"}, "")
