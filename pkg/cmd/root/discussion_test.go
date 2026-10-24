@@ -69,7 +69,7 @@ func TestDiscussionCreateDeleteThroughRoot(t *testing.T) {
 	for _, operation := range []string{"create", "delete"} {
 		t.Run(operation, func(t *testing.T) {
 			f := &cmdutil.Factory{Config: rootTestConfig{}, HttpClient: func() (*http.Client, error) {
-				return &http.Client{Transport: rootRoundTripFunc(func(r *http.Request) (*http.Response, error) {
+				return &http.Client{Transport: rootRoundTripFunc(func(_ *http.Request) (*http.Response, error) {
 					return &http.Response{StatusCode: 403, Status: "403 Forbidden", Body: io.NopCloser(strings.NewReader(`{"message":"denied\u001b[31m Bearer secret","access_token":"hidden-token"}`))}, nil
 				})}, nil
 			}}
