@@ -67,9 +67,10 @@ func TestAPIDryRunStartupDoesNotReadOrMutateCredentials(t *testing.T) {
 			primary := filepath.Join(dir, "token.json")
 			tokenPath := primary
 			content := []byte(`{"access_token":"x!","refresh_token":"private-refresh","user":"private-user"}`)
-			if state == "legacy" {
+			switch state {
+			case "legacy":
 				tokenPath = filepath.Join(home, ".atomgit_personal_token.json")
-			} else if state == "corrupt" {
+			case "corrupt":
 				content = []byte(`{"private-token":broken`)
 			}
 			filePresent := state != "missing" && state != "directory"

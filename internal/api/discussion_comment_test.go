@@ -85,7 +85,7 @@ func TestDiscussionCommentWritesUseContract(t *testing.T) {
 func TestDiscussionCommentWritesRejectNonOK(t *testing.T) {
 	for _, status := range []int{http.StatusCreated, http.StatusNoContent, http.StatusForbidden, http.StatusNotFound} {
 		t.Run(http.StatusText(status), func(t *testing.T) {
-			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(status)
 				_, _ = io.WriteString(w, `{"message":"denied"}`)
 			})

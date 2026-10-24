@@ -55,7 +55,7 @@ push。PR 运行检出最新 head 提交，合并后的运行检出进入 `main`
 发布并优先修复或回退。
 
 `Fast quality gate` 先使用 Go 1.26.6 运行一次完整的 `go test ./...`，再切换到
-Go 1.26.9 执行格式检查、`go vet`、`go fix -diff ./...`、命令参考检查和本机构建。发布工具链下的完整
+Go 1.26.10 执行格式检查、`go vet`、`go fix -diff ./...`、命令参考检查和本机构建。发布工具链下的完整
 package 集合由 `go test -race ./...` 验证，因此门禁不再重复运行普通 `go test`。
 race、交叉编译、平台测试编译和漏洞扫描显式依赖门禁成功，并在门禁之后相互并行；
 npm 测试保持独立。各 Go job 通过显式 `cache` 步骤分别缓存 `~/go/pkg/mod`（模块和
@@ -125,9 +125,14 @@ make release VERSION="v${VERSION}"
 ```
 
 `go.mod` 的 `go` 行规定源码构建最低支持 Go 1.26.6，`toolchain` 行规定开发和正式
-发布建议使用 Go 1.26.9。`scripts/build-release.sh` 会读取、设置并回读 `toolchain`
+发布建议使用 Go 1.26.10。`scripts/build-release.sh` 会读取、设置并回读 `toolchain`
 中的精确版本，再让 GoReleaser 继承相同的 `GOTOOLCHAIN`；如果无法下载、验证或
 执行该工具链，发布会在生成制品前停止。
+
+Go 1.26.10 修复了 `crypto/x509` 的 [GO-2026-6809 / CVE-2026-111943](https://pkg.go.dev/vuln/GO-2026-6809)。
+最低源码兼容版本不代表安全构建基线；分发制品应使用包含该修复的工具链
+（Go 1.26.10 或 Go 1.27.3 及对应分支的后续补丁版本）。已发布的旧二进制需要重新构建，
+仅更新 `go.mod` 不会修复已有安装。
 
 `make vulncheck` 会使用同一版本和 `CGO_ENABLED=0` 构建全部七个发布目标，并用固定
 版本的 `govulncheck` 查询 `https://vuln.go.dev`。每个二进制都会执行可达性扫描；任一
