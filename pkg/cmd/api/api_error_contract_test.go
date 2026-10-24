@@ -277,7 +277,7 @@ func TestAPIRawResponseReadContract(t *testing.T) {
 		{name: "complete response", body: "complete", cause: io.EOF},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			var reader io.Reader = io.MultiReader(strings.NewReader(tt.body), failingReader{err: tt.cause})
+			reader := io.MultiReader(strings.NewReader(tt.body), failingReader{err: tt.cause})
 			if tt.sameRead {
 				reader = &apiFinalErrorReader{body: tt.body, err: tt.cause}
 			}
