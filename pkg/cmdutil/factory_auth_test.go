@@ -43,7 +43,7 @@ func TestAuthenticatedAPIClientRequiresCredentials(t *testing.T) {
 			name:      "wrapped missing credentials",
 			config:    tokenConfig{err: fmt.Errorf("load token: %w", config.ErrNotAuthenticated)},
 			wantIs:    config.ErrNotAuthenticated,
-			wantError: config.ErrNotAuthenticated.Error(),
+			wantError: "load token: " + config.ErrNotAuthenticated.Error(),
 		},
 		{
 			name:      "empty token",
