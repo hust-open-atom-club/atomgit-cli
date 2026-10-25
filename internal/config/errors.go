@@ -10,9 +10,8 @@ import (
 var (
 	// ErrNotAuthenticated is the canonical error returned when a command
 	// requires stored credentials but none are available. It is a sentinel so
-	// callers can match it with errors.Is, and its message doubles as the
-	// actionable "run `ag-cli auth login`" guidance shown to the user.
-	ErrNotAuthenticated = errors.New("not authenticated: run `ag-cli auth login`")
+	// callers can match it with errors.Is. Recovery advice belongs to CLI output.
+	ErrNotAuthenticated = errors.New("credentials are missing")
 
 	// ErrTokenNotFound is returned when no token file exists in any search path.
 	ErrTokenNotFound = errors.New("token file not found")

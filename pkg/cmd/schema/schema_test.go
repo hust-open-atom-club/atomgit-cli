@@ -35,6 +35,13 @@ func TestRegisteredCommands(t *testing.T) {
 		{[]string{"discussion", "delete"}, 1, 2, "text", "write"},
 		{[]string{"org", "discussion", "list"}, 1, 1, "text,json", "read"},
 		{[]string{"org", "discussion", "view"}, 2, 2, "text,json", "read"},
+		{[]string{"org", "discussion", "create"}, 1, 1, "text", "write"},
+		{[]string{"org", "discussion", "edit"}, 2, 2, "text", "write"},
+		{[]string{"org", "discussion", "delete"}, 2, 2, "text", "write"},
+		{[]string{"org", "discussion", "comment", "create"}, 2, 2, "text", "write"},
+		{[]string{"org", "discussion", "comment", "reply"}, 3, 3, "text", "write"},
+		{[]string{"org", "discussion", "comment", "edit"}, 3, 3, "text", "write"},
+		{[]string{"org", "discussion", "comment", "delete"}, 3, 3, "text", "write"},
 	} {
 		t.Run(strings.Join(tc.path, "/"), func(t *testing.T) {
 			f := &cmdutil.Factory{
@@ -86,7 +93,7 @@ func TestRegisteredCommands(t *testing.T) {
 					t.Fatal("missing body/body-file constraint")
 				}
 			}
-			if detail.Path == "ag-cli discussion create" {
+			if detail.Path == "ag-cli discussion create" || detail.Path == "ag-cli org discussion create" {
 				for _, name := range []string{"title", "category"} {
 					i := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == name })
 					if i < 0 || !detail.Flags[i].Required {
@@ -101,7 +108,7 @@ func TestRegisteredCommands(t *testing.T) {
 					t.Fatalf("create constraints = %+v", detail.FlagGroups)
 				}
 			}
-			if detail.Path == "ag-cli discussion edit" {
+			if detail.Path == "ag-cli discussion edit" || detail.Path == "ag-cli org discussion edit" {
 				wantGroups := []commandschema.FlagGroup{
 					{Kind: "atLeastOneRequired", Flags: []string{"body", "body-file", "category", "title"}},
 					{Kind: "mutuallyExclusive", Flags: []string{"body", "body-file"}},
@@ -113,7 +120,16 @@ func TestRegisteredCommands(t *testing.T) {
 					t.Fatal("missing body input metadata")
 				}
 			}
-			if strings.HasPrefix(detail.Path, "ag-cli org discussion ") {
+			if strings.HasPrefix(detail.Path, "ag-cli org discussion comment ") && !strings.HasSuffix(detail.Path, " delete") {
+				want := []commandschema.FlagGroup{
+					{Kind: "atLeastOneRequired", Flags: []string{"body", "body-file"}},
+					{Kind: "mutuallyExclusive", Flags: []string{"body", "body-file"}},
+				}
+				if !reflect.DeepEqual(detail.FlagGroups, want) {
+					t.Fatalf("comment body constraints = %+v", detail.FlagGroups)
+				}
+			}
+			if detail.Path == "ag-cli org discussion list" || detail.Path == "ag-cli org discussion view" {
 				jsonFlag := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == "json" })
 				if jsonFlag < 0 || detail.Flags[jsonFlag].Type != "bool" || detail.Flags[jsonFlag].Default != "false" {
 					t.Fatal("missing optional JSON output flag")

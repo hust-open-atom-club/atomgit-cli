@@ -3,6 +3,7 @@ package org
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"unicode"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -15,8 +16,8 @@ import (
 func newCmdOrgDiscussion(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "discussion",
-		Short:        "Read organization discussions",
-		Long:         "List and view discussions for an explicitly specified AtomGit organization.",
+		Short:        "Manage organization discussions",
+		Long:         "List, view, create, edit, and delete organization discussions and their comments. An explicit organization path is required for every operation.",
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -25,6 +26,11 @@ func newCmdOrgDiscussion(f *cmdutil.Factory) *cobra.Command {
 	}
 	cmd.AddCommand(newCmdOrgDiscussionList(f))
 	cmd.AddCommand(newCmdOrgDiscussionView(f))
+	cmd.AddCommand(newCmdOrgDiscussionCreate(f))
+	cmd.AddCommand(newCmdOrgDiscussionEdit(f))
+	cmd.AddCommand(newCmdOrgDiscussionDelete(f))
+	cmd.AddCommand(newCmdOrgDiscussionComment(f))
+	commandschema.Annotate(cmd, commandschema.Metadata{Output: "text", Effects: "none"})
 	return cmd
 }
 
@@ -38,7 +44,7 @@ func newCmdOrgDiscussionList(f *cmdutil.Factory) *cobra.Command {
   ag-cli org discussion list my-organization --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			organization, err := parseDiscussionOrganization(args[0])
+			organization, err := parseReadDiscussionOrganization(args[0])
 			if err != nil {
 				return err
 			}
@@ -86,7 +92,7 @@ Hidden, deleted, and empty bodies are shown as explicit placeholders.`,
   ag-cli org discussion view my-organization 1 --comments --json`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			organization, err := parseDiscussionOrganization(args[0])
+			organization, err := parseReadDiscussionOrganization(args[0])
 			if err != nil {
 				return err
 			}
@@ -125,7 +131,7 @@ Hidden, deleted, and empty bodies are shown as explicit placeholders.`,
 	return cmd
 }
 
-func parseDiscussionOrganization(value string) (string, error) {
+func parseReadDiscussionOrganization(value string) (string, error) {
 	organization, err := parseOrganization(value)
 	if err != nil {
 		return "", err
@@ -139,4 +145,31 @@ func parseDiscussionOrganization(value string) (string, error) {
 		}
 	}
 	return organization, nil
+}
+
+func parseDiscussionOrganization(value string) (string, error) {
+	if !validDiscussionPathID(value) {
+		return "", fmt.Errorf("invalid organization: %q", value)
+	}
+	return value, nil
+}
+
+func orgDiscussionNumber(value string) (int, error) {
+	number, err := strconv.Atoi(value)
+	if err != nil || number <= 0 || strconv.Itoa(number) != value {
+		return 0, fmt.Errorf("invalid discussion number %q: must be a positive integer", value)
+	}
+	return number, nil
+}
+
+func validDiscussionPathID(value string) bool {
+	if value == "" || value == "." || value == ".." {
+		return false
+	}
+	for _, r := range value {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("-._~", r)) {
+			return false
+		}
+	}
+	return true
 }

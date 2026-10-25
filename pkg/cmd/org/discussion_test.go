@@ -35,6 +35,15 @@ func runOrgDiscussionCommand(t *testing.T, cmd *cobra.Command, args []string, fl
 
 func TestOrgDiscussionRegistersCommands(t *testing.T) {
 	cmd := NewCmdOrg(&cmdutil.Factory{})
+	discussionCount := 0
+	for _, child := range cmd.Commands() {
+		if child.Name() == "discussion" {
+			discussionCount++
+		}
+	}
+	if discussionCount != 1 {
+		t.Fatalf("registered %d discussion commands, want one", discussionCount)
+	}
 	for _, tt := range []struct {
 		name  string
 		flags []string

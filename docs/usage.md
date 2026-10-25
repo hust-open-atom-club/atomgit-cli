@@ -116,6 +116,8 @@ ag-cli doctor owner/repo --live --json
 
 ## 认证
 
+例如，`ag-cli api /user` 找不到凭据时，会输出 `No credentials are configured.` 及 `ag-cli auth login` 登录提示，并返回非零退出码。
+
 ```bash
 # 浏览器 OAuth 登录并写入令牌文件
 ag-cli auth login
@@ -486,7 +488,7 @@ ag-cli org runner-group namespaces hust-open-atom-club <group-id> --json
 
 `ag-cli org runner-group` 使用 Actions API v8，只读检查组织级 Runner Group；它与 `ag-cli runner list/shared` 查看仓库直接配置或共享的主机 Runner 不同。`list`、`runners`、`runner-sets` 和 `namespaces` 默认最多返回 30 条并要求 `--limit` 为正数；文本输出包含组织和 Group ID，JSON 保留对应官方响应的固定 snake_case 字段。权限不足、Group 不存在或分页响应不完整时命令会明确失败，不会把部分数据当作完整结果。`namespaces` 会先查询 Group 详情，确认其存在且可访问，再读取共享仓库；不存在时返回非零退出码，存在但没有共享仓库时仍正常返回空列表。
 
-### 组织讨论
+### 组织讨论读取
 
 ```bash
 # 列出指定组织的讨论（默认最多 30 条）
@@ -501,11 +503,48 @@ ag-cli org discussion view hust-open-atom-club 1 --comments
 ag-cli org discussion view hust-open-atom-club 1 --comments --json
 ```
 
-`org discussion` 使用 API v5 的 `/orgs/{org}/discuss` 端点。必须显式指定组织路径，不会从 Git remote 推断。未登录时尝试公开访问，已登录时使用配置的凭据。权限不足或资源不存在时返回非零退出码。
+`org discussion list/view` 使用 API v5 的 `/orgs/{org}/discuss` 端点。必须显式指定组织路径，不会从 Git remote 推断。未登录时尝试公开访问，已登录时使用配置的凭据。权限不足或资源不存在时返回非零退出码。
 
 `list` 按 API 分页读取，最多返回 `--limit` 指定的条数，且 `--limit` 必须为正数。文本输出包含讨论编号、标题、分类、作者、状态、评论数和更新时间。`--json` 使用与仓库 `discussion list` 相同的讨论字段；空列表输出为 `[]`。
 
-`view` 要求讨论编号为正数，输出 Markdown 正文，文本和 JSON 格式与仓库 `discussion view` 一致。指定 `--comments` 时，按服务端顺序读取全部评论及嵌套回复，即使 API 未提供数量或返回的数量已过期也会继续读取。已删除、隐藏和空正文分别显示为 `[deleted]`、`[hidden]` 和 `[no content]`。未指定 `--comments` 时，JSON 省略 `comments` 字段；请求评论但结果为空时，该字段为 `[]`。遇到空页或达到列表条数上限时停止分页；重复页没有新条目、单个集合扫描超过 100 页、评论或回复请求失败时，命令会返回错误，不会输出部分评论线程。这些命令仅支持读取组织讨论，不支持组织讨论写入和状态管理。
+`view` 要求讨论编号为正数，输出 Markdown 正文，文本和 JSON 格式与仓库 `discussion view` 一致。指定 `--comments` 时，按服务端顺序读取全部评论及嵌套回复，即使 API 未提供数量或返回的数量已过期也会继续读取。已删除、隐藏和空正文分别显示为 `[deleted]`、`[hidden]` 和 `[no content]`。未指定 `--comments` 时，JSON 省略 `comments` 字段；请求评论但结果为空时，该字段为 `[]`。遇到空页或达到列表条数上限时停止分页；重复页没有新条目、单个集合扫描超过 100 页、评论或回复请求失败时，命令会返回错误，不会输出部分评论线程。
+
+### 组织讨论写操作
+
+```bash
+# 在显式指定的组织中创建讨论
+ag-cli org discussion create my-org --title "Roadmap" --category "Ideas" --body "Next steps"
+ag-cli org discussion create my-org --title "Roadmap" --category "Ideas" --body-file discussion.md
+ag-cli org discussion create my-org --title "Roadmap" --category "Ideas" --body-file -
+
+# 只修改指定字段，保留其他字段
+ag-cli org discussion edit my-org 7 --title "Updated roadmap"
+ag-cli org discussion edit my-org 7 --body-file discussion.md --category "Ideas"
+
+# 创建评论或回复一级评论
+ag-cli org discussion comment create my-org 7 --body "Looks good"
+ag-cli org discussion comment create my-org 7 --body-file -
+ag-cli org discussion comment reply my-org 7 abc123 --body-file reply.md
+
+# 编辑或删除评论及回复
+ag-cli org discussion comment edit my-org 7 abc123 --body "Updated comment"
+ag-cli org discussion comment delete my-org 7 abc123
+ag-cli org discussion comment delete my-org 7 abc123 --yes
+
+# 确认后删除讨论，或显式跳过确认
+ag-cli org discussion delete my-org 7
+ag-cli org discussion delete my-org 7 --yes
+```
+
+这些命令均要求认证并显式指定组织路径，不会从 Git remote 推断组织。讨论编号必须为正整数；评论和回复 ID 按字符串原样处理，不能用来代替讨论编号。
+
+创建讨论时，标题、分类名称和 Markdown 正文均不能为空。分类使用不含展示 emoji 的名称，而非 ID。`--body` 与 `--body-file` 互斥，`--body-file -` 从标准输入读取。创建评论、回复和编辑评论也要求非空正文；空内容或仅含空白的输入会在认证和 API 请求前被拒绝。有效 Markdown 按原样发送，保留空白和末尾换行。
+
+编辑讨论时，至少指定 `--title`、`--category`、`--body` 或 `--body-file` 中的一项。命令会先读取当前讨论，保留未指定字段的值。显式传入空 `--body`、空文件或空标准输入表示请求清空 Markdown 正文，服务端仍可能根据自身规则拒绝；标题和分类名称不能为空。更新后会核对返回的讨论身份和修改字段；响应不完整或不匹配时，通过 GET 回读校验，校验失败则返回错误。
+
+回复、编辑和删除评论前，会先确认目标属于指定组织讨论。回复只能指向一级评论。查询会遍历评论分页及一层回复，找到目标后停止；目标不存在或分页不完整时不会写入。删除讨论或评论时，会显示组织、讨论编号及适用的评论 ID，要求确认。只有 `y`、`yes` 或 `--yes` 会执行删除；空输入、EOF 或其他回答均取消操作，不发送删除请求。
+
+这些操作使用 API v5 `/orgs/{org}/discuss` 系列端点，接受 HTTP 200，删除响应可以为空。写请求不会自动重试或跟随重定向。写入或校验失败时，改动可能已经生效，应先在 AtomGit 查看讨论状态再决定是否重试。本命令组覆盖组织讨论的读取和写入，不包含状态变更、点赞和采纳。
 
 ## 组织看板 (kanban)
 

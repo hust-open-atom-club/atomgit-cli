@@ -100,7 +100,15 @@
 - [ag-cli notification list](#ag-cli-notification-list) — List repository notifications
 - [ag-cli notification mark-read](#ag-cli-notification-mark-read) — Mark repository notifications as read
 - [ag-cli org](#ag-cli-org) — Manage organizations
-- [ag-cli org discussion](#ag-cli-org-discussion) — Read organization discussions
+- [ag-cli org discussion](#ag-cli-org-discussion) — Manage organization discussions
+- [ag-cli org discussion comment](#ag-cli-org-discussion-comment) — Manage organization discussion comments
+- [ag-cli org discussion comment create](#ag-cli-org-discussion-comment-create) — Create a comment on a discussion
+- [ag-cli org discussion comment delete](#ag-cli-org-discussion-comment-delete) — Delete a discussion comment
+- [ag-cli org discussion comment edit](#ag-cli-org-discussion-comment-edit) — Edit a discussion comment
+- [ag-cli org discussion comment reply](#ag-cli-org-discussion-comment-reply) — Reply to a discussion comment
+- [ag-cli org discussion create](#ag-cli-org-discussion-create) — Create an organization discussion
+- [ag-cli org discussion delete](#ag-cli-org-discussion-delete) — Delete an organization discussion
+- [ag-cli org discussion edit](#ag-cli-org-discussion-edit) — Edit an organization discussion
 - [ag-cli org discussion list](#ag-cli-org-discussion-list) — List organization discussions
 - [ag-cli org discussion view](#ag-cli-org-discussion-view) — View an organization discussion
 - [ag-cli org list](#ag-cli-org-list) — List organizations for the authenticated user
@@ -2387,7 +2395,7 @@ Usage: `ag-cli org`
 
 Manage organizations
 
-List organizations associated with your AtomGit account and inspect organization details, members, repositories, discussions, and Actions runner groups.
+List organizations associated with your AtomGit account, inspect organization details, members, repositories, and Actions runner groups, and manage organization discussions.
 
 ### Flags
 
@@ -2401,9 +2409,9 @@ List organizations associated with your AtomGit account and inspect organization
 
 Usage: `ag-cli org discussion`
 
-Read organization discussions
+Manage organization discussions
 
-List and view discussions for an explicitly specified AtomGit organization.
+List, view, create, edit, and delete organization discussions and their comments. An explicit organization path is required for every operation.
 
 ### Flags
 
@@ -2411,6 +2419,240 @@ List and view discussions for an explicitly specified AtomGit organization.
 | --- | --- | --- | --- |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli org discussion comment
+
+Usage: `ag-cli org discussion comment`
+
+Manage organization discussion comments
+
+Create, reply to, edit, and delete comments on organization discussions.
+
+Comment identifiers stay opaque strings. Edit and delete confirm that the
+comment belongs to the given discussion before writing. Reply targets must be
+top-level comments; replies are only one level deep.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli org discussion comment create
+
+Usage: `ag-cli org discussion comment create <org> <number> (--body <text> | --body-file <path-or->) [flags]`
+
+Create a comment on a discussion
+
+Create a top-level Markdown comment on an organization discussion.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read body text from file (use - for stdin) | `` | local |
+| `-b, --body` | Comment body text | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli org discussion comment create my-org 1 --body "Looks good"
+ag-cli org discussion comment create my-org 1 --body-file comment.md
+ag-cli org discussion comment create my-org 1 --body-file -
+```
+
+
+## ag-cli org discussion comment delete
+
+Usage: `ag-cli org discussion comment delete <org> <number> <comment-id> [flags]`
+
+Delete a discussion comment
+
+Delete a discussion comment or reply.
+
+The comment is confirmed to belong to the given discussion before deletion.
+Asks for confirmation unless --yes is supplied. Cancelling does not send the
+delete request.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip deletion confirmation | `false` | local |
+
+### Example
+
+```bash
+ag-cli org discussion comment delete my-org 1 abc123
+ag-cli org discussion comment delete my-org 1 abc123 --yes
+```
+
+
+## ag-cli org discussion comment edit
+
+Usage: `ag-cli org discussion comment edit <org> <number> <comment-id> (--body <text> | --body-file <path-or->) [flags]`
+
+Edit a discussion comment
+
+Replace the Markdown body of a discussion comment or reply.
+
+The comment is confirmed to belong to the given discussion before the update
+is sent. A comment that cannot be found is left unchanged.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read new body text from file (use - for stdin) | `` | local |
+| `-b, --body` | New comment body text | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli org discussion comment edit my-org 1 abc123 --body "Updated"
+ag-cli org discussion comment edit my-org 1 reply.id --body-file note.md
+```
+
+
+## ag-cli org discussion comment reply
+
+Usage: `ag-cli org discussion comment reply <org> <number> <comment-id> (--body <text> | --body-file <path-or->) [flags]`
+
+Reply to a discussion comment
+
+Reply to a top-level comment on an organization discussion.
+
+The parent comment is confirmed to belong to the discussion before the reply
+is posted. Replying to a reply is rejected.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read body text from file (use - for stdin) | `` | local |
+| `-b, --body` | Reply body text | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli org discussion comment reply my-org 1 abc123 --body "Agreed"
+ag-cli org discussion comment reply my-org 1 abc123 --body-file reply.md
+```
+
+
+## ag-cli org discussion create
+
+Usage: `ag-cli org discussion create <org> [flags]`
+
+Create an organization discussion
+
+Create an organization discussion with a title, category name, and Markdown body.
+
+Title, category, and body must not be empty or whitespace-only. Use the category
+name without its display emoji or ID. Provide exactly one of --body or --body-file;
+use --body-file - to read stdin. Body text is sent without trimming.
+
+Requires authentication. POST requests are not automatically retried or redirected.
+If the result is uncertain, inspect the discussion list before retrying.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--category` | Category name without a display emoji or ID (required) | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read the Markdown body from file (use - for stdin) | `` | local |
+| `-b, --body` | Markdown body (cannot be blank) | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-t, --title` | Discussion title (required, cannot be blank) | `` | local |
+
+### Example
+
+```bash
+ag-cli org discussion create my-org --title "Roadmap" --category "Ideas" --body "Next steps"
+ag-cli org discussion create my-org --title "Roadmap" --category "Ideas" --body-file discussion.md
+ag-cli org discussion create my-org --title "Roadmap" --category "Ideas" --body-file -
+```
+
+
+## ag-cli org discussion delete
+
+Usage: `ag-cli org discussion delete <org> <number> [flags]`
+
+Delete an organization discussion
+
+Permanently delete an organization discussion by its positive number.
+
+Requires authentication. Confirm with y or yes at the prompt, or pass --yes.
+Empty input, EOF, or a negative response cancels without sending a request.
+Use --yes for non-interactive deletion. DELETE requests are not automatically
+retried or redirected; inspect uncertain results before retrying.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip confirmation prompt | `false` | local |
+
+### Example
+
+```bash
+ag-cli org discussion delete my-org 7
+ag-cli org discussion delete my-org 7 --yes
+```
+
+
+## ag-cli org discussion edit
+
+Usage: `ag-cli org discussion edit <org> <number> [flags]`
+
+Edit an organization discussion
+
+Edit the title, Markdown body, or category of an organization discussion.
+
+At least one edit flag is required. Unspecified fields retain their current
+values. Titles and category names cannot be empty or whitespace-only. Use the
+category name alone, without its display emoji or ID. --body and --body-file
+are mutually exclusive; an empty body, file, or stdin requests clearing the
+body, subject to server validation. Body text is sent without trimming.
+
+The command requires authentication and verifies the update response, reading
+the discussion back when necessary. PUT requests are never automatically
+retried; inspect the discussion before retrying an uncertain result.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--category` | New category name without a display emoji or ID (cannot be blank) | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-F, --body-file` | Read the Markdown body from file (use - for stdin) | `` | local |
+| `-b, --body` | New Markdown body (empty requests clearing it) | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-t, --title` | New discussion title (cannot be blank) | `` | local |
+
+### Example
+
+```bash
+ag-cli org discussion edit my-org 6 --title "Updated title"
+ag-cli org discussion edit my-org 6 --body "Updated **Markdown**"
+ag-cli org discussion edit my-org 6 --body-file discussion.md
+ag-cli org discussion edit my-org 6 --body-file -
+ag-cli org discussion edit my-org 6 --title "Roadmap" --category "Ideas"
+```
 
 
 ## ag-cli org discussion list

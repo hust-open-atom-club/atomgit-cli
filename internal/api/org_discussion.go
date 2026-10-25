@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 )
@@ -15,18 +14,9 @@ type DiscussionCommentThread struct {
 	Replies []DiscussionComment
 }
 
-func organizationDiscussionPath(org string, segments ...string) string {
-	var path strings.Builder
-	path.WriteString("/orgs/" + url.PathEscape(org) + "/discuss")
-	for _, segment := range segments {
-		path.WriteString("/" + url.PathEscape(segment))
-	}
-	return path.String()
-}
-
 // ListOrganizationDiscussions fetches at most limit unique discussions.
 func ListOrganizationDiscussions(client *Client, org string, limit int) ([]Discussion, error) {
-	items, err := organizationDiscussionPages[Discussion](client, organizationDiscussionPath(org), limit, func(item Discussion) string {
+	items, err := organizationDiscussionPages[Discussion](client, OrganizationPath(org, "discuss"), limit, func(item Discussion) string {
 		if item.Number <= 0 {
 			return ""
 		}
@@ -38,23 +28,10 @@ func ListOrganizationDiscussions(client *Client, org string, limit int) ([]Discu
 	return items, nil
 }
 
-// GetOrganizationDiscussion fetches a discussion from the explicit organization.
-func GetOrganizationDiscussion(client *Client, org string, number int) (DiscussionDetail, error) {
-	var detail DiscussionDetail
-	path := organizationDiscussionPath(org, strconv.Itoa(number))
-	if err := client.doJSONRequest(http.MethodGet, path, nil, "", "application/json", discussionReadPolicy, &detail); err != nil {
-		return DiscussionDetail{}, fmt.Errorf("get organization discussion: %w", err)
-	}
-	if detail.Number != number || detail.Number <= 0 {
-		return DiscussionDetail{}, fmt.Errorf("get organization discussion: %w: missing or mismatched discussion number", ErrInvalidResponse)
-	}
-	return detail, nil
-}
-
 // ListOrganizationDiscussionThreads reads all comments and replies before
 // returning. Counts are advisory: omitted or stale totals must not hide threads.
 func ListOrganizationDiscussionThreads(client *Client, org string, number int) ([]DiscussionCommentThread, error) {
-	path := organizationDiscussionPath(org, strconv.Itoa(number), "comment")
+	path := OrganizationPath(org, "discuss", strconv.Itoa(number), "comment")
 	commentKey := func(comment DiscussionComment) string { return strings.TrimSpace(comment.ID) }
 	comments, err := organizationDiscussionPages[DiscussionComment](client, path, math.MaxInt, commentKey)
 	if err != nil {
@@ -62,7 +39,7 @@ func ListOrganizationDiscussionThreads(client *Client, org string, number int) (
 	}
 	threads := make([]DiscussionCommentThread, 0, len(comments))
 	for _, comment := range comments {
-		path := organizationDiscussionPath(org, strconv.Itoa(number), "comment", comment.ID, "reply")
+		path := OrganizationPath(org, "discuss", strconv.Itoa(number), "comment", comment.ID, "reply")
 		replies, err := organizationDiscussionPages[DiscussionComment](client, path, math.MaxInt, commentKey)
 		if err != nil {
 			return nil, fmt.Errorf("list replies of organization discussion comment %s: %w", comment.ID, err)
