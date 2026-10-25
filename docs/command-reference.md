@@ -109,6 +109,8 @@
 - [ag-cli org discussion create](#ag-cli-org-discussion-create) — Create an organization discussion
 - [ag-cli org discussion delete](#ag-cli-org-discussion-delete) — Delete an organization discussion
 - [ag-cli org discussion edit](#ag-cli-org-discussion-edit) — Edit an organization discussion
+- [ag-cli org discussion list](#ag-cli-org-discussion-list) — List organization discussions
+- [ag-cli org discussion view](#ag-cli-org-discussion-view) — View an organization discussion
 - [ag-cli org list](#ag-cli-org-list) — List organizations for the authenticated user
 - [ag-cli org members](#ag-cli-org-members) — List organization members
 - [ag-cli org repos](#ag-cli-org-repos) — List organization repositories
@@ -2409,7 +2411,7 @@ Usage: `ag-cli org discussion`
 
 Manage organization discussions
 
-Create, edit, and delete organization discussions and their comments. An explicit organization path is required for every operation.
+List, view, create, edit, and delete organization discussions and their comments. An explicit organization path is required for every operation.
 
 ### Flags
 
@@ -2650,6 +2652,59 @@ ag-cli org discussion edit my-org 6 --body "Updated **Markdown**"
 ag-cli org discussion edit my-org 6 --body-file discussion.md
 ag-cli org discussion edit my-org 6 --body-file -
 ag-cli org discussion edit my-org 6 --title "Roadmap" --category "Ideas"
+```
+
+
+## ag-cli org discussion list
+
+Usage: `ag-cli org discussion list <org> [flags]`
+
+List organization discussions
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--json` | Output discussions as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-L, --limit` | Maximum number of discussions to list | `30` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli org discussion list my-organization
+ag-cli org discussion list my-organization --limit 100
+ag-cli org discussion list my-organization --json
+```
+
+
+## ag-cli org discussion view
+
+Usage: `ag-cli org discussion view <org> <number> [flags]`
+
+View an organization discussion
+
+View a single organization discussion with its Markdown body.
+
+With --comments, fetch comments and their nested replies in server order.
+Hidden, deleted, and empty bodies are shown as explicit placeholders.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--comments` | Also fetch and show the comment thread | `false` | local |
+| `--json` | Output the discussion as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli org discussion view my-organization 1
+ag-cli org discussion view my-organization 1 --comments
+ag-cli org discussion view my-organization 1 --comments --json
 ```
 
 
