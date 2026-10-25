@@ -3,6 +3,7 @@ package agcmd
 import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api/actions"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"fmt"
 	"io"
 )
@@ -12,6 +13,10 @@ import (
 func renderCommandError(w io.Writer, err error) {
 	role := commandErrorRole(err)
 	if diagnostic, ok := apiDiagnostic(role); ok {
+		renderDiagnostic(w, diagnostic)
+		return
+	}
+	if diagnostic, ok := credentialDiagnostic(role); ok {
 		renderDiagnostic(w, diagnostic)
 		return
 	}
@@ -26,7 +31,7 @@ func commandErrorRole(err error) error {
 		// wrappers. Do not search through another operation to find a marker.
 		//nolint:errorlint // Match this layer's marker without searching through an owning operation.
 		switch err {
-		case api.ErrRequestPreparation, api.ErrInvalidResponse:
+		case api.ErrRequestPreparation, api.ErrInvalidResponse, config.ErrNotAuthenticated:
 			return err
 		}
 		//nolint:errorlint // Inspect this layer before its causes so an inner role cannot replace an outer one.

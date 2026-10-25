@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 )
 
@@ -237,10 +238,14 @@ func FindDiscussionComment(client *Client, owner, repo string, number int, comme
 	if _, err := GetDiscussion(client, owner, repo, number); err != nil {
 		return DiscussionCommentLocation{}, err
 	}
+	return findDiscussionComment(client, RepositoryPath(owner, repo, "discuss", strconv.Itoa(number)), number, commentID)
+}
+
+func findDiscussionComment(client *Client, path string, number int, commentID string) (DiscussionCommentLocation, error) {
 	var located DiscussionCommentLocation
 	var found bool
 	var replyErr error
-	comments := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment")
+	comments := path + "/comment"
 	err := eachDiscussionPage(client, comments, func(page []DiscussionComment) (bool, error) {
 		for _, comment := range page {
 			if comment.ID == commentID {
@@ -250,7 +255,7 @@ func FindDiscussionComment(client *Client, owner, repo string, number int, comme
 			}
 		}
 		for _, comment := range page {
-			replies := RepositoryPath(owner, repo, "discuss", strconv.Itoa(number), "comment", comment.ID, "reply")
+			replies := comments + "/" + url.PathEscape(comment.ID) + "/reply"
 			err := eachDiscussionPage(client, replies, func(replyPage []DiscussionComment) (bool, error) {
 				for _, reply := range replyPage {
 					if reply.ID == commentID {

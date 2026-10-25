@@ -412,10 +412,20 @@ func TestNewConfigWithoutCredentials(t *testing.T) {
 	if cfg.GetHost() != defaultHost {
 		t.Fatalf("host = %q", cfg.GetHost())
 	}
-	if _, err := cfg.GetToken(); !errors.Is(err, ErrNotAuthenticated) {
-		t.Fatalf("GetToken error = %v", err)
-	}
-	if _, err := cfg.GetUser(); !errors.Is(err, ErrNotAuthenticated) {
-		t.Fatalf("GetUser error = %v", err)
+	for name, lookup := range map[string]func() (string, error){
+		"GetToken": cfg.GetToken,
+		"GetUser":  cfg.GetUser,
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := lookup()
+			if !errors.Is(err, ErrNotAuthenticated) || !errors.Is(err, ErrTokenNotFound) {
+				t.Fatalf("error = %v, want missing credentials and token lookup causes", err)
+			}
+			for _, path := range getTokenFilePaths() {
+				if !strings.Contains(err.Error(), path) {
+					t.Errorf("error = %v, missing searched path %q", err, path)
+				}
+			}
+		})
 	}
 }

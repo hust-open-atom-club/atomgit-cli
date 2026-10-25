@@ -17,3 +17,14 @@ func RepositoryPath(owner, repo string, segments ...string) string {
 	}
 	return strings.Join(parts, "/")
 }
+
+// OrganizationPath builds /orgs/{organization}[/{segments...}] from raw
+// identifiers, escaping each argument once as a single path segment.
+func OrganizationPath(organization string, segments ...string) string {
+	parts := make([]string, 0, 2+len(segments))
+	parts = append(parts, "/orgs", url.PathEscape(organization))
+	for _, segment := range segments {
+		parts = append(parts, url.PathEscape(segment))
+	}
+	return strings.Join(parts, "/")
+}

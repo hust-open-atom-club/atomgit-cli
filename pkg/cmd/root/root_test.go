@@ -176,6 +176,7 @@ func TestRootContextCancelsV5AndActionsRequests(t *testing.T) {
 		args []string
 	}{
 		{name: "v5 issue request", args: []string{"issue", "view", "alice/demo", "1"}},
+		{name: "organization discussion write", args: []string{"org", "discussion", "create", "my-org", "--title", "Roadmap", "--category", "Ideas", "--body", "Next steps"}},
 		{name: "v8 Actions request", args: []string{"run", "view", "alice/demo", "run-1"}},
 	}
 

@@ -29,6 +29,8 @@
 
 - 手动创建访问令牌：参考 [AtomGit 访问令牌（PAT）文档](https://docs.gitcode.com/docs/help/home/user_center/security_management/user_pat/)，依次进入「个人设置」->「访问令牌」->「新建访问令牌」，按需设置权限范围和到期时间，再将生成的 PAT 写入令牌文件。PAT 创建后只显示一次，请立即妥善保存，不要将其提交到代码仓库或分享给他人。
 
+需要认证的命令在缺少凭据时会提示运行 `ag-cli auth login`，并返回非零退出码。该提示不展示凭据查找路径或原始底层错误。
+
 令牌文件的默认路径因操作系统而异：
 
 - Linux：`/home/<用户名>/.config/ag-cli/token.json`
