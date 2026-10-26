@@ -16,6 +16,9 @@ var (
 	// ErrTokenNotFound is returned when no token file exists in any search path.
 	ErrTokenNotFound = errors.New("token file not found")
 
+	// ErrInvalidCredentials means credential data or a file safety check was rejected.
+	ErrInvalidCredentials = errors.New("invalid credentials")
+
 	// ErrTokenFileSymlink is returned when a token file is a symlink
 	ErrTokenFileSymlink = errors.New("token file is a symlink")
 
@@ -25,6 +28,21 @@ var (
 	// ErrTokenFileUnreadable is returned when a token file is not owner-readable.
 	ErrTokenFileUnreadable = errors.New("token file is not owner-readable")
 )
+
+// CredentialFormatError describes a credential decoder failure. Offset and
+// InvalidFieldType are format facts exposed by config, independently of the
+// concrete parser cause retained in Err.
+type CredentialFormatError struct {
+	Offset           int64
+	InvalidFieldType bool
+	Err              error
+}
+
+func (e *CredentialFormatError) Error() string {
+	return fmt.Sprintf("failed to parse token file: %v; cause: %v", ErrInvalidCredentials, e.Err)
+}
+func (e *CredentialFormatError) Unwrap() error        { return e.Err }
+func (e *CredentialFormatError) Is(target error) bool { return target == ErrInvalidCredentials }
 
 // TokenPermissionError is returned when a token file cannot be read due to
 // file permission issues. The hint varies by platform.

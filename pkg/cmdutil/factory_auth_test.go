@@ -117,6 +117,22 @@ func TestOptionalAPIClientDoesNotFallBackOnStoreFailure(t *testing.T) {
 	}
 }
 
+func TestOptionalAPIClientRejectsMalformedCredentials(t *testing.T) {
+	cause := errors.New("private decoder cause")
+	format := &config.CredentialFormatError{InvalidFieldType: true, Err: cause}
+	factory := &Factory{
+		Config: tokenConfig{err: format},
+		HttpClient: func() (*http.Client, error) {
+			t.Fatal("malformed credentials must stop before creating an anonymous client")
+			return nil, nil
+		},
+	}
+	client, err := factory.OptionalAPIClient()
+	if client != nil || !errors.Is(err, config.ErrInvalidCredentials) || !errors.Is(err, cause) {
+		t.Fatalf("client = %v, error = %v, want original credential format failure", client, err)
+	}
+}
+
 func TestAuthenticatedAPIClientUsesInjectedTransport(t *testing.T) {
 	requests := 0
 	factory := &Factory{

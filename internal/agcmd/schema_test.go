@@ -337,7 +337,7 @@ func TestAuthenticatedCommandStillReportsCorruptCredentials(t *testing.T) {
 	}
 
 	stdout, stderr, err := runAgCommandProcess(t, []string{"pr", "view", "1"})
-	if err == nil || stdout != "" || !strings.Contains(stderr, "failed to load config:") {
+	if err == nil || stdout != "" || !strings.Contains(stderr, "Credential configuration is invalid.") {
 		t.Fatalf("pr view: error=%v stdout=%s stderr=%s", err, stdout, stderr)
 	}
 }

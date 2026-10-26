@@ -36,7 +36,8 @@ func commandErrorRole(err error) error {
 		}
 		//nolint:errorlint // Inspect this layer before its causes so an inner role cannot replace an outer one.
 		switch err.(type) {
-		case *api.HTTPError, *actions.HTTPError, *actions.JobNotFoundError, *api.RequestExecutionError, *api.ResponseReadError:
+		case *api.HTTPError, *actions.HTTPError, *actions.JobNotFoundError, *api.RequestExecutionError, *api.ResponseReadError,
+			*config.CredentialFormatError:
 			return err
 		}
 		//nolint:errorlint // Inspect the wrapping protocol to traverse error layers explicitly.
