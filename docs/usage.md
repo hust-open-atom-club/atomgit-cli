@@ -497,6 +497,27 @@ ag-cli org runner-job-history hust-open-atom-club \
 
 `ag-cli org runner-job-history` 使用 Actions API v8 查询组织级 Runner 资源的 Job 执行历史，只读，不提供取消或重跑操作。`--limit` 默认 30 且必须为正数；文本输出包含 job run/job ID、名称、状态、runs_on、pipeline 名称与 run ID、组织/仓库 namespace ID、开始/完成时间和 duration，JSON 条目保留官方 snake_case 字段，`total_count` 为应用 `--limit` 后的条目数。时间筛选使用 `YYYY-MM-DD HH:mm:ss`；官方未定义时区，CLI 原样发送且不做时区转换。`duration` 的官方文档未定义单位，CLI 输出原始整数；缺失的开始或完成时间在文本中显示为 `-`。空历史正常返回；缺失必需分页字段的响应（包括 `null`、空对象或错误对象）、权限不足、组织不存在或分页不完整/矛盾时命令明确失败。
 
+### 组织讨论读取
+
+```bash
+# 列出指定组织的讨论（默认最多 30 条）
+ag-cli org discussion list hust-open-atom-club
+ag-cli org discussion list hust-open-atom-club --limit 100 --json
+
+# 查看讨论详情及 Markdown 正文
+ag-cli org discussion view hust-open-atom-club 1
+
+# 同时读取评论及其嵌套回复
+ag-cli org discussion view hust-open-atom-club 1 --comments
+ag-cli org discussion view hust-open-atom-club 1 --comments --json
+```
+
+`org discussion list/view` 使用 API v5 的 `/orgs/{org}/discuss` 端点。必须显式指定组织路径，不会从 Git remote 推断。未登录时尝试公开访问，已登录时使用配置的凭据。权限不足或资源不存在时返回非零退出码。
+
+`list` 按 API 分页读取，最多返回 `--limit` 指定的条数，且 `--limit` 必须为正数。文本输出包含讨论编号、标题、分类、作者、状态、评论数和更新时间。`--json` 使用与仓库 `discussion list` 相同的讨论字段；空列表输出为 `[]`。
+
+`view` 要求讨论编号为正数，输出 Markdown 正文，文本和 JSON 格式与仓库 `discussion view` 一致。指定 `--comments` 时，按服务端顺序读取全部评论及嵌套回复，即使 API 未提供数量或返回的数量已过期也会继续读取。已删除、隐藏和空正文分别显示为 `[deleted]`、`[hidden]` 和 `[no content]`。未指定 `--comments` 时，JSON 省略 `comments` 字段；请求评论但结果为空时，该字段为 `[]`。遇到空页或达到列表条数上限时停止分页；重复页没有新条目、单个集合扫描超过 100 页、评论或回复请求失败时，命令会返回错误，不会输出部分评论线程。
+
 ### 组织讨论写操作
 
 ```bash
@@ -532,7 +553,7 @@ ag-cli org discussion delete my-org 7 --yes
 
 回复、编辑和删除评论前，会先确认目标属于指定组织讨论。回复只能指向一级评论。查询会遍历评论分页及一层回复，找到目标后停止；目标不存在或分页不完整时不会写入。删除讨论或评论时，会显示组织、讨论编号及适用的评论 ID，要求确认。只有 `y`、`yes` 或 `--yes` 会执行删除；空输入、EOF 或其他回答均取消操作，不发送删除请求。
 
-这些操作使用 API v5 `/orgs/{org}/discuss` 系列端点，接受 HTTP 200，删除响应可以为空。写请求不会自动重试或跟随重定向。写入或校验失败时，改动可能已经生效，应先在 AtomGit 查看讨论状态再决定是否重试。本命令组覆盖讨论及评论写操作，不包含状态变更、点赞、采纳和组织讨论列表/详情命令。
+这些操作使用 API v5 `/orgs/{org}/discuss` 系列端点，接受 HTTP 200，删除响应可以为空。写请求不会自动重试或跟随重定向。写入或校验失败时，改动可能已经生效，应先在 AtomGit 查看讨论状态再决定是否重试。本命令组覆盖组织讨论的读取和写入，不包含状态变更、点赞和采纳。
 
 ## 组织看板 (kanban)
 

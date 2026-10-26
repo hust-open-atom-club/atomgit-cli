@@ -11,12 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// commentThread pairs a comment with the replies collected for it. Replies
-// live on a separate endpoint, so the API type itself stays transport-only.
-type commentThread struct {
-	Comment api.DiscussionComment
-	Replies []api.DiscussionComment
-}
+type commentThread = api.DiscussionCommentThread
 
 func newCmdDiscussionView(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
@@ -79,11 +74,7 @@ empty bodies are shown as explicit placeholders instead of blank text.`,
 				}
 			}
 
-			if opts.jsonOut {
-				return cmdutil.WriteJSON(cmd.OutOrStdout(), buildDiscussionViewJSON(detail, threads))
-			}
-			printDiscussionView(cmd.OutOrStdout(), detail, threads)
-			return nil
+			return WriteView(cmd.OutOrStdout(), detail, threads, opts.jsonOut)
 		},
 	}
 
@@ -91,6 +82,16 @@ empty bodies are shown as explicit placeholders instead of blank text.`,
 	cmd.Flags().BoolVar(&opts.jsonOut, "json", false, "Output the discussion as JSON")
 
 	return cmd
+}
+
+// WriteView renders a discussion and optional thread in text or JSON.
+// A nil thread omits comments from JSON; an empty thread renders comments: [].
+func WriteView(out io.Writer, detail api.DiscussionDetail, threads []api.DiscussionCommentThread, jsonOutput bool) error {
+	if jsonOutput {
+		return cmdutil.WriteJSON(out, buildDiscussionViewJSON(detail, threads))
+	}
+	printDiscussionView(out, detail, threads)
+	return nil
 }
 
 // discussionBody picks the Markdown body when present and falls back to the

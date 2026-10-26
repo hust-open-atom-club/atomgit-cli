@@ -33,6 +33,8 @@ func TestRegisteredCommands(t *testing.T) {
 		{[]string{"discussion", "edit"}, 1, 2, "text", "write"},
 		{[]string{"discussion", "create"}, 0, 1, "text", "write"},
 		{[]string{"discussion", "delete"}, 1, 2, "text", "write"},
+		{[]string{"org", "discussion", "list"}, 1, 1, "text,json", "read"},
+		{[]string{"org", "discussion", "view"}, 2, 2, "text,json", "read"},
 		{[]string{"org", "discussion", "create"}, 1, 1, "text", "write"},
 		{[]string{"org", "discussion", "edit"}, 2, 2, "text", "write"},
 		{[]string{"org", "discussion", "delete"}, 2, 2, "text", "write"},
@@ -125,6 +127,26 @@ func TestRegisteredCommands(t *testing.T) {
 				}
 				if !reflect.DeepEqual(detail.FlagGroups, want) {
 					t.Fatalf("comment body constraints = %+v", detail.FlagGroups)
+				}
+			}
+			if detail.Path == "ag-cli org discussion list" || detail.Path == "ag-cli org discussion view" {
+				jsonFlag := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == "json" })
+				if jsonFlag < 0 || detail.Flags[jsonFlag].Type != "bool" || detail.Flags[jsonFlag].Default != "false" {
+					t.Fatal("missing optional JSON output flag")
+				}
+				if !strings.Contains(strings.ToLower(detail.Positionals.Description), "organization") {
+					t.Fatal("missing organization argument description")
+				}
+				if detail.Path == "ag-cli org discussion list" {
+					limit := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == "limit" })
+					if limit < 0 || detail.Flags[limit].Type != "int" || detail.Flags[limit].Default != "30" || detail.Flags[limit].Shorthand != "L" {
+						t.Fatal("missing list limit metadata")
+					}
+				} else {
+					comments := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == "comments" })
+					if comments < 0 || detail.Flags[comments].Type != "bool" || detail.Flags[comments].Default != "false" {
+						t.Fatal("missing optional comments metadata")
+					}
 				}
 			}
 			global := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == "raw-output" })

@@ -2,6 +2,7 @@ package discussion
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"text/tabwriter"
 
@@ -63,35 +64,37 @@ func newCmdDiscussionList(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to list discussions for %s: %w", repository, err)
 			}
-			out := cmd.OutOrStdout()
-			if opts.JSON {
-				return cmdutil.WriteJSON(out, items)
-			}
-
-			if len(items) == 0 {
-				fmt.Fprintln(out, "No discussions found.")
-				return nil
-			}
-
-			w := tabwriter.NewWriter(out, 0, 4, 2, ' ', 0)
-			fmt.Fprintln(w, "NUMBER\tTITLE\tCATEGORY\tAUTHOR\tSTATUS\tCOMMENTS\tUPDATED")
-			for _, item := range items {
-				fmt.Fprintf(w, "#%d\t%s\t%s\t%s\t%s\t%d\t%s\n",
-					item.Number,
-					displayDiscussionValue(item.Title),
-					displayDiscussionValue(item.Category.Name),
-					discussionAuthor(item),
-					discussionStatus(item),
-					item.CommentTotal,
-					displayDiscussionValue(item.UpdatedAt),
-				)
-			}
-			return w.Flush()
+			return WriteList(cmd.OutOrStdout(), items, opts.JSON)
 		},
 	}
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of discussions to list")
 	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output discussions as JSON")
 	return cmd
+}
+
+// WriteList renders repository and organization discussion lists consistently.
+func WriteList(out io.Writer, items []api.Discussion, jsonOutput bool) error {
+	if jsonOutput {
+		return cmdutil.WriteJSON(out, items)
+	}
+	if len(items) == 0 {
+		fmt.Fprintln(out, "No discussions found.")
+		return nil
+	}
+	w := tabwriter.NewWriter(out, 0, 4, 2, ' ', 0)
+	fmt.Fprintln(w, "NUMBER\tTITLE\tCATEGORY\tAUTHOR\tSTATUS\tCOMMENTS\tUPDATED")
+	for _, item := range items {
+		fmt.Fprintf(w, "#%d\t%s\t%s\t%s\t%s\t%d\t%s\n",
+			item.Number,
+			displayDiscussionValue(item.Title),
+			displayDiscussionValue(item.Category.Name),
+			discussionAuthor(item),
+			discussionStatus(item),
+			item.CommentTotal,
+			displayDiscussionValue(item.UpdatedAt),
+		)
+	}
+	return w.Flush()
 }
 
 func displayDiscussionValue(value string) string {

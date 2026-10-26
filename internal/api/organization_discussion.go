@@ -13,7 +13,10 @@ func GetOrganizationDiscussion(client *Client, organization string, number int) 
 	path := OrganizationPath(organization, "discuss", strconv.Itoa(number))
 	var detail DiscussionDetail
 	if err := client.doJSONRequest(http.MethodGet, path, nil, "", "application/json", discussionReadPolicy, &detail); err != nil {
-		return DiscussionDetail{}, err
+		return DiscussionDetail{}, fmt.Errorf("get organization discussion: %w", err)
+	}
+	if detail.Number != number || detail.Number <= 0 {
+		return DiscussionDetail{}, fmt.Errorf("get organization discussion: %w: missing or mismatched discussion number", ErrInvalidResponse)
 	}
 	return detail, nil
 }
