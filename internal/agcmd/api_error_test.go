@@ -92,6 +92,16 @@ func TestAPIErrorDiagnostics(t *testing.T) {
 			"The server returned HTTP 404.\nThe error response body could not be read.",
 		},
 		{
+			"read credential format cause",
+			&api.ResponseReadError{Err: &config.CredentialFormatError{Err: errors.New("private-credential")}},
+			"The server response could not be read.",
+		},
+		{
+			"HTTP credential format cause",
+			&api.HTTPError{StatusCode: 403, ReadError: &config.CredentialFormatError{Err: errors.New("private-credential")}},
+			"The server returned HTTP 403.\nThe error response body could not be read.",
+		},
+		{
 			"read role only",
 			fmt.Errorf(
 				"read: %w; decode: %w",

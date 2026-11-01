@@ -59,8 +59,8 @@ func parseCredentialStore(data []byte) (*CredentialStore, bool, error) {
 		Version  int             `json:"version"`
 		Accounts json.RawMessage `json:"accounts"`
 	}
-	if err := json.Unmarshal(data, &envelope); err != nil {
-		return nil, false, fmt.Errorf("failed to parse token file: %w", err)
+	if err := decodeCredentialData(data, &envelope); err != nil {
+		return nil, false, err
 	}
 	if envelope.Version != 0 && envelope.Version != credentialStoreVersion {
 		return nil, false, fmt.Errorf("unsupported credential store version %d", envelope.Version)
@@ -69,8 +69,8 @@ func parseCredentialStore(data []byte) (*CredentialStore, bool, error) {
 		return nil, false, fmt.Errorf("credential store version is required when accounts are present")
 	}
 	var store CredentialStore
-	if err := json.Unmarshal(data, &store); err != nil {
-		return nil, false, fmt.Errorf("failed to parse token file: %w", err)
+	if err := decodeCredentialData(data, &store); err != nil {
+		return nil, false, err
 	}
 	if store.Version == credentialStoreVersion {
 		if len(store.Accounts) == 0 {
@@ -98,8 +98,8 @@ func parseCredentialStore(data []byte) (*CredentialStore, bool, error) {
 	}
 
 	var legacy StoredCredentials
-	if err := json.Unmarshal(data, &legacy); err != nil {
-		return nil, false, fmt.Errorf("failed to parse token file: %w", err)
+	if err := decodeCredentialData(data, &legacy); err != nil {
+		return nil, false, err
 	}
 	legacy, err := normalizeAccount(legacy)
 	if err != nil {
@@ -322,5 +322,20 @@ func saveCredentialStore(store *CredentialStore) (resultErr error) {
 		return fmt.Errorf("replace credential file: %w", err)
 	}
 	temporaryPath = "" // The rename transferred ownership to the destination.
+	return nil
+}
+
+// decodeCredentialData attaches format facts at the decoder boundary.
+func decodeCredentialData(data []byte, target any) error {
+	if err := json.Unmarshal(data, target); err != nil {
+		failure := &CredentialFormatError{Err: err}
+		if syntax, ok := errors.AsType[*json.SyntaxError](err); ok {
+			failure.Offset = syntax.Offset
+		}
+		if _, ok := errors.AsType[*json.UnmarshalTypeError](err); ok {
+			failure.InvalidFieldType = true
+		}
+		return failure
+	}
 	return nil
 }
