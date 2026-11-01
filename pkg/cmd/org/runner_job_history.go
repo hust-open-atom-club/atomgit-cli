@@ -136,6 +136,7 @@ func collectJobHistoryPages(limit int, fetch func(page, perPage int) (actions.Jo
 	seenItems := make(map[string]struct{})
 	seenPages := make(map[string]struct{})
 	expectedTotal := -1
+	expectedPageSize, expectedPageCount := 0, 0
 	for page := 1; ; page++ {
 		response, err := fetch(page, perPage)
 		if err != nil {
@@ -155,8 +156,17 @@ func collectJobHistoryPages(limit int, fetch func(page, perPage int) (actions.Jo
 		}
 		if expectedTotal < 0 {
 			expectedTotal = response.Total
+			expectedPageSize, expectedPageCount = response.PageSize, response.PageCount
 		} else if response.Total != expectedTotal {
 			return nil, fmt.Errorf("inconsistent pagination: API reported total %d after %d", response.Total, expectedTotal)
+		}
+		// Validate the page boundaries before consuming content or returning at
+		// the limit. A changed page size can otherwise silently skip entries.
+		if response.PageSize != expectedPageSize {
+			return nil, fmt.Errorf("inconsistent pagination: API reported page_size %d after %d", response.PageSize, expectedPageSize)
+		}
+		if response.PageCount != expectedPageCount {
+			return nil, fmt.Errorf("inconsistent pagination: API reported page_count %d after %d", response.PageCount, expectedPageCount)
 		}
 		if page == 1 && response.Total > 0 && response.PageSize > 0 && response.PageCount > 0 {
 			wantPageCount := (response.Total + response.PageSize - 1) / response.PageSize

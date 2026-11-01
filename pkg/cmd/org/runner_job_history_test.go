@@ -475,3 +475,83 @@ func TestRunnerJobHistoryRejectsInvalidEmptyResponses(t *testing.T) {
 		}
 	}
 }
+
+func TestRunnerJobHistoryCrossPageMetadataBeforeLimit(t *testing.T) {
+	tests := []struct {
+		name           string
+		firstPageSize  int
+		secondPageSize int
+		secondCount    int
+		wantErr        string
+	}{
+		{name: "page size changes", firstPageSize: 100, secondPageSize: 150, secondCount: 2, wantErr: "page_size 150 after 100"},
+		{name: "page count decreases", firstPageSize: 100, secondPageSize: 100, secondCount: 1, wantErr: "page_count 1 after 2"},
+		{name: "page count increases", firstPageSize: 100, secondPageSize: 100, secondCount: 3, wantErr: "page_count 3 after 2"},
+		{name: "page count becomes zero", firstPageSize: 100, secondPageSize: 100, secondCount: 0, wantErr: "page_count 0 after 2"},
+		{name: "consistent metadata", firstPageSize: 100, secondPageSize: 100, secondCount: 2},
+		{name: "consistent server page size cap", firstPageSize: 80, secondPageSize: 80, secondCount: 3},
+	}
+	for _, tt := range tests {
+		for _, jsonOutput := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/json=%v", tt.name, jsonOutput), func(t *testing.T) {
+				calls := 0
+				transport := orgRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+					calls++
+					page, _ := strconv.Atoi(req.URL.Query().Get("page"))
+					if page != calls || page > 2 || req.URL.Query().Get("per_page") != "100" {
+						t.Fatalf("unexpected query: %s", req.URL.RawQuery)
+					}
+					size, count := tt.firstPageSize, (200+tt.firstPageSize-1)/tt.firstPageSize
+					if page == 2 {
+						size, count = tt.secondPageSize, tt.secondCount
+					}
+					response := actions.JobHistoryListResponse{PageNum: page, PageSize: size, Total: 200, PageCount: count}
+					for index := (page - 1) * size; index < min(page*size, 200); index++ {
+						response.Content = append(response.Content, testJobHistoryItem(strconv.Itoa(index)))
+					}
+					body, err := json.Marshal(response)
+					if err != nil {
+						t.Fatal(err)
+					}
+					return orgResponse(http.StatusOK, string(body)), nil
+				})
+				args := []string{"team", "--limit", "120"}
+				if jsonOutput {
+					args = append(args, "--json")
+				}
+				output, err := executeRunnerJobHistoryCommand(t, orgFactory(orgTestConfig{}, transport), args...)
+				if calls != 2 {
+					t.Fatalf("requests = %d, want 2", calls)
+				}
+				if tt.wantErr != "" {
+					if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+						t.Fatalf("error = %v, want %q", err, tt.wantErr)
+					}
+					if strings.Contains(output, "JOB RUN") || strings.Contains(output, `"job_history"`) {
+						t.Fatalf("invalid pagination produced success output: %s", output)
+					}
+					return
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				if jsonOutput {
+					var result jobHistoryOutput
+					if err := json.Unmarshal([]byte(output), &result); err != nil {
+						t.Fatal(err)
+					}
+					if result.TotalCount != 120 || len(result.JobHistory) != 120 {
+						t.Fatalf("returned count = %d, items = %d", result.TotalCount, len(result.JobHistory))
+					}
+					for index, item := range result.JobHistory {
+						if want := "run-" + strconv.Itoa(index); item.JobRunID != want {
+							t.Fatalf("item %d = %q, want %q", index, item.JobRunID, want)
+						}
+					}
+				} else if !strings.Contains(output, "run-119") || strings.Contains(output, "run-120") {
+					t.Fatalf("unexpected limited output: %s", output)
+				}
+			})
+		}
+	}
+}
