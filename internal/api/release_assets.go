@@ -107,7 +107,7 @@ func UploadReleaseAsset(ctx context.Context, client *Client, upload ReleaseUploa
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			if resp != nil {
-				// Ignore response-close errors to preserve the transport failure.
+				// Response cleanup is best effort; retry safety depends on whether upload bytes were consumed.
 				_ = resp.Body.Close()
 			}
 			if closeErr := requestBody.waitForClose(requestBodyCloseTimeout); closeErr != nil {
@@ -127,7 +127,7 @@ func UploadReleaseAsset(ctx context.Context, client *Client, upload ReleaseUploa
 		}
 
 		if resp.StatusCode/100 == 2 {
-			// Ignore response-close errors so cleanup does not turn HTTP success into failure.
+			// The server accepted the upload; response cleanup does not change that outcome.
 			_ = resp.Body.Close()
 			if closeErr := requestBody.waitForClose(requestBodyCloseTimeout); closeErr != nil {
 				return fmt.Errorf("wait for upload request body to close after success: %w", closeErr)
@@ -137,7 +137,7 @@ func UploadReleaseAsset(ctx context.Context, client *Client, upload ReleaseUploa
 
 		// HTTP failure: retain only the shared sanitized excerpt, do not retry.
 		responseErr := NewHTTPError(resp)
-		// Ignore response-close errors to preserve the HTTP failure read above.
+		// Preserve the upload rejection while releasing the response.
 		_ = resp.Body.Close()
 		if closeErr := requestBody.waitForClose(requestBodyCloseTimeout); closeErr != nil {
 			return fmt.Errorf("upload failed: %w; wait for request body to close: %w", responseErr, closeErr)
@@ -238,7 +238,7 @@ func DeleteReleaseAttachmentByID(client *Client, owner, repo, tag, attachmentID 
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and API error handling are separate.
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("delete attachment failed: %w", NewHTTPError(resp))
@@ -276,7 +276,7 @@ func DownloadReleaseAttachment(ctx context.Context, client *Client, owner, repo,
 
 	if resp.StatusCode != http.StatusOK {
 		responseErr := NewHTTPError(resp)
-		// Ignore response-close errors to preserve the HTTP failure read above.
+		// Close failed responses here; the caller owns successful attachment streams.
 		_ = resp.Body.Close()
 		return nil, fmt.Errorf("download failed: %w", responseErr)
 	}

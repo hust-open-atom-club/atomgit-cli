@@ -269,7 +269,7 @@ func TestRawRequestSupportsCustomAcceptAndEmptyToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close() //nolint:errcheck // Test reads the raw response separately; Close only releases test response resources.
+	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
@@ -322,7 +322,7 @@ func TestDoRequestRawWithBody(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer resp.Body.Close() //nolint:errcheck // Test only asserts request/response metadata; Close only releases test response resources.
+			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusAccepted {
 				t.Fatalf("status = %d", resp.StatusCode)
 			}
@@ -353,7 +353,7 @@ func TestDoRequestRawWithBodyReplaysBodyOnRetry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close() //nolint:errcheck // Test only asserts retry metadata; Close only releases test response resources.
+	defer resp.Body.Close()
 	if atomic.LoadInt32(&calls) != 2 {
 		t.Fatalf("calls = %d", calls)
 	}

@@ -195,7 +195,7 @@ func resolveNumber(client *api.Client, owner, repo string, num int) (string, err
 	if err != nil {
 		return "", fmt.Errorf("failed to check issue #%d: %w", num, err)
 	}
-	defer issueResp.Body.Close() //nolint:errcheck // Status determines issue lookup; Close only releases response resources.
+	defer issueResp.Body.Close()
 	if issueResp.StatusCode == http.StatusOK {
 		return browser.BuildIssueURL(owner, repo, num), nil
 	}
@@ -210,7 +210,7 @@ func resolveNumber(client *api.Client, owner, repo string, num int) (string, err
 	if err != nil {
 		return "", fmt.Errorf("failed to check PR #%d: %w", num, err)
 	}
-	defer prResp.Body.Close() //nolint:errcheck // Status determines pull request lookup; Close only releases response resources.
+	defer prResp.Body.Close()
 	if prResp.StatusCode == http.StatusOK {
 		return browser.BuildPRURL(owner, repo, num), nil
 	}

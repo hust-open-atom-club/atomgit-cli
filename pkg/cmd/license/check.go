@@ -51,7 +51,7 @@ func newCmdCheck(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to check license: %w", &api.RequestExecutionError{Err: err})
 			}
-			defer resp.Body.Close() //nolint:errcheck // Status determines the primary error; the response body is best-effort diagnostic text and Close only releases response resources.
+			defer resp.Body.Close()
 
 			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 				return fmt.Errorf("license check failed: %w", api.NewHTTPError(resp))

@@ -433,7 +433,7 @@ func getWebhook(client *api.Client, repository cmdutil.Repository, id int64) (ap
 	if err != nil {
 		return api.Webhook{}, fmt.Errorf("failed to get webhook #%d: %w", id, err)
 	}
-	defer resp.Body.Close() //nolint:errcheck // Status and JSON decode errors are handled separately; Close only releases response resources.
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		details := api.ReadErrorResponse(resp)
 		return api.Webhook{}, fmt.Errorf("failed to get webhook #%d: API request failed: %s (response body omitted to protect webhook secrets)", id, details.Status)
@@ -456,12 +456,14 @@ func listWebhooks(client *api.Client, repository cmdutil.Repository, limit int) 
 		}
 		if resp.StatusCode != http.StatusOK {
 			details := api.ReadErrorResponse(resp)
-			resp.Body.Close() //nolint:errcheck // Response error details were read before close; the webhook API error remains primary.
+			// Retain the status-only error to avoid exposing webhook secrets.
+			resp.Body.Close()
 			return nil, fmt.Errorf("API request failed: %s (response body omitted to protect webhook secrets)", details.Status)
 		}
 		var pageItems []api.Webhook
 		decodeErr := json.NewDecoder(resp.Body).Decode(&pageItems)
-		resp.Body.Close() //nolint:errcheck // JSON decode result is checked separately; Close only releases response resources.
+		// Release each page before fetching the next; preserve any JSON decode error.
+		resp.Body.Close()
 		if decodeErr != nil {
 			return nil, fmt.Errorf("decode webhook list response: %w", decodeErr)
 		}
@@ -485,7 +487,7 @@ func mutateWebhook(client *api.Client, method, path string, body map[string]any,
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close() //nolint:errcheck // Status and JSON decode errors are handled separately; Close only releases response resources.
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		details := api.ReadErrorResponse(resp)
 		return fmt.Errorf("API request failed: %s (response body omitted to protect webhook secrets)", details.Status)

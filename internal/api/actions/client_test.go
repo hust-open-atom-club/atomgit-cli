@@ -426,7 +426,7 @@ func TestDownloadJobLogReturnsRawBody(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close() //nolint:errcheck // Test reads the streamed response separately; Close only releases test response resources.
+	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
@@ -514,7 +514,7 @@ func TestActionsStreamingDownloadIgnoresMetadataTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close() //nolint:errcheck // Test reads the streamed response separately; Close only releases test response resources.
+	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("read long stream: %v", err)
@@ -537,7 +537,7 @@ func TestActionsStreamingDownloadStopsOnContextCancellation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close() //nolint:errcheck // Cancellation read result is asserted separately; Close only releases test response resources.
+	defer resp.Body.Close()
 
 	result := make(chan error, 1)
 	go func(body io.Reader) {
@@ -575,7 +575,7 @@ func TestArtifactDownloadFollowsRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close() //nolint:errcheck // Test reads the streamed response separately; Close only releases test response resources.
+	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)

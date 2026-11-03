@@ -74,7 +74,7 @@ func writeJobLogOutputWithLimits(out io.Writer, source io.Reader, limits jobLogL
 
 	archive, err := zip.OpenReader(temporaryName)
 	if err == nil {
-		defer archive.Close() //nolint:errcheck // The ZIP archive is read-only; log entry read errors are handled separately and Close only releases resources.
+		defer archive.Close()
 		return writeZipJobLogs(out, archive.File, limits)
 	}
 	if !errors.Is(err, zip.ErrFormat) {
@@ -93,7 +93,7 @@ func writeJobLogOutputWithLimits(out io.Writer, source io.Reader, limits jobLogL
 	if err != nil {
 		return fmt.Errorf("open temporary job log: %w", err)
 	}
-	defer plain.Close() //nolint:errcheck // The temporary log is reopened read-only; io.Copy handles read/write errors and Close only releases resources.
+	defer plain.Close()
 	if _, err := io.Copy(out, plain); err != nil {
 		return fmt.Errorf("write job log: %w", err)
 	}
