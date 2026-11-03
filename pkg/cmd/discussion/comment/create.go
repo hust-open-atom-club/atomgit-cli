@@ -19,9 +19,9 @@ func newCmdCreate(f *cmdutil.Factory) *cobra.Command {
 		Use:   "create [<owner>/<repo>] <number> (--body <text> | --body-file <path-or->)",
 		Short: "Create a comment on a discussion",
 		Long:  "Create a top-level Markdown comment on a repository discussion.",
-		Example: `  ag discussion comment create owner/repo 1 --body "Looks good"
-  ag discussion comment create owner/repo 1 --body-file comment.md
-  ag discussion comment create 1 --body-file -`,
+		Example: `  ag-cli discussion comment create owner/repo 1 --body "Looks good"
+  ag-cli discussion comment create owner/repo 1 --body-file comment.md
+  ag-cli discussion comment create 1 --body-file -`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
