@@ -223,7 +223,7 @@ ag-cli repo list --limit 100
 ag-cli repo list --json
 
 # 仅为本次调用临时指定 token 和服务根地址
-ag-cli repo list --token "$TOKEN" --base-url https://test.gitcode.net
+ag-cli repo list --token "$TOKEN" --base-url "$BASE-URL"
 
 # 查看仓库详情
 ag-cli repo view
