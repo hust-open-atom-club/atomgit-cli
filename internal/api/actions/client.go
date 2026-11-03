@@ -65,6 +65,13 @@ type ListJobsOptions struct {
 	PerPage int
 }
 
+type ListJobHistoryOptions struct {
+	Page           int
+	PerPage        int
+	StartTimeBegin string
+	StartTimeEnd   string
+}
+
 type HTTPError struct {
 	Operation  string
 	StatusCode int
@@ -383,6 +390,42 @@ func (c *Client) ListOrganizationRunnerGroupSharedNamespaces(organization, group
 	}
 	if result.SharedNamespaces == nil {
 		result.SharedNamespaces = make([]SharedNamespace, 0)
+	}
+	return result, nil
+}
+
+func (c *Client) ListOrganizationRunnerJobHistory(organization string, opts ListJobHistoryOptions) (JobHistoryListResponse, error) {
+	query := url.Values{}
+	setPositiveInt(query, "page", opts.Page)
+	setPositiveInt(query, "per_page", opts.PerPage)
+	setString(query, "start_time_begin", opts.StartTimeBegin)
+	setString(query, "start_time_end", opts.StartTimeEnd)
+
+	// Keep field presence separate from zero values: an error object or null
+	// response must not become a successful empty history.
+	var envelope struct {
+		PageNum   *int            `json:"page_num"`
+		PageSize  *int            `json:"page_size"`
+		Total     *int            `json:"total"`
+		PageCount *int            `json:"page_count"`
+		Content   json.RawMessage `json:"content"`
+	}
+	path := organizationPath(organization) + "/actions/runner-resources/job-history" + encodeQuery(query)
+	if err := c.getJSON("list organization runner job history", path, &envelope); err != nil {
+		return JobHistoryListResponse{}, err
+	}
+	if envelope.PageNum == nil || envelope.PageSize == nil || envelope.Total == nil || envelope.PageCount == nil || len(envelope.Content) == 0 {
+		return JobHistoryListResponse{}, fmt.Errorf("list organization runner job history: invalid pagination response: required fields are missing or null")
+	}
+	result := JobHistoryListResponse{
+		PageNum: *envelope.PageNum, PageSize: *envelope.PageSize,
+		Total: *envelope.Total, PageCount: *envelope.PageCount,
+	}
+	if err := json.Unmarshal(envelope.Content, &result.Content); err != nil {
+		return JobHistoryListResponse{}, fmt.Errorf("list organization runner job history: decode content: %w", err)
+	}
+	if result.Content == nil {
+		result.Content = make([]JobHistory, 0)
 	}
 	return result, nil
 }

@@ -344,6 +344,37 @@ type SharedNamespaceListResponse struct {
 	SharedNamespaces []SharedNamespace `json:"shared_namespaces"`
 }
 
+// JobHistory is one entry in the organization runner-resource job history.
+// StartTime and CompleteTime are kept as strings because the API documents
+// their format but not their time zone; callers must not reinterpret them.
+type JobHistory struct {
+	State              string `json:"state"`
+	Duration           int64  `json:"duration"`
+	OrgNamespaceID     string `json:"org_namespace_id"`
+	RepoNamespaceID    string `json:"repo_namespace_id"`
+	JobRunID           string `json:"job_run_id"`
+	JobID              string `json:"job_id"`
+	JobExternalID      string `json:"job_external_id"`
+	JobName            string `json:"job_name"`
+	PipelineExternalID string `json:"pipeline_external_id"`
+	PipelineOriginID   string `json:"pipeline_origin_id"`
+	PipelineRunID      string `json:"pipeline_run_id"`
+	PipelineName       string `json:"pipeline_name"`
+	RunsOn             string `json:"runs_on"`
+	StartTime          string `json:"start_time"`
+	CompleteTime       string `json:"complete_time"`
+}
+
+// JobHistoryListResponse is the documented job-history pagination envelope.
+// It intentionally does not use the runner list wrapper.
+type JobHistoryListResponse struct {
+	PageNum   int          `json:"page_num"`
+	PageSize  int          `json:"page_size"`
+	Total     int          `json:"total"`
+	PageCount int          `json:"page_count"`
+	Content   []JobHistory `json:"content"`
+}
+
 type WorkflowDispatchPayload struct {
 	Ref    string            `json:"ref"`
 	Inputs map[string]string `json:"inputs,omitempty"`

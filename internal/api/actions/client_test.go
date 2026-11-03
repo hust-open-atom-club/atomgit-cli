@@ -2,9 +2,11 @@ package actions
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -960,5 +962,131 @@ func TestGetStepLogPostsPaginationFields(t *testing.T) {
 	}
 	if !result.HasMore || result.StartOffset != 57 || result.EndOffset != 178 || result.Log != "next page\n" {
 		t.Fatalf("result = %#v", result)
+	}
+}
+
+func TestListOrganizationRunnerJobHistoryUsesV8PathFiltersAndBearerAuth(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("method = %s", req.Method)
+		}
+		if got, want := req.URL.EscapedPath(), "/api/v8/orgs/team%20ci/actions/runner-resources/job-history"; got != want {
+			t.Fatalf("path = %q, want %q", got, want)
+		}
+		if got := req.Header.Get("Authorization"); got != "Bearer secret" {
+			t.Fatalf("Authorization = %q", got)
+		}
+		want := url.Values{
+			"page":             {"2"},
+			"per_page":         {"50"},
+			"start_time_begin": {"2026-10-01 00:00:00"},
+			"start_time_end":   {"2026-10-31 23:59:59"},
+		}
+		if req.URL.Query().Encode() != want.Encode() {
+			t.Fatalf("query = %q, want %q", req.URL.RawQuery, want.Encode())
+		}
+		return response(req, http.StatusOK, `{
+			"page_num": 2,
+			"page_size": 50,
+			"total": 1,
+			"page_count": 1,
+			"content": [{
+				"state": "SUCCESS",
+				"duration": 125,
+				"org_namespace_id": "org-1",
+				"repo_namespace_id": "repo-1",
+				"job_run_id": "job-run-1",
+				"job_id": "job-1",
+				"job_external_id": "external-1",
+				"job_name": "build",
+				"pipeline_external_id": "pipeline-external-1",
+				"pipeline_origin_id": "pipeline-origin-1",
+				"pipeline_run_id": "pipeline-run-1",
+				"pipeline_name": "CI",
+				"runs_on": "ubuntu-latest",
+				"start_time": "2026-10-10 10:00:00",
+				"complete_time": "2026-10-10 10:02:05"
+			}]
+		}`), nil
+	})
+
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+	result, err := client.ListOrganizationRunnerJobHistory("team ci", ListJobHistoryOptions{
+		Page:           2,
+		PerPage:        50,
+		StartTimeBegin: "2026-10-01 00:00:00",
+		StartTimeEnd:   "2026-10-31 23:59:59",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.PageNum != 2 || result.PageSize != 50 || result.Total != 1 || result.PageCount != 1 || len(result.Content) != 1 {
+		t.Fatalf("result = %#v", result)
+	}
+	item := result.Content[0]
+	if item.State != "SUCCESS" || item.Duration != 125 || item.OrgNamespaceID != "org-1" || item.RepoNamespaceID != "repo-1" {
+		t.Fatalf("item identities = %#v", item)
+	}
+	if item.JobRunID != "job-run-1" || item.JobID != "job-1" || item.JobExternalID != "external-1" || item.JobName != "build" {
+		t.Fatalf("job fields = %#v", item)
+	}
+	if item.PipelineExternalID != "pipeline-external-1" || item.PipelineOriginID != "pipeline-origin-1" || item.PipelineRunID != "pipeline-run-1" || item.PipelineName != "CI" {
+		t.Fatalf("pipeline fields = %#v", item)
+	}
+	if item.RunsOn != "ubuntu-latest" || item.StartTime != "2026-10-10 10:00:00" || item.CompleteTime != "2026-10-10 10:02:05" {
+		t.Fatalf("runtime fields = %#v", item)
+	}
+}
+
+func TestListOrganizationRunnerJobHistoryNormalizesNullContent(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.RawQuery != "page=1&per_page=30" {
+			t.Fatalf("query = %q", req.URL.RawQuery)
+		}
+		return response(req, http.StatusOK, `{"page_num":1,"page_size":30,"total":0,"page_count":0,"content":null}`), nil
+	})
+
+	client := NewClientWithHTTPClient("secret", &http.Client{Transport: transport})
+	result, err := client.ListOrganizationRunnerJobHistory("team", ListJobHistoryOptions{Page: 1, PerPage: 30})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Content == nil || len(result.Content) != 0 {
+		t.Fatalf("content = %#v, want non-nil empty slice", result.Content)
+	}
+}
+
+func TestListOrganizationRunnerJobHistoryRejectsInvalidEnvelope(t *testing.T) {
+	valid := map[string]any{"page_num": 1, "page_size": 30, "total": 0, "page_count": 0, "content": []any{}}
+	bodies := map[string]string{"null": "null", "empty object": "{}", "error object": `{"message":"upstream failure"}`}
+	for field := range valid {
+		for _, null := range []bool{false, true} {
+			if field == "content" && null {
+				continue // Explicit null content is a supported empty list.
+			}
+			body := make(map[string]any)
+			maps.Copy(body, valid)
+			if null {
+				body[field] = nil
+			} else {
+				delete(body, field)
+			}
+			data, err := json.Marshal(body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			bodies[fmt.Sprintf("%s null=%v", field, null)] = string(data)
+		}
+	}
+	for name, body := range bodies {
+		t.Run(name, func(t *testing.T) {
+			client := NewClientWithHTTPClient("secret", &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return response(req, http.StatusOK, body), nil
+			})})
+			_, err := client.ListOrganizationRunnerJobHistory("team", ListJobHistoryOptions{Page: 1, PerPage: 30})
+			if err == nil || !strings.Contains(err.Error(), "invalid pagination response") {
+				t.Fatalf("error = %v, want invalid pagination response", err)
+			}
+		})
 	}
 }
