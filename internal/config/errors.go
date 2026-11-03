@@ -16,6 +16,10 @@ var (
 	// ErrTokenNotFound is returned when no token file exists in any search path.
 	ErrTokenNotFound = errors.New("token file not found")
 
+	// ErrCredentialAccess means a credential source could not be located or read.
+	// It does not mean credentials are absent or their contents are invalid.
+	ErrCredentialAccess = errors.New("credential access failed")
+
 	// ErrInvalidCredentials means credential data or a file safety check was rejected.
 	ErrInvalidCredentials = errors.New("invalid credentials")
 
@@ -28,6 +32,24 @@ var (
 	// ErrTokenFileUnreadable is returned when a token file is not owner-readable.
 	ErrTokenFileUnreadable = errors.New("token file is not owner-readable")
 )
+
+// CredentialAccessError records a failed credential source lookup or read.
+// Operation and Path describe the attempted access; Err retains its cause.
+type CredentialAccessError struct {
+	Operation string
+	Path      string
+	Err       error
+}
+
+func (e *CredentialAccessError) Error() string {
+	if e.Path == "" {
+		return fmt.Sprintf("%s: %v", e.Operation, e.Err)
+	}
+	return fmt.Sprintf("%s %s: %v", e.Operation, e.Path, e.Err)
+}
+
+func (e *CredentialAccessError) Unwrap() error        { return e.Err }
+func (e *CredentialAccessError) Is(target error) bool { return target == ErrCredentialAccess }
 
 // CredentialFormatError describes a credential decoder failure. Offset and
 // InvalidFieldType are format facts exposed by config, independently of the
