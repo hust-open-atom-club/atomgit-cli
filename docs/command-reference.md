@@ -100,6 +100,7 @@
 - [ag-cli notification list](#ag-cli-notification-list) — List repository notifications
 - [ag-cli notification mark-read](#ag-cli-notification-mark-read) — Mark repository notifications as read
 - [ag-cli org](#ag-cli-org) — Manage organizations
+- [ag-cli org create](#ag-cli-org-create) — Create an organization
 - [ag-cli org discussion](#ag-cli-org-discussion) — Manage organization discussions
 - [ag-cli org discussion comment](#ag-cli-org-discussion-comment) — Manage organization discussion comments
 - [ag-cli org discussion comment create](#ag-cli-org-discussion-comment-create) — Create a comment on a discussion
@@ -2396,7 +2397,7 @@ Usage: `ag-cli org`
 
 Manage organizations
 
-List organizations associated with your AtomGit account, inspect organization details, members, repositories, Actions runner groups, and runner job history, and manage organization discussions.
+Create organizations, list organizations associated with your AtomGit account, inspect organization details, members, repositories, Actions runner groups, and runner job history, and manage organization discussions.
 
 ### Flags
 
@@ -2404,6 +2405,39 @@ List organizations associated with your AtomGit account, inspect organization de
 | --- | --- | --- | --- |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli org create
+
+Usage: `ag-cli org create <path> [flags]`
+
+Create an organization
+
+Create an AtomGit organization using an explicit path.
+
+The name defaults to the path and visibility defaults to public. Use
+--visibility private to create a private organization. Omitted options are left
+to the API defaults; --description="" explicitly sends an empty description.
+Creation requests are never automatically retried or redirected. If the
+response cannot be read or verified, check AtomGit before retrying.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--name` | Organization name (defaults to path) | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--visibility` | Organization visibility: public or private | `public` | local |
+| `-d, --description` | Organization description | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli org create my-organization
+ag-cli org create my-team --name 'My Team' --visibility private
+ag-cli org create my-team --description 'Team projects'
+```
 
 
 ## ag-cli org discussion
