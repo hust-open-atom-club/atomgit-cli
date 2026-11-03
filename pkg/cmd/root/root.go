@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/alias"
 	apiCmd "atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmd/api"
@@ -62,12 +63,13 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	cmd.Flags().Bool("version", false, "Show version information")
 
 	cmd.PersistentFlags().BoolP("help", "h", false, "Show help for command")
+	baseURLHelp := "Override the API server origin for this command only"
 	if f != nil {
 		cmd.PersistentFlags().StringVar(&f.TokenOverride, "token", "", "Use an access token for this command only")
-		cmd.PersistentFlags().StringVar(&f.BaseURL, "base-url", "", "Use an API server origin for this command only (for example, https://test.gitcode.net)")
+		cmd.PersistentFlags().StringVar(&f.BaseURL, "base-url", api.BaseURL, baseURLHelp)
 	} else {
 		cmd.PersistentFlags().String("token", "", "Use an access token for this command only")
-		cmd.PersistentFlags().String("base-url", "", "Use an API server origin for this command only (for example, https://test.gitcode.net)")
+		cmd.PersistentFlags().String("base-url", api.BaseURL, baseURLHelp)
 	}
 
 	// Sanitize by default even when output is piped: a downstream program may

@@ -48,11 +48,11 @@ func TestNormalizeBaseURL(t *testing.T) {
 		want  string
 		err   bool
 	}{
-		{value: "https://test.gitcode.net", want: "https://test.gitcode.net"},
-		{value: " https://test.gitcode.net/ ", want: "https://test.gitcode.net"},
+		{value: "https://api.atomgit.com", want: "https://api.atomgit.com"},
+		{value: " https://api.atomgit.com/ ", want: "https://api.atomgit.com"},
 		{value: "http://localhost:8080", want: "http://localhost:8080"},
-		{value: "https://test.gitcode.net/api/v5", err: true},
-		{value: "https://user@test.gitcode.net", err: true},
+		{value: "https://api.atomgit.com/api/v5", err: true},
+		{value: "https://user@api.atomgit.com", err: true},
 		{value: "file:///tmp/service", err: true},
 	}
 	for _, tt := range tests {
@@ -68,7 +68,7 @@ func TestNormalizeBaseURL(t *testing.T) {
 func TestFactoryBaseURLSelectsAPIVersion(t *testing.T) {
 	var paths []string
 	factory := &Factory{
-		BaseURL: "https://test.gitcode.net/",
+		BaseURL: "https://api.atomgit.com/",
 		HttpClient: func() (*http.Client, error) {
 			return &http.Client{Transport: factoryRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				paths = append(paths, req.URL.Path)

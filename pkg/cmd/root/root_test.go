@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	internalapi "atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/commandschema"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	internalversion "atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
@@ -285,12 +286,22 @@ func TestNewCmdRootVersionHelp(t *testing.T) {
 			t.Errorf("help output does not mention %s: %s", flag, out.String())
 		}
 	}
+	baseURLFlag := cmd.PersistentFlags().Lookup("base-url")
+	if baseURLFlag == nil {
+		t.Fatal("base-url flag is missing")
+	}
+	if baseURLFlag.DefValue != internalapi.BaseURL {
+		t.Errorf("base-url flag default = %q, want %q", baseURLFlag.DefValue, internalapi.BaseURL)
+	}
+	if !strings.Contains(out.String(), internalapi.BaseURL) {
+		t.Errorf("help output does not mention built-in API origin %q: %s", internalapi.BaseURL, out.String())
+	}
 }
 
 func TestRepoListAcceptsTransientTokenAndBaseURL(t *testing.T) {
 	const (
 		commandToken = "command-token"
-		baseURL      = "https://test.gitcode.net"
+		baseURL      = "https://api.atomgit.com"
 	)
 	var requestCount int
 	factory := &cmdutil.Factory{
@@ -333,7 +344,7 @@ func TestRootRejectsVersionedBaseURL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd.SetArgs([]string{"repo", "list", "--base-url", "https://test.gitcode.net/api/v5"})
+	cmd.SetArgs([]string{"repo", "list", "--base-url", "https://api.atomgit.com/api/v5"})
 	err = cmd.Execute()
 	if err == nil || !strings.Contains(err.Error(), "path") {
 		t.Fatalf("Execute() error = %v, want base URL path error", err)
