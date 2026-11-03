@@ -36,7 +36,7 @@
 需要访问不同部署或以不同用户身份执行单次命令时，也可以临时指定访问令牌和服务根地址：
 
 ```bash
-ag-cli repo list --token "$TOKEN" --base-url https://test.gitcode.net
+ag-cli repo list --token "$TOKEN" --base-url "$BASE-URL"
 ```
 
 `--token` 和 `--base-url` 只在当前命令进程的内存中生效，不会写入 `token.json`、`config.json` 或其他配置文件。`--base-url` 只接受不含路径的 HTTP(S) 服务根地址；普通命令自动使用 `/api/v5`，Actions 命令自动使用 `/api/v8`。不同进程可以使用不同参数。由于命令行参数可能被 shell 历史或系统进程列表记录，不需要临时覆盖时仍建议使用凭据文件。
