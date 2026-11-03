@@ -301,7 +301,7 @@ func TestNewCmdRootVersionHelp(t *testing.T) {
 func TestRepoListAcceptsTransientTokenAndBaseURL(t *testing.T) {
 	const (
 		commandToken = "command-token"
-		baseURL      = "https://api.atomgit.com"
+		baseURL      = "https://api.gitcode.com"
 	)
 	var requestCount int
 	factory := &cmdutil.Factory{
@@ -339,6 +339,54 @@ func TestRepoListAcceptsTransientTokenAndBaseURL(t *testing.T) {
 	}
 }
 
+func TestRepoCreateUsesIdentityFromTransientToken(t *testing.T) {
+	const (
+		commandToken = "command-token"
+		baseURL      = "https://api.gitcode.com"
+	)
+	var requestPaths []string
+	factory := &cmdutil.Factory{
+		Config: rootTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				requestPaths = append(requestPaths, req.URL.Path)
+				if got, want := req.URL.Scheme+"://"+req.URL.Host, baseURL; got != want {
+					t.Errorf("request origin = %q, want %q", got, want)
+				}
+				if got, want := req.Header.Get("Authorization"), "Bearer "+commandToken; got != want {
+					t.Errorf("Authorization = %q, want %q", got, want)
+				}
+				switch req.URL.Path {
+				case "/api/v5/user":
+					return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"login":"command-user"}`)), Request: req}, nil
+				case "/api/v5/user/repos":
+					return &http.Response{StatusCode: http.StatusCreated, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"name":"demo","web_url":"https://gitcode.com/command-user/demo"}`)), Request: req}, nil
+				default:
+					t.Fatalf("unexpected request path %q", req.URL.Path)
+					return nil, nil
+				}
+			})}, nil
+		},
+	}
+
+	var stdout bytes.Buffer
+	cmd, err := newCmdRootWithWriters(factory, &stdout, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetArgs([]string{"repo", "create", "demo", "--token", commandToken, "--base-url", baseURL})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	wantPaths := []string{"/api/v5/user", "/api/v5/user/repos"}
+	if !reflect.DeepEqual(requestPaths, wantPaths) {
+		t.Fatalf("request paths = %#v, want %#v", requestPaths, wantPaths)
+	}
+	if !strings.Contains(stdout.String(), "command-user/demo") || !strings.Contains(stdout.String(), "https://gitcode.com/command-user/demo") {
+		t.Fatalf("output = %q, want transient-token identity and response URL", stdout.String())
+	}
+}
+
 func TestRootRejectsVersionedBaseURL(t *testing.T) {
 	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{Config: rootTestConfig{}}, io.Discard, io.Discard)
 	if err != nil {
@@ -348,6 +396,18 @@ func TestRootRejectsVersionedBaseURL(t *testing.T) {
 	err = cmd.Execute()
 	if err == nil || !strings.Contains(err.Error(), "path") {
 		t.Fatalf("Execute() error = %v, want base URL path error", err)
+	}
+}
+
+func TestRootRejectsRemoteHTTPBaseURL(t *testing.T) {
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{Config: rootTestConfig{}}, io.Discard, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetArgs([]string{"repo", "list", "--base-url", "http://api.gitcode.com"})
+	err = cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "loopback") {
+		t.Fatalf("Execute() error = %v, want remote HTTP error", err)
 	}
 }
 

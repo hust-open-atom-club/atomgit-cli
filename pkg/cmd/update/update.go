@@ -291,13 +291,6 @@ func publicAPIClient(f *cmdutil.Factory) (*api.Client, error) {
 	return f.NewAPIClient("")
 }
 
-func factoryErrorWriter(f *cmdutil.Factory) io.Writer {
-	if f == nil {
-		return nil
-	}
-	return f.ErrorWriter
-}
-
 func selectLatestStableRelease(releases []api.Release) (string, error) {
 	latest := ""
 	for _, release := range releases {

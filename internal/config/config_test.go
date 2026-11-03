@@ -433,17 +433,38 @@ func TestNewConfigWithoutCredentials(t *testing.T) {
 func TestWithTokenOverrideIsInMemoryOnly(t *testing.T) {
 	base := &config{host: defaultHost, token: "stored-token", user: "alice"}
 	override := "command-token"
-	cfg := WithTokenOverride(base, &override)
+	resolveCalls := 0
+	cfg := WithTokenOverride(base, &override, func(token string) (string, error) {
+		resolveCalls++
+		if token != override {
+			t.Fatalf("resolved token = %q, want %q", token, override)
+		}
+		return "bob", nil
+	})
 
 	if got, err := cfg.GetToken(); err != nil || got != override {
 		t.Fatalf("GetToken() = %q, %v", got, err)
 	}
+	for range 2 {
+		if got, err := cfg.GetUser(); err != nil || got != "bob" {
+			t.Fatalf("GetUser() = %q, %v", got, err)
+		}
+	}
+	if resolveCalls != 1 {
+		t.Fatalf("user resolver calls = %d, want 1", resolveCalls)
+	}
 	if base.token != "stored-token" {
 		t.Fatalf("stored token changed to %q", base.token)
+	}
+	if base.user != "alice" {
+		t.Fatalf("stored user changed to %q", base.user)
 	}
 
 	override = ""
 	if got, err := cfg.GetToken(); err != nil || got != "stored-token" {
 		t.Fatalf("GetToken() without override = %q, %v", got, err)
+	}
+	if got, err := cfg.GetUser(); err != nil || got != "alice" {
+		t.Fatalf("GetUser() without override = %q, %v", got, err)
 	}
 }

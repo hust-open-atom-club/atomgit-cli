@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -38,7 +39,19 @@ func (f *Factory) ApplyTokenOverride() {
 	if f == nil || f.Config == nil {
 		return
 	}
-	f.Config = config.WithTokenOverride(f.Config, &f.TokenOverride)
+	f.Config = config.WithTokenOverride(f.Config, &f.TokenOverride, f.resolveTokenUser)
+}
+
+func (f *Factory) resolveTokenUser(token string) (string, error) {
+	client, err := f.NewAPIClient(token)
+	if err != nil {
+		return "", fmt.Errorf("resolve user for command-line token: %w", err)
+	}
+	user, err := client.CurrentUserLogin()
+	if err != nil {
+		return "", fmt.Errorf("resolve user for command-line token: %w", err)
+	}
+	return user, nil
 }
 
 // CommandContext returns the active root command context when available.
@@ -124,12 +137,23 @@ func NormalizeBaseURL(value string) (string, error) {
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return "", fmt.Errorf("invalid base URL: scheme must be http or https")
 	}
+	if parsed.Scheme == "http" && !isLoopbackHost(parsed.Hostname()) {
+		return "", fmt.Errorf("invalid base URL: http is only allowed for loopback hosts")
+	}
 	if parsed.User != nil || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" || (parsed.Path != "" && parsed.Path != "/") {
 		return "", fmt.Errorf("invalid base URL: credentials, query, fragment, and path are not allowed")
 	}
 	parsed.Path = ""
 	parsed.RawPath = ""
 	return strings.TrimRight(parsed.String(), "/"), nil
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // APIBaseURL appends an API version path to a validated server origin.

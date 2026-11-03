@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -26,14 +27,26 @@ type Config interface {
 
 type tokenOverrideConfig struct {
 	Config
-	token *string
+	token       *string
+	resolveUser func(string) (string, error)
+
+	mu            sync.Mutex
+	resolvedToken string
+	resolvedUser  string
+	resolveErr    error
 }
 
 // WithTokenOverride returns a configuration view whose token can be
 // overridden for a single command invocation. The override is kept only in
 // memory and is never written to the credential store.
-func WithTokenOverride(base Config, token *string) Config {
-	return &tokenOverrideConfig{Config: base, token: token}
+func WithTokenOverride(base Config, token *string, resolveUser func(string) (string, error)) Config {
+	if existing, ok := base.(*tokenOverrideConfig); ok && existing.token == token {
+		existing.mu.Lock()
+		existing.resolveUser = resolveUser
+		existing.mu.Unlock()
+		return existing
+	}
+	return &tokenOverrideConfig{Config: base, token: token, resolveUser: resolveUser}
 }
 
 func (c *tokenOverrideConfig) GetToken() (string, error) {
@@ -41,6 +54,26 @@ func (c *tokenOverrideConfig) GetToken() (string, error) {
 		return *c.token, nil
 	}
 	return c.Config.GetToken()
+}
+
+func (c *tokenOverrideConfig) GetUser() (string, error) {
+	if c.token == nil || *c.token == "" {
+		return c.Config.GetUser()
+	}
+
+	token := *c.token
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.resolvedToken == token {
+		return c.resolvedUser, c.resolveErr
+	}
+	if c.resolveUser == nil {
+		return "", errors.New("cannot resolve the user for the command-line token")
+	}
+
+	c.resolvedUser, c.resolveErr = c.resolveUser(token)
+	c.resolvedToken = token
+	return c.resolvedUser, c.resolveErr
 }
 
 type config struct {

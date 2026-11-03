@@ -3,6 +3,7 @@ package repo
 import (
 	"fmt"
 	"io"
+	"net/url"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -60,6 +61,26 @@ Pass --clone to clone the repository locally after creation.`,
 
 func createdRepositoryURL(host, owner, repo string) string {
 	return cmdutil.ResolveWebURL("", host, owner, repo)
+}
+
+func createdRepositoryURLFromResponse(result api.Repository, host, owner, repo string) string {
+	fallback := createdRepositoryURL(host, owner, repo)
+	for _, candidate := range []string{result.HTMLURL, result.AlternateHTMLURL} {
+		candidate = strings.TrimSuffix(strings.TrimSpace(candidate), "/")
+		parsed, err := url.Parse(candidate)
+		if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+			continue
+		}
+		origin := (&url.URL{Scheme: parsed.Scheme, Host: parsed.Host}).String()
+		if _, err := cmdutil.NormalizeBaseURL(origin); err != nil {
+			continue
+		}
+		if parsed.Path != "/"+owner+"/"+repo {
+			continue
+		}
+		return candidate
+	}
+	return fallback
 }
 
 func runCreate(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory, opts *CreateOptions) error {
@@ -129,7 +150,7 @@ func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory,
 		return fmt.Errorf("failed to create repository: %w", err)
 	}
 
-	repoURL := createdRepositoryURL(f.Config.GetHost(), owner, repoName)
+	repoURL := createdRepositoryURLFromResponse(result, f.Config.GetHost(), owner, repoName)
 	fmt.Fprintf(out, "✓ Created repository %s/%s\n", owner, repoName)
 	fmt.Fprintf(out, "  URL: %s\n", repoURL)
 

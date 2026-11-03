@@ -223,7 +223,7 @@ ag-cli repo list --limit 100
 ag-cli repo list --json
 
 # 仅为本次调用临时指定 token 和服务根地址
-ag-cli repo list --token "$TOKEN" --base-url https://api.atomgit.com
+ag-cli repo list --token "$TOKEN" --base-url "$BASE_URL"
 
 # 查看仓库详情
 ag-cli repo view
@@ -316,7 +316,7 @@ ag-cli repo delete --yes
 ag-cli repo delete owner/repo --yes
 ```
 
-`--token` 和 `--base-url` 是全局参数，只在当前命令进程中生效，不会写入凭据文件或其他配置。`--base-url` 默认为 `https://api.atomgit.com`，不传该参数时使用同一地址；它只接受不含路径的 HTTP(S) 服务根地址。API v5 和 Actions v8 命令会分别自动添加 `/api/v5` 和 `/api/v8`。命令行中的 token 可能出现在 shell 历史或系统进程列表中；无需临时覆盖时，建议继续使用 `ag-cli auth login` 保存的凭据。
+`--token` 和 `--base-url` 是全局参数，只在当前命令进程中生效，不会写入凭据文件或其他配置。`--base-url` 默认为 `https://api.atomgit.com`，不传该参数时使用同一地址；远程服务必须使用不含路径的 HTTPS 根地址，只有回环地址允许使用 HTTP。API v5 和 Actions v8 命令会分别自动添加 `/api/v5` 和 `/api/v8`。需要当前用户名的命令会通过临时 token 查询所选服务，不会继续使用本地持久化账户的用户名。命令行中的 token 可能出现在 shell 历史或系统进程列表中；无需临时覆盖时，建议继续使用 `ag-cli auth login` 保存的凭据。
 
 `ag-cli repo edit` 仅发送命令行中明确指定的字段，支持 `--name`、`--description`、`--default-branch` 和 `--visibility public|private`。`--public`、`--private` 是可见性的便利选项；它们与 `--visibility` 三者互斥。名称或可见性修改需要交互确认，可使用 `--yes` 跳过确认。成功后命令会显示更新后的仓库名称和浏览器 URL。
 

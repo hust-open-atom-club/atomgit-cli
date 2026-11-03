@@ -48,11 +48,17 @@ func TestNormalizeBaseURL(t *testing.T) {
 		want  string
 		err   bool
 	}{
+		{value: "", err: true},
 		{value: "https://api.atomgit.com", want: "https://api.atomgit.com"},
-		{value: " https://api.atomgit.com/ ", want: "https://api.atomgit.com"},
+		{value: " https://api.gitcode.com/ ", want: "https://api.gitcode.com"},
 		{value: "http://localhost:8080", want: "http://localhost:8080"},
+		{value: "http://127.0.0.1:8080", want: "http://127.0.0.1:8080"},
+		{value: "http://[::1]:8080", want: "http://[::1]:8080"},
+		{value: "http://api.gitcode.com", err: true},
 		{value: "https://api.atomgit.com/api/v5", err: true},
 		{value: "https://user@api.atomgit.com", err: true},
+		{value: "https://api.gitcode.com?x=1", err: true},
+		{value: "https://api.gitcode.com#fragment", err: true},
 		{value: "file:///tmp/service", err: true},
 	}
 	for _, tt := range tests {
@@ -66,12 +72,12 @@ func TestNormalizeBaseURL(t *testing.T) {
 }
 
 func TestFactoryBaseURLSelectsAPIVersion(t *testing.T) {
-	var paths []string
+	var requestURLs []string
 	factory := &Factory{
-		BaseURL: "https://api.atomgit.com/",
+		BaseURL: "https://api.gitcode.com/",
 		HttpClient: func() (*http.Client, error) {
 			return &http.Client{Transport: factoryRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-				paths = append(paths, req.URL.Path)
+				requestURLs = append(requestURLs, req.URL.String())
 				body := `{}`
 				if strings.Contains(req.URL.Path, "/actions/workflows") {
 					body = `{"workflows":[]}`
@@ -97,7 +103,77 @@ func TestFactoryBaseURLSelectsAPIVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(paths) != 2 || paths[0] != "/api/v5/user" || paths[1] != "/api/v8/repos/owner/repo/actions/workflows" {
-		t.Fatalf("request paths = %#v", paths)
+	want := []string{
+		"https://api.gitcode.com/api/v5/user",
+		"https://api.gitcode.com/api/v8/repos/owner/repo/actions/workflows?page=1&per_page=1",
+	}
+	if len(requestURLs) != len(want) || requestURLs[0] != want[0] || requestURLs[1] != want[1] {
+		t.Fatalf("request URLs = %#v, want %#v", requestURLs, want)
+	}
+}
+
+func TestApplyTokenOverrideResolvesUserAgainstSelectedOrigin(t *testing.T) {
+	requests := 0
+	factory := &Factory{
+		BaseURL:       "https://api.gitcode.com",
+		Config:        stubConfig{},
+		TokenOverride: "command-token",
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: factoryRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				requests++
+				if got, want := req.URL.String(), "https://api.gitcode.com/api/v5/user"; got != want {
+					t.Fatalf("request URL = %q, want %q", got, want)
+				}
+				if got, want := req.Header.Get("Authorization"), "Bearer command-token"; got != want {
+					t.Fatalf("Authorization = %q, want %q", got, want)
+				}
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header:     make(http.Header),
+					Body:       io.NopCloser(strings.NewReader(`{"login":"bob"}`)),
+					Request:    req,
+				}, nil
+			})}, nil
+		},
+	}
+
+	factory.ApplyTokenOverride()
+	factory.ApplyTokenOverride()
+	for range 2 {
+		user, err := factory.Config.GetUser()
+		if err != nil || user != "bob" {
+			t.Fatalf("GetUser() = %q, %v", user, err)
+		}
+	}
+	if requests != 1 {
+		t.Fatalf("identity requests = %d, want 1", requests)
+	}
+}
+
+func TestApplyTokenOverrideDoesNotFallBackToStoredUser(t *testing.T) {
+	const commandToken = "private-command-token"
+	factory := &Factory{
+		BaseURL:       "https://api.gitcode.com",
+		Config:        stubConfig{},
+		TokenOverride: commandToken,
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: factoryRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusUnauthorized,
+					Header:     make(http.Header),
+					Body:       io.NopCloser(strings.NewReader(`{"message":"denied"}`)),
+					Request:    req,
+				}, nil
+			})}, nil
+		},
+	}
+
+	factory.ApplyTokenOverride()
+	user, err := factory.Config.GetUser()
+	if err == nil || user != "" {
+		t.Fatalf("GetUser() = %q, %v; want verification failure", user, err)
+	}
+	if strings.Contains(err.Error(), commandToken) {
+		t.Fatalf("GetUser() error leaked the command token: %v", err)
 	}
 }
