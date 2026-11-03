@@ -24,6 +24,25 @@ type Config interface {
 	GetHost() string
 }
 
+type tokenOverrideConfig struct {
+	Config
+	token *string
+}
+
+// WithTokenOverride returns a configuration view whose token can be
+// overridden for a single command invocation. The override is kept only in
+// memory and is never written to the credential store.
+func WithTokenOverride(base Config, token *string) Config {
+	return &tokenOverrideConfig{Config: base, token: token}
+}
+
+func (c *tokenOverrideConfig) GetToken() (string, error) {
+	if c.token != nil && *c.token != "" {
+		return *c.token, nil
+	}
+	return c.Config.GetToken()
+}
+
 type config struct {
 	host  string
 	token string

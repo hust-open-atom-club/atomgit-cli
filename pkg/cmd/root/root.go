@@ -62,6 +62,13 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	cmd.Flags().Bool("version", false, "Show version information")
 
 	cmd.PersistentFlags().BoolP("help", "h", false, "Show help for command")
+	if f != nil {
+		cmd.PersistentFlags().StringVar(&f.TokenOverride, "token", "", "Use an access token for this command only")
+		cmd.PersistentFlags().StringVar(&f.BaseURL, "base-url", "", "Use an API server origin for this command only (for example, https://test.gitcode.net)")
+	} else {
+		cmd.PersistentFlags().String("token", "", "Use an access token for this command only")
+		cmd.PersistentFlags().String("base-url", "", "Use an API server origin for this command only (for example, https://test.gitcode.net)")
+	}
 
 	// Sanitize by default even when output is piped: a downstream program may
 	// forward bytes to a terminal. Machine consumers can explicitly opt into
@@ -77,6 +84,16 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	cmd.PersistentFlags().BoolVar(&rawOutput, "raw-output", false, "Disable terminal output sanitization for machine processing")
 	cmd.PersistentPreRunE = func(*cobra.Command, []string) error {
 		updateBashCompletionHelp(cmd)
+		if f != nil && f.BaseURL != "" {
+			normalized, err := cmdutil.NormalizeBaseURL(f.BaseURL)
+			if err != nil {
+				return err
+			}
+			f.BaseURL = normalized
+		}
+		if f != nil {
+			f.ApplyTokenOverride()
+		}
 		if err := safeOut.SetRaw(rawOutput); err != nil {
 			return fmt.Errorf("configure stdout: %w", err)
 		}

@@ -474,7 +474,7 @@ func TestActionsMetadataTimeoutCoversStalledBody(t *testing.T) {
 
 	httpClient := server.Client()
 	httpClient.Timeout = 40 * time.Millisecond
-	client := newClientWithBaseURL("secret", server.URL+APIVersion, httpClient)
+	client := NewClientWithBaseURL("secret", server.URL+APIVersion, httpClient)
 	started := time.Now()
 	_, err := client.GetRun("team", "demo", "run-1")
 	if err == nil {
@@ -568,7 +568,7 @@ func TestArtifactDownloadFollowsRedirect(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := newClientWithBaseURL("secret", server.URL+"/api/v8", server.Client())
+	client := NewClientWithBaseURL("secret", server.URL+"/api/v8", server.Client())
 	resp, err := client.DownloadArtifact("team", "demo", "artifact-1")
 	if err != nil {
 		t.Fatal(err)

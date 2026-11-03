@@ -429,3 +429,21 @@ func TestNewConfigWithoutCredentials(t *testing.T) {
 		})
 	}
 }
+
+func TestWithTokenOverrideIsInMemoryOnly(t *testing.T) {
+	base := &config{host: defaultHost, token: "stored-token", user: "alice"}
+	override := "command-token"
+	cfg := WithTokenOverride(base, &override)
+
+	if got, err := cfg.GetToken(); err != nil || got != override {
+		t.Fatalf("GetToken() = %q, %v", got, err)
+	}
+	if base.token != "stored-token" {
+		t.Fatalf("stored token changed to %q", base.token)
+	}
+
+	override = ""
+	if got, err := cfg.GetToken(); err != nil || got != "stored-token" {
+		t.Fatalf("GetToken() without override = %q, %v", got, err)
+	}
+}

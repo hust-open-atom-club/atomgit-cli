@@ -83,6 +83,12 @@ does not verify remote permissions, resource existence, or server-side validatio
 			if err != nil {
 				return err
 			}
+			if f != nil && f.BaseURL != "" {
+				prepared.baseURL, err = cmdutil.APIBaseURL(f.BaseURL, internalapi.APIVersion)
+				if err != nil {
+					return err
+				}
+			}
 			if opts.dryRun {
 				return writePreview(cmd.OutOrStdout(), prepared)
 			}

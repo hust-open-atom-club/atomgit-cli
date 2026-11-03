@@ -108,15 +108,15 @@ func runPRChecks(cmd *cobra.Command, f *cmdutil.Factory, opts checksOptions, arg
 }
 
 func newChecksClients(f *cmdutil.Factory, token string) (*api.Client, *actions.Client, error) {
-	ctx := f.CommandContext()
-	if f.HttpClient == nil {
-		return api.NewClient(token).WithContext(ctx).WithRetryWriter(f.ErrorWriter), actions.NewClient(token).WithContext(ctx).WithRetryWriter(f.ErrorWriter), nil
-	}
-	httpClient, err := f.HttpClient()
+	prClient, err := f.NewAPIClient(token)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create HTTP client: %w", err)
+		return nil, nil, err
 	}
-	return api.NewClientWithHTTPClient(token, httpClient).WithContext(ctx).WithRetryWriter(f.ErrorWriter), actions.NewClientWithHTTPClient(token, httpClient).WithContext(ctx).WithRetryWriter(f.ErrorWriter), nil
+	actionsClient, err := f.NewActionsClient(token)
+	if err != nil {
+		return nil, nil, err
+	}
+	return prClient, actionsClient, nil
 }
 
 func currentPRChecks(prClient *api.Client, actionsClient *actions.Client, owner, repo, number string) ([]actions.Run, error) {

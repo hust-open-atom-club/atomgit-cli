@@ -258,7 +258,9 @@ Work seamlessly with AtomGit from the command line.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | local |
+| `--token` | Use an access token for this command only | `` | local |
 | `--version` | Show version information | `false` | local |
 | `-h, --help` | Show help for command | `false` | local |
 
@@ -275,7 +277,9 @@ Create, list, and delete command shortcuts (aliases) for "ag-cli" commands.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -289,7 +293,9 @@ Delete an alias
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -303,7 +309,9 @@ List aliases
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -327,7 +335,9 @@ Windows path), escape it with a backslash: C:\Program\ Files.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -361,10 +371,12 @@ does not verify remote permissions, resource existence, or server-side validatio
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--dry-run` | Preview the redacted request as JSON without credentials or network access | `false` | local |
 | `--input` | Read the raw request body from a file or - for stdin | `` | local |
 | `--paginate` | Request all pages and emit compact JSON pages as NDJSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-H, --accept` | Set the Accept request header | `application/json` | local |
 | `-X, --method` | HTTP method: GET, POST, PATCH, PUT, or DELETE | `GET` | local |
 | `-f, --field` | Add a string field as key=value | `[]` | local |
@@ -394,7 +406,9 @@ Manage authentication state for AtomGit.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -410,7 +424,9 @@ Implement the Git credential helper protocol
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -424,8 +440,10 @@ List saved AtomGit accounts
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output accounts as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -454,10 +472,12 @@ do not change the active account.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--force` | Always authenticate again even if already logged in | `false` | local |
 | `--git-email` | Override the Git user.email stored for this account | `` | local |
 | `--git-name` | Override the Git user.name stored for this account | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `--with-token` | Read an access token from standard input instead of browser OAuth | `false` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -478,7 +498,9 @@ otherwise switch to another account first. Use --all to remove every account.
 | --- | --- | --- | --- |
 | `--account` | Account username to remove | `` | local |
 | `--all` | Remove all saved accounts | `false` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -492,7 +514,9 @@ Refresh the access token using the stored refresh_token
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -510,7 +534,9 @@ ag-cli auth switch; access tokens are not written to Git configuration.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -526,8 +552,10 @@ Inspect local credentials without modifying them. Local presence does not prove 
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output authentication status as JSON, including failures | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `--verify` | Verify the active identity online without refreshing or changing credentials | `false` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -551,11 +579,13 @@ Switch the active account and synchronize Git identity
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--git-email` | Override Git user.email for this switch | `` | local |
 | `--git-name` | Override Git user.name for this switch | `` | local |
 | `--global` | Update global Git identity instead of the current repository | `false` | local |
 | `--no-git` | Do not update Git identity | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -571,7 +601,9 @@ Display the authentication token used for AtomGit API requests.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -589,7 +621,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -617,8 +651,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--ref` | Source ref to create the branch from | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -642,7 +678,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Confirm branch deletion without prompting | `false` | local |
 
@@ -668,8 +706,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output branches as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of branches to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -698,7 +738,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -716,7 +758,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip deletion confirmation | `false` | local |
 
@@ -735,7 +779,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of protected branch rules to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -767,9 +813,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--merge` | Merge allowlist: develop, admin, maintainer, usernames, or empty | `` | local |
 | `--push` | Push allowlist: develop, admin, maintainer, usernames, or empty | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation when updating an existing rule | `false` | local |
 
@@ -797,7 +845,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -815,7 +865,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -839,7 +891,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-R, --repo` | Select another repository using the OWNER/REPO format | `` | local |
 | `-a, --actions` | Open repository actions | `false` | local |
 | `-b, --branch` | Select another branch by passing in the branch name | `` | local |
@@ -863,7 +917,9 @@ Check for a newer AtomGit CLI release
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -881,7 +937,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -899,7 +957,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -917,7 +977,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read body text from file (use - for stdin) | `` | local |
 | `-b, --body` | Comment body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -937,7 +999,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -956,7 +1020,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read new body text from file (use - for stdin) | `` | local |
 | `-b, --body` | New comment body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -976,8 +1042,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output comments as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of comments to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -996,8 +1064,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output the comment as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -1015,8 +1085,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output comparison as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -1034,7 +1106,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -1052,11 +1126,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output commits as JSON | `false` | local |
 | `--path` | Only list commits that touch the given file path | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--ref` | Commit SHA or branch name to start from | `` | local |
 | `--since` | Only list commits after this time (RFC 3339, e.g. 2024-11-08T16:25:44Z) | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `--until` | Only list commits before this time (RFC 3339, e.g. 2024-11-08T16:25:44Z) | `` | local |
 | `-L, --limit` | Maximum number of commits to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -1076,7 +1152,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -1094,8 +1172,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output commit as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-w, --web` | Open a commit in the browser | `false` | local |
 
@@ -1114,7 +1194,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -1136,7 +1218,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -1154,7 +1238,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read body text from file (use - for stdin) | `` | local |
 | `-b, --body` | Comment body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -1186,7 +1272,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip deletion confirmation | `false` | local |
 
@@ -1215,7 +1303,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read new body text from file (use - for stdin) | `` | local |
 | `-b, --body` | New comment body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -1245,7 +1335,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read body text from file (use - for stdin) | `` | local |
 | `-b, --body` | Reply body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -1279,8 +1371,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--category` | Category name without a display emoji or ID (required) | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read the Markdown body from file (use - for stdin) | `` | local |
 | `-b, --body` | Markdown body (cannot be blank) | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -1314,7 +1408,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -1350,8 +1446,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--category` | New category name without a display emoji or ID (cannot be blank) | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read the Markdown body from file (use - for stdin) | `` | local |
 | `-b, --body` | New Markdown body (empty requests clearing it) | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -1382,8 +1480,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output discussions as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of discussions to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -1406,9 +1506,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--comments` | Also fetch and show the comment thread | `false` | local |
 | `--json` | Output the discussion as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -1434,9 +1536,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output a redacted health report as JSON | `false` | local |
 | `--live` | Run read-only connectivity and authentication probes | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -1462,7 +1566,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -1482,8 +1588,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output entries as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of entries to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -1516,9 +1624,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
 | `--add` | Branch names to add (repeatable) | `[]` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output branch names as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--remove` | Branch names to remove (repeatable) | `[]` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -1546,7 +1656,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -1564,7 +1676,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -1582,7 +1696,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read body text from file | `` | local |
 | `-b, --body` | Comment body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -1602,7 +1718,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -1621,7 +1739,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-b, --body` | New comment body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -1640,7 +1760,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -1659,7 +1781,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
 | `--assignee` | Assign the issue to a user (login) | `` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read issue body from file (use - for stdin) | `` | local |
 | `-b, --body` | Issue body | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -1690,8 +1814,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
 | `--assignee` | Set the issue assignee (login) | `` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--remove-assignee` | Clear the issue assignee | `false` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read the new issue body from a file | `` | local |
 | `-b, --body` | New issue body | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -1724,8 +1850,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output entries as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of entries to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -1755,8 +1883,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
 | `--add` | Comma-separated labels to add | `` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--remove` | Comma-separated labels to remove | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -1784,9 +1914,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | --- | --- | --- | --- |
 | `--assignee` | Filter by assignee: @me for issues assigned to you across all your repositories | `` | local |
 | `--author` | Filter by author: @me for issues you created across all your repositories | `` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--involved` | Filter by involvement: @me for issues you created or are assigned to across all your repositories | `` | local |
 | `--json` | Output issues as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of issues to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-s, --state` | Filter by state: open, closed, all | `open` | local |
@@ -1809,8 +1941,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output linked pull requests as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -1837,8 +1971,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output entries as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of entries to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -1864,7 +2000,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -1882,8 +2020,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output issue as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-w, --web` | Open an issue in the browser | `false` | local |
 
@@ -1900,7 +2040,9 @@ List and inspect read-only organization Kanban boards and their Issue/Pull Reque
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -1922,8 +2064,10 @@ List items on a Kanban board
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output Kanban items as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of Kanban items to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -1945,8 +2089,10 @@ List organization Kanban boards
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output Kanban boards as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of Kanban boards to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -1968,8 +2114,10 @@ View a Kanban board
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output the Kanban board as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -1993,7 +2141,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -2011,9 +2161,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--color` | Label color in #RGB or #RRGGBB format | `` | local |
 | `--name` | Label name | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -2040,7 +2192,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -2066,9 +2220,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--color` | New label color in #RGB or #RRGGBB format | `` | local |
 | `--name` | New label name | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -2092,8 +2248,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output labels as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of labels to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -2116,7 +2274,9 @@ Check license compliance using openEuler compliance service.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -2132,7 +2292,9 @@ Check if a license is compliant using openEuler compliance service.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -2153,7 +2315,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -2171,7 +2335,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -2189,8 +2355,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--due-on` | Due date in YYYY-MM-DD format | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-d, --description` | Milestone description | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-t, --title` | Milestone title | `` | local |
@@ -2210,7 +2378,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -2229,8 +2399,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--due-on` | New due date in YYYY-MM-DD format | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-d, --description` | New milestone description; pass an empty value to clear | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-t, --title` | New milestone title | `` | local |
@@ -2250,10 +2422,12 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--direction` | Sort direction: asc, desc | `asc` | local |
 | `--json` | Output milestones as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--sort` | Sort milestones by created or due_on | `due_on` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of milestones to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-s, --state` | Filter by state: open, closed, all | `open` | local |
@@ -2279,7 +2453,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -2297,8 +2473,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output milestone as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -2316,7 +2494,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -2339,10 +2519,12 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--before` | Only list notifications updated before this RFC 3339 timestamp | `` | local |
 | `--json` | Output notifications as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--since` | Only list notifications updated at or after this RFC 3339 timestamp | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `--type` | Only list notifications of this type (for example merge_requests_open) | `` | local |
 | `--unread` | Only list unread notifications | `false` | local |
 | `-L, --limit` | Maximum number of notifications to list | `30` | local |
@@ -2377,7 +2559,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
 | `--all` | Mark every unread notification in the repository | `false` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip the --all confirmation prompt | `false` | local |
 
@@ -2401,7 +2585,9 @@ List organizations associated with your AtomGit account, inspect organization de
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -2417,7 +2603,9 @@ List, view, create, edit, and delete organization discussions and their comments
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -2437,7 +2625,9 @@ top-level comments; replies are only one level deep.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -2453,7 +2643,9 @@ Create a top-level Markdown comment on an organization discussion.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read body text from file (use - for stdin) | `` | local |
 | `-b, --body` | Comment body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -2483,7 +2675,9 @@ delete request.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip deletion confirmation | `false` | local |
 
@@ -2510,7 +2704,9 @@ is sent. A comment that cannot be found is left unchanged.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read new body text from file (use - for stdin) | `` | local |
 | `-b, --body` | New comment body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -2538,7 +2734,9 @@ is posted. Replying to a reply is rejected.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read body text from file (use - for stdin) | `` | local |
 | `-b, --body` | Reply body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -2570,8 +2768,10 @@ If the result is uncertain, inspect the discussion list before retrying.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--category` | Category name without a display emoji or ID (required) | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read the Markdown body from file (use - for stdin) | `` | local |
 | `-b, --body` | Markdown body (cannot be blank) | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -2603,7 +2803,9 @@ retried or redirected; inspect uncertain results before retrying.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -2637,8 +2839,10 @@ retried; inspect the discussion before retrying an uncertain result.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--category` | New category name without a display emoji or ID (cannot be blank) | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read the Markdown body from file (use - for stdin) | `` | local |
 | `-b, --body` | New Markdown body (empty requests clearing it) | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -2665,8 +2869,10 @@ List organization discussions
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output discussions as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of discussions to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -2694,9 +2900,11 @@ Hidden, deleted, and empty bodies are shown as explicit placeholders.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--comments` | Also fetch and show the comment thread | `false` | local |
 | `--json` | Output the discussion as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -2718,8 +2926,10 @@ List organizations for the authenticated user
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output organizations as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of organizations to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -2742,8 +2952,10 @@ List organization members
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output members as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of members to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -2766,8 +2978,10 @@ List organization repositories
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output repositories as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of repositories to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -2792,7 +3006,9 @@ Inspect organization-level AtomGit Actions runner groups and their read-only ass
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -2814,8 +3030,10 @@ List organization runner groups
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output runner groups as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of runner groups to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -2838,8 +3056,10 @@ List repositories that can use an organization runner group
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output shared namespaces as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of shared namespaces to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -2854,8 +3074,10 @@ List Kubernetes runner sets in an organization runner group
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output runner sets as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of runner sets to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -2870,8 +3092,10 @@ List host runners in an organization runner group
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output runners as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of runners to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -2886,8 +3110,10 @@ View an organization runner group
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output runner group as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -2908,8 +3134,10 @@ View an organization
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output organization as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -2934,7 +3162,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -2955,8 +3185,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output activity as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of activity entries to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -2991,10 +3223,12 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--detach` | Check out PR in detached HEAD mode | `false` | local |
 | `--force` | Force checkout, bypassing safety checks for dirty tree and branch conflicts | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--recurse-submodules` | Update submodules after checkout | `false` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-b, --branch` | Local branch name (default: PR head branch name) | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -3032,7 +3266,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-i, --interval` | Polling interval when using --watch | `10s` | local |
 | `-w, --watch` | Watch checks until they reach a terminal state | `false` | local |
@@ -3060,7 +3296,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -3078,7 +3316,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -3096,7 +3336,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read body text from file | `` | local |
 | `-b, --body` | Comment body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -3116,7 +3358,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -3135,7 +3379,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-b, --body` | New comment body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -3154,7 +3400,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-b, --body` | Reply body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -3173,7 +3421,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -3191,8 +3441,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output commits as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of commits to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -3217,6 +3469,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | --- | --- | --- | --- |
 | `--assignee` | Assignee login (repeat for multiple users) | `[]` | local |
 | `--base` | Base branch (defaults to repository default) | `` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--draft` | Mark pull request as a draft | `false` | local |
 | `--head` | Head branch | `` | local |
 | `--label` | Label name (repeat for multiple labels) | `[]` | local |
@@ -3225,6 +3478,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--reviewer` | Approval reviewer login (repeat for multiple users) | `[]` | local |
 | `--tester` | Tester login (repeat for multiple users) | `[]` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read PR body from file (use - for stdin) | `` | local |
 | `-b, --body` | PR body | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -3255,7 +3509,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -3281,12 +3537,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--add-label` | Label name to add (repeat for multiple labels) | `[]` | local |
 | `--add-reviewer` | Approval reviewer login to add (repeat for multiple users) | `[]` | local |
 | `--add-tester` | Tester login to add (repeat for multiple users) | `[]` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--milestone` | Milestone number, exact title, or 'none' to clear | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--remove-assignee` | Assignee login to remove (repeat for multiple users) | `[]` | local |
 | `--remove-label` | Label name to remove (repeat for multiple labels) | `[]` | local |
 | `--remove-reviewer` | Approval reviewer login to remove (repeat for multiple users) | `[]` | local |
 | `--remove-tester` | Tester login to remove (repeat for multiple users) | `[]` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Read new PR body from file (use - for stdin) | `` | local |
 | `-b, --body` | New PR body | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -3316,8 +3574,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output files as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -3338,8 +3598,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output history as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of history entries to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -3365,7 +3627,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -3383,7 +3647,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-i, --issue` | Issue number to link (can be specified multiple times) | `[]` | local |
 
@@ -3404,10 +3670,12 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | --- | --- | --- | --- |
 | `--assignee` | Filter by assignee: @me for PRs assigned to you across all your repositories | `` | local |
 | `--author` | Filter by author: @me for PRs you created across all your repositories | `` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output pull requests as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--review-needed` | Filter by requested reviewer: @me for PRs that need your review across all your repositories | `` | local |
 | `--review-requested` | Filter by requested approver: @me for PRs that need your approval across all your repositories | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of PRs to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-s, --state` | Filter by state: open, closed, locked, merged, all | `open` | local |
@@ -3431,7 +3699,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
 | `--admin` | Use administrator privileges to merge a pull request that does not meet requirements | `false` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-b, --body` | Body text for the merge commit | `` | local |
 | `-d, --delete-branch` | Delete the source branch after merge | `false` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -3454,8 +3724,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output reactions as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of reactions to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -3481,7 +3753,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -3504,8 +3778,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
 | `--approve` | Approve the pull request | `false` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--force` | Force approval as a repository administrator | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -3530,7 +3806,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-i, --issue` | Issue number to unlink (can be specified multiple times) | `[]` | local |
 
@@ -3549,8 +3827,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output pull request as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-w, --web` | Open a pull request in the browser | `false` | local |
 
@@ -3572,7 +3852,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -3599,9 +3881,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--prerelease` | Mark release as a prerelease (release_status=pre) | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--target` | Target commitish (branch or SHA) | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Path to file containing release body | `` | local |
 | `-b, --body` | Release body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -3631,7 +3915,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -3664,9 +3950,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--overwrite` | Replace an existing local file at --output | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--timeout` | Maximum attachment transfer time (0 disables the limit) | `30m0s` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-o, --output` | Local file path to write the attachment to (required) | `` | local |
 
@@ -3692,9 +3980,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--latest` | Set release status to latest (release_status=latest) | `false` | local |
 | `--prerelease` | Set release status to prerelease (release_status=pre) | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --body-file` | Path to file containing new release body | `` | local |
 | `-b, --body` | New release body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -3723,8 +4013,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output releases as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of releases to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -3749,10 +4041,12 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--overwrite` | Delete an existing attachment with the same name before uploading | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--skip-existing` | Do nothing and report success if an attachment with the same name already exists | `false` | local |
 | `--timeout` | Maximum attachment transfer time (0 disables the limit) | `30m0s` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-n, --name` | Remote attachment name (defaults to the local file's base name) | `` | local |
 
@@ -3781,8 +4075,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output release details as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -3807,7 +4103,9 @@ For repository-scoped commands, OWNER/REPO may be omitted and inferred from the 
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -3828,7 +4126,9 @@ The repository argument can be:
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-b, --branch` | Clone specific branch | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -3872,7 +4172,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -3890,7 +4192,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-p, --permission` | Permission: pull, push, or admin | `push` | local |
 
@@ -3915,7 +4219,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-p, --permission` | Permission: pull, push, or admin | `` | local |
 | `-y, --yes` | Skip confirmation for permission reductions | `false` | local |
@@ -3941,8 +4247,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output collaborators as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of collaborators to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -3972,7 +4280,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -3997,8 +4307,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output collaborator as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -4022,7 +4334,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -4047,10 +4361,12 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--branch` | Branch to modify (required) | `` | local |
 | `--file` | Read raw file bytes from a path, or - for stdin | `` | local |
 | `--message` | Commit message (required) | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -4079,10 +4395,12 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--branch` | Branch to modify (required) | `` | local |
 | `--message` | Commit message (required) | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--sha` | Current file Blob SHA | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -4108,9 +4426,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output the complete API directory array as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--ref` | Branch, tag, or commit identifier | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -4141,11 +4461,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--branch` | Branch to modify (required) | `` | local |
 | `--file` | Read raw file bytes from a path, or - for stdin | `` | local |
 | `--message` | Commit message (required) | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--sha` | Current file Blob SHA | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -4170,9 +4492,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output the complete API file object as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--ref` | Branch, tag, or commit identifier | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -4203,9 +4527,11 @@ Pass --clone to clone the repository locally after creation.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--private` | Make the repository private | `false` | local |
 | `--public` | Make the repository public | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-c, --clone` | Clone the repository after creation | `false` | local |
 | `-d, --description` | Description of the repository | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -4243,7 +4569,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -4282,11 +4610,13 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--default-branch` | New default branch | `` | local |
 | `--name` | New repository name (does not change the repository path) | `` | local |
 | `--private` | Make the repository private | `false` | local |
 | `--public` | Make the repository public | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `--visibility` | New visibility: public or private | `` | local |
 | `-d, --description` | New repository description | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -4331,9 +4661,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--private` | Make the forked repository private | `false` | local |
 | `--public` | Make the forked repository public | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-c, --clone` | Clone the forked repository | `false` | local |
 | `-d, --description` | Description for the forked repository | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -4357,8 +4689,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output forks as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of forks to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -4385,7 +4719,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -4403,8 +4739,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output contributors as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of contributors to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -4423,8 +4761,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output download statistics as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -4442,8 +4782,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output events as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of events to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -4462,8 +4804,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output languages as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -4481,8 +4825,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output stargazers as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of stargazers to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -4501,8 +4847,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output watchers as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of watchers to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -4519,8 +4867,10 @@ List repositories for the authenticated user, a specified user, or an organizati
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output repositories as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of repositories to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -4548,7 +4898,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -4566,8 +4918,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output push remote mirrors as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of push remote mirrors to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -4594,8 +4948,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output repository remote mirror state as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -4621,7 +4977,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -4654,6 +5012,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--assignees` | Comma-separated approver usernames (empty clears) | `` | local |
 | `--assignees-number` | Minimum approver count (0 disables) | `0` | local |
 | `--auto-squash-merge` | Enable squash by default for new pull requests (pull-request section) | `false` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--can-force-merge` | Allow administrators to force merge (pull-request section) | `false` | local |
 | `--can-reopen` | Allow reopening closed pull requests (pull-request section) | `false` | local |
 | `--close-issue-when-mr-merged` | Select closing linked issues by default (pull-request section) | `false` | local |
@@ -4676,6 +5035,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--squash-merge-with-no-merge-commit` | Do not create a merge commit for squash merges (pull-request section) | `false` | local |
 | `--testers` | Comma-separated tester usernames (empty clears) | `` | local |
 | `--testers-number` | Minimum tester count (0 disables) | `0` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip update confirmation | `false` | local |
 
@@ -4704,9 +5064,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output policy settings as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--section` | Section: permission, code-review, or pull-request (default: all) | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -4735,7 +5097,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -4757,6 +5121,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--commit-message-regex` | Regular expression required for commit messages (empty disables it) | `` | local |
 | `--deny-force-push` | Deny force pushes, including from administrators | `false` | local |
 | `--json` | Output the updated fields as JSON | `false` | local |
@@ -4764,6 +5129,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--reject-not-signed-by-gpg` | Require commits to have verified GPG signatures | `false` | local |
 | `--skip-rule-for-owner` | Exempt repository administrators from applicable push rules | `false` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip update confirmation | `false` | local |
 
@@ -4790,8 +5156,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output push rules as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -4814,9 +5182,11 @@ List contents of a repository directory
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output directory entries as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--ref` | Branch, tag, or commit identifier | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -4832,9 +5202,11 @@ Read a file from a repository
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output file content as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--ref` | Branch, tag, or commit identifier | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -4860,7 +5232,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-b, --branch` | Branch to synchronize (defaults to the repository default branch) | `` | local |
 | `-f, --force` | Overwrite divergent commits after confirmation | `false` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -4908,9 +5282,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--password-stdin` | Read the organization-transfer password from standard input (requires --yes) | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--to` | Destination organization namespace (required) | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip the confirmation prompt | `false` | local |
 
@@ -4937,8 +5313,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output repository as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-w, --web` | Open a repository in the browser | `false` | local |
 
@@ -4962,7 +5340,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -4980,12 +5360,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--encryption` | Secret mode: password or signature | `` | local |
 | `--events` | Comma-separated events: push, tag-push, issues, note, merge-requests | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--secret-env` | Read the webhook secret from this environment variable | `` | local |
 | `--secret-file` | Read the webhook secret from a file | `` | local |
 | `--secret-stdin` | Read the webhook secret from standard input | `false` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `--url` | Webhook target HTTP(S) URL | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -5010,7 +5392,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -5035,12 +5419,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--encryption` | Secret mode: password or signature | `` | local |
 | `--events` | Replace events; use none to disable all events | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--secret-env` | Read the webhook secret from this environment variable | `` | local |
 | `--secret-file` | Read the webhook secret from a file | `` | local |
 | `--secret-stdin` | Read the webhook secret from standard input | `false` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `--url` | New webhook target HTTP(S) URL | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -5065,8 +5451,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output webhooks as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of webhooks to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -5091,7 +5479,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -5116,8 +5506,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output webhook as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -5142,7 +5534,9 @@ rerun, cancel, and deletion operations are not supported.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -5156,7 +5550,9 @@ Inspect and manage workflow artifacts
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -5175,7 +5571,9 @@ confirmation. Deletion cannot be undone. Use --yes to skip the prompt.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip deletion confirmation | `false` | local |
 
@@ -5202,8 +5600,10 @@ download a zip from a specific workflow run.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output artifact metadata as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -5229,12 +5629,14 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
 | `--actor` | Filter by triggering username | `` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--end-time` | Filter runs ending at or before this Unix timestamp in milliseconds | `0` | local |
 | `--event` | Filter by event: mr, push, manual | `` | local |
 | `--json` | Output workflow runs as JSON | `false` | local |
 | `--pr` | Filter by pull request number | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--start-time` | Filter runs starting at or after this Unix timestamp in milliseconds | `0` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `--workflow` | Filter by workflow ID | `` | local |
 | `--workflow-name` | Filter by workflow name | `` | local |
 | `-L, --limit` | Maximum number of runs to list | `30` | local |
@@ -5267,9 +5669,11 @@ atomically and refuses to replace an existing file unless --overwrite is set.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--output` | Write the complete log to a file instead of stdout | `` | local |
 | `--overwrite` | Replace an existing --output destination | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -5298,10 +5702,12 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | --- | --- | --- | --- |
 | `--artifact` | Download a specific artifact as a zip archive | `` | local |
 | `--artifact-file` | Artifact destination path (defaults to the artifact name) | `` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--log` | Write the selected job log text to stdout | `false` | local |
 | `--log-file` | Download the selected job log archive to a file | `` | local |
 | `--overwrite` | Replace an existing download destination | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-j, --job` | View a specific job | `` | local |
 
@@ -5332,7 +5738,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -5357,8 +5765,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output runners as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of runners to list (0 means all) | `0` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -5384,8 +5794,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output runners as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of runners to list (0 means all) | `0` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -5409,7 +5821,9 @@ List public commands or describe an exact command path without executing it. Pat
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -5436,7 +5850,9 @@ Search AtomGit repositories, issues, and users. Pull request search is not suppo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -5450,12 +5866,14 @@ search issues
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output results as JSON | `false` | local |
 | `--order` | Sort order: asc or desc | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--repo` | Filter by repository path | `` | local |
 | `--sort` | Sort by created_at or last_push_at | `` | local |
 | `--state` | Filter by state: open or closed | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of results | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -5472,6 +5890,7 @@ Aliases: `repos`
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--fork` | Include forked repositories | `false` | local |
 | `--json` | Output results as JSON | `false` | local |
 | `--language` | Filter by repository language | `` | local |
@@ -5479,6 +5898,7 @@ Aliases: `repos`
 | `--owner` | Filter by repository owner path | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--sort` | Sort by last_push_at, stars_count, or forks_count | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of results | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -5493,10 +5913,12 @@ search users
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output results as JSON | `false` | local |
 | `--order` | Sort order: asc or desc | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--sort` | Sort by joined_at | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of results | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -5513,7 +5935,9 @@ Manage SSH keys registered with your AtomGit account.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -5527,7 +5951,9 @@ Add an SSH key to your AtomGit account
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-t, --title` | Title for the new key | `` | local |
 
@@ -5547,7 +5973,9 @@ to confirm the deletion. Use --yes to skip the confirmation prompt.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -5569,8 +5997,10 @@ List SSH keys registered with your AtomGit account
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--limit` | Maximum number of SSH keys to list | `1000` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -5595,7 +6025,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -5613,8 +6045,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--ref` | Branch, tag, or commit SHA to create the tag from (required) | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-m, --message` | Tag message | `` | local |
 
@@ -5636,7 +6070,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation prompt | `false` | local |
 
@@ -5662,8 +6098,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output tags as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of tags to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -5692,7 +6130,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -5713,7 +6153,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip deletion confirmation | `false` | local |
 
@@ -5739,8 +6181,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output protected tag rules as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of protected tag rules to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -5772,8 +6216,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--create-access` | Create access: none, developer, or maintainer | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip confirmation when updating an existing rule | `false` | local |
 
@@ -5801,8 +6247,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output the protected tag rule as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -5816,7 +6264,9 @@ Update AtomGit CLI to the latest stable release
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-c, --check` | Check for an update without installing it | `false` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -5833,7 +6283,9 @@ View AtomGit user profiles, email addresses, starred and watched repositories, a
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -5854,6 +6306,7 @@ email addresses, or rename the account login.
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
 | `--avatar` | Avatar URL | `` | local |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--company` | Company name | `` | local |
 | `--description` | Profile description | `` | local |
 | `--email` | Public email address | `` | local |
@@ -5862,6 +6315,7 @@ email addresses, or rename the account login.
 | `--location` | Profile location | `` | local |
 | `--nickname` | Profile nickname | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `--website` | Website URL | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -5884,8 +6338,10 @@ List email addresses for the authenticated user
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output email addresses as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -5908,8 +6364,10 @@ List personal activity events for a user. Without an explicit username, the auth
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output events as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `--year` | Filter events to the specified year (0 disables the filter) | `0` | local |
 | `-L, --limit` | Maximum number of events to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -5936,9 +6394,11 @@ List user and group namespaces visible to the authenticated user. The default mo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output namespaces as JSON | `false` | local |
 | `--mode` | Namespace source: intrant, project, or all | `intrant` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of namespaces to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -5963,8 +6423,10 @@ List starred repositories for a user. Without a username, the authenticated-user
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output repositories as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of repositories to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -5987,8 +6449,10 @@ View the current user or a public user profile
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output the user profile as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-w, --web` | Open the user profile in the browser | `false` | local |
 
@@ -6014,8 +6478,10 @@ List watched repositories for a user. Without a username, the authenticated-user
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output repositories as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of repositories to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -6038,8 +6504,10 @@ Show version information
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output version information as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -6057,7 +6525,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -6084,8 +6554,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--json` | Output workflows as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -6111,7 +6583,9 @@ Aliases: `dispatch`
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-F, --field` | Add a string parameter in key=value format | `[]` | local |
 | `-f, --raw-field` | Add a string parameter in key=value format | `[]` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -6142,9 +6616,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Use an API server origin for this command only (for example, https://test.gitcode.net) | `` | inherited |
 | `--file` | Path to a local workflow YAML file | `` | local |
 | `--json` | Output the validation response as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example

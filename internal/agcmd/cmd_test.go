@@ -6,8 +6,16 @@ import (
 	"reflect"
 	"testing"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
+
+type commandConfigStub struct{}
+
+func (commandConfigStub) GetToken() (string, error) { return "stored-token", nil }
+func (commandConfigStub) GetUser() (string, error)  { return "alice", nil }
+func (commandConfigStub) GetHost() string           { return "atomgit.com" }
 
 func TestNewSignalContextUsesPlatformSignalsWithoutRealDelivery(t *testing.T) {
 	type signalContextTestKey struct{}
@@ -52,5 +60,18 @@ func TestIsExtensionCommand(t *testing.T) {
 	}
 	if isExtensionCommand(root, []string{"missing"}) {
 		t.Fatal("missing command was recognized as an extension")
+	}
+}
+
+func TestLoadCommandConfigAppliesTokenOverride(t *testing.T) {
+	factory := &cmdutil.Factory{TokenOverride: "command-token"}
+	if err := loadCommandConfig(nil, factory, func() (config.Config, error) {
+		return commandConfigStub{}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := factory.Config.GetToken()
+	if err != nil || got != "command-token" {
+		t.Fatalf("GetToken() = %q, %v", got, err)
 	}
 }

@@ -131,3 +131,19 @@ func TestAPICommandEndToEnd(t *testing.T) {
 		}
 	})
 }
+
+func TestAPICommandUsesConfiguredServerOrigin(t *testing.T) {
+	fixture := newAPITestFixture("secret", func(req *http.Request) (*http.Response, error) {
+		if got, want := req.URL.String(), "https://test.gitcode.net/api/v5/user"; got != want {
+			t.Fatalf("request URL = %q, want %q", got, want)
+		}
+		return apiTestResponse(req, http.StatusOK, `{}`), nil
+	})
+	fixture.factory.BaseURL = "https://test.gitcode.net"
+	cmd := NewCmdAPI(fixture.factory)
+	cmd.SetOut(fixture.stdout)
+	cmd.SetArgs([]string{"/user"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+}

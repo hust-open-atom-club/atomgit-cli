@@ -33,6 +33,14 @@
 
 常规命令加载凭据时，若令牌文件的 JSON 语法或字段类型错误，CLI 会提示检查文件格式；语法错误会包含字节位置。该诊断不展示原始 JSON 内容或解码器错误，修正文件后可重试命令。
 
+需要访问不同部署或以不同用户身份执行单次命令时，也可以临时指定访问令牌和服务根地址：
+
+```bash
+ag-cli repo list --token "$TOKEN" --base-url https://test.gitcode.net
+```
+
+`--token` 和 `--base-url` 只在当前命令进程的内存中生效，不会写入 `token.json`、`config.json` 或其他配置文件。`--base-url` 只接受不含路径的 HTTP(S) 服务根地址；普通命令自动使用 `/api/v5`，Actions 命令自动使用 `/api/v8`。不同进程可以使用不同参数。由于命令行参数可能被 shell 历史或系统进程列表记录，不需要临时覆盖时仍建议使用凭据文件。
+
 令牌文件的默认路径因操作系统而异：
 
 - Linux：`/home/<用户名>/.config/ag-cli/token.json`

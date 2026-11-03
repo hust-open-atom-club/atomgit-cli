@@ -280,6 +280,64 @@ func TestNewCmdRootVersionHelp(t *testing.T) {
 	if !strings.Contains(out.String(), "--raw-output") {
 		t.Errorf("help output does not mention --raw-output: %s", out.String())
 	}
+	for _, flag := range []string{"--token", "--base-url"} {
+		if !strings.Contains(out.String(), flag) {
+			t.Errorf("help output does not mention %s: %s", flag, out.String())
+		}
+	}
+}
+
+func TestRepoListAcceptsTransientTokenAndBaseURL(t *testing.T) {
+	const (
+		commandToken = "command-token"
+		baseURL      = "https://test.gitcode.net"
+	)
+	var requestCount int
+	factory := &cmdutil.Factory{
+		Config: rootTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				requestCount++
+				if got, want := req.URL.String(), baseURL+"/api/v5/user/repos?page=1&per_page=100"; got != want {
+					t.Errorf("request URL = %q, want %q", got, want)
+				}
+				if got, want := req.Header.Get("Authorization"), "Bearer "+commandToken; got != want {
+					t.Errorf("Authorization = %q, want %q", got, want)
+				}
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Status:     "200 OK",
+					Header:     make(http.Header),
+					Body:       io.NopCloser(strings.NewReader("[]")),
+					Request:    req,
+				}, nil
+			})}, nil
+		},
+	}
+
+	cmd, err := newCmdRootWithWriters(factory, io.Discard, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetArgs([]string{"repo", "list", "--token", commandToken, "--base-url", baseURL})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if requestCount != 1 {
+		t.Fatalf("request count = %d, want 1", requestCount)
+	}
+}
+
+func TestRootRejectsVersionedBaseURL(t *testing.T) {
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{Config: rootTestConfig{}}, io.Discard, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetArgs([]string{"repo", "list", "--base-url", "https://test.gitcode.net/api/v5"})
+	err = cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "path") {
+		t.Fatalf("Execute() error = %v, want base URL path error", err)
+	}
 }
 
 func TestRootSanitizesPipedOutputByDefault(t *testing.T) {

@@ -97,6 +97,7 @@ func loadCommandConfig(selected *cobra.Command, factory *cmdutil.Factory, load f
 		return err
 	}
 	factory.Config = cfg
+	factory.ApplyTokenOverride()
 	return nil
 }
 
