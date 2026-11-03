@@ -22,8 +22,8 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 
 The parent comment is confirmed to belong to the discussion before the reply
 is posted. Replying to a reply is rejected.`,
-		Example: `  ag discussion comment reply owner/repo 1 abc123 --body "Agreed"
-  ag discussion comment reply 1 abc123 --body-file reply.md`,
+		Example: `  ag-cli discussion comment reply owner/repo 1 abc123 --body "Agreed"
+  ag-cli discussion comment reply 1 abc123 --body-file reply.md`,
 		Args: cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 2)

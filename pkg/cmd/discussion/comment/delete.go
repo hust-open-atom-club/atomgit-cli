@@ -20,8 +20,8 @@ func newCmdDelete(f *cmdutil.Factory) *cobra.Command {
 The comment is confirmed to belong to the given discussion before deletion.
 Asks for confirmation unless --yes is supplied. Cancelling does not send the
 delete request.`,
-		Example: `  ag discussion comment delete owner/repo 1 abc123
-  ag discussion comment delete owner/repo 1 abc123 --yes`,
+		Example: `  ag-cli discussion comment delete owner/repo 1 abc123
+  ag-cli discussion comment delete owner/repo 1 abc123 --yes`,
 		Args: cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 2)

@@ -1163,9 +1163,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag discussion comment create owner/repo 1 --body "Looks good"
-ag discussion comment create owner/repo 1 --body-file comment.md
-ag discussion comment create 1 --body-file -
+ag-cli discussion comment create owner/repo 1 --body "Looks good"
+ag-cli discussion comment create owner/repo 1 --body-file comment.md
+ag-cli discussion comment create 1 --body-file -
 ```
 
 
@@ -1194,8 +1194,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag discussion comment delete owner/repo 1 abc123
-ag discussion comment delete owner/repo 1 abc123 --yes
+ag-cli discussion comment delete owner/repo 1 abc123
+ag-cli discussion comment delete owner/repo 1 abc123 --yes
 ```
 
 
@@ -1224,8 +1224,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag discussion comment edit owner/repo 1 abc123 --body "Updated"
-ag discussion comment edit 1 reply.id --body-file note.md
+ag-cli discussion comment edit owner/repo 1 abc123 --body "Updated"
+ag-cli discussion comment edit 1 reply.id --body-file note.md
 ```
 
 
@@ -1254,8 +1254,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag discussion comment reply owner/repo 1 abc123 --body "Agreed"
-ag discussion comment reply 1 abc123 --body-file reply.md
+ag-cli discussion comment reply owner/repo 1 abc123 --body "Agreed"
+ag-cli discussion comment reply 1 abc123 --body-file reply.md
 ```
 
 
