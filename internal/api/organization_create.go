@@ -44,7 +44,10 @@ func CreateOrganization(client *Client, request OrganizationCreateRequest) (Crea
 	if err := client.doJSONRequestContext(client.requestContext(), &httpClient, http.MethodPost,
 		"/orgs", bytes.NewReader(body), "application/json", "application/json", policy, &result); err != nil {
 		var httpErr *HTTPError
-		if !errors.As(err, &httpErr) && !errors.Is(err, ErrRequestPreparation) {
+		isHTTPError := errors.As(err, &httpErr)
+		// A server or gateway can fail after the organization was committed.
+		uncertainHTTPError := isHTTPError && httpErr.StatusCode >= 500 && httpErr.StatusCode < 600
+		if !errors.Is(err, ErrRequestPreparation) && (!isHTTPError || uncertainHTTPError) {
 			return CreatedOrganization{}, fmt.Errorf("create organization: %w; creation may have succeeded, check AtomGit before retrying", err)
 		}
 		return CreatedOrganization{}, fmt.Errorf("create organization: %w", err)

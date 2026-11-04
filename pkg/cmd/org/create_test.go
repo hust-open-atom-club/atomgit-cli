@@ -83,7 +83,10 @@ func TestOrgCreateValidationBeforeAuthentication(t *testing.T) {
 	} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			calls := 0
-			cmd := newCmdOrgCreate(orgFactory(orgTestConfig{tokenCalls: &calls}, nil))
+			cmd := newCmdOrgCreate(orgFactory(orgTestConfig{tokenCalls: &calls}, func(*http.Request) (*http.Response, error) {
+				t.Fatal("sent a request with invalid arguments")
+				return nil, nil
+			}))
 			cmd.SilenceErrors, cmd.SilenceUsage = true, true
 			cmd.SetArgs(args)
 			if err := cmd.Execute(); err == nil {
@@ -98,7 +101,10 @@ func TestOrgCreateValidationBeforeAuthentication(t *testing.T) {
 
 func TestOrgCreateAuthenticationAndCompletion(t *testing.T) {
 	calls := 0
-	cmd := newCmdOrgCreate(orgFactory(orgTestConfig{tokenErr: config.ErrNotAuthenticated, tokenCalls: &calls}, nil))
+	cmd := newCmdOrgCreate(orgFactory(orgTestConfig{tokenErr: config.ErrNotAuthenticated, tokenCalls: &calls}, func(*http.Request) (*http.Response, error) {
+		t.Fatal("sent a request during completion or without authentication")
+		return nil, nil
+	}))
 	complete, ok := cmd.GetFlagCompletionFunc("visibility")
 	if !ok {
 		t.Fatal("visibility completion missing")

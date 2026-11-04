@@ -17,8 +17,13 @@ func TestCreateOrganizationDoesNotReplay(t *testing.T) {
 		err    error
 	}{
 		{"transport", 0, transportErr},
+		{"unauthorized", 401, nil},
+		{"forbidden", 403, nil},
+		{"conflict", 409, nil},
 		{"rate limit", 429, nil},
-		{"server error", 503, nil},
+		{"server error", 500, nil},
+		{"bad gateway", 502, nil},
+		{"service unavailable", 503, nil},
 		{"moved", 301, nil},
 		{"found", 302, nil},
 		{"see other", 303, nil},
@@ -53,8 +58,12 @@ func TestCreateOrganizationDoesNotReplay(t *testing.T) {
 			if tt.err != nil && !errors.Is(err, tt.err) {
 				t.Fatalf("lost transport error: %v", err)
 			}
-			if tt.err != nil && !strings.Contains(err.Error(), "creation may have succeeded") {
-				t.Fatalf("missing uncertain write guidance: %v", err)
+			if tt.err == nil && !IsHTTPStatus(err, tt.status) {
+				t.Fatalf("lost HTTP status: %v", err)
+			}
+			wantUncertain := tt.err != nil || tt.status >= 500
+			if got := strings.Contains(err.Error(), "creation may have succeeded, check AtomGit before retrying"); got != wantUncertain {
+				t.Fatalf("uncertain guidance = %v, want %v: %v", got, wantUncertain, err)
 			}
 			// The caller's redirect policy must remain intact.
 			if err := httpClient.CheckRedirect(nil, nil); err != nil || redirects != 1 {
