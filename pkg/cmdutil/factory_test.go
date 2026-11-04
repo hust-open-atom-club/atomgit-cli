@@ -42,6 +42,29 @@ func TestFactoryStoresDependencies(t *testing.T) {
 	}
 }
 
+func TestFactoryTokenForCommand(t *testing.T) {
+	tests := []struct {
+		name     string
+		factory  *Factory
+		fallback string
+		want     string
+		override bool
+	}{
+		{name: "nil factory", fallback: "stored-token", want: "stored-token"},
+		{name: "no override", factory: &Factory{}, fallback: "stored-token", want: "stored-token"},
+		{name: "blank override", factory: &Factory{TokenOverride: "  "}, fallback: "stored-token", want: "stored-token"},
+		{name: "command override", factory: &Factory{TokenOverride: "command-token"}, fallback: "stored-token", want: "command-token", override: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, overridden := tt.factory.TokenForCommand(tt.fallback)
+			if got != tt.want || overridden != tt.override {
+				t.Fatalf("TokenForCommand() = %q, %t; want %q, %t", got, overridden, tt.want, tt.override)
+			}
+		})
+	}
+}
+
 func TestNormalizeBaseURL(t *testing.T) {
 	tests := []struct {
 		value string

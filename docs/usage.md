@@ -316,6 +316,8 @@ ag-cli repo delete --yes
 ag-cli repo delete owner/repo --yes
 ```
 
+使用自定义 `--base-url` 创建仓库时，CLI 只采用创建接口返回且通过校验的仓库 URL。若响应未提供可用 URL，仓库仍会创建成功，但 CLI 不会回退到默认公网地址；同时指定 `--clone` 时会明确报告已跳过克隆。由于 API、Web 和 Git 可能使用不同域名，CLI 不会自动把自定义部署的 API token 转发给响应中的 Git 主机，Git 会使用其常规凭据流程。
+
 `--token` 和 `--base-url` 是全局参数，只在当前命令进程中生效，不会写入凭据文件或其他配置。`--base-url` 默认为 `https://api.atomgit.com`，不传该参数时使用同一地址；远程服务必须使用不含路径的 HTTPS 根地址，只有回环地址允许使用 HTTP。API v5 和 Actions v8 命令会分别自动添加 `/api/v5` 和 `/api/v8`。需要当前用户名的命令会通过临时 token 查询所选服务，不会继续使用本地持久化账户的用户名。命令行中的 token 可能出现在 shell 历史或系统进程列表中；无需临时覆盖时，建议继续使用 `ag-cli auth login` 保存的凭据。
 
 `ag-cli repo edit` 仅发送命令行中明确指定的字段，支持 `--name`、`--description`、`--default-branch` 和 `--visibility public|private`。`--public`、`--private` 是可见性的便利选项；它们与 `--visibility` 三者互斥。名称或可见性修改需要交互确认，可使用 `--yes` 跳过确认。成功后命令会显示更新后的仓库名称和浏览器 URL。

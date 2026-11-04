@@ -63,8 +63,7 @@ func createdRepositoryURL(host, owner, repo string) string {
 	return cmdutil.ResolveWebURL("", host, owner, repo)
 }
 
-func createdRepositoryURLFromResponse(result api.Repository, host, owner, repo string) string {
-	fallback := createdRepositoryURL(host, owner, repo)
+func createdRepositoryURLFromResponse(result api.Repository, owner, repo string) (string, bool) {
 	for _, candidate := range []string{result.HTMLURL, result.AlternateHTMLURL} {
 		candidate = strings.TrimSuffix(strings.TrimSpace(candidate), "/")
 		parsed, err := url.Parse(candidate)
@@ -78,9 +77,27 @@ func createdRepositoryURLFromResponse(result api.Repository, host, owner, repo s
 		if parsed.Path != "/"+owner+"/"+repo {
 			continue
 		}
-		return candidate
+		return candidate, true
 	}
-	return fallback
+	return "", false
+}
+
+func canUseDefaultRepositoryURLFallback(f *cmdutil.Factory) bool {
+	if f == nil || strings.TrimSpace(f.BaseURL) == "" {
+		return true
+	}
+	origin, err := cmdutil.NormalizeBaseURL(f.BaseURL)
+	return err == nil && strings.EqualFold(origin, api.BaseURL)
+}
+
+func createdRepositoryCloneCredentials(f *cmdutil.Factory, cloneURL string) *cloneCredentials {
+	// A custom API origin does not establish which Web or Git hosts belong to
+	// that deployment. Let Git handle authentication rather than forwarding an
+	// API token to a host inferred only from the create response.
+	if !canUseDefaultRepositoryURLFallback(f) {
+		return nil
+	}
+	return resolveCloneAuth(f.Config, cloneURL)
 }
 
 func runCreate(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory, opts *CreateOptions) error {
@@ -150,15 +167,26 @@ func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory,
 		return fmt.Errorf("failed to create repository: %w", err)
 	}
 
-	repoURL := createdRepositoryURLFromResponse(result, f.Config.GetHost(), owner, repoName)
+	repoURL, responseURL := createdRepositoryURLFromResponse(result, owner, repoName)
+	if !responseURL && canUseDefaultRepositoryURLFallback(f) {
+		repoURL = createdRepositoryURL(f.Config.GetHost(), owner, repoName)
+	}
 	fmt.Fprintf(out, "✓ Created repository %s/%s\n", owner, repoName)
+	if repoURL == "" {
+		const unavailable = "the selected API service did not return a usable repository URL"
+		if opts.Clone {
+			return fmt.Errorf("repository was created, but clone was skipped: %s", unavailable)
+		}
+		fmt.Fprintf(errOut, "warning: %s\n", unavailable)
+		return nil
+	}
 	fmt.Fprintf(out, "  URL: %s\n", repoURL)
 
 	// Clone if requested
 	if opts.Clone {
 		cloneURL := strings.TrimSuffix(repoURL, ".git") + ".git"
 		cloneOpts := &CloneOptions{Directory: repoName}
-		if err := clone(in, out, errOut, cloneURL, cloneOpts, resolveCloneAuth(f.Config, cloneURL)); err != nil {
+		if err := clone(in, out, errOut, cloneURL, cloneOpts, createdRepositoryCloneCredentials(f, cloneURL)); err != nil {
 			return fmt.Errorf("failed to clone newly created repository: %w", err)
 		}
 	}

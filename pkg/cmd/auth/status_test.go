@@ -119,6 +119,53 @@ func TestStatusLocalAndReadOnly(t *testing.T) {
 	}
 }
 
+func TestStatusVerificationUsesCommandTokenAtSelectedOrigin(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		credentials string
+		localStatus string
+	}{
+		{name: "stored credentials", credentials: `{"access_token":"stored-token","user":"alice"}`, localStatus: "configured"},
+		{name: "missing credentials", localStatus: "missing"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			statusCredentials(t, tc.credentials)
+			calls := 0
+			f := &cmdutil.Factory{
+				BaseURL:       "https://api.gitcode.com",
+				TokenOverride: "command-token",
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: authRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						calls++
+						if got, want := req.URL.String(), "https://api.gitcode.com/api/v5/user"; got != want {
+							t.Fatalf("request URL = %q, want %q", got, want)
+						}
+						if got, want := req.Header.Get("Authorization"), "Bearer command-token"; got != want {
+							t.Fatalf("Authorization = %q, want %q", got, want)
+						}
+						return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"login":"bob"}`)), Request: req}, nil
+					})}, nil
+				},
+			}
+
+			out, stderr, err := executeStatus(context.Background(), f, "--verify", "--json")
+			if err != nil || stderr != "" || calls != 1 {
+				t.Fatalf("out=%s stderr=%s calls=%d err=%v", out, stderr, calls, err)
+			}
+			var r authStatusReport
+			if err := json.Unmarshal([]byte(out), &r); err != nil {
+				t.Fatal(err)
+			}
+			if !r.OK || r.LocalStatus != tc.localStatus || r.Verification.Status != "verified" || r.Verification.Account == nil || *r.Verification.Account != "bob" {
+				t.Fatalf("report = %+v", r)
+			}
+			if strings.Contains(out, "stored-token") || strings.Contains(out, "command-token") {
+				t.Fatalf("credential leaked: %s", out)
+			}
+		})
+	}
+}
+
 func TestStatusOnlineResults(t *testing.T) {
 	for _, tc := range []struct {
 		name         string

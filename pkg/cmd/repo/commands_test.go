@@ -611,6 +611,81 @@ func TestRunCreateClonesPublicAndPrivateRepositories(t *testing.T) {
 	}
 }
 
+func TestRunCreateCustomOriginDoesNotFallBackToPublicRepositoryURL(t *testing.T) {
+	responses := []struct {
+		name string
+		body string
+	}{
+		{name: "missing URL", body: `{}`},
+		{name: "invalid URL", body: `{"web_url":"https://atomgit.com//demo"}`},
+	}
+	for _, response := range responses {
+		for _, cloneRequested := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/clone=%t", response.name, cloneRequested), func(t *testing.T) {
+				transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+					if got, want := req.URL.String(), "https://api.gitcode.com/api/v5/user/repos"; got != want {
+						t.Fatalf("request URL = %q, want %q", got, want)
+					}
+					return forkResponse(http.StatusCreated, response.body), nil
+				})
+				factory := repoFactory(repoCommandConfig{token: "deployment-token", user: "alice"}, transport)
+				factory.BaseURL = "https://api.gitcode.com"
+				cloneCalls := 0
+				clone := func(io.Reader, io.Writer, io.Writer, string, *CloneOptions, *cloneCredentials) error {
+					cloneCalls++
+					return nil
+				}
+				var out, errOut bytes.Buffer
+				err := runCreateWithClone(strings.NewReader(""), &out, &errOut, factory, &CreateOptions{Name: "demo", Clone: cloneRequested}, clone)
+
+				if cloneCalls != 0 {
+					t.Fatalf("clone calls = %d, want 0", cloneCalls)
+				}
+				combined := out.String() + errOut.String()
+				if strings.Contains(combined, "atomgit.com") || strings.Contains(combined, "deployment-token") {
+					t.Fatalf("custom deployment fell back to public credentials or URL: %q", combined)
+				}
+				if !strings.Contains(out.String(), "Created repository alice/demo") {
+					t.Fatalf("output = %q, want successful creation", out.String())
+				}
+				if cloneRequested {
+					if err == nil || !strings.Contains(err.Error(), "repository was created, but clone was skipped") {
+						t.Fatalf("error = %v, want partial-success clone error", err)
+					}
+				} else if err != nil || !strings.Contains(errOut.String(), "did not return a usable repository URL") {
+					t.Fatalf("error = %v stderr = %q", err, errOut.String())
+				}
+			})
+		}
+	}
+}
+
+func TestRunCreateCustomOriginDoesNotForwardTokenToResponseHost(t *testing.T) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		return forkResponse(http.StatusCreated, `{"web_url":"https://atomgit.com/alice/demo"}`), nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "deployment-token", user: "alice"}, transport)
+	factory.BaseURL = "https://api.gitcode.com"
+	cloneCalls := 0
+	clone := func(_ io.Reader, _, _ io.Writer, cloneURL string, _ *CloneOptions, creds *cloneCredentials) error {
+		cloneCalls++
+		if cloneURL != "https://atomgit.com/alice/demo.git" {
+			t.Fatalf("clone URL = %q", cloneURL)
+		}
+		if creds != nil {
+			t.Fatalf("custom deployment token was prepared for response host: %#v", creds)
+		}
+		return nil
+	}
+
+	if err := runCreateWithClone(strings.NewReader(""), io.Discard, io.Discard, factory, &CreateOptions{Name: "demo", Clone: true}, clone); err != nil {
+		t.Fatal(err)
+	}
+	if cloneCalls != 1 {
+		t.Fatalf("clone calls = %d, want 1", cloneCalls)
+	}
+}
+
 func TestRunCreateReportsCloneFailure(t *testing.T) {
 	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusCreated, `{}`), nil

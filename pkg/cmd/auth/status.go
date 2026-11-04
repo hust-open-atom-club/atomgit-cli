@@ -74,30 +74,37 @@ func inspectAuthStatus(ctx context.Context, f *cmdutil.Factory, verify bool) aut
 	if verify {
 		r.Verification.Status = "skipped"
 	}
-	cred, _, err := config.InspectCredentials()
-	if errors.Is(err, config.ErrTokenNotFound) {
+	cred, _, inspectErr := config.InspectCredentials()
+	storedToken := ""
+	localValid := false
+	switch {
+	case errors.Is(inspectErr, config.ErrTokenNotFound):
 		present := false
 		r.CredentialsPresent = &present
 		r.LocalStatus = "missing"
 		r.Message = "No local credentials; run ag-cli auth login."
-		return r
-	}
-	if err != nil || cred == nil || strings.TrimSpace(cred.AccessToken) == "" || strings.TrimSpace(cred.User) == "" {
+	case inspectErr != nil || cred == nil || strings.TrimSpace(cred.AccessToken) == "" || strings.TrimSpace(cred.User) == "":
 		r.Message = "Local credentials are incomplete, invalid or unreadable; check the active account configuration."
+	default:
+		localValid = true
+		storedToken = cred.AccessToken
+		present := true
+		r.CredentialsPresent = &present
+		r.LocalAccount = safeStatusAccount(cred.User, cred)
+		r.LocalStatus, r.OK = "configured", true
+		r.Message = "Local credentials are configured; online validity has not been verified."
+	}
+	if !verify {
 		return r
 	}
-	present := true
-	r.CredentialsPresent = &present
-	r.LocalAccount = safeStatusAccount(cred.User, cred)
-	r.LocalStatus, r.OK = "configured", true
-	r.Message = "Local credentials are configured; online validity has not been verified."
-	if !verify {
+	probeToken, overridden := f.TokenForCommand(storedToken)
+	if strings.TrimSpace(probeToken) == "" {
 		return r
 	}
 	r.OK = false
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	client, err := f.NewAPIClient(cred.AccessToken)
+	client, err := f.NewAPIClient(probeToken)
 	if err != nil {
 		r.Verification.Status = "client_error"
 		r.Message = "Unable to initialize the HTTP client."
@@ -118,21 +125,29 @@ func inspectAuthStatus(ctx context.Context, f *cmdutil.Factory, verify bool) aut
 	}
 	status := 200
 	r.Verification.HTTPStatus = &status
-	r.Verification.Account = safeStatusAccount(login, cred)
-	if !strings.EqualFold(cred.User, login) {
+	r.Verification.Account = safeStatusAccount(login, cred, probeToken)
+	if !overridden && localValid && !strings.EqualFold(cred.User, login) {
 		r.Verification.Status = "identity_mismatch"
 		r.Message = "The server identity differs from the local account; credentials were not changed."
 		return r
 	}
 	r.Verification.Status, r.OK = "verified", true
-	r.Message = "Identity verified with the AtomGit user API."
+	if overridden {
+		r.Message = "Command-line token identity verified with the AtomGit user API; local credentials were not used for the online request."
+	} else {
+		r.Message = "Identity verified with the AtomGit user API."
+	}
 	return r
 }
 
 // Account fields are untrusted metadata too. Never echo known credentials even
 // if a malformed file or API response places them in an account name.
-func safeStatusAccount(account string, cred *config.StoredCredentials) *string {
-	for _, secret := range []string{cred.AccessToken, cred.RefreshToken} {
+func safeStatusAccount(account string, cred *config.StoredCredentials, additionalSecrets ...string) *string {
+	secrets := append([]string(nil), additionalSecrets...)
+	if cred != nil {
+		secrets = append(secrets, cred.AccessToken, cred.RefreshToken)
+	}
+	for _, secret := range secrets {
 		if secret != "" && strings.Contains(account, secret) {
 			redacted := "[redacted]"
 			return &redacted

@@ -42,6 +42,17 @@ func (f *Factory) ApplyTokenOverride() {
 	f.Config = config.WithTokenOverride(f.Config, &f.TokenOverride, f.resolveTokenUser)
 }
 
+// TokenForCommand returns an explicitly supplied command-line token when one
+// is available, otherwise it returns fallback. The boolean reports whether the
+// command-line token was selected, allowing diagnostic commands to keep local
+// credential inspection separate from credentials used for online probes.
+func (f *Factory) TokenForCommand(fallback string) (string, bool) {
+	if f != nil && strings.TrimSpace(f.TokenOverride) != "" {
+		return f.TokenOverride, true
+	}
+	return fallback, false
+}
+
 func (f *Factory) resolveTokenUser(token string) (string, error) {
 	client, err := f.NewAPIClient(token)
 	if err != nil {

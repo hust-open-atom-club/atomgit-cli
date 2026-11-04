@@ -185,6 +185,44 @@ func TestLiveReadOnlyAndRedaction(t *testing.T) {
 	}
 }
 
+func TestLiveUsesCommandTokenAtSelectedOrigin(t *testing.T) {
+	credentials(t, validCredentials)
+	requests := 0
+	f := &cmdutil.Factory{
+		BaseURL:       "https://api.gitcode.com",
+		TokenOverride: "command-token",
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: transport(func(req *http.Request) (*http.Response, error) {
+				requests++
+				if req.URL.Scheme != "https" || req.URL.Host != "api.gitcode.com" {
+					t.Fatalf("request URL = %q, want selected origin", req.URL.String())
+				}
+				if got, want := req.Header.Get("Authorization"), "Bearer command-token"; got != want {
+					t.Fatalf("Authorization = %q, want %q", got, want)
+				}
+				body := `{"login":"bob"}`
+				switch {
+				case strings.HasSuffix(req.URL.Path, "/actions/workflows"):
+					body = `{"total_count":0,"workflows":[]}`
+				case strings.HasSuffix(req.URL.Path, "/discuss"):
+					body = `[]`
+				case strings.HasSuffix(req.URL.Path, "/repos/team/demo"):
+					body = `{"full_name":"team/demo"}`
+				}
+				return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: req}, nil
+			})}, nil
+		},
+	}
+
+	r, out, err := execute(t, f, "team/demo", "--live")
+	if err != nil || !r.OK || requests < 4 {
+		t.Fatalf("requests=%d err=%v report=%s", requests, err, out)
+	}
+	if strings.Contains(out, "very-secret-token") || strings.Contains(out, "command-token") {
+		t.Fatalf("credential leaked: %s", out)
+	}
+}
+
 func TestRepositoryCanonicalPath(t *testing.T) {
 	for _, inferred := range []bool{false, true} {
 		for _, tc := range []struct {
