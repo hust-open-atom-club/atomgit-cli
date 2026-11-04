@@ -125,9 +125,6 @@ func NewClient(token string) *Client {
 }
 
 func NewClientWithHTTPClient(token string, httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = defaultHTTPClient()
-	}
 	return NewClientWithBaseURL(token, baseapi.BaseURL+APIVersion, httpClient)
 }
 

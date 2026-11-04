@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"slices"
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -105,9 +106,32 @@ func createdRepositoryURLHostAllowed(f *cmdutil.Factory, repositoryURL *url.URL)
 		return true
 	}
 	if !isPublicAPIHost(selectedURL) || repositoryURL.Port() != "" {
-		return false
+		return repositoryURL.Scheme == "https" && repositoryURL.Port() == selectedURL.Port() && relatedDeploymentHost(selectedURL.Hostname(), repositoryURL.Hostname())
 	}
 	return repositoryURL.Scheme == "https" && cmdutil.IsAtomGitHost(repositoryURL.Hostname())
+}
+
+func relatedDeploymentHost(apiHost, repositoryHost string) bool {
+	apiHost = strings.ToLower(strings.TrimSuffix(apiHost, "."))
+	repositoryHost = strings.ToLower(strings.TrimSuffix(repositoryHost, "."))
+	if apiHost == "" || repositoryHost == "" {
+		return false
+	}
+	candidates := []string{apiHost}
+	if after, ok := strings.CutPrefix(apiHost, "api."); ok {
+		candidates = append(candidates, after)
+	}
+	labels := strings.Split(apiHost, ".")
+	if len(labels) > 1 {
+		first := labels[0]
+		for _, webFirst := range []string{strings.TrimSuffix(first, "-api"), strings.TrimPrefix(first, "api-")} {
+			if webFirst != "" && webFirst != first {
+				candidate := append([]string{webFirst}, labels[1:]...)
+				candidates = append(candidates, strings.Join(candidate, "."))
+			}
+		}
+	}
+	return slices.Contains(candidates, repositoryHost)
 }
 
 func isPublicAPIHost(selectedURL *url.URL) bool {
@@ -127,7 +151,8 @@ func canUseDefaultRepositoryURLFallback(f *cmdutil.Factory) bool {
 		return true
 	}
 	origin, err := cmdutil.NormalizeBaseURL(f.BaseURL)
-	return err == nil && strings.EqualFold(origin, api.BaseURL)
+	defaultOrigin, defaultErr := cmdutil.NormalizeBaseURL(api.BaseURL)
+	return err == nil && defaultErr == nil && strings.EqualFold(origin, defaultOrigin)
 }
 
 func createdRepositoryCloneCredentials(f *cmdutil.Factory, cloneURL string) *cloneCredentials {
@@ -139,9 +164,8 @@ func createdRepositoryCloneCredentials(f *cmdutil.Factory, cloneURL string) *clo
 	}
 
 	// A custom API origin does not establish trust in an unrelated Web or Git
-	// host. Forward the command credential only when the API response points to
-	// the exact HTTPS host that already received it; otherwise Git may use its
-	// own configured credential helpers without exposing the API token.
+	// host. Forward the command credential only to the same HTTPS host or a host
+	// related by one of the conservative API/Web naming rules above.
 	origin, err := cmdutil.NormalizeBaseURL(f.BaseURL)
 	if err != nil {
 		return nil
@@ -151,7 +175,10 @@ func createdRepositoryCloneCredentials(f *cmdutil.Factory, cloneURL string) *clo
 		return nil
 	}
 	cloneTarget, err := url.Parse(cloneURL)
-	if err != nil || cloneTarget.Scheme != "https" || cloneTarget.User != nil || !strings.EqualFold(cloneTarget.Host, apiURL.Host) {
+	if err != nil || cloneTarget.Scheme != "https" || cloneTarget.User != nil {
+		return nil
+	}
+	if !strings.EqualFold(cloneTarget.Host, apiURL.Host) && (cloneTarget.Port() != apiURL.Port() || !relatedDeploymentHost(apiURL.Hostname(), cloneTarget.Hostname())) {
 		return nil
 	}
 	token, err := f.Config.GetToken()

@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func isolateConfig(t *testing.T) string {
@@ -505,5 +506,37 @@ func TestWithTokenOverrideNormalizesWhitespaceAndRetriesResolution(t *testing.T)
 	}
 	if got, err := cfg.GetUser(); got != "" || !errors.Is(err, ErrNotAuthenticated) {
 		t.Fatalf("GetUser() with blank override = %q, %v; want not authenticated", got, err)
+	}
+}
+
+func TestWithTokenOverrideDoesNotHoldLockDuringResolution(t *testing.T) {
+	base := &config{host: defaultHost, token: "stored-token", user: "alice"}
+	override := "command-token"
+	var cfg Config
+	var resolver func(string) (string, error)
+	resolver = func(string) (string, error) {
+		// Re-applying the same override takes the cache mutex. This would
+		// deadlock if GetUser kept that mutex locked while invoking resolver.
+		cfg = WithTokenOverride(cfg, &override, resolver)
+		return "bob", nil
+	}
+	cfg = WithTokenOverride(base, &override, resolver)
+
+	type result struct {
+		user string
+		err  error
+	}
+	done := make(chan result, 1)
+	go func() {
+		user, err := cfg.GetUser()
+		done <- result{user: user, err: err}
+	}()
+	select {
+	case got := <-done:
+		if got.err != nil || got.user != "bob" {
+			t.Fatalf("GetUser() = %q, %v", got.user, got.err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("GetUser deadlocked while resolving the command-token user")
 	}
 }

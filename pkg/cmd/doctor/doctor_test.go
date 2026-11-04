@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -188,12 +189,14 @@ func TestLiveReadOnlyAndRedaction(t *testing.T) {
 func TestLiveUsesCommandTokenAtSelectedOrigin(t *testing.T) {
 	credentials(t, validCredentials)
 	requests := 0
+	var paths []string
 	f := &cmdutil.Factory{
 		BaseURL:       "https://api.gitcode.com",
 		TokenOverride: "command-token",
 		HttpClient: func() (*http.Client, error) {
 			return &http.Client{Transport: transport(func(req *http.Request) (*http.Response, error) {
 				requests++
+				paths = append(paths, req.URL.Path)
 				if req.URL.Scheme != "https" || req.URL.Host != "api.gitcode.com" {
 					t.Fatalf("request URL = %q, want selected origin", req.URL.String())
 				}
@@ -221,6 +224,12 @@ func TestLiveUsesCommandTokenAtSelectedOrigin(t *testing.T) {
 	if strings.Contains(out, "very-secret-token") || strings.Contains(out, "command-token") {
 		t.Fatalf("credential leaked: %s", out)
 	}
+	for _, wantPrefix := range []string{"/api/v5/user", "/api/v5/repos/team/demo", "/api/v8/repos/team/demo/actions/workflows", "/api/v5/repos/team/demo/discuss"} {
+		found := slices.Contains(paths, wantPrefix)
+		if !found {
+			t.Errorf("request paths = %#v, missing %q", paths, wantPrefix)
+		}
+	}
 }
 
 func TestLiveExplicitEmptyTokenDoesNotUseStoredCredentials(t *testing.T) {
@@ -245,6 +254,9 @@ func TestLiveExplicitEmptyTokenDoesNotUseStoredCredentials(t *testing.T) {
 	}
 	if got := row(t, r, "authentication").Status; got != "skip" {
 		t.Fatalf("authentication status = %q, report=%s", got, out)
+	}
+	if hint := row(t, r, "authentication").Hint; !strings.Contains(hint, "non-empty --token") {
+		t.Fatalf("authentication hint = %q", hint)
 	}
 	if strings.Contains(out, "very-secret-token") {
 		t.Fatalf("stored credential leaked: %s", out)

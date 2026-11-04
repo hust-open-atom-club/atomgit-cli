@@ -75,6 +75,7 @@ func TestFactoryOverridePresence(t *testing.T) {
 		baseURL bool
 	}{
 		{name: "defaults", factory: &Factory{BaseURL: "https://api.atomgit.com"}},
+		{name: "normalized default", factory: &Factory{BaseURL: "https://api.atomgit.com/"}},
 		{name: "explicit empty token", factory: &Factory{BaseURL: "https://api.atomgit.com", TokenOverrideSet: true}, token: true},
 		{name: "direct token", factory: &Factory{BaseURL: "https://api.atomgit.com", TokenOverride: "token"}, token: true},
 		{name: "explicit default base URL", factory: &Factory{BaseURL: "https://api.atomgit.com", BaseURLOverrideSet: true}, baseURL: true},

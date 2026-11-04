@@ -2,8 +2,12 @@ package agcmd
 
 import (
 	"context"
+	"errors"
+	"io"
+	"net/http"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
@@ -64,14 +68,56 @@ func TestIsExtensionCommand(t *testing.T) {
 }
 
 func TestLoadCommandConfigAppliesTokenOverride(t *testing.T) {
-	factory := &cmdutil.Factory{TokenOverride: "command-token"}
+	loadCalls := 0
+	factory := &cmdutil.Factory{
+		TokenOverride: "command-token",
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: statusTransport(func(req *http.Request) (*http.Response, error) {
+				if got, want := req.Header.Get("Authorization"), "Bearer command-token"; got != want {
+					t.Fatalf("Authorization = %q, want %q", got, want)
+				}
+				return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"login":"bob"}`)), Request: req}, nil
+			})}, nil
+		},
+	}
 	if err := loadCommandConfig(nil, factory, func() (config.Config, error) {
-		return commandConfigStub{}, nil
+		loadCalls++
+		return nil, errors.New("corrupt persistent credentials")
 	}); err != nil {
 		t.Fatal(err)
+	}
+	if loadCalls != 0 {
+		t.Fatalf("persistent config loads = %d, want 0", loadCalls)
 	}
 	got, err := factory.Config.GetToken()
 	if err != nil || got != "command-token" {
 		t.Fatalf("GetToken() = %q, %v", got, err)
+	}
+	user, err := factory.Config.GetUser()
+	if err != nil || user != "bob" {
+		t.Fatalf("GetUser() = %q, %v; want command-token identity", user, err)
+	}
+	if host := factory.Config.GetHost(); host != "atomgit.com" {
+		t.Fatalf("GetHost() = %q, want default host", host)
+	}
+}
+
+func TestLoadCommandConfigLoadsStoredConfigWithoutOverride(t *testing.T) {
+	loadCalls := 0
+	factory := &cmdutil.Factory{}
+	if err := loadCommandConfig(nil, factory, func() (config.Config, error) {
+		loadCalls++
+		return commandConfigStub{}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if loadCalls != 1 {
+		t.Fatalf("persistent config loads = %d, want 1", loadCalls)
+	}
+	if token, err := factory.Config.GetToken(); err != nil || token != "stored-token" {
+		t.Fatalf("GetToken() = %q, %v", token, err)
+	}
+	if user, err := factory.Config.GetUser(); err != nil || user != "alice" {
+		t.Fatalf("GetUser() = %q, %v", user, err)
 	}
 }

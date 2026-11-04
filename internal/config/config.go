@@ -50,6 +50,9 @@ func WithTokenOverride(base Config, token *string, resolveUser func(string) (str
 
 func (c *tokenOverrideConfig) GetToken() (string, error) {
 	if c.token == nil {
+		if c.Config == nil {
+			return "", ErrNotAuthenticated
+		}
 		return c.Config.GetToken()
 	}
 	token := c.overrideToken()
@@ -61,6 +64,9 @@ func (c *tokenOverrideConfig) GetToken() (string, error) {
 
 func (c *tokenOverrideConfig) GetUser() (string, error) {
 	if c.token == nil {
+		if c.Config == nil {
+			return "", ErrNotAuthenticated
+		}
 		return c.Config.GetUser()
 	}
 	token := c.overrideToken()
@@ -69,21 +75,36 @@ func (c *tokenOverrideConfig) GetUser() (string, error) {
 	}
 
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	if c.resolvedToken == token {
-		return c.resolvedUser, nil
+		user := c.resolvedUser
+		c.mu.Unlock()
+		return user, nil
 	}
-	if c.resolveUser == nil {
+	resolveUser := c.resolveUser
+	c.mu.Unlock()
+	if resolveUser == nil {
 		return "", errors.New("cannot resolve the user for the command-line token")
 	}
 
-	user, err := c.resolveUser(token)
+	// User resolution may perform a network request. Do not hold the cache lock
+	// while invoking it; concurrent misses may resolve more than once, but only
+	// successful results are cached and failures remain retryable.
+	user, err := resolveUser(token)
 	if err != nil {
 		return "", err
 	}
+	c.mu.Lock()
 	c.resolvedUser = user
 	c.resolvedToken = token
-	return c.resolvedUser, nil
+	c.mu.Unlock()
+	return user, nil
+}
+
+func (c *tokenOverrideConfig) GetHost() string {
+	if c.Config == nil {
+		return defaultHost
+	}
+	return c.Config.GetHost()
 }
 
 func (c *tokenOverrideConfig) overrideToken() string {

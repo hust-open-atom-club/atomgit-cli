@@ -733,6 +733,35 @@ func TestRunCreateAcceptsCanonicalResponseCasing(t *testing.T) {
 	}
 }
 
+func TestRunCreateSupportsRelatedDeploymentWebHost(t *testing.T) {
+	transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if got, want := req.URL.Host, "test-api.gitcode.net"; got != want {
+			t.Fatalf("API host = %q, want %q", got, want)
+		}
+		return forkResponse(http.StatusCreated, `{"web_url":"https://test.gitcode.net/alice/demo"}`), nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "deployment-token", user: "alice"}, transport)
+	factory.BaseURL = "https://test-api.gitcode.net"
+	cloneCalls := 0
+	clone := func(_ io.Reader, _, _ io.Writer, cloneURL string, _ *CloneOptions, creds *cloneCredentials) error {
+		cloneCalls++
+		if cloneURL != "https://test.gitcode.net/alice/demo.git" {
+			t.Fatalf("clone URL = %q", cloneURL)
+		}
+		if creds == nil || creds.host != "test.gitcode.net" || creds.username != "alice" || creds.token != "deployment-token" {
+			t.Fatalf("clone credentials = %#v, want selected deployment credentials", creds)
+		}
+		return nil
+	}
+
+	if err := runCreateWithClone(strings.NewReader(""), io.Discard, io.Discard, factory, &CreateOptions{Name: "demo", Clone: true}, clone); err != nil {
+		t.Fatal(err)
+	}
+	if cloneCalls != 1 {
+		t.Fatalf("clone calls = %d, want 1", cloneCalls)
+	}
+}
+
 func TestRunCreateReportsCloneFailure(t *testing.T) {
 	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusCreated, `{}`), nil

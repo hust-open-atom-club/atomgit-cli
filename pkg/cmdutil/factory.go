@@ -38,7 +38,7 @@ type Factory struct {
 // ApplyTokenOverride installs the command-line token as an in-memory view of
 // the loaded configuration. It never writes to the credential store.
 func (f *Factory) ApplyTokenOverride() {
-	if f == nil || f.Config == nil || !f.HasTokenOverride() {
+	if f == nil || !f.HasTokenOverride() {
 		return
 	}
 	f.Config = config.WithTokenOverride(f.Config, &f.TokenOverride, f.resolveTokenUser)
@@ -62,7 +62,8 @@ func (f *Factory) HasBaseURLOverride() bool {
 		return true
 	}
 	origin, err := NormalizeBaseURL(f.BaseURL)
-	return err == nil && !strings.EqualFold(origin, api.BaseURL)
+	defaultOrigin, defaultErr := NormalizeBaseURL(api.BaseURL)
+	return err == nil && defaultErr == nil && !strings.EqualFold(origin, defaultOrigin)
 }
 
 // TokenForCommand returns an explicitly supplied command-line token when one

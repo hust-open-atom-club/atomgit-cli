@@ -342,6 +342,30 @@ func TestRepoListAcceptsTransientTokenAndBaseURL(t *testing.T) {
 	}
 }
 
+func TestDefaultBaseURLIsNotMarkedAsOverride(t *testing.T) {
+	factory := &cmdutil.Factory{}
+	cmd, err := newCmdRootWithWriters(factory, io.Discard, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use: "probe-default-base-url",
+		RunE: func(*cobra.Command, []string) error {
+			if factory.BaseURL != internalapi.BaseURL {
+				t.Fatalf("BaseURL = %q, want %q", factory.BaseURL, internalapi.BaseURL)
+			}
+			if factory.BaseURLOverrideSet || factory.HasBaseURLOverride() {
+				t.Fatalf("default base URL was marked as an explicit override")
+			}
+			return nil
+		},
+	})
+	cmd.SetArgs([]string{"probe-default-base-url"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestExplicitEmptyTokenDoesNotUseStoredCredentials(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{

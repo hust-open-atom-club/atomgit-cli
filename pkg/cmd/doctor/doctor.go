@@ -130,7 +130,7 @@ func diagnose(f *cmdutil.Factory, args []string, live bool) report {
 			r.add("credential_expiry", "skip", "Credential expiry is not recorded", "")
 		}
 	}
-	probeToken, _ := f.TokenForCommand(token)
+	probeToken, tokenOverridden := f.TokenForCommand(token)
 	repo, _, repoErr := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
 	if repoErr == nil {
 		_, repoErr = cmdutil.ParseRepository(repo.String())
@@ -186,7 +186,11 @@ func diagnose(f *cmdutil.Factory, args []string, live bool) report {
 		r.add("service", "skip", "No usable API response; see connectivity check", "")
 	}
 	if probeToken == "" {
-		r.add("authentication", "skip", "No usable credentials", "Provide --token for this command or resolve the local credentials check first.")
+		hint := "Provide --token for this command or resolve the local credentials check first."
+		if tokenOverridden {
+			hint = "Provide a non-empty --token value for this command."
+		}
+		r.add("authentication", "skip", "No usable credentials", hint)
 	} else {
 		if err == nil && user.Login == "" {
 			err = errors.New("invalid user response")

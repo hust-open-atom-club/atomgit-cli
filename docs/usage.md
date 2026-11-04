@@ -317,7 +317,7 @@ ag-cli repo delete --yes
 ag-cli repo delete owner/repo --yes
 ```
 
-使用自定义 `--base-url` 创建仓库时，CLI 只采用创建接口返回、通过路径校验且属于所选服务主机的仓库 URL；内置公网 API 也允许已知的 AtomGit/GitCode Web 主机。若响应未提供可用 URL，仓库仍会创建成功，但 CLI 不会回退到默认公网地址；同时指定 `--clone` 时会明确报告已跳过克隆。当返回的 HTTPS 仓库 URL 与所选 API 服务为同一主机时，CLI 可安全复用当前命令凭据克隆私有仓库；跨主机时不会转发 API token。
+使用自定义 `--base-url` 创建仓库时，CLI 只采用创建接口返回、通过路径校验且属于所选部署的仓库 URL。除同一主机外，也支持可验证的 API/Web 主机命名对应，例如去掉 `api.` 前缀或 `-api` 后缀；内置公网 API 也允许已知的 AtomGit/GitCode Web 主机。若响应未提供可用 URL，仓库仍会创建成功，但 CLI 不会回退到默认公网地址；同时指定 `--clone` 时会明确报告已跳过克隆。CLI 仅向同一主机或通过上述命名对应验证的 HTTPS 克隆主机复用当前命令凭据，不会向无关响应主机转发 API token。
 
 `--token` 和 `--base-url` 是全局参数，只在当前命令进程中生效，不会写入凭据文件或其他配置。`--base-url` 默认为 `https://api.atomgit.com`，不传该参数时使用同一地址；远程服务必须使用不含路径的 HTTPS 根地址，只有回环地址允许使用 HTTP。API v5 和 Actions v8 命令会分别自动添加 `/api/v5` 和 `/api/v8`。需要当前用户名的命令会通过临时 token 查询所选服务，不会继续使用本地持久化账户的用户名。命令行中的 token 可能出现在 shell 历史或系统进程列表中；无需临时覆盖时，建议继续使用 `ag-cli auth login` 保存的凭据。
 
