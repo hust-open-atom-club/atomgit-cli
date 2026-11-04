@@ -468,3 +468,42 @@ func TestWithTokenOverrideIsInMemoryOnly(t *testing.T) {
 		t.Fatalf("GetUser() without override = %q, %v", got, err)
 	}
 }
+
+func TestWithTokenOverrideNormalizesWhitespaceAndRetriesResolution(t *testing.T) {
+	base := &config{host: defaultHost, token: "stored-token", user: "alice"}
+	override := "  command-token\n"
+	resolveCalls := 0
+	cfg := WithTokenOverride(base, &override, func(token string) (string, error) {
+		resolveCalls++
+		if token != "command-token" {
+			t.Fatalf("resolved token = %q, want trimmed command token", token)
+		}
+		if resolveCalls == 1 {
+			return "", errors.New("temporary failure")
+		}
+		return "bob", nil
+	})
+
+	if got, err := cfg.GetToken(); err != nil || got != "command-token" {
+		t.Fatalf("GetToken() = %q, %v", got, err)
+	}
+	if user, err := cfg.GetUser(); err == nil || user != "" {
+		t.Fatalf("first GetUser() = %q, %v; want temporary failure", user, err)
+	}
+	for range 2 {
+		if user, err := cfg.GetUser(); err != nil || user != "bob" {
+			t.Fatalf("retried GetUser() = %q, %v", user, err)
+		}
+	}
+	if resolveCalls != 2 {
+		t.Fatalf("user resolver calls = %d, want one failed and one successful call", resolveCalls)
+	}
+
+	override = " \t "
+	if got, err := cfg.GetToken(); err != nil || got != "stored-token" {
+		t.Fatalf("GetToken() with blank override = %q, %v", got, err)
+	}
+	if got, err := cfg.GetUser(); err != nil || got != "alice" {
+		t.Fatalf("GetUser() with blank override = %q, %v", got, err)
+	}
+}

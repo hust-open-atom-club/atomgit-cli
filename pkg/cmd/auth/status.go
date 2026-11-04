@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"strings"
 	"time"
 
@@ -70,7 +71,7 @@ func newCmdAuthStatus(f *cmdutil.Factory) *cobra.Command {
 }
 
 func inspectAuthStatus(ctx context.Context, f *cmdutil.Factory, verify bool) authStatusReport {
-	r := authStatusReport{Host: "atomgit.com", LocalStatus: "invalid", Verification: statusVerification{Requested: verify, Status: "not_requested"}}
+	r := authStatusReport{Host: authStatusHost(f), LocalStatus: "invalid", Verification: statusVerification{Requested: verify, Status: "not_requested"}}
 	if verify {
 		r.Verification.Status = "skipped"
 	}
@@ -138,6 +139,21 @@ func inspectAuthStatus(ctx context.Context, f *cmdutil.Factory, verify bool) aut
 		r.Message = "Identity verified with the AtomGit user API."
 	}
 	return r
+}
+
+func authStatusHost(f *cmdutil.Factory) string {
+	if f == nil || strings.TrimSpace(f.BaseURL) == "" {
+		return "atomgit.com"
+	}
+	origin, err := cmdutil.NormalizeBaseURL(f.BaseURL)
+	if err != nil {
+		return "atomgit.com"
+	}
+	parsed, err := url.Parse(origin)
+	if err != nil || parsed.Host == "" {
+		return "atomgit.com"
+	}
+	return parsed.Host
 }
 
 // Account fields are untrusted metadata too. Never echo known credentials even

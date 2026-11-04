@@ -54,6 +54,7 @@ func TestFactoryTokenForCommand(t *testing.T) {
 		{name: "no override", factory: &Factory{}, fallback: "stored-token", want: "stored-token"},
 		{name: "blank override", factory: &Factory{TokenOverride: "  "}, fallback: "stored-token", want: "stored-token"},
 		{name: "command override", factory: &Factory{TokenOverride: "command-token"}, fallback: "stored-token", want: "command-token", override: true},
+		{name: "trimmed command override", factory: &Factory{TokenOverride: "  command-token\n"}, fallback: "stored-token", want: "command-token", override: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

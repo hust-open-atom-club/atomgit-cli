@@ -47,8 +47,10 @@ func (f *Factory) ApplyTokenOverride() {
 // command-line token was selected, allowing diagnostic commands to keep local
 // credential inspection separate from credentials used for online probes.
 func (f *Factory) TokenForCommand(fallback string) (string, bool) {
-	if f != nil && strings.TrimSpace(f.TokenOverride) != "" {
-		return f.TokenOverride, true
+	if f != nil {
+		if token := strings.TrimSpace(f.TokenOverride); token != "" {
+			return token, true
+		}
 	}
 	return fallback, false
 }

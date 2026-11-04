@@ -686,6 +686,32 @@ func TestRunCreateCustomOriginDoesNotForwardTokenToResponseHost(t *testing.T) {
 	}
 }
 
+func TestRunCreateAcceptsCanonicalResponseCasing(t *testing.T) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		return forkResponse(http.StatusCreated, `{"web_url":"https://api.gitcode.com/Alice/Demo"}`), nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "deployment-token", user: "alice"}, transport)
+	factory.BaseURL = "https://api.gitcode.com"
+	cloneCalls := 0
+	clone := func(_ io.Reader, _, _ io.Writer, cloneURL string, _ *CloneOptions, creds *cloneCredentials) error {
+		cloneCalls++
+		if cloneURL != "https://api.gitcode.com/Alice/Demo.git" {
+			t.Fatalf("clone URL = %q", cloneURL)
+		}
+		if creds == nil || creds.host != "api.gitcode.com" || creds.username != "alice" || creds.token != "deployment-token" {
+			t.Fatalf("clone credentials = %#v, want command credentials for the selected host", creds)
+		}
+		return nil
+	}
+
+	if err := runCreateWithClone(strings.NewReader(""), io.Discard, io.Discard, factory, &CreateOptions{Name: "demo", Clone: true}, clone); err != nil {
+		t.Fatal(err)
+	}
+	if cloneCalls != 1 {
+		t.Fatalf("clone calls = %d, want 1", cloneCalls)
+	}
+}
+
 func TestRunCreateReportsCloneFailure(t *testing.T) {
 	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusCreated, `{}`), nil

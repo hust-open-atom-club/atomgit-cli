@@ -33,7 +33,6 @@ type tokenOverrideConfig struct {
 	mu            sync.Mutex
 	resolvedToken string
 	resolvedUser  string
-	resolveErr    error
 }
 
 // WithTokenOverride returns a configuration view whose token can be
@@ -50,30 +49,41 @@ func WithTokenOverride(base Config, token *string, resolveUser func(string) (str
 }
 
 func (c *tokenOverrideConfig) GetToken() (string, error) {
-	if c.token != nil && *c.token != "" {
-		return *c.token, nil
+	if token := c.overrideToken(); token != "" {
+		return token, nil
 	}
 	return c.Config.GetToken()
 }
 
 func (c *tokenOverrideConfig) GetUser() (string, error) {
-	if c.token == nil || *c.token == "" {
+	token := c.overrideToken()
+	if token == "" {
 		return c.Config.GetUser()
 	}
 
-	token := *c.token
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.resolvedToken == token {
-		return c.resolvedUser, c.resolveErr
+		return c.resolvedUser, nil
 	}
 	if c.resolveUser == nil {
 		return "", errors.New("cannot resolve the user for the command-line token")
 	}
 
-	c.resolvedUser, c.resolveErr = c.resolveUser(token)
+	user, err := c.resolveUser(token)
+	if err != nil {
+		return "", err
+	}
+	c.resolvedUser = user
 	c.resolvedToken = token
-	return c.resolvedUser, c.resolveErr
+	return c.resolvedUser, nil
+}
+
+func (c *tokenOverrideConfig) overrideToken() string {
+	if c.token == nil {
+		return ""
+	}
+	return strings.TrimSpace(*c.token)
 }
 
 type config struct {

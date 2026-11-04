@@ -159,6 +159,9 @@ func TestStatusVerificationUsesCommandTokenAtSelectedOrigin(t *testing.T) {
 			if !r.OK || r.LocalStatus != tc.localStatus || r.Verification.Status != "verified" || r.Verification.Account == nil || *r.Verification.Account != "bob" {
 				t.Fatalf("report = %+v", r)
 			}
+			if r.Host != "api.gitcode.com" {
+				t.Fatalf("report host = %q, want selected API host", r.Host)
+			}
 			if strings.Contains(out, "stored-token") || strings.Contains(out, "command-token") {
 				t.Fatalf("credential leaked: %s", out)
 			}

@@ -74,7 +74,7 @@ func createdRepositoryURLFromResponse(result api.Repository, owner, repo string)
 		if _, err := cmdutil.NormalizeBaseURL(origin); err != nil {
 			continue
 		}
-		if parsed.Path != "/"+owner+"/"+repo {
+		if !strings.EqualFold(parsed.Path, "/"+owner+"/"+repo) {
 			continue
 		}
 		return candidate, true
@@ -91,13 +91,38 @@ func canUseDefaultRepositoryURLFallback(f *cmdutil.Factory) bool {
 }
 
 func createdRepositoryCloneCredentials(f *cmdutil.Factory, cloneURL string) *cloneCredentials {
-	// A custom API origin does not establish which Web or Git hosts belong to
-	// that deployment. Let Git handle authentication rather than forwarding an
-	// API token to a host inferred only from the create response.
-	if !canUseDefaultRepositoryURLFallback(f) {
+	if f == nil || f.Config == nil {
 		return nil
 	}
-	return resolveCloneAuth(f.Config, cloneURL)
+	if canUseDefaultRepositoryURLFallback(f) {
+		return resolveCloneAuth(f.Config, cloneURL)
+	}
+
+	// A custom API origin does not establish trust in an unrelated Web or Git
+	// host. Forward the command credential only when the API response points to
+	// the exact HTTPS host that already received it; otherwise Git may use its
+	// own configured credential helpers without exposing the API token.
+	origin, err := cmdutil.NormalizeBaseURL(f.BaseURL)
+	if err != nil {
+		return nil
+	}
+	apiURL, err := url.Parse(origin)
+	if err != nil {
+		return nil
+	}
+	cloneTarget, err := url.Parse(cloneURL)
+	if err != nil || cloneTarget.Scheme != "https" || cloneTarget.User != nil || !strings.EqualFold(cloneTarget.Host, apiURL.Host) {
+		return nil
+	}
+	token, err := f.Config.GetToken()
+	if err != nil || strings.TrimSpace(token) == "" {
+		return nil
+	}
+	username, err := f.Config.GetUser()
+	if err != nil || strings.TrimSpace(username) == "" {
+		return nil
+	}
+	return &cloneCredentials{host: cloneTarget.Host, username: username, token: token}
 }
 
 func runCreate(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory, opts *CreateOptions) error {
