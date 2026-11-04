@@ -100,6 +100,10 @@ func inspectAuthStatus(ctx context.Context, f *cmdutil.Factory, verify bool) aut
 	}
 	probeToken, overridden := f.TokenForCommand(storedToken)
 	if strings.TrimSpace(probeToken) == "" {
+		if overridden {
+			r.OK = false
+			r.Message = "The command-line token is empty; local credentials were not used for online verification."
+		}
 		return r
 	}
 	r.OK = false
@@ -142,7 +146,7 @@ func inspectAuthStatus(ctx context.Context, f *cmdutil.Factory, verify bool) aut
 }
 
 func authStatusHost(f *cmdutil.Factory) string {
-	if f == nil || strings.TrimSpace(f.BaseURL) == "" {
+	if f == nil || !f.HasBaseURLOverride() {
 		return "atomgit.com"
 	}
 	origin, err := cmdutil.NormalizeBaseURL(f.BaseURL)

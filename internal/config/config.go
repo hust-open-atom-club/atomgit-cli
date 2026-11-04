@@ -49,16 +49,23 @@ func WithTokenOverride(base Config, token *string, resolveUser func(string) (str
 }
 
 func (c *tokenOverrideConfig) GetToken() (string, error) {
-	if token := c.overrideToken(); token != "" {
-		return token, nil
+	if c.token == nil {
+		return c.Config.GetToken()
 	}
-	return c.Config.GetToken()
+	token := c.overrideToken()
+	if token == "" {
+		return "", ErrNotAuthenticated
+	}
+	return token, nil
 }
 
 func (c *tokenOverrideConfig) GetUser() (string, error) {
+	if c.token == nil {
+		return c.Config.GetUser()
+	}
 	token := c.overrideToken()
 	if token == "" {
-		return c.Config.GetUser()
+		return "", ErrNotAuthenticated
 	}
 
 	c.mu.Lock()

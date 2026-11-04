@@ -686,6 +686,27 @@ func TestRunCreateCustomOriginDoesNotForwardTokenToResponseHost(t *testing.T) {
 	}
 }
 
+func TestRunCreateCustomOriginRejectsUnrelatedResponseHost(t *testing.T) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		return forkResponse(http.StatusCreated, `{"web_url":"https://atomgit.com/alice/demo"}`), nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "deployment-token", user: "alice"}, transport)
+	factory.BaseURL = "https://alt.example.test"
+	cloneCalls := 0
+	clone := func(io.Reader, io.Writer, io.Writer, string, *CloneOptions, *cloneCredentials) error {
+		cloneCalls++
+		return nil
+	}
+
+	err := runCreateWithClone(strings.NewReader(""), io.Discard, io.Discard, factory, &CreateOptions{Name: "demo", Clone: true}, clone)
+	if err == nil || !strings.Contains(err.Error(), "repository was created, but clone was skipped") {
+		t.Fatalf("error = %v, want partial-success clone error", err)
+	}
+	if cloneCalls != 0 {
+		t.Fatalf("clone calls = %d, want 0", cloneCalls)
+	}
+}
+
 func TestRunCreateAcceptsCanonicalResponseCasing(t *testing.T) {
 	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return forkResponse(http.StatusCreated, `{"web_url":"https://api.gitcode.com/Alice/Demo"}`), nil

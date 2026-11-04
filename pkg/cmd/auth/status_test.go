@@ -169,6 +169,43 @@ func TestStatusVerificationUsesCommandTokenAtSelectedOrigin(t *testing.T) {
 	}
 }
 
+func TestAuthStatusHostDistinguishesDefaultAndExplicitBaseURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		factory *cmdutil.Factory
+		want    string
+	}{
+		{name: "built-in default", factory: &cmdutil.Factory{BaseURL: "https://api.atomgit.com"}, want: "atomgit.com"},
+		{name: "explicit built-in API", factory: &cmdutil.Factory{BaseURL: "https://api.atomgit.com", BaseURLOverrideSet: true}, want: "api.atomgit.com"},
+		{name: "custom API", factory: &cmdutil.Factory{BaseURL: "https://api.gitcode.com"}, want: "api.gitcode.com"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := authStatusHost(tt.factory); got != tt.want {
+				t.Fatalf("authStatusHost() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStatusExplicitEmptyTokenDoesNotUseStoredCredentials(t *testing.T) {
+	statusCredentials(t, `{"access_token":"stored-token","user":"alice"}`)
+	f := &cmdutil.Factory{
+		TokenOverrideSet: true,
+		HttpClient: func() (*http.Client, error) {
+			t.Fatal("explicit empty token created an online client")
+			return nil, nil
+		},
+	}
+	r := inspectAuthStatus(context.Background(), f, true)
+	if r.OK || r.Verification.Status != "skipped" || r.Verification.Performed {
+		t.Fatalf("report = %+v", r)
+	}
+	if !strings.Contains(r.Message, "command-line token is empty") {
+		t.Fatalf("message = %q", r.Message)
+	}
+}
+
 func TestStatusOnlineResults(t *testing.T) {
 	for _, tc := range []struct {
 		name         string

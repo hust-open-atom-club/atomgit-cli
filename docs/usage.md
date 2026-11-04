@@ -174,7 +174,7 @@ ag-cli auth logout --all
 ```json
 {
   "ok": true,
-  "host": "api.atomgit.com",
+  "host": "atomgit.com",
   "credentialsPresent": true,
   "localAccount": "alice",
   "localStatus": "configured",
@@ -190,7 +190,7 @@ ag-cli auth logout --all
 ```
 
 - `ok` 为布尔值；本地状态正常且未请求验证，或请求的验证通过时为 `true`，退出码为 0；其他运行时结果为 `false`，退出码为 1，诊断写入 stderr。
-- `host` 为在线验证选用的 API 主机；传入 `--base-url` 时会反映该命令级服务源。
+- `host` 默认为 `atomgit.com`；显式传入 `--base-url` 时，会反映该命令级 API 服务的主机。
 - `credentialsPresent` 为 `true`（已读到完整的活动凭据）、`false`（没有凭据文件）或 `null`（配置不完整、损坏或无法读取，不能确认）。`localAccount` 为账号字符串，无法确定时为 `null`；`localStatus` 为 `configured`、`missing` 或 `invalid`。
 - `verification.requested` 表示是否传入 `--verify`；`performed` 表示是否已尝试 API 请求，不表示验证成功。无可用本地凭据时跳过请求。
 - `verification.status` 为 `not_requested`、`skipped`、`verified`、`identity_mismatch`、`unauthorized`（401）、`forbidden`（403）、`server_error`（5xx）、`http_error`（其他非预期 HTTP 状态）、`network_error`、`timeout`、`canceled`、`invalid_response` 或 `client_error`。403 和网络错误不等同于令牌过期。
@@ -317,7 +317,7 @@ ag-cli repo delete --yes
 ag-cli repo delete owner/repo --yes
 ```
 
-使用自定义 `--base-url` 创建仓库时，CLI 只采用创建接口返回且通过校验的仓库 URL。若响应未提供可用 URL，仓库仍会创建成功，但 CLI 不会回退到默认公网地址；同时指定 `--clone` 时会明确报告已跳过克隆。当返回的 HTTPS 仓库 URL 与所选 API 服务为同一主机时，CLI 可安全复用当前命令凭据克隆私有仓库；由于 API、Web 和 Git 也可能使用不同域名，跨主机时不会转发 API token，Git 会使用其常规凭据流程。
+使用自定义 `--base-url` 创建仓库时，CLI 只采用创建接口返回、通过路径校验且属于所选服务主机的仓库 URL；内置公网 API 也允许已知的 AtomGit/GitCode Web 主机。若响应未提供可用 URL，仓库仍会创建成功，但 CLI 不会回退到默认公网地址；同时指定 `--clone` 时会明确报告已跳过克隆。当返回的 HTTPS 仓库 URL 与所选 API 服务为同一主机时，CLI 可安全复用当前命令凭据克隆私有仓库；跨主机时不会转发 API token。
 
 `--token` 和 `--base-url` 是全局参数，只在当前命令进程中生效，不会写入凭据文件或其他配置。`--base-url` 默认为 `https://api.atomgit.com`，不传该参数时使用同一地址；远程服务必须使用不含路径的 HTTPS 根地址，只有回环地址允许使用 HTTP。API v5 和 Actions v8 命令会分别自动添加 `/api/v5` 和 `/api/v8`。需要当前用户名的命令会通过临时 token 查询所选服务，不会继续使用本地持久化账户的用户名。命令行中的 token 可能出现在 shell 历史或系统进程列表中；无需临时覆盖时，建议继续使用 `ag-cli auth login` 保存的凭据。
 

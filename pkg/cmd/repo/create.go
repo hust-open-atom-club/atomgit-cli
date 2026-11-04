@@ -63,7 +63,7 @@ func createdRepositoryURL(host, owner, repo string) string {
 	return cmdutil.ResolveWebURL("", host, owner, repo)
 }
 
-func createdRepositoryURLFromResponse(result api.Repository, owner, repo string) (string, bool) {
+func createdRepositoryURLFromResponse(f *cmdutil.Factory, result api.Repository, owner, repo string) (string, bool) {
 	for _, candidate := range []string{result.HTMLURL, result.AlternateHTMLURL} {
 		candidate = strings.TrimSuffix(strings.TrimSpace(candidate), "/")
 		parsed, err := url.Parse(candidate)
@@ -74,12 +74,52 @@ func createdRepositoryURLFromResponse(result api.Repository, owner, repo string)
 		if _, err := cmdutil.NormalizeBaseURL(origin); err != nil {
 			continue
 		}
+		if !createdRepositoryURLHostAllowed(f, parsed) {
+			continue
+		}
 		if !strings.EqualFold(parsed.Path, "/"+owner+"/"+repo) {
 			continue
 		}
 		return candidate, true
 	}
 	return "", false
+}
+
+func createdRepositoryURLHostAllowed(f *cmdutil.Factory, repositoryURL *url.URL) bool {
+	if repositoryURL == nil {
+		return false
+	}
+	selectedOrigin := api.BaseURL
+	if f != nil && strings.TrimSpace(f.BaseURL) != "" {
+		selectedOrigin = f.BaseURL
+	}
+	selectedOrigin, err := cmdutil.NormalizeBaseURL(selectedOrigin)
+	if err != nil {
+		return false
+	}
+	selectedURL, err := url.Parse(selectedOrigin)
+	if err != nil {
+		return false
+	}
+	if strings.EqualFold(repositoryURL.Scheme, selectedURL.Scheme) && strings.EqualFold(repositoryURL.Host, selectedURL.Host) {
+		return true
+	}
+	if !isPublicAPIHost(selectedURL) || repositoryURL.Port() != "" {
+		return false
+	}
+	return repositoryURL.Scheme == "https" && cmdutil.IsAtomGitHost(repositoryURL.Hostname())
+}
+
+func isPublicAPIHost(selectedURL *url.URL) bool {
+	if selectedURL == nil || selectedURL.Scheme != "https" || selectedURL.Port() != "" {
+		return false
+	}
+	switch strings.ToLower(selectedURL.Hostname()) {
+	case "api.atomgit.com", "api.gitcode.com":
+		return true
+	default:
+		return false
+	}
 }
 
 func canUseDefaultRepositoryURLFallback(f *cmdutil.Factory) bool {
@@ -192,7 +232,7 @@ func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory,
 		return fmt.Errorf("failed to create repository: %w", err)
 	}
 
-	repoURL, responseURL := createdRepositoryURLFromResponse(result, owner, repoName)
+	repoURL, responseURL := createdRepositoryURLFromResponse(f, result, owner, repoName)
 	if !responseURL && canUseDefaultRepositoryURLFallback(f) {
 		repoURL = createdRepositoryURL(f.Config.GetHost(), owner, repoName)
 	}

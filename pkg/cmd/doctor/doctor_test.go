@@ -223,6 +223,34 @@ func TestLiveUsesCommandTokenAtSelectedOrigin(t *testing.T) {
 	}
 }
 
+func TestLiveExplicitEmptyTokenDoesNotUseStoredCredentials(t *testing.T) {
+	credentials(t, validCredentials)
+	requests := 0
+	f := &cmdutil.Factory{
+		TokenOverrideSet: true,
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: transport(func(req *http.Request) (*http.Response, error) {
+				requests++
+				if authorization := req.Header.Get("Authorization"); authorization != "" {
+					t.Fatalf("Authorization = %q, want anonymous probe", authorization)
+				}
+				return &http.Response{StatusCode: http.StatusUnauthorized, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"message":"authentication required"}`)), Request: req}, nil
+			})}, nil
+		},
+	}
+
+	r, out, _ := execute(t, f, "--live")
+	if requests != 1 {
+		t.Fatalf("requests = %d, want one anonymous connectivity probe", requests)
+	}
+	if got := row(t, r, "authentication").Status; got != "skip" {
+		t.Fatalf("authentication status = %q, report=%s", got, out)
+	}
+	if strings.Contains(out, "very-secret-token") {
+		t.Fatalf("stored credential leaked: %s", out)
+	}
+}
+
 func TestRepositoryCanonicalPath(t *testing.T) {
 	for _, inferred := range []bool{false, true} {
 		for _, tc := range []struct {

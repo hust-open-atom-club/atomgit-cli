@@ -461,11 +461,11 @@ func TestWithTokenOverrideIsInMemoryOnly(t *testing.T) {
 	}
 
 	override = ""
-	if got, err := cfg.GetToken(); err != nil || got != "stored-token" {
-		t.Fatalf("GetToken() without override = %q, %v", got, err)
+	if got, err := cfg.GetToken(); got != "" || !errors.Is(err, ErrNotAuthenticated) {
+		t.Fatalf("GetToken() with explicit empty override = %q, %v", got, err)
 	}
-	if got, err := cfg.GetUser(); err != nil || got != "alice" {
-		t.Fatalf("GetUser() without override = %q, %v", got, err)
+	if got, err := cfg.GetUser(); got != "" || !errors.Is(err, ErrNotAuthenticated) {
+		t.Fatalf("GetUser() with explicit empty override = %q, %v", got, err)
 	}
 }
 
@@ -500,10 +500,10 @@ func TestWithTokenOverrideNormalizesWhitespaceAndRetriesResolution(t *testing.T)
 	}
 
 	override = " \t "
-	if got, err := cfg.GetToken(); err != nil || got != "stored-token" {
-		t.Fatalf("GetToken() with blank override = %q, %v", got, err)
+	if got, err := cfg.GetToken(); got != "" || !errors.Is(err, ErrNotAuthenticated) {
+		t.Fatalf("GetToken() with blank override = %q, %v; want not authenticated", got, err)
 	}
-	if got, err := cfg.GetUser(); err != nil || got != "alice" {
-		t.Fatalf("GetUser() with blank override = %q, %v", got, err)
+	if got, err := cfg.GetUser(); got != "" || !errors.Is(err, ErrNotAuthenticated) {
+		t.Fatalf("GetUser() with blank override = %q, %v; want not authenticated", got, err)
 	}
 }

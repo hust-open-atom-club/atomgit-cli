@@ -337,6 +337,32 @@ func TestRepoListAcceptsTransientTokenAndBaseURL(t *testing.T) {
 	if requestCount != 1 {
 		t.Fatalf("request count = %d, want 1", requestCount)
 	}
+	if !factory.TokenOverrideSet || !factory.BaseURLOverrideSet {
+		t.Fatalf("explicit flags were not recorded: token=%t baseURL=%t", factory.TokenOverrideSet, factory.BaseURLOverrideSet)
+	}
+}
+
+func TestExplicitEmptyTokenDoesNotUseStoredCredentials(t *testing.T) {
+	requests := 0
+	factory := &cmdutil.Factory{
+		Config: rootTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			requests++
+			return nil, errors.New("unexpected HTTP client")
+		},
+	}
+	cmd, err := newCmdRootWithWriters(factory, io.Discard, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetArgs([]string{"repo", "list", "--token="})
+	err = cmd.Execute()
+	if err == nil || !errors.Is(err, config.ErrNotAuthenticated) {
+		t.Fatalf("Execute() error = %v, want not authenticated", err)
+	}
+	if requests != 0 {
+		t.Fatalf("HTTP client calls = %d, want 0", requests)
+	}
 }
 
 func TestRepoCreateUsesIdentityFromTransientToken(t *testing.T) {
@@ -396,6 +422,18 @@ func TestRootRejectsVersionedBaseURL(t *testing.T) {
 	err = cmd.Execute()
 	if err == nil || !strings.Contains(err.Error(), "path") {
 		t.Fatalf("Execute() error = %v, want base URL path error", err)
+	}
+}
+
+func TestRootRejectsExplicitEmptyBaseURL(t *testing.T) {
+	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{Config: rootTestConfig{}}, io.Discard, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetArgs([]string{"repo", "list", "--base-url="})
+	err = cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "invalid base URL") {
+		t.Fatalf("Execute() error = %v, want empty base URL error", err)
 	}
 }
 

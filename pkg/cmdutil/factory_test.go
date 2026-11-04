@@ -53,6 +53,7 @@ func TestFactoryTokenForCommand(t *testing.T) {
 		{name: "nil factory", fallback: "stored-token", want: "stored-token"},
 		{name: "no override", factory: &Factory{}, fallback: "stored-token", want: "stored-token"},
 		{name: "blank override", factory: &Factory{TokenOverride: "  "}, fallback: "stored-token", want: "stored-token"},
+		{name: "explicit blank override", factory: &Factory{TokenOverride: "  ", TokenOverrideSet: true}, fallback: "stored-token", want: "", override: true},
 		{name: "command override", factory: &Factory{TokenOverride: "command-token"}, fallback: "stored-token", want: "command-token", override: true},
 		{name: "trimmed command override", factory: &Factory{TokenOverride: "  command-token\n"}, fallback: "stored-token", want: "command-token", override: true},
 	}
@@ -61,6 +62,31 @@ func TestFactoryTokenForCommand(t *testing.T) {
 			got, overridden := tt.factory.TokenForCommand(tt.fallback)
 			if got != tt.want || overridden != tt.override {
 				t.Fatalf("TokenForCommand() = %q, %t; want %q, %t", got, overridden, tt.want, tt.override)
+			}
+		})
+	}
+}
+
+func TestFactoryOverridePresence(t *testing.T) {
+	tests := []struct {
+		name    string
+		factory *Factory
+		token   bool
+		baseURL bool
+	}{
+		{name: "defaults", factory: &Factory{BaseURL: "https://api.atomgit.com"}},
+		{name: "explicit empty token", factory: &Factory{BaseURL: "https://api.atomgit.com", TokenOverrideSet: true}, token: true},
+		{name: "direct token", factory: &Factory{BaseURL: "https://api.atomgit.com", TokenOverride: "token"}, token: true},
+		{name: "explicit default base URL", factory: &Factory{BaseURL: "https://api.atomgit.com", BaseURLOverrideSet: true}, baseURL: true},
+		{name: "direct custom base URL", factory: &Factory{BaseURL: "https://api.gitcode.com"}, baseURL: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.factory.HasTokenOverride(); got != tt.token {
+				t.Fatalf("HasTokenOverride() = %t, want %t", got, tt.token)
+			}
+			if got := tt.factory.HasBaseURLOverride(); got != tt.baseURL {
+				t.Fatalf("HasBaseURLOverride() = %t, want %t", got, tt.baseURL)
 			}
 		})
 	}

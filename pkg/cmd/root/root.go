@@ -86,7 +86,11 @@ func newCmdRootWithWriters(f *cmdutil.Factory, stdout, stderr io.Writer) (*cobra
 	cmd.PersistentFlags().BoolVar(&rawOutput, "raw-output", false, "Disable terminal output sanitization for machine processing")
 	cmd.PersistentPreRunE = func(*cobra.Command, []string) error {
 		updateBashCompletionHelp(cmd)
-		if f != nil && f.BaseURL != "" {
+		if f != nil {
+			f.TokenOverrideSet = cmd.PersistentFlags().Changed("token")
+			f.BaseURLOverrideSet = cmd.PersistentFlags().Changed("base-url")
+		}
+		if f != nil && (f.BaseURL != "" || f.BaseURLOverrideSet) {
 			normalized, err := cmdutil.NormalizeBaseURL(f.BaseURL)
 			if err != nil {
 				return err

@@ -20,8 +20,10 @@ import (
 type Factory struct {
 	// BaseURL overrides the default AtomGit server origin for this process only.
 	BaseURL            string
+	BaseURLOverrideSet bool
 	Config             config.Config
 	TokenOverride      string
+	TokenOverrideSet   bool
 	HttpClient         func() (*http.Client, error)
 	Context            func() context.Context
 	BrowserOpener      browser.Opener
@@ -36,10 +38,31 @@ type Factory struct {
 // ApplyTokenOverride installs the command-line token as an in-memory view of
 // the loaded configuration. It never writes to the credential store.
 func (f *Factory) ApplyTokenOverride() {
-	if f == nil || f.Config == nil {
+	if f == nil || f.Config == nil || !f.HasTokenOverride() {
 		return
 	}
 	f.Config = config.WithTokenOverride(f.Config, &f.TokenOverride, f.resolveTokenUser)
+}
+
+// HasTokenOverride reports whether a token was explicitly selected for this
+// command. The Changed state keeps an explicit empty value distinct from an
+// omitted flag; the non-empty fallback supports factories constructed by
+// callers other than Cobra.
+func (f *Factory) HasTokenOverride() bool {
+	return f != nil && (f.TokenOverrideSet || strings.TrimSpace(f.TokenOverride) != "")
+}
+
+// HasBaseURLOverride reports whether the API origin was explicitly selected.
+// A non-default value also counts for factories constructed outside Cobra.
+func (f *Factory) HasBaseURLOverride() bool {
+	if f == nil {
+		return false
+	}
+	if f.BaseURLOverrideSet {
+		return true
+	}
+	origin, err := NormalizeBaseURL(f.BaseURL)
+	return err == nil && !strings.EqualFold(origin, api.BaseURL)
 }
 
 // TokenForCommand returns an explicitly supplied command-line token when one
@@ -47,10 +70,8 @@ func (f *Factory) ApplyTokenOverride() {
 // command-line token was selected, allowing diagnostic commands to keep local
 // credential inspection separate from credentials used for online probes.
 func (f *Factory) TokenForCommand(fallback string) (string, bool) {
-	if f != nil {
-		if token := strings.TrimSpace(f.TokenOverride); token != "" {
-			return token, true
-		}
+	if f != nil && f.HasTokenOverride() {
+		return strings.TrimSpace(f.TokenOverride), true
 	}
 	return fallback, false
 }
