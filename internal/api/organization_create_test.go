@@ -62,6 +62,10 @@ func TestCreateOrganizationDoesNotReplay(t *testing.T) {
 				t.Fatalf("lost HTTP status: %v", err)
 			}
 			wantUncertain := tt.err != nil || tt.status >= 500
+			var uncertain *OrganizationCreationUncertainError
+			if errors.As(err, &uncertain) != wantUncertain {
+				t.Fatalf("uncertain error type = %T, want uncertain=%v", err, wantUncertain)
+			}
 			if got := strings.Contains(err.Error(), "creation may have succeeded, check AtomGit before retrying"); got != wantUncertain {
 				t.Fatalf("uncertain guidance = %v, want %v: %v", got, wantUncertain, err)
 			}
@@ -82,7 +86,8 @@ func TestCreateOrganizationResponseReadFailure(t *testing.T) {
 	})})
 	_, err := CreateOrganization(client, OrganizationCreateRequest{Path: "team"})
 	var readErr *ResponseReadError
-	if !errors.As(err, &readErr) || !errors.Is(err, cause) || calls != 1 || !strings.Contains(err.Error(), "creation may have succeeded") {
+	var uncertain *OrganizationCreationUncertainError
+	if !errors.As(err, &uncertain) || !errors.As(err, &readErr) || !errors.Is(err, cause) || calls != 1 || !strings.Contains(err.Error(), "creation may have succeeded") {
 		t.Fatalf("error=%v calls=%d", err, calls)
 	}
 }
@@ -107,7 +112,8 @@ func TestCreateOrganizationInvalidIdentity(t *testing.T) {
 		t.Run(body, func(t *testing.T) {
 			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte(body)) })
 			_, err := CreateOrganization(client, OrganizationCreateRequest{Path: "team"})
-			if !errors.Is(err, ErrInvalidResponse) || !strings.Contains(err.Error(), "creation may have succeeded") {
+			var uncertain *OrganizationCreationUncertainError
+			if !errors.As(err, &uncertain) || !errors.Is(err, ErrInvalidResponse) || !strings.Contains(err.Error(), "creation may have succeeded") {
 				t.Fatalf("error = %v", err)
 			}
 		})

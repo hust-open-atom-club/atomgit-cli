@@ -170,11 +170,17 @@ func TestAPIErrorProcess(t *testing.T) {
 			code, body = http.StatusForbidden, `{"message":"private-body xyz789"}`
 		case "HTTP read":
 			code = http.StatusForbidden
+		case "server error", "server error read":
+			code, body = http.StatusBadGateway, `{"message":"private-body xyz789\u001b[31m"}`
 		case "invalid":
 			body = `{"private-body":"xyz789"`
+		case "identity":
+			body = `{"id":1,"path":"other","web_url":"https://private.test"}`
+		case "org success":
+			body = `{"id":1,"path":"team","web_url":"https://example.test/team"}`
 		}
 		var reader io.Reader = strings.NewReader(body)
-		if scenario == "read" || scenario == "HTTP read" {
+		if scenario == "read" || scenario == "HTTP read" || scenario == "server error read" {
 			reader = apiProcessReadFailure{cause: context.DeadlineExceeded}
 		}
 		if scenario == "read plain" {

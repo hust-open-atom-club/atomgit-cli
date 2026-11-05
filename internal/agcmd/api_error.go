@@ -15,6 +15,13 @@ func apiDiagnostic(err error) (commandDiagnostic, bool) {
 	role := commandErrorRole(err)
 	//nolint:errorlint // Only the selected API operation supplies response or execution facts.
 	switch failure := role.(type) {
+	case *api.OrganizationCreationUncertainError:
+		// Preserve the operation's retry guidance without exposing the wrapped
+		// error text, which may contain private response or transport details.
+		d, _ := apiDiagnostic(failure.Err)
+		d.summary = "Organization creation could not be confirmed."
+		d.hint = "Organization creation may have succeeded. Check AtomGit before retrying."
+		return d, true
 	case *api.HTTPError:
 		return apiStatusDiagnostic(failure.StatusCode, failure.ReadError != nil), true
 	case *actions.HTTPError:

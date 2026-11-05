@@ -30,6 +30,18 @@ type CreatedOrganization struct {
 	FullPath    string `json:"full_path"`
 }
 
+// OrganizationCreationUncertainError means the request may have created the
+// organization. Err retains the response or execution failure for inspection.
+type OrganizationCreationUncertainError struct {
+	Err error
+}
+
+func (e *OrganizationCreationUncertainError) Error() string {
+	return fmt.Sprintf("create organization: %v; creation may have succeeded, check AtomGit before retrying", e.Err)
+}
+
+func (e *OrganizationCreationUncertainError) Unwrap() error { return e.Err }
+
 // CreateOrganization sends a single write without transport retries or redirect
 // replay. A failed response read does not establish whether creation occurred.
 func CreateOrganization(client *Client, request OrganizationCreateRequest) (CreatedOrganization, error) {
@@ -48,12 +60,14 @@ func CreateOrganization(client *Client, request OrganizationCreateRequest) (Crea
 		// A server or gateway can fail after the organization was committed.
 		uncertainHTTPError := isHTTPError && httpErr.StatusCode >= 500 && httpErr.StatusCode < 600
 		if !errors.Is(err, ErrRequestPreparation) && (!isHTTPError || uncertainHTTPError) {
-			return CreatedOrganization{}, fmt.Errorf("create organization: %w; creation may have succeeded, check AtomGit before retrying", err)
+			return CreatedOrganization{}, &OrganizationCreationUncertainError{Err: err}
 		}
 		return CreatedOrganization{}, fmt.Errorf("create organization: %w", err)
 	}
 	if result.ID <= 0 || result.Path != request.Path {
-		return CreatedOrganization{}, fmt.Errorf("create organization: %w: missing or mismatched organization identity; creation may have succeeded, check AtomGit before retrying", ErrInvalidResponse)
+		return CreatedOrganization{}, &OrganizationCreationUncertainError{
+			Err: fmt.Errorf("%w: missing or mismatched organization identity", ErrInvalidResponse),
+		}
 	}
 	return result, nil
 }
