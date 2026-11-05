@@ -12,23 +12,27 @@ import (
 func TestCreateOrganizationDoesNotReplay(t *testing.T) {
 	transportErr := errors.New("connection lost")
 	for _, tt := range []struct {
-		name   string
-		status int
-		err    error
+		name      string
+		status    int
+		err       error
+		uncertain bool
 	}{
-		{"transport", 0, transportErr},
-		{"unauthorized", 401, nil},
-		{"forbidden", 403, nil},
-		{"conflict", 409, nil},
-		{"rate limit", 429, nil},
-		{"server error", 500, nil},
-		{"bad gateway", 502, nil},
-		{"service unavailable", 503, nil},
-		{"moved", 301, nil},
-		{"found", 302, nil},
-		{"see other", 303, nil},
-		{"temporary redirect", 307, nil},
-		{"permanent redirect", 308, nil},
+		{"transport", 0, transportErr, true},
+		{"created", 201, nil, true},
+		{"accepted", 202, nil, true},
+		{"no content", 204, nil, true},
+		{"unauthorized", 401, nil, false},
+		{"forbidden", 403, nil, false},
+		{"conflict", 409, nil, false},
+		{"rate limit", 429, nil, false},
+		{"server error", 500, nil, true},
+		{"bad gateway", 502, nil, true},
+		{"service unavailable", 503, nil, true},
+		{"moved", 301, nil, true},
+		{"found", 302, nil, true},
+		{"see other", 303, nil, true},
+		{"temporary redirect", 307, nil, true},
+		{"permanent redirect", 308, nil, true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			calls, redirects := 0, 0
@@ -61,7 +65,7 @@ func TestCreateOrganizationDoesNotReplay(t *testing.T) {
 			if tt.err == nil && !IsHTTPStatus(err, tt.status) {
 				t.Fatalf("lost HTTP status: %v", err)
 			}
-			wantUncertain := tt.err != nil || tt.status >= 500
+			wantUncertain := tt.uncertain
 			var uncertain *OrganizationCreationUncertainError
 			if errors.As(err, &uncertain) != wantUncertain {
 				t.Fatalf("uncertain error type = %T, want uncertain=%v", err, wantUncertain)

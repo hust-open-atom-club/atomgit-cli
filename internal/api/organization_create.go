@@ -57,8 +57,10 @@ func CreateOrganization(client *Client, request OrganizationCreateRequest) (Crea
 		"/orgs", bytes.NewReader(body), "application/json", "application/json", policy, &result); err != nil {
 		var httpErr *HTTPError
 		isHTTPError := errors.As(err, &httpErr)
-		// A server or gateway can fail after the organization was committed.
-		uncertainHTTPError := isHTTPError && httpErr.StatusCode >= 500 && httpErr.StatusCode < 600
+		// Unexpected success, redirection, or server failure does not prove
+		// that the organization was not created. Never replay the request.
+		uncertainHTTPError := isHTTPError && ((httpErr.StatusCode >= 200 && httpErr.StatusCode < 400) ||
+			(httpErr.StatusCode >= 500 && httpErr.StatusCode < 600))
 		if !errors.Is(err, ErrRequestPreparation) && (!isHTTPError || uncertainHTTPError) {
 			return CreatedOrganization{}, &OrganizationCreationUncertainError{Err: err}
 		}

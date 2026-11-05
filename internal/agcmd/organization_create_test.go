@@ -28,6 +28,10 @@ func TestOrgCreateProcessPresentation(t *testing.T) {
 		name, scenario, detail string
 		definite, success      bool
 	}{
+		{name: "created", scenario: "created", detail: "The server returned HTTP 201."},
+		{name: "accepted", scenario: "accepted", detail: "The server returned HTTP 202."},
+		{name: "no content", scenario: "no content", detail: "The server returned HTTP 204."},
+		{name: "redirect", scenario: "redirect", detail: "The server returned HTTP 303."},
 		{name: "5xx", scenario: "server error", detail: "The server returned HTTP 502."},
 		{name: "5xx with interrupted body", scenario: "server error read", detail: "The server returned HTTP 502.\nThe error response body could not be read."},
 		{name: "execution failure", scenario: "execution", detail: "The HTTP request could not be completed."},

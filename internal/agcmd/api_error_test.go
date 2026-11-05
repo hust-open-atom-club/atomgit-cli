@@ -172,6 +172,14 @@ func TestAPIErrorProcess(t *testing.T) {
 			code = http.StatusForbidden
 		case "server error", "server error read":
 			code, body = http.StatusBadGateway, `{"message":"private-body xyz789\u001b[31m"}`
+		case "created":
+			code, body = http.StatusCreated, `{"id":1,"path":"team"}`
+		case "accepted":
+			code = http.StatusAccepted
+		case "no content":
+			code, body = http.StatusNoContent, ""
+		case "redirect":
+			code, body = http.StatusSeeOther, `{"message":"private-body xyz789"}`
 		case "invalid":
 			body = `{"private-body":"xyz789"`
 		case "identity":
@@ -187,7 +195,7 @@ func TestAPIErrorProcess(t *testing.T) {
 			reader = apiProcessReadFailure{cause: errors.New("private-read")}
 		}
 		return &http.Response{
-			StatusCode: code, Status: "private-status", Header: make(http.Header),
+			StatusCode: code, Status: "private-status", Header: http.Header{"Location": {"https://other.test/result"}},
 			Body: io.NopCloser(reader), Request: r,
 		}, nil
 	})

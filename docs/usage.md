@@ -503,7 +503,7 @@ ag-cli org runner-job-history hust-open-atom-club \
 
 `ag-cli org create <path>` 要求认证并显式指定组织路径，不会从 Git remote 推断。可选的 `--name`、`--description`（`-d`）和 `--visibility` 只有显式指定时才发送给 API；省略时由服务端采用名称等于路径、可见性为 `public` 的默认值。`--description=""` 会显式发送空描述。路径、空名称和可见性枚举在认证与网络请求前校验。
 
-创建使用 API v5 `POST /orgs`，只接受 HTTP 200，并校验返回的组织 ID 和路径。成功时显示组织路径以及服务端返回的 `web_url`；缺少 URL 时只显示路径，不拼接链接。写请求不会自动重试或跟随重定向；如果请求执行、响应读取或校验失败，或收到 HTTP 5xx 响应，组织可能已经创建，命令会提示先在 AtomGit 确认状态再决定是否重试。
+创建使用 API v5 `POST /orgs`，只接受 HTTP 200，并校验返回的组织 ID 和路径。成功时显示组织路径以及服务端返回的 `web_url`；缺少 URL 时只显示路径，不拼接链接。写请求不会自动重试或跟随重定向；如果请求执行、响应读取或校验失败，或收到非预期的其他 2xx、3xx 或 5xx 响应，组织可能已经创建，命令会提示先在 AtomGit 确认状态再决定是否重试。
 
 `view` 输出组织路径、名称、可见性、描述和公开 URL。`members` 与 `repos` 支持分页，并在认证和网络请求前校验 `--limit`；空结果的 JSON 输出为 `[]`。仓库输出还包含描述、默认分支、主要语言、Star、Fork 和更新时间。
 
