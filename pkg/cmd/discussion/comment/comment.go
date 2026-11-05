@@ -1,4 +1,4 @@
-// Package comment provides the ag discussion comment subcommands for creating,
+// Package comment provides the ag-cli discussion comment subcommands for creating,
 // replying to, editing, and deleting comments on repository discussions.
 package comment
 

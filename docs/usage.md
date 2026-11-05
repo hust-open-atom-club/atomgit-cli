@@ -116,6 +116,8 @@ ag-cli doctor owner/repo --live --json
 
 ## 认证
 
+凭据路径无法确定或文件访问失败时，命令会输出 `Unable to read credentials.` 并返回非零退出码；权限不足时会提示检查所有权和读取权限。此类故障不会降级为匿名请求。
+
 例如，`ag-cli api /user` 找不到凭据时，会输出 `No credentials are configured.` 及 `ag-cli auth login` 登录提示，并返回非零退出码。
 
 同一命令读到 JSON 语法或字段类型错误的凭据文件时，会输出 `Credential configuration is invalid.` 及格式检查提示，并返回非零退出码；语法错误还会标明字节位置。

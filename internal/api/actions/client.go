@@ -510,7 +510,8 @@ func (c *Client) download(operation, path string) (*http.Response, error) {
 	}
 	if resp.StatusCode != http.StatusOK {
 		err := responseError(operation, resp)
-		resp.Body.Close() //nolint:errcheck // Closing only releases error response resources; responseError preserves the primary API error.
+		// Ignore response-close errors to preserve the API failure.
+		_ = resp.Body.Close()
 		return nil, err
 	}
 	return resp, nil

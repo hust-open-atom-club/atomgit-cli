@@ -22,8 +22,8 @@ func newCmdEdit(f *cmdutil.Factory) *cobra.Command {
 
 The comment is confirmed to belong to the given discussion before the update
 is sent. A comment that cannot be found is left unchanged.`,
-		Example: `  ag discussion comment edit owner/repo 1 abc123 --body "Updated"
-  ag discussion comment edit 1 reply.id --body-file note.md`,
+		Example: `  ag-cli discussion comment edit owner/repo 1 abc123 --body "Updated"
+  ag-cli discussion comment edit 1 reply.id --body-file note.md`,
 		Args: cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 2)
