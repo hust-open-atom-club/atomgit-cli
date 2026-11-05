@@ -1,12 +1,14 @@
 package agcmd
 
 import (
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"bytes"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
@@ -131,5 +133,69 @@ func TestCredentialFormatDiagnosticKeepsCausePrivate(t *testing.T) {
 		"Check the credential file syntax and field types.\n"
 	if out.String() != want || !errors.Is(err, cause) {
 		t.Fatalf("output = %q, want safe diagnostic with cause retained", out.String())
+	}
+}
+
+func TestCredentialAccessDiagnostics(t *testing.T) {
+	private := errors.New("private-token and private-cause")
+	for _, tc := range []struct {
+		name   string
+		access *config.CredentialAccessError
+		detail string
+		hint   string
+	}{
+		{"unknown cause", &config.CredentialAccessError{Operation: "private-operation", Path: "/credential", Err: private},
+			"Credential file: \"/credential\".", ""},
+		{"permission", &config.CredentialAccessError{Operation: "open", Path: "/credential", Err: fmt.Errorf("private wrapper: %w", os.ErrPermission)},
+			"Credential file: \"/credential\".", "Check the file and parent directory ownership and read permissions."},
+		{"no path", &config.CredentialAccessError{Operation: "locate credential paths", Err: private},
+			"No credential file paths are available.", "Check the home directory and XDG_CONFIG_HOME settings."},
+		{"inner role", &config.CredentialAccessError{Path: "/credential", Err: fmt.Errorf("%w: %w", config.ErrNotAuthenticated, private)},
+			"Credential file: \"/credential\".", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := fmt.Errorf("private wrapper: %w", tc.access)
+			want := "Error: Unable to read credentials.\n\n" + tc.detail + "\n"
+			if tc.hint != "" {
+				want += "\n" + tc.hint + "\n"
+			}
+			for _, raw := range []bool{false, true} {
+				var out bytes.Buffer
+				writer := cmdutil.NewSanitizingWriter(&out)
+				if err := writer.SetRaw(raw); err != nil {
+					t.Fatal(err)
+				}
+				renderCommandError(writer, err)
+				if err := cmdutil.FlushWriter(writer); err != nil {
+					t.Fatal(err)
+				}
+				if out.String() != want {
+					t.Fatalf("raw=%t: output = %q, want %q", raw, out.String(), want)
+				}
+			}
+			if !errors.Is(err, config.ErrCredentialAccess) || !errors.Is(err, tc.access.Err) {
+				t.Fatal("presentation lost original cause")
+			}
+		})
+	}
+}
+
+func TestCredentialAccessCauseDoesNotReplaceOuterRole(t *testing.T) {
+	access := &config.CredentialAccessError{Err: errors.New("private-cause")}
+	for _, tc := range []struct {
+		name    string
+		err     error
+		summary string
+	}{
+		{"format", &config.CredentialFormatError{Err: access}, "Credential configuration is invalid."},
+		{"API", &api.ResponseReadError{Err: access}, "API request failed."},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var out bytes.Buffer
+			renderCommandError(&out, tc.err)
+			if !strings.HasPrefix(out.String(), "Error: "+tc.summary+"\n") || strings.Contains(out.String(), "Unable to read credentials") {
+				t.Fatalf("inner access failure replaced outer operation: %q", out.String())
+			}
+		})
 	}
 }

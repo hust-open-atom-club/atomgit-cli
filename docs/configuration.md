@@ -104,7 +104,7 @@ ag-cli auth setup-git
 
 ### 必需认证与可选认证
 
-大多数命令需要已登录账号；缺少凭据或凭据文件无法读取时，会返回规范的 `not authenticated` 错误并提示运行 `ag-cli auth login`。
+大多数命令需要已登录账号；缺少凭据时会提示运行 `ag-cli auth login`。凭据路径无法确定或文件访问失败时，会单独报告无法读取凭据，并在权限不足时提示检查文件及父目录的所有权和读取权限。
 
 帮助和版本入口不需要读取凭据：`ag-cli --help`、`ag-cli help <command>`、子命令的 `-h`/`--help`、`ag-cli --version`、`ag-cli version` 和 `ag-cli version --json` 在凭据缺失、损坏或无法读取时仍可使用。
 

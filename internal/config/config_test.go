@@ -429,3 +429,62 @@ func TestNewConfigWithoutCredentials(t *testing.T) {
 		})
 	}
 }
+
+func TestCredentialAccessStopsLegacyFallback(t *testing.T) {
+	home := isolateConfig(t)
+	writeCredentialsFile(t, filepath.Join(home, legacyTokenFile), StoredCredentials{AccessToken: "legacy", User: "alice"})
+	path, err := PrimaryTokenPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(path, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name string
+		load func() error
+	}{
+		{"configuration", func() error { _, err := NewConfig(); return err }},
+		{"store", func() error { _, err := LoadCredentialStore(); return err }},
+		{"token", func() error { _, err := (&config{}).GetToken(); return err }},
+		{"user", func() error { _, err := (&config{}).GetUser(); return err }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.load()
+			access, ok := errors.AsType[*CredentialAccessError](err)
+			if !ok || !errors.Is(err, ErrCredentialAccess) || errors.Is(err, ErrTokenNotFound) || errors.Is(err, ErrNotAuthenticated) || errors.Is(err, ErrInvalidCredentials) {
+				t.Fatalf("error = %v, want only credential access failure", err)
+			}
+			cause, ok := errors.AsType[*os.PathError](err)
+			if !ok || cause.Path != path || access.Path != path || !errors.Is(err, cause.Err) {
+				t.Fatalf("error lost the selected path or native cause: %v", err)
+			}
+		})
+	}
+}
+
+func TestCredentialPathLookupFailure(t *testing.T) {
+	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	t.Setenv("XDG_CONFIG_HOME", "")
+	for _, tc := range []struct {
+		name string
+		load func() error
+	}{
+		{"read", func() error { _, err := readCredentialData(); return err }},
+		{"inspection", func() error { _, _, err := InspectCredentials(); return err }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.load()
+			access, ok := errors.AsType[*CredentialAccessError](err)
+			if !ok || !errors.Is(err, ErrCredentialAccess) || errors.Is(err, ErrTokenNotFound) || access.Err == nil || access.Path != "" {
+				t.Fatalf("error = %v, want path lookup failure retaining its cause", err)
+			}
+		})
+	}
+	// An explicit XDG path remains usable without a home directory.
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if _, err := readCredentialData(); !errors.Is(err, ErrTokenNotFound) || errors.Is(err, ErrCredentialAccess) {
+		t.Fatalf("explicit XDG path: %v, want missing credentials", err)
+	}
+}

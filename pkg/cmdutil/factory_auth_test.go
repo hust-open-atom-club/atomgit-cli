@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 
@@ -197,5 +198,29 @@ func TestAuthenticatedAPIClientReportsHTTPClientErrors(t *testing.T) {
 	_, err := factory.AuthenticatedAPIClient()
 	if !errors.Is(err, want) {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestCredentialAccessFailureStopsClientCreation(t *testing.T) {
+	cause := &os.PathError{Op: "open", Path: "/credential", Err: os.ErrPermission}
+	access := &config.CredentialAccessError{Operation: "open token file", Path: cause.Path, Err: cause}
+	factory := &Factory{
+		Config:     tokenConfig{err: access},
+		HttpClient: func() (*http.Client, error) { t.Fatal("access failure must stop client creation"); return nil, nil },
+	}
+	for _, tc := range []struct {
+		name   string
+		create func() error
+	}{
+		{"required API", func() error { _, err := factory.AuthenticatedAPIClient(); return err }},
+		{"optional API", func() error { _, err := factory.OptionalAPIClient(); return err }},
+		{"Actions", func() error { _, err := factory.AuthenticatedActionsClient(); return err }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.create()
+			if !errors.Is(err, config.ErrCredentialAccess) || !errors.Is(err, cause) || errors.Is(err, config.ErrNotAuthenticated) {
+				t.Fatalf("error = %v, want access failure retaining cause", err)
+			}
+		})
 	}
 }

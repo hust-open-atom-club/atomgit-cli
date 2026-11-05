@@ -118,10 +118,9 @@ func LoadStoredCredentials() (*StoredCredentials, error) {
 }
 
 func readCredentialData() ([]byte, error) {
-	paths := getTokenFilePaths()
-
-	if len(paths) == 0 {
-		return nil, fmt.Errorf("no token file paths available, please make sure user $HOME or $XDG_CONFIG_HOME is set")
+	paths, err := tokenFilePaths()
+	if err != nil {
+		return nil, err
 	}
 
 	var failedPaths []string
@@ -133,9 +132,9 @@ func readCredentialData() ([]byte, error) {
 				continue
 			}
 			if isPermissionErr(err) {
-				return nil, &TokenPermissionError{Path: path, Err: err}
+				err = &TokenPermissionError{Path: path, Err: err}
 			}
-			return nil, fmt.Errorf("lstat token file info %s: %w", path, err)
+			return nil, &CredentialAccessError{Operation: "lstat token file", Path: path, Err: err}
 		}
 		if li.Mode()&os.ModeSymlink != 0 {
 			return nil, fmt.Errorf("cannot read %s: %w\n"+
@@ -149,18 +148,18 @@ func readCredentialData() ([]byte, error) {
 				continue
 			}
 			if isPermissionErr(err) {
-				return nil, &TokenPermissionError{Path: path, Err: err}
+				err = &TokenPermissionError{Path: path, Err: err}
 			}
-			return nil, fmt.Errorf("open token file %s: %w", path, err)
+			return nil, &CredentialAccessError{Operation: "open token file", Path: path, Err: err}
 		}
 		defer f.Close() //nolint:errcheck // Read-only credential file; stat and read errors are handled separately.
 
 		info, err := f.Stat()
 		if err != nil {
 			if isPermissionErr(err) {
-				return nil, &TokenPermissionError{Path: path, Err: err}
+				err = &TokenPermissionError{Path: path, Err: err}
 			}
-			return nil, fmt.Errorf("stat token file info %s: %w", path, err)
+			return nil, &CredentialAccessError{Operation: "stat token file", Path: path, Err: err}
 		}
 
 		if !os.SameFile(li, info) {
@@ -173,7 +172,7 @@ func readCredentialData() ([]byte, error) {
 
 		data, err := io.ReadAll(f)
 		if err != nil {
-			return nil, fmt.Errorf("read token file %s: %w", path, err)
+			return nil, &CredentialAccessError{Operation: "read token file", Path: path, Err: err}
 		}
 
 		return data, nil
@@ -194,6 +193,12 @@ func readCredentialData() ([]byte, error) {
 //   - []string: slice of absolute file paths to search, ordered by priority.
 //     Empty slice if home directory cannot be determined.
 func getTokenFilePaths() []string {
+	paths, _ := tokenFilePaths()
+	return paths
+}
+
+// tokenFilePaths preserves a failed home lookup when no usable path exists.
+func tokenFilePaths() ([]string, error) {
 	var paths []string
 
 	xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
@@ -211,7 +216,10 @@ func getTokenFilePaths() []string {
 		paths = append(paths, filepath.Join(homeDir, legacyTokenFile))
 	}
 
-	return paths
+	if len(paths) == 0 {
+		return nil, &CredentialAccessError{Operation: "locate credential paths", Err: err}
+	}
+	return paths, nil
 }
 
 // PrimaryTokenPath returns the path to the preferred ag-cli token.json (XDG config dir).
