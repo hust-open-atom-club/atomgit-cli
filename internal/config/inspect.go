@@ -38,7 +38,7 @@ func InspectCredentials() (*StoredCredentials, os.FileMode, error) {
 		}
 		const maxSize = 1 << 20
 		data, err := io.ReadAll(io.LimitReader(f, maxSize+1))
-		f.Close()
+		_ = f.Close()
 		if err != nil {
 			return nil, info.Mode(), &CredentialAccessError{Operation: "read credential file", Path: path, Err: err}
 		}

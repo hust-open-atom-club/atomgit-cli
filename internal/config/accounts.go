@@ -303,15 +303,15 @@ func saveCredentialStore(store *CredentialStore) (resultErr error) {
 	// On failure, discard the temporary file and preserve the operation error.
 	// A successful write must pass Sync and Close before replacement.
 	if err := temporary.Chmod(0o600); err != nil {
-		temporary.Close()
+		_ = temporary.Close()
 		return fmt.Errorf("secure temporary credential file: %w", err)
 	}
 	if _, err := temporary.Write(data); err != nil {
-		temporary.Close()
+		_ = temporary.Close()
 		return fmt.Errorf("write temporary credential file: %w", err)
 	}
 	if err := temporary.Sync(); err != nil {
-		temporary.Close()
+		_ = temporary.Close()
 		return fmt.Errorf("sync temporary credential file: %w", err)
 	}
 	if err := temporary.Close(); err != nil {

@@ -428,12 +428,12 @@ func executePagination(out io.Writer, client *internalapi.Client, request prepar
 		if resp.StatusCode < 200 || resp.StatusCode > 299 {
 			err := responseError(fmt.Sprintf("request page %d", state.page), resp, token)
 			// Preserve the page request error already read from the response.
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			return err
 		}
 		body, readErr := io.ReadAll(resp.Body)
 		// Release each page before fetching the next; preserve any body read error.
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if readErr != nil {
 			err := fmt.Errorf("read page %d: %w", state.page, &internalapi.ResponseReadError{Err: readErr})
 			return redact(&redactedError{

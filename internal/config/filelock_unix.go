@@ -24,7 +24,7 @@ func lockFile(path string) (*fileLock, error) {
 	}
 	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil {
 		// Preserve the lock acquisition error while releasing the unused file.
-		f.Close()
+		_ = f.Close()
 		return nil, fmt.Errorf("lock alias config: %w", err)
 	}
 	return &fileLock{f: f}, nil

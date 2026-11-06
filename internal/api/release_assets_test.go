@@ -668,7 +668,7 @@ func TestDownloadReleaseAttachmentSanitizesHTTPError(t *testing.T) {
 
 	body, err := DownloadReleaseAttachment(context.Background(), client, "owner", "repo", "v1.0", "asset.bin")
 	if body != nil {
-		body.Close()
+		_ = body.Close()
 		t.Fatalf("body = %v, want nil", body)
 	}
 	assertSanitizedReleaseError(t, err, secret)

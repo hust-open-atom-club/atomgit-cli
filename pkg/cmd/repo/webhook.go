@@ -457,13 +457,13 @@ func listWebhooks(client *api.Client, repository cmdutil.Repository, limit int) 
 		if resp.StatusCode != http.StatusOK {
 			details := api.ReadErrorResponse(resp)
 			// Retain the status-only error to avoid exposing webhook secrets.
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			return nil, fmt.Errorf("API request failed: %s (response body omitted to protect webhook secrets)", details.Status)
 		}
 		var pageItems []api.Webhook
 		decodeErr := json.NewDecoder(resp.Body).Decode(&pageItems)
 		// Release each page before fetching the next; preserve any JSON decode error.
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if decodeErr != nil {
 			return nil, fmt.Errorf("decode webhook list response: %w", decodeErr)
 		}

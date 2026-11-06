@@ -264,7 +264,7 @@ func TestReplayChecksRequestsAndConsumption(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if err := replay.Check(); err != nil {
 				t.Fatal(err)
 			}
