@@ -199,8 +199,8 @@ func resolveNumber(client *api.Client, owner, repo string, num int) (string, err
 	if issueResp.StatusCode == http.StatusOK {
 		return browser.BuildIssueURL(owner, repo, num), nil
 	}
-	// Drain body for connection reuse before issuing the PR check
-	io.Copy(io.Discard, issueResp.Body) //nolint:errcheck // Draining a rejected issue response is best-effort connection reuse; status determines the result.
+	// Drain rejected responses for connection reuse.
+	_, _ = io.Copy(io.Discard, issueResp.Body)
 	if issueResp.StatusCode != http.StatusNotFound {
 		return "", fmt.Errorf("unexpected status checking issue #%d: %s", num, api.SanitizeErrorText(issueResp.Status))
 	}
@@ -214,7 +214,7 @@ func resolveNumber(client *api.Client, owner, repo string, num int) (string, err
 	if prResp.StatusCode == http.StatusOK {
 		return browser.BuildPRURL(owner, repo, num), nil
 	}
-	io.Copy(io.Discard, prResp.Body) //nolint:errcheck // Draining a rejected pull request response is best-effort connection reuse; status determines the result.
+	_, _ = io.Copy(io.Discard, prResp.Body)
 	if prResp.StatusCode != http.StatusNotFound {
 		return "", fmt.Errorf("unexpected status checking PR #%d: %s", num, api.SanitizeErrorText(prResp.Status))
 	}
