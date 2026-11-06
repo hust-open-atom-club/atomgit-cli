@@ -158,6 +158,10 @@
 - [ag-cli release upload](#ag-cli-release-upload) — Upload an attachment to a release
 - [ag-cli release view](#ag-cli-release-view) — View a release by tag
 - [ag-cli repo](#ag-cli-repo) — Manage repositories
+- [ag-cli repo cla](#ag-cli-repo-cla) — Manage repository CLA configuration
+- [ag-cli repo cla disable](#ag-cli-repo-cla-disable) — Disable repository CLA
+- [ag-cli repo cla list](#ag-cli-repo-cla-list) — List available CLAs
+- [ag-cli repo cla set](#ag-cli-repo-cla-set) — Select and enable a repository CLA
 - [ag-cli repo clone](#ag-cli-repo-clone) — Clone a repository
 - [ag-cli repo collaborator](#ag-cli-repo-collaborator) — Manage repository collaborators
 - [ag-cli repo collaborator add](#ag-cli-repo-collaborator-add) — Add a direct repository collaborator
@@ -3872,6 +3876,105 @@ For repository-scoped commands, OWNER/REPO may be omitted and inferred from the 
 | --- | --- | --- | --- |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli repo cla
+
+Usage: `ag-cli repo cla`
+
+Manage repository CLA configuration
+
+List available contributor license agreements, select an agreement, or disable CLA.
+The available list does not describe the repository's current configuration.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli repo cla disable
+
+Usage: `ag-cli repo cla disable [<owner>/<repo>] [flags]`
+
+Disable repository CLA
+
+Disable repository CLA. Requires confirmation unless --yes is supplied.
+Writes are never automatically retried or redirected. Check AtomGit before retrying a failed update.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip update confirmation | `false` | local |
+
+### Example
+
+```bash
+ag-cli repo cla disable owner/repo --yes
+```
+
+
+## ag-cli repo cla list
+
+Usage: `ag-cli repo cla list [<owner>/<repo>] [flags]`
+
+List available CLAs
+
+List available CLAs, not the repository's current CLA configuration.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--json` | Output available CLAs as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli repo cla list owner/repo
+ag-cli repo cla list --json
+```
+
+
+## ag-cli repo cla set
+
+Usage: `ag-cli repo cla set [<owner>/<repo>] [flags]`
+
+Select and enable a repository CLA
+
+Select and enable a repository CLA. Requires confirmation unless --yes is supplied.
+Writes are never automatically retried or redirected. Check AtomGit before retrying a failed update.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--cla-id` | Available CLA ID (required) | `` | local |
+| `--enforce-check` | Prevent merging PRs without a completed CLA check (only sent when specified) | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip update confirmation | `false` | local |
+
+### Example
+
+```bash
+ag-cli repo cla set owner/repo --cla-id agreement-id --enforce-check=false --yes
+```
 
 
 ## ag-cli repo clone

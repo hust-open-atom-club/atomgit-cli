@@ -141,6 +141,14 @@ func TestActualTreeIsOfflineCompleteAndDeterministic(t *testing.T) {
 			t.Errorf("organization discussion view manual missing %q", want)
 		}
 	}
+	for _, want := range []string{`\-\-cla\-id`, `\-\-enforce\-check`, `\-\-yes`, "never automatically retried"} {
+		if !strings.Contains(first["ag-cli-repo-cla-set.1"], want) {
+			t.Errorf("CLA set manual missing %q", want)
+		}
+	}
+	if strings.Contains(first["ag-cli-repo-cla-disable.1"], `\-\-enforce\-check`) {
+		t.Fatal("disable manual exposes an enable-only option")
+	}
 	for _, want := range []string{`\-\-name`, `\-\-description`, `\-\-visibility`, "public", "never automatically retried"} {
 		if !strings.Contains(first["ag-cli-org-create.1"], want) {
 			t.Errorf("organization create manual missing %q", want)

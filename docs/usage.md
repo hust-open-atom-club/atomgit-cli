@@ -319,6 +319,27 @@ ag-cli repo delete owner/repo --yes
 
 该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。
 
+#### 仓库 CLA
+
+```bash
+# 列出可用协议；省略仓库时使用当前 Git 仓库的 AtomGit remote
+ag-cli repo cla list owner/repo
+ag-cli repo cla list --json
+# CLA ID 为字符串，来自可用协议列表；显式 false 会发送给 API
+ag-cli repo cla set owner/repo --cla-id agreement-id --enforce-check=false
+ag-cli repo cla set owner/repo --cla-id agreement-id --enforce-check --yes
+# 停用是独立操作
+ag-cli repo cla disable owner/repo --yes
+```
+
+`list` 使用 `GET /repos/{owner}/{repo}/clas`，解析响应的 `data` 数组。文本每行输出协议 ID 和名称，以制表符分隔；JSON 输出为包含 `id`、`name` 的数组，空列表输出 `[]`。这是可用 CLA 列表，不代表仓库当前启用的协议或检查设置。
+
+`set` 必须提供非空的 `--cla-id`；缺少或空 ID 在认证和请求前报错，不会意外停用 CLA。`--enforce-check` 表示禁止合入未完成 CLA 签署检查的 PR；`--enforce-check=false` 显式关闭该检查，省略选项则不发送该字段。`disable` 不接受 CLA ID 或检查选项，向单数路径 `PUT /repos/{owner}/{repo}/cla` 发送 `{}`；`set` 使用同一路径，发送字符串 `cla_id` 及显式指定的布尔 `enforce_check`。
+
+写操作默认在 stderr 展示目标仓库、操作和指定字段并请求确认；`--yes` 跳过确认，取消时不发送请求。只接受约定的 HTTP 200，允许空响应，不自动重试或跟随重定向。失败后应先在 AtomGit 确认配置再重试。命令不提供协议模板创建、签署或未文档化的当前配置查询，测试只使用离线 mock。
+
+接口依据：[可用 CLA 列表](https://docs.atomgit.com/docs/apis/get-api-v-5-repos-owner-repo-clas/)、[CLA 配置](https://docs.atomgit.com/docs/apis/put-api-v-5-repos-owner-repo-clas/)。
+
 #### 仓库策略设置
 
 ```bash
