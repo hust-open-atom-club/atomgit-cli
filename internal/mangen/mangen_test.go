@@ -141,6 +141,11 @@ func TestActualTreeIsOfflineCompleteAndDeterministic(t *testing.T) {
 			t.Errorf("organization discussion view manual missing %q", want)
 		}
 	}
+	for _, want := range []string{`\-\-name`, `\-\-description`, `\-\-visibility`, "public", "never automatically retried"} {
+		if !strings.Contains(first["ag-cli-org-create.1"], want) {
+			t.Errorf("organization create manual missing %q", want)
+		}
+	}
 }
 
 func TestInvalidInputs(t *testing.T) {

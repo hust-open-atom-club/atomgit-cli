@@ -170,18 +170,32 @@ func TestAPIErrorProcess(t *testing.T) {
 			code, body = http.StatusForbidden, `{"message":"private-body xyz789"}`
 		case "HTTP read":
 			code = http.StatusForbidden
+		case "server error", "server error read":
+			code, body = http.StatusBadGateway, `{"message":"private-body xyz789\u001b[31m"}`
+		case "created":
+			code, body = http.StatusCreated, `{"id":1,"path":"team"}`
+		case "accepted":
+			code = http.StatusAccepted
+		case "no content":
+			code, body = http.StatusNoContent, ""
+		case "redirect":
+			code, body = http.StatusSeeOther, `{"message":"private-body xyz789"}`
 		case "invalid":
 			body = `{"private-body":"xyz789"`
+		case "identity":
+			body = `{"id":1,"path":"other","web_url":"https://private.test"}`
+		case "org success":
+			body = `{"id":1,"path":"team","web_url":"https://example.test/team"}`
 		}
 		var reader io.Reader = strings.NewReader(body)
-		if scenario == "read" || scenario == "HTTP read" {
+		if scenario == "read" || scenario == "HTTP read" || scenario == "server error read" {
 			reader = apiProcessReadFailure{cause: context.DeadlineExceeded}
 		}
 		if scenario == "read plain" {
 			reader = apiProcessReadFailure{cause: errors.New("private-read")}
 		}
 		return &http.Response{
-			StatusCode: code, Status: "private-status", Header: make(http.Header),
+			StatusCode: code, Status: "private-status", Header: http.Header{"Location": {"https://other.test/result"}},
 			Body: io.NopCloser(reader), Request: r,
 		}, nil
 	})

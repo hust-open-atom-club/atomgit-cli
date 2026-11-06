@@ -33,6 +33,7 @@ func TestRegisteredCommands(t *testing.T) {
 		{[]string{"discussion", "edit"}, 1, 2, "text", "write"},
 		{[]string{"discussion", "create"}, 0, 1, "text", "write"},
 		{[]string{"discussion", "delete"}, 1, 2, "text", "write"},
+		{[]string{"org", "create"}, 1, 1, "text", "write"},
 		{[]string{"org", "discussion", "list"}, 1, 1, "text,json", "read"},
 		{[]string{"org", "discussion", "view"}, 2, 2, "text,json", "read"},
 		{[]string{"org", "discussion", "create"}, 1, 1, "text", "write"},
@@ -91,6 +92,14 @@ func TestRegisteredCommands(t *testing.T) {
 				}
 				if len(detail.FlagGroups) != 1 || detail.FlagGroups[0].Kind != "mutuallyExclusive" {
 					t.Fatal("missing body/body-file constraint")
+				}
+			}
+			if detail.Path == "ag-cli org create" {
+				for name, defaultValue := range map[string]string{"name": "", "description": "", "visibility": "public"} {
+					i := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == name })
+					if i < 0 || detail.Flags[i].Required || detail.Flags[i].Default != defaultValue || detail.Flags[i].Type != "string" {
+						t.Fatalf("incorrect optional flag metadata for %s", name)
+					}
 				}
 			}
 			if detail.Path == "ag-cli discussion create" || detail.Path == "ag-cli org discussion create" {
