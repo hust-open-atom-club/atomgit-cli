@@ -5,6 +5,7 @@ package mangen
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -199,11 +200,17 @@ func text(b *strings.Builder, s string) {
 // silently deleted; use an empty output directory after removing a command.
 func Write(directory string, pages []Page, check bool) error {
 	if !check {
+		//nolint:gosec // G301: public manual directories must be readable and traversable by all users.
 		if err := os.MkdirAll(directory, 0o755); err != nil {
 			return fmt.Errorf("create manual directory: %w", err)
 		}
 	}
-	entries, err := os.ReadDir(directory)
+	root, err := os.OpenRoot(directory)
+	if err != nil {
+		return fmt.Errorf("open manual directory: %w", err)
+	}
+	defer root.Close()
+	entries, err := fs.ReadDir(root.FS(), ".")
 	if err != nil {
 		return fmt.Errorf("read manual directory: %w", err)
 	}
@@ -220,17 +227,19 @@ func Write(directory string, pages []Page, check bool) error {
 		}
 	}
 	for _, page := range pages {
-		path := filepath.Join(directory, page.Name)
 		if check {
-			current, err := os.ReadFile(path)
+			current, err := root.ReadFile(page.Name)
 			if err != nil {
 				return fmt.Errorf("read manual %s: %w", page.Name, err)
 			}
 			if !bytes.Equal(current, page.Data) {
 				return fmt.Errorf("manual %s is out of date", page.Name)
 			}
-		} else if err := os.WriteFile(path, page.Data, 0o644); err != nil {
-			return fmt.Errorf("write manual %s: %w", page.Name, err)
+		} else {
+			// Manual pages are public documentation and must be readable by all users.
+			if err := root.WriteFile(page.Name, page.Data, 0o644); err != nil {
+				return fmt.Errorf("write manual %s: %w", page.Name, err)
+			}
 		}
 	}
 	return nil
