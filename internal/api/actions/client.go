@@ -510,7 +510,6 @@ func (c *Client) download(operation, path string) (*http.Response, error) {
 	}
 	if resp.StatusCode != http.StatusOK {
 		err := responseError(operation, resp)
-		// Close rejected downloads here; the caller owns successful response bodies.
 		_ = resp.Body.Close()
 		return nil, err
 	}

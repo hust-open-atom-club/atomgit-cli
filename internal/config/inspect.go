@@ -32,7 +32,6 @@ func InspectCredentials() (*StoredCredentials, os.FileMode, error) {
 		}
 		opened, statErr := f.Stat()
 		if err := validateInspectedFileIdentity(path, info, opened, statErr); err != nil {
-			// Preserve the stat or file identity error while releasing the file.
 			_ = f.Close()
 			return nil, info.Mode(), err
 		}

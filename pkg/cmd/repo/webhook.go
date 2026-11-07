@@ -456,7 +456,6 @@ func listWebhooks(client *api.Client, repository cmdutil.Repository, limit int) 
 		}
 		if resp.StatusCode != http.StatusOK {
 			details := api.ReadErrorResponse(resp)
-			// Retain the status-only error to avoid exposing webhook secrets.
 			_ = resp.Body.Close()
 			return nil, fmt.Errorf("API request failed: %s (response body omitted to protect webhook secrets)", details.Status)
 		}

@@ -107,7 +107,6 @@ func UploadReleaseAsset(ctx context.Context, client *Client, upload ReleaseUploa
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			if resp != nil {
-				// Response cleanup is best effort; retry safety depends on whether upload bytes were consumed.
 				_ = resp.Body.Close()
 			}
 			if closeErr := requestBody.waitForClose(requestBodyCloseTimeout); closeErr != nil {
@@ -137,7 +136,6 @@ func UploadReleaseAsset(ctx context.Context, client *Client, upload ReleaseUploa
 
 		// HTTP failure: retain only the shared sanitized excerpt, do not retry.
 		responseErr := NewHTTPError(resp)
-		// Preserve the upload rejection while releasing the response.
 		_ = resp.Body.Close()
 		if closeErr := requestBody.waitForClose(requestBodyCloseTimeout); closeErr != nil {
 			return fmt.Errorf("upload failed: %w; wait for request body to close: %w", responseErr, closeErr)
@@ -276,7 +274,6 @@ func DownloadReleaseAttachment(ctx context.Context, client *Client, owner, repo,
 
 	if resp.StatusCode != http.StatusOK {
 		responseErr := NewHTTPError(resp)
-		// Close failed responses here; the caller owns successful attachment streams.
 		_ = resp.Body.Close()
 		return nil, fmt.Errorf("download failed: %w", responseErr)
 	}

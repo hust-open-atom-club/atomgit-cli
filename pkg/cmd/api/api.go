@@ -427,7 +427,6 @@ func executePagination(out io.Writer, client *internalapi.Client, request prepar
 		}
 		if resp.StatusCode < 200 || resp.StatusCode > 299 {
 			err := responseError(fmt.Sprintf("request page %d", state.page), resp, token)
-			// Preserve the page request error already read from the response.
 			_ = resp.Body.Close()
 			return err
 		}
