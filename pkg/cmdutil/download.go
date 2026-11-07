@@ -98,7 +98,7 @@ func copyDownloadNoReplace(temporaryName, destination string) (err error) {
 	if err != nil {
 		return fmt.Errorf("open completed download: %w", err)
 	}
-	defer source.Close() //nolint:errcheck // Source is a read-only completed download; stat and destination write errors are handled separately.
+	defer source.Close()
 
 	info, err := source.Stat()
 	if err != nil {

@@ -300,16 +300,18 @@ func saveCredentialStore(store *CredentialStore) (resultErr error) {
 	}
 	temporaryPath := temporary.Name()
 	defer func() { removeTemporaryConfig(temporaryPath, &resultErr) }()
+	// On failure, discard the temporary file and preserve the operation error.
+	// A successful write must pass Sync and Close before replacement.
 	if err := temporary.Chmod(0o600); err != nil {
-		temporary.Close() //nolint:errcheck // Chmod failed; closing the temporary file is best-effort cleanup while the permission error remains primary.
+		_ = temporary.Close()
 		return fmt.Errorf("secure temporary credential file: %w", err)
 	}
 	if _, err := temporary.Write(data); err != nil {
-		temporary.Close() //nolint:errcheck // Write failed; closing the temporary file is best-effort cleanup while the write error remains primary.
+		_ = temporary.Close()
 		return fmt.Errorf("write temporary credential file: %w", err)
 	}
 	if err := temporary.Sync(); err != nil {
-		temporary.Close() //nolint:errcheck // Sync failed; closing the temporary file is best-effort cleanup while the sync error remains primary.
+		_ = temporary.Close()
 		return fmt.Errorf("sync temporary credential file: %w", err)
 	}
 	if err := temporary.Close(); err != nil {

@@ -406,7 +406,7 @@ func newCmdCommitText(f *cmdutil.Factory, format string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer body.Close() //nolint:errcheck // Commit body is read by io.Copy separately; Close only releases the streamed response.
+			defer body.Close()
 			if _, err := io.Copy(cmd.OutOrStdout(), body); err != nil {
 				return fmt.Errorf("stream commit %s output: %w", format, err)
 			}

@@ -152,7 +152,7 @@ func readCredentialData() ([]byte, error) {
 			}
 			return nil, &CredentialAccessError{Operation: "open token file", Path: path, Err: err}
 		}
-		defer f.Close() //nolint:errcheck // Read-only credential file; stat and read errors are handled separately.
+		defer f.Close()
 
 		info, err := f.Stat()
 		if err != nil {

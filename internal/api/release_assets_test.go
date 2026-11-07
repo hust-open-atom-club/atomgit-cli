@@ -404,7 +404,7 @@ func TestUploadReleaseAssetRetriesRealFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer file.Close() //nolint:errcheck // Test opens the upload source read-only; Close only releases test resources.
+	defer file.Close()
 
 	upload := ReleaseUploadURL{
 		URL:     "https://store.example.com/upload?policy=abc",
@@ -581,7 +581,7 @@ func TestDownloadReleaseAttachmentSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DownloadReleaseAttachment: %v", err)
 	}
-	defer rc.Close() //nolint:errcheck // Test reads the streamed attachment separately; Close only releases test resources.
+	defer rc.Close()
 
 	got, err := io.ReadAll(rc)
 	if err != nil {
@@ -621,7 +621,7 @@ func TestDownloadReleaseAttachmentDoesNotUseMetadataTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DownloadReleaseAttachment: %v", err)
 	}
-	defer body.Close() //nolint:errcheck // Test reads the streamed attachment separately; Close only releases test resources.
+	defer body.Close()
 	got, err := io.ReadAll(body)
 	if err != nil {
 		t.Fatalf("read download: %v", err)
@@ -668,7 +668,7 @@ func TestDownloadReleaseAttachmentSanitizesHTTPError(t *testing.T) {
 
 	body, err := DownloadReleaseAttachment(context.Background(), client, "owner", "repo", "v1.0", "asset.bin")
 	if body != nil {
-		body.Close() //nolint:errcheck // Unexpected response body is test cleanup; the assertion below reports the failure.
+		_ = body.Close()
 		t.Fatalf("body = %v, want nil", body)
 	}
 	assertSanitizedReleaseError(t, err, secret)

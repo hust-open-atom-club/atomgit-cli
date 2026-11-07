@@ -23,7 +23,7 @@ func lockFile(path string) (*fileLock, error) {
 		return nil, fmt.Errorf("open alias lock file %s: %w", path, err)
 	}
 	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil {
-		f.Close() //nolint:errcheck // Lock acquisition failed; closing the file is best-effort cleanup while the lock error remains primary.
+		_ = f.Close()
 		return nil, fmt.Errorf("lock alias config: %w", err)
 	}
 	return &fileLock{f: f}, nil
@@ -45,6 +45,6 @@ func syncDir(dir string) error {
 	if err != nil {
 		return err
 	}
-	defer d.Close() //nolint:errcheck // Directory Sync result is returned; Close only releases the directory handle.
+	defer d.Close()
 	return d.Sync()
 }
