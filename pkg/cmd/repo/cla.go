@@ -40,7 +40,7 @@ func newCmdRepoCLAList(f *cmdutil.Factory) *cobra.Command {
 				return cmdutil.WriteJSON(cmd.OutOrStdout(), agreements)
 			}
 			for _, agreement := range agreements {
-				if _, err := fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\n", agreement.ID, agreement.Name); err != nil {
+				if _, err := fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\n", cmdutil.EscapeTSVField(agreement.ID), cmdutil.EscapeTSVField(agreement.Name)); err != nil {
 					return err
 				}
 			}

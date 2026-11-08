@@ -73,6 +73,41 @@ func TestRepoCLAList(t *testing.T) {
 	}
 }
 
+func TestRepoCLAListEscapesTSVFields(t *testing.T) {
+	id, name := "cla\\id\tpart\nnext\r", "Agreement\tExtra\nFake row\r\\end"
+	body, err := json.Marshal(map[string]any{"data": []map[string]string{{"id": id, "name": name}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, asJSON := range []bool{false, true} {
+		t.Run(fmt.Sprintf("json=%t", asJSON), func(t *testing.T) {
+			f := policyFactory(t, func(*http.Request) (int, string) { return 200, string(body) })
+			args := []string{"list", "team/demo"}
+			if asJSON {
+				args = append(args, "--json")
+			}
+			out, stderr, err := executeCLA(t, f, "", args...)
+			if err != nil || stderr != "" {
+				t.Fatalf("error=%v stderr=%q", err, stderr)
+			}
+			if asJSON {
+				var got []map[string]string
+				if err := json.Unmarshal([]byte(out), &got); err != nil {
+					t.Fatal(err)
+				}
+				if len(got) != 1 || got[0]["id"] != id || got[0]["name"] != name {
+					t.Fatalf("JSON changed field values: %q", out)
+				}
+				return
+			}
+			want := `cla\\id\tpart\nnext\r` + "\t" + `Agreement\tExtra\nFake row\r\\end` + "\n"
+			if out != want {
+				t.Fatalf("output=%q want=%q", out, want)
+			}
+		})
+	}
+}
+
 func TestRepoCLAWrite(t *testing.T) {
 	for _, tc := range []struct {
 		name string
