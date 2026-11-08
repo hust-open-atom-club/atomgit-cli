@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -195,6 +196,69 @@ func TestCredentialAccessCauseDoesNotReplaceOuterRole(t *testing.T) {
 			renderCommandError(&out, tc.err)
 			if !strings.HasPrefix(out.String(), "Error: "+tc.summary+"\n") || strings.Contains(out.String(), "Unable to read credentials") {
 				t.Fatalf("inner access failure replaced outer operation: %q", out.String())
+			}
+		})
+	}
+}
+
+func TestCredentialFileSafetyDiagnostics(t *testing.T) {
+	ownerHint := "Check ownership and file read permissions."
+	if runtime.GOOS != "windows" {
+		ownerHint = "Check ownership and set the credential file permissions to 0600."
+	}
+	for _, tc := range []struct {
+		name         string
+		reason       error
+		detail, hint string
+	}{
+		{"symlink", config.ErrTokenFileSymlink, "The credential file is a symbolic link.", "Use a regular credential file owned by the current user."},
+		{"changed", config.ErrTokenFileChanged, "The credential file changed while it was being opened.", "Check the credential file before retrying."},
+		{"owner unreadable", &config.TokenPermissionError{Path: "/private/credential", Err: config.ErrTokenFileUnreadable}, "The credential file is not readable by its owner.", ownerHint},
+		{"nonregular", config.ErrTokenFileNotRegular, "The credential file is not a regular file.", "Use a regular credential file owned by the current user."},
+		{"oversized", config.ErrTokenFileTooLarge, "The credential file exceeds the inspection size limit.", "Check the credential file size; inspection accepts at most 1 MiB."},
+		{"private cause", errors.New("private-token and private-cause"), "The credential file failed a safety check.", "Check the credential file before retrying."},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := fmt.Errorf("private wrapper: %w", &config.CredentialFileSafetyError{Path: "/private/credential", Err: tc.reason})
+			want := "Error: Credential configuration is invalid.\n\n" + tc.detail + "\n\n" + tc.hint + "\n"
+			for _, raw := range []bool{false, true} {
+				var out bytes.Buffer
+				writer := cmdutil.NewSanitizingWriter(&out)
+				if err := writer.SetRaw(raw); err != nil {
+					t.Fatal(err)
+				}
+				renderCommandError(writer, err)
+				if err := cmdutil.FlushWriter(writer); err != nil {
+					t.Fatal(err)
+				}
+				if out.String() != want {
+					t.Fatalf("raw=%t: output = %q, want %q", raw, out.String(), want)
+				}
+			}
+			if !errors.Is(err, tc.reason) {
+				t.Fatal("diagnostic changed original cause")
+			}
+		})
+	}
+}
+
+func TestCredentialSafetyAndOuterOperationRoles(t *testing.T) {
+	safety := &config.CredentialFileSafetyError{Err: config.ErrTokenFileSymlink}
+	for _, tc := range []struct {
+		name   string
+		err    error
+		detail string
+	}{
+		{"API owns safety cause", &api.ResponseReadError{Err: safety}, "The server response could not be read."},
+		{"access owns safety cause", &config.CredentialAccessError{Path: "/credential", Err: safety}, "Unable to read credentials."},
+		{"format owns safety cause", &config.CredentialFormatError{InvalidFieldType: true, Err: safety}, "The credential file has an invalid field type."},
+		{"safety owns access cause", &config.CredentialFileSafetyError{Err: &config.CredentialAccessError{Err: os.ErrPermission}}, "The credential file failed a safety check."},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var out bytes.Buffer
+			renderCommandError(&out, tc.err)
+			if !strings.Contains(out.String(), tc.detail) || strings.Contains(out.String(), "The credential file is a symbolic link.") {
+				t.Fatalf("inner cause replaced outer operation: %q", out.String())
 			}
 		})
 	}

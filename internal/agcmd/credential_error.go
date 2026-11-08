@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 )
@@ -37,6 +38,34 @@ func credentialDiagnostic(err error) (commandDiagnostic, bool) {
 			if errors.Is(access.Err, os.ErrPermission) {
 				d.hint = "Check the file and parent directory ownership and read permissions."
 			}
+		}
+		return d, true
+	}
+	//nolint:errorlint // errors.As could misclassify a format error with a nested safety error.
+	if safety, ok := err.(*config.CredentialFileSafetyError); ok {
+		d := commandDiagnostic{
+			summary: "Credential configuration is invalid.",
+			detail:  "The credential file failed a safety check.",
+			hint:    "Check the credential file before retrying.",
+		}
+		switch {
+		case errors.Is(safety.Err, config.ErrTokenFileSymlink):
+			d.detail = "The credential file is a symbolic link."
+			d.hint = "Use a regular credential file owned by the current user."
+		case errors.Is(safety.Err, config.ErrTokenFileChanged):
+			d.detail = "The credential file changed while it was being opened."
+		case errors.Is(safety.Err, config.ErrTokenFileUnreadable):
+			d.detail = "The credential file is not readable by its owner."
+			d.hint = "Check ownership and file read permissions."
+			if runtime.GOOS != "windows" {
+				d.hint = "Check ownership and set the credential file permissions to 0600."
+			}
+		case errors.Is(safety.Err, config.ErrTokenFileNotRegular):
+			d.detail = "The credential file is not a regular file."
+			d.hint = "Use a regular credential file owned by the current user."
+		case errors.Is(safety.Err, config.ErrTokenFileTooLarge):
+			d.detail = "The credential file exceeds the inspection size limit."
+			d.hint = "Check the credential file size; inspection accepts at most 1 MiB."
 		}
 		return d, true
 	}

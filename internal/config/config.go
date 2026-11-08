@@ -137,8 +137,7 @@ func readCredentialData() ([]byte, error) {
 			return nil, &CredentialAccessError{Operation: "lstat token file", Path: path, Err: err}
 		}
 		if li.Mode()&os.ModeSymlink != 0 {
-			return nil, fmt.Errorf("cannot read %s: %w\n"+
-				"remove the symlink and place the token file directly", path, ErrTokenFileSymlink)
+			return nil, &CredentialFileSafetyError{Path: path, Err: ErrTokenFileSymlink}
 		}
 
 		f, err := os.Open(path)
@@ -163,7 +162,7 @@ func readCredentialData() ([]byte, error) {
 		}
 
 		if !os.SameFile(li, info) {
-			return nil, fmt.Errorf("cannot read %s: %w", path, ErrTokenFileChanged)
+			return nil, &CredentialFileSafetyError{Path: path, Err: ErrTokenFileChanged}
 		}
 
 		if err := validateAndFixTokenFilePerm(f, path, info); err != nil {

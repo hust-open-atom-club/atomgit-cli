@@ -224,3 +224,29 @@ func TestCredentialAccessFailureStopsClientCreation(t *testing.T) {
 		})
 	}
 }
+
+func TestCredentialSafetyFailureStopsClientCreation(t *testing.T) {
+	safety := &config.CredentialFileSafetyError{Path: "/credential", Err: config.ErrTokenFileSymlink}
+	factory := &Factory{
+		Config: tokenConfig{err: safety},
+		HttpClient: func() (*http.Client, error) {
+			t.Fatal("safety rejection must stop client creation")
+			return nil, nil
+		},
+	}
+	for _, tc := range []struct {
+		name   string
+		create func() error
+	}{
+		{"required API", func() error { _, err := factory.AuthenticatedAPIClient(); return err }},
+		{"optional API", func() error { _, err := factory.OptionalAPIClient(); return err }},
+		{"Actions", func() error { _, err := factory.AuthenticatedActionsClient(); return err }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.create()
+			if !errors.Is(err, config.ErrInvalidCredentials) || !errors.Is(err, config.ErrTokenFileSymlink) || errors.Is(err, config.ErrNotAuthenticated) || errors.Is(err, config.ErrCredentialAccess) {
+				t.Fatalf("error = %v, want safety rejection retaining cause", err)
+			}
+		})
+	}
+}

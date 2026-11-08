@@ -252,6 +252,7 @@ func TestLoadStoredCredentials(t *testing.T) {
 
 	t.Run("rejects symlink token file", func(t *testing.T) {
 		home := isolateConfig(t)
+		writeCredentialsFile(t, filepath.Join(home, legacyTokenFile), StoredCredentials{AccessToken: "legacy", User: "bob"})
 		target := filepath.Join(home, "real-token.json")
 		writeCredentialsFile(t, target, StoredCredentials{AccessToken: "secret", User: "alice"})
 
@@ -267,8 +268,8 @@ func TestLoadStoredCredentials(t *testing.T) {
 		}
 
 		_, err := LoadStoredCredentials()
-		if !errors.Is(err, ErrTokenFileSymlink) {
-			t.Fatalf("error = %v, want ErrTokenFileSymlink", err)
+		if !errors.Is(err, ErrTokenFileSymlink) || !errors.Is(err, ErrInvalidCredentials) || errors.Is(err, ErrCredentialAccess) || errors.Is(err, ErrTokenNotFound) {
+			t.Fatalf("error = %v, want symlink safety rejection without fallback", err)
 		}
 	})
 }

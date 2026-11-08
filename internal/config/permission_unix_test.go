@@ -189,7 +189,7 @@ func TestValidateAndFixTokenFilePerm(t *testing.T) {
 		}
 
 		err = validateAndFixTokenFilePerm(f, path, info)
-		if errors.Is(err, ErrCredentialAccess) || !errors.Is(err, ErrTokenFileUnreadable) {
+		if errors.Is(err, ErrCredentialAccess) || !errors.Is(err, ErrTokenFileUnreadable) || !errors.Is(err, ErrInvalidCredentials) {
 			t.Fatalf("owner-read validation must remain a safety rejection: %v", err)
 		}
 		if err == nil {

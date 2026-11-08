@@ -14,10 +14,9 @@ func TestValidateAndFixTokenFilePermWindows(t *testing.T) {
 	}
 }
 
-func TestTokenPermissionErrorHintWindows(t *testing.T) {
+func TestTokenPermissionErrorMessageWindows(t *testing.T) {
 	err := &TokenPermissionError{Path: `C:\Users\test\token.json`, Err: os.ErrPermission}
-	want := `cannot read token file C:\Users\test\token.json: permission denied
-hint: check ownership and file read permissions`
+	want := `cannot read token file C:\Users\test\token.json: permission denied`
 	if err.Error() != want {
 		t.Fatalf("error = %q, want %q", err, want)
 	}

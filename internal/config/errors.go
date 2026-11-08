@@ -31,6 +31,12 @@ var (
 
 	// ErrTokenFileUnreadable is returned when a token file is not owner-readable.
 	ErrTokenFileUnreadable = errors.New("token file is not owner-readable")
+
+	// ErrTokenFileNotRegular is returned when inspection rejects a non-regular file.
+	ErrTokenFileNotRegular = errors.New("credential file must be a regular file")
+
+	// ErrTokenFileTooLarge is returned when inspection rejects an oversized file.
+	ErrTokenFileTooLarge = errors.New("credential file exceeds size limit")
 )
 
 // CredentialAccessError records a failed credential source lookup or read.
@@ -51,6 +57,19 @@ func (e *CredentialAccessError) Error() string {
 func (e *CredentialAccessError) Unwrap() error        { return e.Err }
 func (e *CredentialAccessError) Is(target error) bool { return target == ErrCredentialAccess }
 
+// CredentialFileSafetyError records a credential file rejected by a safety check.
+// Err retains the specific rejection reason independently of CLI guidance.
+type CredentialFileSafetyError struct {
+	Path string
+	Err  error
+}
+
+func (e *CredentialFileSafetyError) Error() string {
+	return fmt.Sprintf("unsafe credential file %s: %v", e.Path, e.Err)
+}
+func (e *CredentialFileSafetyError) Unwrap() error        { return e.Err }
+func (e *CredentialFileSafetyError) Is(target error) bool { return target == ErrInvalidCredentials }
+
 // CredentialFormatError describes a credential decoder failure. Offset and
 // InvalidFieldType are format facts exposed by config, independently of the
 // concrete parser cause retained in Err.
@@ -67,7 +86,7 @@ func (e *CredentialFormatError) Unwrap() error        { return e.Err }
 func (e *CredentialFormatError) Is(target error) bool { return target == ErrInvalidCredentials }
 
 // TokenPermissionError is returned when a token file cannot be read due to
-// file permission issues. The hint varies by platform.
+// file permission issues. It retains the original cause.
 type TokenPermissionError struct {
 	Path string
 	Err  error
@@ -78,7 +97,7 @@ func (e *TokenPermissionError) Error() string {
 	if pathErr, ok := errors.AsType[*os.PathError](err); ok {
 		err = pathErr.Err
 	}
-	return fmt.Sprintf("cannot read token file %s: %v\nhint: %s", e.Path, err, e.hint())
+	return fmt.Sprintf("cannot read token file %s: %v", e.Path, err)
 }
 
 func (e *TokenPermissionError) Unwrap() error {

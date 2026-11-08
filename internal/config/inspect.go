@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 )
@@ -23,8 +22,11 @@ func InspectCredentials() (*StoredCredentials, os.FileMode, error) {
 		if err != nil {
 			return nil, 0, &CredentialAccessError{Operation: "lstat credential file", Path: path, Err: err}
 		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil, 0, &CredentialFileSafetyError{Path: path, Err: ErrTokenFileSymlink}
+		}
 		if !info.Mode().IsRegular() {
-			return nil, 0, fmt.Errorf("credential file must be a regular file")
+			return nil, 0, &CredentialFileSafetyError{Path: path, Err: ErrTokenFileNotRegular}
 		}
 		f, err := os.Open(path)
 		if err != nil {
@@ -42,7 +44,7 @@ func InspectCredentials() (*StoredCredentials, os.FileMode, error) {
 			return nil, info.Mode(), &CredentialAccessError{Operation: "read credential file", Path: path, Err: err}
 		}
 		if len(data) > maxSize {
-			return nil, info.Mode(), fmt.Errorf("credential file exceeds size limit")
+			return nil, info.Mode(), &CredentialFileSafetyError{Path: path, Err: ErrTokenFileTooLarge}
 		}
 		store, _, err := parseCredentialStore(data)
 		if err != nil {
@@ -76,7 +78,7 @@ func validateInspectedFileIdentity(path string, before, after os.FileInfo, statE
 		return &CredentialAccessError{Operation: "stat credential file", Path: path, Err: statErr}
 	}
 	if !os.SameFile(before, after) {
-		return ErrTokenFileChanged
+		return &CredentialFileSafetyError{Path: path, Err: ErrTokenFileChanged}
 	}
 	return nil
 }

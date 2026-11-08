@@ -2,10 +2,7 @@
 
 package config
 
-import (
-	"fmt"
-	"os"
-)
+import "os"
 
 // validateTokenFilePerm validates Unix permission bits for a credential file.
 //
@@ -31,7 +28,7 @@ func validateAndFixTokenFilePerm(f *os.File, path string, info os.FileInfo) erro
 
 	fixed, err := validateTokenFilePerm(perm)
 	if err != nil {
-		return &TokenPermissionError{Path: path, Err: err}
+		return &CredentialFileSafetyError{Path: path, Err: &TokenPermissionError{Path: path, Err: err}}
 	}
 	if fixed != perm {
 		if err := f.Chmod(fixed); err != nil {
@@ -40,10 +37,4 @@ func validateAndFixTokenFilePerm(f *os.File, path string, info os.FileInfo) erro
 	}
 
 	return nil
-}
-
-// hint returns a Unix-specific hint that includes the chmod command to fix
-// token file permissions.
-func (e *TokenPermissionError) hint() string {
-	return fmt.Sprintf("check ownership and set permissions with `chmod 600 %q`", e.Path)
 }
