@@ -100,6 +100,7 @@
 - [ag-cli notification list](#ag-cli-notification-list) — List repository notifications
 - [ag-cli notification mark-read](#ag-cli-notification-mark-read) — Mark repository notifications as read
 - [ag-cli org](#ag-cli-org) — Manage organizations
+- [ag-cli org create](#ag-cli-org-create) — Create an organization
 - [ag-cli org discussion](#ag-cli-org-discussion) — Manage organization discussions
 - [ag-cli org discussion comment](#ag-cli-org-discussion-comment) — Manage organization discussion comments
 - [ag-cli org discussion comment create](#ag-cli-org-discussion-comment-create) — Create a comment on a discussion
@@ -120,6 +121,7 @@
 - [ag-cli org runner-group runner-sets](#ag-cli-org-runner-group-runner-sets) — List Kubernetes runner sets in an organization runner group
 - [ag-cli org runner-group runners](#ag-cli-org-runner-group-runners) — List host runners in an organization runner group
 - [ag-cli org runner-group view](#ag-cli-org-runner-group-view) — View an organization runner group
+- [ag-cli org runner-job-history](#ag-cli-org-runner-job-history) — List organization runner job execution history
 - [ag-cli org view](#ag-cli-org-view) — View an organization
 - [ag-cli pr](#ag-cli-pr) — Manage pull requests
 - [ag-cli pr activity](#ag-cli-pr-activity) — List the operation log of a pull request
@@ -156,6 +158,10 @@
 - [ag-cli release upload](#ag-cli-release-upload) — Upload an attachment to a release
 - [ag-cli release view](#ag-cli-release-view) — View a release by tag
 - [ag-cli repo](#ag-cli-repo) — Manage repositories
+- [ag-cli repo cla](#ag-cli-repo-cla) — Manage repository CLA configuration
+- [ag-cli repo cla disable](#ag-cli-repo-cla-disable) — Disable repository CLA
+- [ag-cli repo cla list](#ag-cli-repo-cla-list) — List available CLAs
+- [ag-cli repo cla set](#ag-cli-repo-cla-set) — Select and enable a repository CLA
 - [ag-cli repo clone](#ag-cli-repo-clone) — Clone a repository
 - [ag-cli repo collaborator](#ag-cli-repo-collaborator) — Manage repository collaborators
 - [ag-cli repo collaborator add](#ag-cli-repo-collaborator-add) — Add a direct repository collaborator
@@ -1248,9 +1254,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag discussion comment create owner/repo 1 --body "Looks good"
-ag discussion comment create owner/repo 1 --body-file comment.md
-ag discussion comment create 1 --body-file -
+ag-cli discussion comment create owner/repo 1 --body "Looks good"
+ag-cli discussion comment create owner/repo 1 --body-file comment.md
+ag-cli discussion comment create 1 --body-file -
 ```
 
 
@@ -1281,8 +1287,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag discussion comment delete owner/repo 1 abc123
-ag discussion comment delete owner/repo 1 abc123 --yes
+ag-cli discussion comment delete owner/repo 1 abc123
+ag-cli discussion comment delete owner/repo 1 abc123 --yes
 ```
 
 
@@ -1313,8 +1319,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag discussion comment edit owner/repo 1 abc123 --body "Updated"
-ag discussion comment edit 1 reply.id --body-file note.md
+ag-cli discussion comment edit owner/repo 1 abc123 --body "Updated"
+ag-cli discussion comment edit 1 reply.id --body-file note.md
 ```
 
 
@@ -1345,8 +1351,8 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ### Example
 
 ```bash
-ag discussion comment reply owner/repo 1 abc123 --body "Agreed"
-ag discussion comment reply 1 abc123 --body-file reply.md
+ag-cli discussion comment reply owner/repo 1 abc123 --body "Agreed"
+ag-cli discussion comment reply 1 abc123 --body-file reply.md
 ```
 
 
@@ -2579,7 +2585,7 @@ Usage: `ag-cli org`
 
 Manage organizations
 
-List organizations associated with your AtomGit account, inspect organization details, members, repositories, and Actions runner groups, and manage organization discussions.
+Create organizations, list organizations associated with your AtomGit account, inspect organization details, members, repositories, Actions runner groups, and runner job history, and manage organization discussions.
 
 ### Flags
 
@@ -2589,6 +2595,39 @@ List organizations associated with your AtomGit account, inspect organization de
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli org create
+
+Usage: `ag-cli org create <path> [flags]`
+
+Create an organization
+
+Create an AtomGit organization using an explicit path.
+
+The name defaults to the path and visibility defaults to public. Use
+--visibility private to create a private organization. Omitted options are left
+to the API defaults; --description="" explicitly sends an empty description.
+Creation requests are never automatically retried or redirected. If the
+response cannot be read or verified, check AtomGit before retrying.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--name` | Organization name (defaults to path) | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--visibility` | Organization visibility: public or private | `public` | local |
+| `-d, --description` | Organization description | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli org create my-organization
+ag-cli org create my-team --name 'My Team' --visibility private
+ag-cli org create my-team --description 'Team projects'
+```
 
 
 ## ag-cli org discussion
@@ -3121,6 +3160,34 @@ View an organization runner group
 ```bash
 ag-cli org runner-group view my-organization group-id
 ag-cli org runner-group view my-organization group-id --json
+```
+
+
+## ag-cli org runner-job-history
+
+Usage: `ag-cli org runner-job-history <org> [flags]`
+
+List organization runner job execution history
+
+List the read-only execution history of organization-level AtomGit Actions runner resources. This command does not cancel or retry jobs. Time filters use the API's YYYY-MM-DD HH:mm:ss format and are sent without timezone conversion; the API documentation does not define a timezone. The duration field is returned as the API's raw integer because its unit is not documented.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--json` | Output runner job history as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--start-time-begin` | Filter by job start time, from (YYYY-MM-DD HH:mm:ss) | `` | local |
+| `--start-time-end` | Filter by job start time, to (YYYY-MM-DD HH:mm:ss) | `` | local |
+| `-L, --limit` | Maximum number of job history entries to list | `30` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli org runner-job-history my-organization
+ag-cli org runner-job-history my-organization --limit 100
+ag-cli org runner-job-history my-organization --start-time-begin "2026-10-01 00:00:00" --start-time-end "2026-10-31 23:59:59" --json
 ```
 
 
@@ -4107,6 +4174,105 @@ For repository-scoped commands, OWNER/REPO may be omitted and inferred from the 
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli repo cla
+
+Usage: `ag-cli repo cla`
+
+Manage repository CLA configuration
+
+List available contributor license agreements, select an agreement, or disable CLA.
+The available list does not describe the repository's current configuration.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli repo cla disable
+
+Usage: `ag-cli repo cla disable [<owner>/<repo>] [flags]`
+
+Disable repository CLA
+
+Disable repository CLA. Requires confirmation unless --yes is supplied.
+Writes are never automatically retried or redirected. Check AtomGit before retrying a failed update.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip update confirmation | `false` | local |
+
+### Example
+
+```bash
+ag-cli repo cla disable owner/repo --yes
+```
+
+
+## ag-cli repo cla list
+
+Usage: `ag-cli repo cla list [<owner>/<repo>] [flags]`
+
+List available CLAs
+
+List available CLAs, not the repository's current CLA configuration.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--json` | Output available CLAs as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli repo cla list owner/repo
+ag-cli repo cla list --json
+```
+
+
+## ag-cli repo cla set
+
+Usage: `ag-cli repo cla set [<owner>/<repo>] [flags]`
+
+Select and enable a repository CLA
+
+Select and enable a repository CLA. Requires confirmation unless --yes is supplied.
+Writes are never automatically retried or redirected. Check AtomGit before retrying a failed update.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--cla-id` | Available CLA ID (required) | `` | local |
+| `--enforce-check` | Prevent merging PRs without a completed CLA check (only sent when specified) | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip update confirmation | `false` | local |
+
+### Example
+
+```bash
+ag-cli repo cla set owner/repo --cla-id agreement-id --enforce-check=false --yes
+```
 
 
 ## ag-cli repo clone

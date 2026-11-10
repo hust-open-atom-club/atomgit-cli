@@ -112,7 +112,7 @@ ag-cli auth setup-git
 
 ### 必需认证与可选认证
 
-大多数命令需要已登录账号；缺少凭据或凭据文件无法读取时，会返回规范的 `not authenticated` 错误并提示运行 `ag-cli auth login`。
+大多数命令需要已登录账号；缺少凭据时会提示运行 `ag-cli auth login`。凭据路径无法确定或文件访问失败时，会单独报告无法读取凭据，并在权限不足时提示检查文件及父目录的所有权和读取权限。
 
 帮助和版本入口不需要读取凭据：`ag-cli --help`、`ag-cli help <command>`、子命令的 `-h`/`--help`、`ag-cli --version`、`ag-cli version` 和 `ag-cli version --json` 在凭据缺失、损坏或无法读取时仍可使用。
 
@@ -127,6 +127,8 @@ ag-cli auth setup-git
 AtomGit API v5、Actions API v8、OAuth 与 Release 等领域客户端的非成功响应统一经过同一安全边界：错误正文最多保留 4 KiB，超出部分会显示为 `...`；明确省略敏感响应正文的端点仅输出清洗后的状态。错误上下文会转义终端控制字符和 Unicode 方向控制字符，并脱敏 Bearer 值及常见的 token、secret、password、authorization 字段。该安全边界独立于终端 writer，因此 `--raw-output` 不会关闭 API 错误脱敏。
 
 普通 API v5、Actions API v8、外部许可证合规检查和通用 `api` 命令在顶层只展示固定诊断和 HTTP 状态码，不展开上述错误正文、状态文本或原始原因。HTTP 错误体读取失败作为附加诊断，不能将已收到的 HTTP 状态改判为取消或超时。底层错误链仍保留这些事实，`--raw-output` 不会切换为详细诊断模式。
+
+`org create` 仅接受约定的 HTTP 200 成功响应；非预期的其他 2xx、3xx 和 5xx 响应均归为创建结果无法确认，不会自动重试或跟随重定向。创建结果无法确认时，顶层错误会保留 HTTP 状态或失败类型，并明确提示组织可能已经创建，先检查 AtomGit 再决定是否重试。此提示也会在 `--raw-output` 模式显示，且不展开原始响应正文或传输错误。
 
 ## API 限流重试
 

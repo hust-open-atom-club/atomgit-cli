@@ -145,16 +145,18 @@ func writeAliasesAtomic(path string, aliases map[string]string) (resultErr error
 	}
 	tmpPath := tmp.Name()
 	defer func() { removeTemporaryConfig(tmpPath, &resultErr) }()
+	// On failure, discard the temporary file and preserve the operation error.
+	// A successful write must pass Sync and Close before replacement.
 	if err := tmp.Chmod(0o600); err != nil {
-		tmp.Close() //nolint:errcheck // Chmod failed; closing the temporary file is best-effort cleanup while the permission error remains primary.
+		_ = tmp.Close()
 		return fmt.Errorf("set temp alias config permissions: %w", err)
 	}
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close() //nolint:errcheck // Write failed; closing the temporary file is best-effort cleanup while the write error remains primary.
+		_ = tmp.Close()
 		return fmt.Errorf("write temp alias config: %w", err)
 	}
 	if err := tmp.Sync(); err != nil {
-		tmp.Close() //nolint:errcheck // Sync failed; closing the temporary file is best-effort cleanup while the sync error remains primary.
+		_ = tmp.Close()
 		return fmt.Errorf("sync temp alias config: %w", err)
 	}
 	if err := tmp.Close(); err != nil {

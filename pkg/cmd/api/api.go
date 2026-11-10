@@ -282,7 +282,7 @@ func execute(cmd *cobra.Command, f *cmdutil.Factory, request preparedRequest) er
 	if err != nil {
 		return redact(fmt.Errorf("request %s %s: %w", request.method, request.path, err), token)
 	}
-	defer resp.Body.Close() //nolint:errcheck // Closing only releases response resources; status and body copy errors are handled separately.
+	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return responseError(request.method+" "+request.path, resp, token)
 	}
@@ -433,11 +433,12 @@ func executePagination(out io.Writer, client *internalapi.Client, request prepar
 		}
 		if resp.StatusCode < 200 || resp.StatusCode > 299 {
 			err := responseError(fmt.Sprintf("request page %d", state.page), resp, token)
-			resp.Body.Close() //nolint:errcheck // Response error details were read before close; the status error remains primary.
+			_ = resp.Body.Close()
 			return err
 		}
 		body, readErr := io.ReadAll(resp.Body)
-		resp.Body.Close() //nolint:errcheck // Page body read result is checked separately; Close only releases response resources.
+		// Release each page before fetching the next; preserve any body read error.
+		_ = resp.Body.Close()
 		if readErr != nil {
 			err := fmt.Errorf("read page %d: %w", state.page, &internalapi.ResponseReadError{Err: readErr})
 			return redact(&redactedError{

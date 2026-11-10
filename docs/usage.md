@@ -116,6 +116,8 @@ ag-cli doctor owner/repo --live --json
 
 ## 认证
 
+凭据路径无法确定或文件访问失败时，命令会输出 `Unable to read credentials.` 并返回非零退出码；权限不足时会提示检查所有权和读取权限。此类故障不会降级为匿名请求。
+
 例如，`ag-cli api /user` 找不到凭据时，会输出 `No credentials are configured.` 及 `ag-cli auth login` 登录提示，并返回非零退出码。
 
 同一命令读到 JSON 语法或字段类型错误的凭据文件时，会输出 `Credential configuration is invalid.` 及格式检查提示，并返回非零退出码；语法错误还会标明字节位置。
@@ -325,6 +327,27 @@ ag-cli repo delete owner/repo --yes
 
 该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。
 
+#### 仓库 CLA
+
+```bash
+# 列出可用协议；省略仓库时使用当前 Git 仓库的 AtomGit remote
+ag-cli repo cla list owner/repo
+ag-cli repo cla list --json
+# CLA ID 为字符串，来自可用协议列表；显式 false 会发送给 API
+ag-cli repo cla set owner/repo --cla-id agreement-id --enforce-check=false
+ag-cli repo cla set owner/repo --cla-id agreement-id --enforce-check --yes
+# 停用是独立操作
+ag-cli repo cla disable owner/repo --yes
+```
+
+`list` 使用 `GET /repos/{owner}/{repo}/clas`，解析响应的 `data` 数组。文本每行输出协议 ID 和名称，以制表符分隔；字段内的反斜杠、制表符、换行和回车使用可见转义，保证一条协议占一行两列。JSON 输出为包含 `id`、`name` 的数组，空列表输出 `[]`。这是可用 CLA 列表，不代表仓库当前启用的协议或检查设置。
+
+`set` 必须提供非空的 `--cla-id`；缺少或空 ID 在认证和请求前报错，不会意外停用 CLA。`--enforce-check` 表示禁止合入未完成 CLA 签署检查的 PR；`--enforce-check=false` 显式关闭该检查，省略选项则不发送该字段。`disable` 不接受 CLA ID 或检查选项，向单数路径 `PUT /repos/{owner}/{repo}/cla` 发送 `{}`；`set` 使用同一路径，发送字符串 `cla_id` 及显式指定的布尔 `enforce_check`。
+
+写操作默认在 stderr 展示目标仓库、操作和指定字段并请求确认；`--yes` 跳过确认，取消时不发送请求。只接受约定的 HTTP 200，允许空响应，不自动重试或跟随重定向。失败后应先在 AtomGit 确认配置再重试。命令不提供协议模板创建、签署或未文档化的当前配置查询，测试只使用离线 mock。
+
+接口依据：[可用 CLA 列表](https://docs.atomgit.com/docs/apis/get-api-v-5-repos-owner-repo-clas/)、[CLA 配置](https://docs.atomgit.com/docs/apis/put-api-v-5-repos-owner-repo-clas/)。
+
 #### 仓库策略设置
 
 ```bash
@@ -463,6 +486,12 @@ ag-cli repo webhook delete owner/repo 42 --yes
 ## 组织 (org)
 
 ```bash
+# 创建组织，名称默认等于路径，可见性默认为 public
+ag-cli org create my-team
+
+# 指定名称、描述并创建私有组织
+ag-cli org create my-team --name 'My Team' --description 'Team projects' --visibility private
+
 # 列出当前账号所属的组织
 ag-cli org list
 
@@ -492,11 +521,24 @@ ag-cli org runner-group view hust-open-atom-club <group-id>
 ag-cli org runner-group runners hust-open-atom-club <group-id> --limit 100
 ag-cli org runner-group runner-sets hust-open-atom-club <group-id> --json
 ag-cli org runner-group namespaces hust-open-atom-club <group-id> --json
+
+# 查询组织 Runner 资源的 Job 执行历史（只读）
+ag-cli org runner-job-history hust-open-atom-club
+ag-cli org runner-job-history hust-open-atom-club \
+  --start-time-begin "2026-10-01 00:00:00" \
+  --start-time-end "2026-10-31 23:59:59" \
+  --limit 100 --json
 ```
+
+`ag-cli org create <path>` 要求认证并显式指定组织路径，不会从 Git remote 推断。可选的 `--name`、`--description`（`-d`）和 `--visibility` 只有显式指定时才发送给 API；省略时由服务端采用名称等于路径、可见性为 `public` 的默认值。`--description=""` 会显式发送空描述。路径、空名称和可见性枚举在认证与网络请求前校验。
+
+创建使用 API v5 `POST /orgs`，只接受 HTTP 200，并校验返回的组织 ID 和路径。成功时显示组织路径以及服务端返回的 `web_url`；缺少 URL 时只显示路径，不拼接链接。写请求不会自动重试或跟随重定向；如果请求执行、响应读取或校验失败，或收到非预期的其他 2xx、3xx 或 5xx 响应，组织可能已经创建，命令会提示先在 AtomGit 确认状态再决定是否重试。
 
 `view` 输出组织路径、名称、可见性、描述和公开 URL。`members` 与 `repos` 支持分页，并在认证和网络请求前校验 `--limit`；空结果的 JSON 输出为 `[]`。仓库输出还包含描述、默认分支、主要语言、Star、Fork 和更新时间。
 
 `ag-cli org runner-group` 使用 Actions API v8，只读检查组织级 Runner Group；它与 `ag-cli runner list/shared` 查看仓库直接配置或共享的主机 Runner 不同。`list`、`runners`、`runner-sets` 和 `namespaces` 默认最多返回 30 条并要求 `--limit` 为正数；文本输出包含组织和 Group ID，JSON 保留对应官方响应的固定 snake_case 字段。权限不足、Group 不存在或分页响应不完整时命令会明确失败，不会把部分数据当作完整结果。`namespaces` 会先查询 Group 详情，确认其存在且可访问，再读取共享仓库；不存在时返回非零退出码，存在但没有共享仓库时仍正常返回空列表。
+
+`ag-cli org runner-job-history` 使用 Actions API v8 查询组织级 Runner 资源的 Job 执行历史，只读，不提供取消或重跑操作。`--limit` 默认 30 且必须为正数；文本输出包含 job run/job ID、名称、状态、runs_on、pipeline 名称与 run ID、组织/仓库 namespace ID、开始/完成时间和 duration，JSON 条目保留官方 snake_case 字段，`total_count` 为应用 `--limit` 后的条目数。时间筛选使用 `YYYY-MM-DD HH:mm:ss`；官方未定义时区，CLI 原样发送且不做时区转换。`duration` 的官方文档未定义单位，CLI 输出原始整数；缺失的开始或完成时间在文本中显示为 `-`。空历史正常返回；缺失必需分页字段的响应（包括 `null`、空对象或错误对象）、权限不足、组织不存在或分页不完整/矛盾时命令明确失败。
 
 ### 组织讨论读取
 

@@ -431,112 +431,61 @@ func TestNewConfigWithoutCredentials(t *testing.T) {
 	}
 }
 
-func TestWithTokenOverrideIsInMemoryOnly(t *testing.T) {
-	base := &config{host: defaultHost, token: "stored-token", user: "alice"}
-	override := "command-token"
-	resolveCalls := 0
-	cfg := WithTokenOverride(base, &override, func(token string) (string, error) {
-		resolveCalls++
-		if token != override {
-			t.Fatalf("resolved token = %q, want %q", token, override)
-		}
-		return "bob", nil
-	})
-
-	if got, err := cfg.GetToken(); err != nil || got != override {
-		t.Fatalf("GetToken() = %q, %v", got, err)
+func TestCredentialAccessStopsLegacyFallback(t *testing.T) {
+	home := isolateConfig(t)
+	writeCredentialsFile(t, filepath.Join(home, legacyTokenFile), StoredCredentials{AccessToken: "legacy", User: "alice"})
+	path, err := PrimaryTokenPath()
+	if err != nil {
+		t.Fatal(err)
 	}
-	for range 2 {
-		if got, err := cfg.GetUser(); err != nil || got != "bob" {
-			t.Fatalf("GetUser() = %q, %v", got, err)
-		}
+	if err := os.MkdirAll(path, 0o700); err != nil {
+		t.Fatal(err)
 	}
-	if resolveCalls != 1 {
-		t.Fatalf("user resolver calls = %d, want 1", resolveCalls)
-	}
-	if base.token != "stored-token" {
-		t.Fatalf("stored token changed to %q", base.token)
-	}
-	if base.user != "alice" {
-		t.Fatalf("stored user changed to %q", base.user)
-	}
-
-	override = ""
-	if got, err := cfg.GetToken(); got != "" || !errors.Is(err, ErrNotAuthenticated) {
-		t.Fatalf("GetToken() with explicit empty override = %q, %v", got, err)
-	}
-	if got, err := cfg.GetUser(); got != "" || !errors.Is(err, ErrNotAuthenticated) {
-		t.Fatalf("GetUser() with explicit empty override = %q, %v", got, err)
+	for _, tc := range []struct {
+		name string
+		load func() error
+	}{
+		{"configuration", func() error { _, err := NewConfig(); return err }},
+		{"store", func() error { _, err := LoadCredentialStore(); return err }},
+		{"token", func() error { _, err := (&config{}).GetToken(); return err }},
+		{"user", func() error { _, err := (&config{}).GetUser(); return err }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.load()
+			access, ok := errors.AsType[*CredentialAccessError](err)
+			if !ok || !errors.Is(err, ErrCredentialAccess) || errors.Is(err, ErrTokenNotFound) || errors.Is(err, ErrNotAuthenticated) || errors.Is(err, ErrInvalidCredentials) {
+				t.Fatalf("error = %v, want only credential access failure", err)
+			}
+			cause, ok := errors.AsType[*os.PathError](err)
+			if !ok || cause.Path != path || access.Path != path || !errors.Is(err, cause.Err) {
+				t.Fatalf("error lost the selected path or native cause: %v", err)
+			}
+		})
 	}
 }
 
-func TestWithTokenOverrideNormalizesWhitespaceAndRetriesResolution(t *testing.T) {
-	base := &config{host: defaultHost, token: "stored-token", user: "alice"}
-	override := "  command-token\n"
-	resolveCalls := 0
-	cfg := WithTokenOverride(base, &override, func(token string) (string, error) {
-		resolveCalls++
-		if token != "command-token" {
-			t.Fatalf("resolved token = %q, want trimmed command token", token)
-		}
-		if resolveCalls == 1 {
-			return "", errors.New("temporary failure")
-		}
-		return "bob", nil
-	})
-
-	if got, err := cfg.GetToken(); err != nil || got != "command-token" {
-		t.Fatalf("GetToken() = %q, %v", got, err)
+func TestCredentialPathLookupFailure(t *testing.T) {
+	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	t.Setenv("XDG_CONFIG_HOME", "")
+	for _, tc := range []struct {
+		name string
+		load func() error
+	}{
+		{"read", func() error { _, err := readCredentialData(); return err }},
+		{"inspection", func() error { _, _, err := InspectCredentials(); return err }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.load()
+			access, ok := errors.AsType[*CredentialAccessError](err)
+			if !ok || !errors.Is(err, ErrCredentialAccess) || errors.Is(err, ErrTokenNotFound) || access.Err == nil || access.Path != "" {
+				t.Fatalf("error = %v, want path lookup failure retaining its cause", err)
+			}
+		})
 	}
-	if user, err := cfg.GetUser(); err == nil || user != "" {
-		t.Fatalf("first GetUser() = %q, %v; want temporary failure", user, err)
-	}
-	for range 2 {
-		if user, err := cfg.GetUser(); err != nil || user != "bob" {
-			t.Fatalf("retried GetUser() = %q, %v", user, err)
-		}
-	}
-	if resolveCalls != 2 {
-		t.Fatalf("user resolver calls = %d, want one failed and one successful call", resolveCalls)
-	}
-
-	override = " \t "
-	if got, err := cfg.GetToken(); got != "" || !errors.Is(err, ErrNotAuthenticated) {
-		t.Fatalf("GetToken() with blank override = %q, %v; want not authenticated", got, err)
-	}
-	if got, err := cfg.GetUser(); got != "" || !errors.Is(err, ErrNotAuthenticated) {
-		t.Fatalf("GetUser() with blank override = %q, %v; want not authenticated", got, err)
-	}
-}
-
-func TestWithTokenOverrideDoesNotHoldLockDuringResolution(t *testing.T) {
-	base := &config{host: defaultHost, token: "stored-token", user: "alice"}
-	override := "command-token"
-	var cfg Config
-	var resolver func(string) (string, error)
-	resolver = func(string) (string, error) {
-		// Re-applying the same override takes the cache mutex. This would
-		// deadlock if GetUser kept that mutex locked while invoking resolver.
-		cfg = WithTokenOverride(cfg, &override, resolver)
-		return "bob", nil
-	}
-	cfg = WithTokenOverride(base, &override, resolver)
-
-	type result struct {
-		user string
-		err  error
-	}
-	done := make(chan result, 1)
-	go func() {
-		user, err := cfg.GetUser()
-		done <- result{user: user, err: err}
-	}()
-	select {
-	case got := <-done:
-		if got.err != nil || got.user != "bob" {
-			t.Fatalf("GetUser() = %q, %v", got.user, got.err)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("GetUser deadlocked while resolving the command-token user")
+	// An explicit XDG path remains usable without a home directory.
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if _, err := readCredentialData(); !errors.Is(err, ErrTokenNotFound) || errors.Is(err, ErrCredentialAccess) {
+		t.Fatalf("explicit XDG path: %v, want missing credentials", err)
 	}
 }

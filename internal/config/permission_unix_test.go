@@ -117,7 +117,7 @@ func TestValidateAndFixTokenFilePerm(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer f.Close() //nolint:errcheck // Test file has no buffered writes; Close only releases test resources.
+		defer f.Close()
 
 		info, err := f.Stat()
 		if err != nil {
@@ -149,7 +149,7 @@ func TestValidateAndFixTokenFilePerm(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer f.Close() //nolint:errcheck // Test file has no buffered writes; Close only releases test resources.
+		defer f.Close()
 
 		info, err := f.Stat()
 		if err != nil {
@@ -181,7 +181,7 @@ func TestValidateAndFixTokenFilePerm(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer f.Close() //nolint:errcheck // Test file has no buffered writes; Close only releases test resources.
+		defer f.Close()
 
 		info, err := f.Stat()
 		if err != nil {
@@ -189,6 +189,9 @@ func TestValidateAndFixTokenFilePerm(t *testing.T) {
 		}
 
 		err = validateAndFixTokenFilePerm(f, path, info)
+		if errors.Is(err, ErrCredentialAccess) || !errors.Is(err, ErrTokenFileUnreadable) {
+			t.Fatalf("owner-read validation must remain a safety rejection: %v", err)
+		}
 		if err == nil {
 			t.Fatal("validateAndFixTokenFilePerm() succeeded unexpectedly")
 		}
