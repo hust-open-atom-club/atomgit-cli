@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -79,12 +78,7 @@ func TestTokenPermissionError(t *testing.T) {
 
 	t.Run("error message", func(t *testing.T) {
 		err := &TokenPermissionError{Path: path, Err: pathErr}
-		want := fmt.Sprintf("cannot read token file %s: permission denied\n", path)
-		if runtime.GOOS == "windows" {
-			want += "hint: check ownership and file read permissions"
-		} else {
-			want += fmt.Sprintf("hint: check ownership and set permissions with `chmod 600 %q`", path)
-		}
+		want := fmt.Sprintf("cannot read token file %s: permission denied", path)
 		if err.Error() != want {
 			t.Fatalf("error = %q, want %q", err, want)
 		}
@@ -110,14 +104,21 @@ func TestTokenPermissionError(t *testing.T) {
 
 	t.Run("error message without path error", func(t *testing.T) {
 		err := &TokenPermissionError{Path: path, Err: os.ErrPermission}
-		want := fmt.Sprintf("cannot read token file %s: permission denied\n", path)
-		if runtime.GOOS == "windows" {
-			want += "hint: check ownership and file read permissions"
-		} else {
-			want += fmt.Sprintf("hint: check ownership and set permissions with `chmod 600 %q`", path)
-		}
+		want := fmt.Sprintf("cannot read token file %s: permission denied", path)
 		if err.Error() != want {
 			t.Fatalf("error = %q, want %q", err, want)
 		}
 	})
+}
+
+func TestCredentialFileSafetyErrorRetainsReason(t *testing.T) {
+	reason := &TokenPermissionError{Path: "/credential", Err: ErrTokenFileUnreadable}
+	err := fmt.Errorf("caller: %w", &CredentialFileSafetyError{Path: reason.Path, Err: reason})
+	if !errors.Is(err, ErrInvalidCredentials) || !errors.Is(err, ErrTokenFileUnreadable) || !errors.Is(err, reason) || errors.Is(err, ErrCredentialAccess) || errors.Is(err, ErrTokenNotFound) {
+		t.Fatalf("error = %v, want safety classification and original reason", err)
+	}
+	permission, ok := errors.AsType[*TokenPermissionError](err)
+	if !ok || permission != reason || strings.Contains(err.Error(), "hint:") {
+		t.Fatalf("lost permission facts or included CLI guidance: %v", err)
+	}
 }
