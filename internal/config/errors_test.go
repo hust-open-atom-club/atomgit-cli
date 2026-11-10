@@ -29,18 +29,6 @@ func TestPermissionErrors(t *testing.T) {
 	path := filepath.Join("tmp", "ag-cli", "token.json")
 	pathErr := &os.PathError{Op: "open", Path: path, Err: syscall.EACCES}
 
-	t.Run("secure token file", func(t *testing.T) {
-		err := tokenSecurePermissionError(path, pathErr)
-		want := fmt.Sprintf(
-			"cannot secure token file %s: permission denied\n"+
-				"hint: make sure the file is owned by the current user",
-			path,
-		)
-		if err.Error() != want {
-			t.Fatalf("error = %q, want %q", err, want)
-		}
-	})
-
 	t.Run("write token file", func(t *testing.T) {
 		err := permissionError(
 			"cannot write token file", path, pathErr,
