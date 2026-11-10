@@ -39,6 +39,22 @@ var (
 	ErrTokenFileTooLarge = errors.New("credential file exceeds size limit")
 )
 
+// FileAccessError records a failure locating or reading the configuration file.
+type FileAccessError struct {
+	Err error
+}
+
+func (e *FileAccessError) Error() string { return e.Err.Error() }
+func (e *FileAccessError) Unwrap() error { return e.Err }
+
+// FileDecodeError records a failure decoding configuration file contents.
+type FileDecodeError struct {
+	Err error
+}
+
+func (e *FileDecodeError) Error() string { return e.Err.Error() }
+func (e *FileDecodeError) Unwrap() error { return e.Err }
+
 // CredentialAccessError records a failed credential source lookup or read.
 // Operation and Path describe the attempted access; Err retains its cause.
 type CredentialAccessError struct {

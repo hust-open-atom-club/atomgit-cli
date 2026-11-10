@@ -31,22 +31,23 @@ func AliasFilePath() (string, error) {
 }
 
 // LoadAliases reads the alias configuration and returns the alias map.
-// A missing configuration file yields an empty map.
+// A missing configuration file yields an empty map. Access and decoding
+// failures retain their causes in FileAccessError or FileDecodeError.
 func LoadAliases() (map[string]string, error) {
 	path, err := AliasFilePath()
 	if err != nil {
-		return nil, err
+		return nil, &FileAccessError{Err: err}
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return map[string]string{}, nil
 		}
-		return nil, fmt.Errorf("read alias config %s: %w", path, err)
+		return nil, &FileAccessError{Err: fmt.Errorf("read alias config %s: %w", path, err)}
 	}
 	var cfg AliasConfig
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parse alias config %s: %w", path, err)
+		return nil, &FileDecodeError{Err: fmt.Errorf("parse alias config %s: %w", path, err)}
 	}
 	if cfg.Aliases == nil {
 		return map[string]string{}, nil
