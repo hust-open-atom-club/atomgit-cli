@@ -64,7 +64,7 @@ func createdRepositoryURL(host, owner, repo string) string {
 	return cmdutil.ResolveWebURL("", host, owner, repo)
 }
 
-func createdRepositoryURLFromResponse(f *cmdutil.Factory, result api.Repository, owner, repo string) (string, bool) {
+func repositoryURLFromResponse(f *cmdutil.Factory, result api.Repository, owner, repo string) (string, bool) {
 	for _, candidate := range []string{result.HTMLURL, result.AlternateHTMLURL} {
 		candidate = strings.TrimSuffix(strings.TrimSpace(candidate), "/")
 		parsed, err := url.Parse(candidate)
@@ -75,7 +75,7 @@ func createdRepositoryURLFromResponse(f *cmdutil.Factory, result api.Repository,
 		if _, err := cmdutil.NormalizeBaseURL(origin); err != nil {
 			continue
 		}
-		if !createdRepositoryURLHostAllowed(f, parsed) {
+		if !repositoryURLHostAllowed(f, parsed) {
 			continue
 		}
 		if !strings.EqualFold(parsed.Path, "/"+owner+"/"+repo) {
@@ -86,7 +86,7 @@ func createdRepositoryURLFromResponse(f *cmdutil.Factory, result api.Repository,
 	return "", false
 }
 
-func createdRepositoryURLHostAllowed(f *cmdutil.Factory, repositoryURL *url.URL) bool {
+func repositoryURLHostAllowed(f *cmdutil.Factory, repositoryURL *url.URL) bool {
 	if repositoryURL == nil {
 		return false
 	}
@@ -155,7 +155,7 @@ func canUseDefaultRepositoryURLFallback(f *cmdutil.Factory) bool {
 	return err == nil && defaultErr == nil && strings.EqualFold(origin, defaultOrigin)
 }
 
-func createdRepositoryCloneCredentials(f *cmdutil.Factory, cloneURL string) *cloneCredentials {
+func repositoryCloneCredentials(f *cmdutil.Factory, cloneURL string) *cloneCredentials {
 	if f == nil || f.Config == nil {
 		return nil
 	}
@@ -259,7 +259,7 @@ func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory,
 		return fmt.Errorf("failed to create repository: %w", err)
 	}
 
-	repoURL, responseURL := createdRepositoryURLFromResponse(f, result, owner, repoName)
+	repoURL, responseURL := repositoryURLFromResponse(f, result, owner, repoName)
 	if !responseURL && canUseDefaultRepositoryURLFallback(f) {
 		repoURL = createdRepositoryURL(f.Config.GetHost(), owner, repoName)
 	}
@@ -278,7 +278,7 @@ func runCreateWithClone(in io.Reader, out, errOut io.Writer, f *cmdutil.Factory,
 	if opts.Clone {
 		cloneURL := strings.TrimSuffix(repoURL, ".git") + ".git"
 		cloneOpts := &CloneOptions{Directory: repoName}
-		if err := clone(in, out, errOut, cloneURL, cloneOpts, createdRepositoryCloneCredentials(f, cloneURL)); err != nil {
+		if err := clone(in, out, errOut, cloneURL, cloneOpts, repositoryCloneCredentials(f, cloneURL)); err != nil {
 			return fmt.Errorf("failed to clone newly created repository: %w", err)
 		}
 	}

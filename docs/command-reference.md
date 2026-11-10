@@ -2615,8 +2615,10 @@ response cannot be read or verified, check AtomGit before retrying.
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
 | `--name` | Organization name (defaults to path) | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `--visibility` | Organization visibility: public or private | `public` | local |
 | `-d, --description` | Organization description | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
@@ -3175,10 +3177,12 @@ List the read-only execution history of organization-level AtomGit Actions runne
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
 | `--json` | Output runner job history as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--start-time-begin` | Filter by job start time, from (YYYY-MM-DD HH:mm:ss) | `` | local |
 | `--start-time-end` | Filter by job start time, to (YYYY-MM-DD HH:mm:ss) | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of job history entries to list | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
@@ -4191,7 +4195,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -4210,7 +4216,9 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip update confirmation | `false` | local |
 
@@ -4235,8 +4243,10 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
 | `--json` | Output available CLAs as JSON | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 ### Example
@@ -4262,9 +4272,11 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 
 | Flag | Description | Default | Scope |
 | --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
 | `--cla-id` | Available CLA ID (required) | `` | local |
 | `--enforce-check` | Prevent merging PRs without a completed CLA check (only sent when specified) | `false` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-y, --yes` | Skip update confirmation | `false` | local |
 

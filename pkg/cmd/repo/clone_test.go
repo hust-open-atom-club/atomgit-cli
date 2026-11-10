@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"reflect"
@@ -96,6 +97,130 @@ func TestResolveCloneRepoArgReportsUserError(t *testing.T) {
 	_, _, err := resolveCloneRepoArg(factory, "project")
 	if err == nil || !strings.Contains(err.Error(), "not authenticated: missing user") {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestResolveCloneRepoArgUsesSelectedDeploymentURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		arg      string
+		wantPath string
+		wantURL  string
+		body     string
+	}{
+		{
+			name:     "short repository name",
+			arg:      "project",
+			wantPath: "/api/v5/repos/alice/project",
+			wantURL:  "https://test.gitcode.net/alice/project.git",
+			body:     `{"web_url":"https://test.gitcode.net/alice/project"}`,
+		},
+		{
+			name:     "owner and repository",
+			arg:      "team/project",
+			wantPath: "/api/v5/repos/team/project",
+			wantURL:  "https://test.gitcode.net/team/project.git",
+			body:     `{"web_url":"https://test.gitcode.net/team/project"}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requests := 0
+			transport := forkRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				requests++
+				if got, want := req.URL.String(), "https://test-api.gitcode.net"+tt.wantPath; got != want {
+					t.Fatalf("request URL = %q, want %q", got, want)
+				}
+				if got, want := req.Header.Get("Authorization"), "Bearer deployment-token"; got != want {
+					t.Fatalf("Authorization = %q, want %q", got, want)
+				}
+				return forkResponse(http.StatusOK, tt.body), nil
+			})
+			factory := repoFactory(repoCommandConfig{token: "deployment-token", user: "alice"}, transport)
+			factory.BaseURL = "https://test-api.gitcode.net"
+
+			cloneURL, repoName, err := resolveCloneRepoArg(factory, tt.arg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cloneURL != tt.wantURL || repoName != "project" {
+				t.Fatalf("resolveCloneRepoArg() = (%q, %q), want (%q, project)", cloneURL, repoName, tt.wantURL)
+			}
+			if requests != 1 {
+				t.Fatalf("requests = %d, want 1", requests)
+			}
+		})
+	}
+}
+
+func TestResolveCloneRepoArgRejectsUntrustedDeploymentURL(t *testing.T) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		return forkResponse(http.StatusOK, `{"web_url":"https://atomgit.com/team/project"}`), nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "deployment-token", user: "alice"}, transport)
+	factory.BaseURL = "https://alt.example.test"
+
+	cloneURL, _, err := resolveCloneRepoArg(factory, "team/project")
+	if err == nil || !strings.Contains(err.Error(), "did not return a usable HTTPS URL") {
+		t.Fatalf("error = %v, want unusable deployment URL", err)
+	}
+	if cloneURL != "" {
+		t.Fatalf("clone URL = %q, want empty", cloneURL)
+	}
+}
+
+func TestRepoCloneScopesDeploymentCredentials(t *testing.T) {
+	transport := forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		return forkResponse(http.StatusOK, `{"web_url":"https://alt.example.test/alice/project"}`), nil
+	})
+	factory := repoFactory(repoCommandConfig{token: "deployment-token", user: "alice"}, transport)
+	factory.BaseURL = "https://alt.example.test"
+	cloneCalls := 0
+	clone := func(_ io.Reader, _, _ io.Writer, cloneURL string, opts *CloneOptions, creds *cloneCredentials) error {
+		cloneCalls++
+		if cloneURL != "https://alt.example.test/alice/project.git" || opts.Directory != "project" {
+			t.Fatalf("clone target = %q directory = %q", cloneURL, opts.Directory)
+		}
+		if creds == nil || creds.host != "alt.example.test" || creds.username != "alice" || creds.token != "deployment-token" {
+			t.Fatalf("clone credentials = %#v", creds)
+		}
+		return nil
+	}
+	cmd := newCmdRepoCloneWithClone(factory, clone)
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	cmd.SetIn(strings.NewReader(""))
+	if err := cmd.RunE(cmd, []string{"project"}); err != nil {
+		t.Fatal(err)
+	}
+	if cloneCalls != 1 {
+		t.Fatalf("clone calls = %d, want 1", cloneCalls)
+	}
+}
+
+func TestRepoCloneDoesNotForwardDeploymentTokenToExplicitPublicURL(t *testing.T) {
+	factory := repoFactory(repoCommandConfig{token: "deployment-token", user: "alice"}, nil)
+	factory.BaseURL = "https://alt.example.test"
+	cloneCalls := 0
+	clone := func(_ io.Reader, _, _ io.Writer, cloneURL string, _ *CloneOptions, creds *cloneCredentials) error {
+		cloneCalls++
+		if cloneURL != "https://atomgit.com/alice/project.git" {
+			t.Fatalf("clone URL = %q", cloneURL)
+		}
+		if creds != nil {
+			t.Fatalf("deployment credentials were forwarded to the public host: %#v", creds)
+		}
+		return nil
+	}
+	cmd := newCmdRepoCloneWithClone(factory, clone)
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	cmd.SetIn(strings.NewReader(""))
+	if err := cmd.RunE(cmd, []string{"https://atomgit.com/alice/project.git"}); err != nil {
+		t.Fatal(err)
+	}
+	if cloneCalls != 1 {
+		t.Fatalf("clone calls = %d, want 1", cloneCalls)
 	}
 }
 

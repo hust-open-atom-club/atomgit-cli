@@ -437,6 +437,51 @@ func TestRepoCreateUsesIdentityFromTransientToken(t *testing.T) {
 	}
 }
 
+func TestRepoCloneCustomOriginDoesNotFallBackToPublicHost(t *testing.T) {
+	const (
+		commandToken = "deployment-token"
+		baseURL      = "https://alt.example.test"
+	)
+	var requestPaths []string
+	factory := &cmdutil.Factory{
+		Config: rootTestConfig{},
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				requestPaths = append(requestPaths, req.URL.Path)
+				if got, want := req.URL.Scheme+"://"+req.URL.Host, baseURL; got != want {
+					t.Fatalf("request origin = %q, want %q", got, want)
+				}
+				if got, want := req.Header.Get("Authorization"), "Bearer "+commandToken; got != want {
+					t.Fatalf("Authorization = %q, want %q", got, want)
+				}
+				switch req.URL.Path {
+				case "/api/v5/user":
+					return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"login":"alice"}`)), Request: req}, nil
+				case "/api/v5/repos/alice/demo":
+					return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"web_url":"https://atomgit.com/alice/demo"}`)), Request: req}, nil
+				default:
+					t.Fatalf("unexpected request path %q", req.URL.Path)
+					return nil, nil
+				}
+			})}, nil
+		},
+	}
+
+	cmd, err := newCmdRootWithWriters(factory, io.Discard, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetArgs([]string{"repo", "clone", "demo", "--token", commandToken, "--base-url", baseURL})
+	err = cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "did not return a usable HTTPS URL") {
+		t.Fatalf("Execute() error = %v, want untrusted clone URL rejection", err)
+	}
+	wantPaths := []string{"/api/v5/user", "/api/v5/repos/alice/demo"}
+	if !reflect.DeepEqual(requestPaths, wantPaths) {
+		t.Fatalf("request paths = %#v, want %#v", requestPaths, wantPaths)
+	}
+}
+
 func TestRootRejectsVersionedBaseURL(t *testing.T) {
 	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{Config: rootTestConfig{}}, io.Discard, io.Discard)
 	if err != nil {
