@@ -119,6 +119,93 @@ func TestStatusLocalAndReadOnly(t *testing.T) {
 	}
 }
 
+func TestStatusVerificationUsesCommandTokenAtSelectedOrigin(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		credentials string
+		localStatus string
+	}{
+		{name: "stored credentials", credentials: `{"access_token":"stored-token","user":"alice"}`, localStatus: "configured"},
+		{name: "missing credentials", localStatus: "missing"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			statusCredentials(t, tc.credentials)
+			calls := 0
+			f := &cmdutil.Factory{
+				BaseURL:       "https://api.gitcode.com",
+				TokenOverride: "command-token",
+				HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: authRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						calls++
+						if got, want := req.URL.String(), "https://api.gitcode.com/api/v5/user"; got != want {
+							t.Fatalf("request URL = %q, want %q", got, want)
+						}
+						if got, want := req.Header.Get("Authorization"), "Bearer command-token"; got != want {
+							t.Fatalf("Authorization = %q, want %q", got, want)
+						}
+						return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"login":"bob"}`)), Request: req}, nil
+					})}, nil
+				},
+			}
+
+			out, stderr, err := executeStatus(context.Background(), f, "--verify", "--json")
+			if err != nil || stderr != "" || calls != 1 {
+				t.Fatalf("out=%s stderr=%s calls=%d err=%v", out, stderr, calls, err)
+			}
+			var r authStatusReport
+			if err := json.Unmarshal([]byte(out), &r); err != nil {
+				t.Fatal(err)
+			}
+			if !r.OK || r.LocalStatus != tc.localStatus || r.Verification.Status != "verified" || r.Verification.Account == nil || *r.Verification.Account != "bob" {
+				t.Fatalf("report = %+v", r)
+			}
+			if r.Host != "api.gitcode.com" {
+				t.Fatalf("report host = %q, want selected API host", r.Host)
+			}
+			if strings.Contains(out, "stored-token") || strings.Contains(out, "command-token") {
+				t.Fatalf("credential leaked: %s", out)
+			}
+		})
+	}
+}
+
+func TestAuthStatusHostDistinguishesDefaultAndExplicitBaseURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		factory *cmdutil.Factory
+		want    string
+	}{
+		{name: "built-in default", factory: &cmdutil.Factory{BaseURL: "https://api.atomgit.com"}, want: "atomgit.com"},
+		{name: "explicit built-in API", factory: &cmdutil.Factory{BaseURL: "https://api.atomgit.com", BaseURLOverrideSet: true}, want: "api.atomgit.com"},
+		{name: "custom API", factory: &cmdutil.Factory{BaseURL: "https://api.gitcode.com"}, want: "api.gitcode.com"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := authStatusHost(tt.factory); got != tt.want {
+				t.Fatalf("authStatusHost() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStatusExplicitEmptyTokenDoesNotUseStoredCredentials(t *testing.T) {
+	statusCredentials(t, `{"access_token":"stored-token","user":"alice"}`)
+	f := &cmdutil.Factory{
+		TokenOverrideSet: true,
+		HttpClient: func() (*http.Client, error) {
+			t.Fatal("explicit empty token created an online client")
+			return nil, nil
+		},
+	}
+	r := inspectAuthStatus(context.Background(), f, true)
+	if r.OK || r.Verification.Status != "skipped" || r.Verification.Performed {
+		t.Fatalf("report = %+v", r)
+	}
+	if !strings.Contains(r.Message, "command-line token is empty") {
+		t.Fatalf("message = %q", r.Message)
+	}
+}
+
 func TestStatusOnlineResults(t *testing.T) {
 	for _, tc := range []struct {
 		name         string

@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
@@ -21,6 +22,10 @@ type CloneOptions struct {
 }
 
 func newCmdRepoClone(f *cmdutil.Factory) *cobra.Command {
+	return newCmdRepoCloneWithClone(f, runClone)
+}
+
+func newCmdRepoCloneWithClone(f *cmdutil.Factory, clone cloneRepositoryFunc) *cobra.Command {
 	opts := &CloneOptions{}
 
 	cmd := &cobra.Command{
@@ -60,13 +65,12 @@ The repository argument can be:
 			}
 			opts.Directory = targetDir
 
-			// Attach the stored account credential only when the HTTPS clone
-			// targets a first-party AtomGit host (atomgit.com or its
-			// gitcode.com mirror); anonymous, SSH, foreign-host and insecure
-			// clones keep their previous behavior.
-			creds := resolveCloneAuth(f.Config, cloneURL)
+			// Scope command credentials to the selected deployment. Explicit
+			// unrelated URLs remain usable through Git's normal credential flow,
+			// but never receive the selected API token.
+			creds := repositoryCloneCredentials(f, cloneURL)
 
-			return runClone(cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr(), cloneURL, opts, creds)
+			return clone(cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr(), cloneURL, opts, creds)
 		},
 	}
 
@@ -76,15 +80,55 @@ The repository argument can be:
 }
 
 func resolveCloneRepoArg(f *cmdutil.Factory, arg string) (string, string, error) {
+	if isExplicitCloneURL(arg) || canUseDefaultRepositoryURLFallback(f) {
+		defaultOwner := ""
+		if !strings.Contains(arg, "/") && !strings.HasPrefix(arg, "git@") {
+			user, err := f.Config.GetUser()
+			if err != nil {
+				return "", "", cmdutil.AuthenticationError(err)
+			}
+			defaultOwner = user
+		}
+		return parseRepoArg(arg, defaultOwner)
+	}
+
 	defaultOwner := ""
-	if !strings.Contains(arg, "/") && !strings.HasPrefix(arg, "git@") {
+	if !strings.Contains(arg, "/") {
 		user, err := f.Config.GetUser()
 		if err != nil {
 			return "", "", cmdutil.AuthenticationError(err)
 		}
 		defaultOwner = user
 	}
-	return parseRepoArg(arg, defaultOwner)
+	repository, err := parseCloneRepository(arg, defaultOwner)
+	if err != nil {
+		return "", "", err
+	}
+	client, err := f.AuthenticatedAPIClient()
+	if err != nil {
+		return "", "", err
+	}
+	var result api.Repository
+	if err := client.Get(api.RepositoryPath(repository.Owner, repository.Name), &result); err != nil {
+		return "", "", fmt.Errorf("resolve clone URL for %s: %w", repository.String(), err)
+	}
+	repositoryURL, ok := repositoryURLFromResponse(f, result, repository.Owner, repository.Name)
+	if !ok {
+		return "", "", fmt.Errorf("repository %s did not return a usable HTTPS URL for the selected API service", repository.String())
+	}
+	return strings.TrimSuffix(repositoryURL, ".git") + ".git", repository.Name, nil
+}
+
+func isExplicitCloneURL(arg string) bool {
+	return strings.HasPrefix(arg, "http://") || strings.HasPrefix(arg, "https://") || strings.HasPrefix(arg, "git@")
+}
+
+func parseCloneRepository(arg, defaultOwner string) (cmdutil.Repository, error) {
+	value := strings.TrimSuffix(strings.TrimSpace(arg), ".git")
+	if !strings.Contains(value, "/") {
+		value = strings.TrimSpace(defaultOwner) + "/" + value
+	}
+	return cmdutil.ParseRepository(value)
 }
 
 func parseRepoArg(arg, defaultOwner string) (cloneURL, repoName string, err error) {

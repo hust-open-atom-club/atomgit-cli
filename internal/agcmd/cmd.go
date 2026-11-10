@@ -92,11 +92,19 @@ func loadCommandConfig(selected *cobra.Command, factory *cmdutil.Factory, load f
 			return nil
 		}
 	}
+	// An explicit command token is a complete in-memory credential source. Do
+	// not let an unrelated malformed or unreadable persistent credential file
+	// prevent the command from using it.
+	if factory.HasTokenOverride() {
+		factory.ApplyTokenOverride()
+		return nil
+	}
 	cfg, err := load()
 	if err != nil {
 		return err
 	}
 	factory.Config = cfg
+	factory.ApplyTokenOverride()
 	return nil
 }
 

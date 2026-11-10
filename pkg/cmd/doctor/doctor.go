@@ -130,6 +130,7 @@ func diagnose(f *cmdutil.Factory, args []string, live bool) report {
 			r.add("credential_expiry", "skip", "Credential expiry is not recorded", "")
 		}
 	}
+	probeToken, tokenOverridden := f.TokenForCommand(token)
 	repo, _, repoErr := cmdutil.ResolveRepositoryFromArgs(f, args, 0)
 	if repoErr == nil {
 		_, repoErr = cmdutil.ParseRepository(repo.String())
@@ -157,7 +158,7 @@ func diagnose(f *cmdutil.Factory, args []string, live bool) report {
 		copyFactory = *f
 	}
 	copyFactory.Context = func() context.Context { return ctx }
-	client, err := copyFactory.NewAPIClient(token)
+	client, err := copyFactory.NewAPIClient(probeToken)
 	if err != nil {
 		r.add("connectivity", "fail", "Unable to initialize HTTP client", "Check HTTP client configuration.")
 		return r
@@ -184,15 +185,19 @@ func diagnose(f *cmdutil.Factory, args []string, live bool) report {
 	default:
 		r.add("service", "skip", "No usable API response; see connectivity check", "")
 	}
-	if token == "" {
-		r.add("authentication", "skip", "No usable local credentials", "Resolve the credentials check first.")
+	if probeToken == "" {
+		hint := "Provide --token for this command or resolve the local credentials check first."
+		if tokenOverridden {
+			hint = "Provide a non-empty --token value for this command."
+		}
+		r.add("authentication", "skip", "No usable credentials", hint)
 	} else {
 		if err == nil && user.Login == "" {
 			err = errors.New("invalid user response")
 		}
 		r.result("authentication", err)
 	}
-	if token == "" || repoErr != nil {
+	if probeToken == "" || repoErr != nil {
 		for _, id := range []string{"repository_access", "actions", "discussion"} {
 			r.add(id, "skip", "Requires usable credentials and repository context", "Pass owner/repo and resolve credential checks.")
 		}
@@ -210,7 +215,7 @@ func diagnose(f *cmdutil.Factory, args []string, live bool) report {
 		}
 	}
 	r.result("repository_access", err)
-	ac, err := copyFactory.NewActionsClient(token)
+	ac, err := copyFactory.NewActionsClient(probeToken)
 	if err == nil {
 		_, err = ac.ListWorkflows(repo.Owner, repo.Name, actions.ListWorkflowsOptions{Page: 1, PerPage: 1})
 	}

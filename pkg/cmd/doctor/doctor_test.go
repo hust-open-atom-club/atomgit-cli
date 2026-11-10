@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -182,6 +183,83 @@ func TestLiveReadOnlyAndRedaction(t *testing.T) {
 				t.Fatal("403 cause overstated")
 			}
 		})
+	}
+}
+
+func TestLiveUsesCommandTokenAtSelectedOrigin(t *testing.T) {
+	credentials(t, validCredentials)
+	requests := 0
+	var paths []string
+	f := &cmdutil.Factory{
+		BaseURL:       "https://api.gitcode.com",
+		TokenOverride: "command-token",
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: transport(func(req *http.Request) (*http.Response, error) {
+				requests++
+				paths = append(paths, req.URL.Path)
+				if req.URL.Scheme != "https" || req.URL.Host != "api.gitcode.com" {
+					t.Fatalf("request URL = %q, want selected origin", req.URL.String())
+				}
+				if got, want := req.Header.Get("Authorization"), "Bearer command-token"; got != want {
+					t.Fatalf("Authorization = %q, want %q", got, want)
+				}
+				body := `{"login":"bob"}`
+				switch {
+				case strings.HasSuffix(req.URL.Path, "/actions/workflows"):
+					body = `{"total_count":0,"workflows":[]}`
+				case strings.HasSuffix(req.URL.Path, "/discuss"):
+					body = `[]`
+				case strings.HasSuffix(req.URL.Path, "/repos/team/demo"):
+					body = `{"full_name":"team/demo"}`
+				}
+				return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: req}, nil
+			})}, nil
+		},
+	}
+
+	r, out, err := execute(t, f, "team/demo", "--live")
+	if err != nil || !r.OK || requests < 4 {
+		t.Fatalf("requests=%d err=%v report=%s", requests, err, out)
+	}
+	if strings.Contains(out, "very-secret-token") || strings.Contains(out, "command-token") {
+		t.Fatalf("credential leaked: %s", out)
+	}
+	for _, wantPrefix := range []string{"/api/v5/user", "/api/v5/repos/team/demo", "/api/v8/repos/team/demo/actions/workflows", "/api/v5/repos/team/demo/discuss"} {
+		found := slices.Contains(paths, wantPrefix)
+		if !found {
+			t.Errorf("request paths = %#v, missing %q", paths, wantPrefix)
+		}
+	}
+}
+
+func TestLiveExplicitEmptyTokenDoesNotUseStoredCredentials(t *testing.T) {
+	credentials(t, validCredentials)
+	requests := 0
+	f := &cmdutil.Factory{
+		TokenOverrideSet: true,
+		HttpClient: func() (*http.Client, error) {
+			return &http.Client{Transport: transport(func(req *http.Request) (*http.Response, error) {
+				requests++
+				if authorization := req.Header.Get("Authorization"); authorization != "" {
+					t.Fatalf("Authorization = %q, want anonymous probe", authorization)
+				}
+				return &http.Response{StatusCode: http.StatusUnauthorized, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"message":"authentication required"}`)), Request: req}, nil
+			})}, nil
+		},
+	}
+
+	r, out, _ := execute(t, f, "--live")
+	if requests != 1 {
+		t.Fatalf("requests = %d, want one anonymous connectivity probe", requests)
+	}
+	if got := row(t, r, "authentication").Status; got != "skip" {
+		t.Fatalf("authentication status = %q, report=%s", got, out)
+	}
+	if hint := row(t, r, "authentication").Hint; !strings.Contains(hint, "non-empty --token") {
+		t.Fatalf("authentication hint = %q", hint)
+	}
+	if strings.Contains(out, "very-secret-token") {
+		t.Fatalf("stored credential leaked: %s", out)
 	}
 }
 

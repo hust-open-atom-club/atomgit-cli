@@ -132,10 +132,7 @@ func NewClient(token string) *Client {
 }
 
 func NewClientWithHTTPClient(token string, httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = defaultHTTPClient()
-	}
-	return newClientWithBaseURL(token, baseapi.BaseURL+APIVersion, httpClient)
+	return NewClientWithBaseURL(token, baseapi.BaseURL+APIVersion, httpClient)
 }
 
 func defaultHTTPClient() *http.Client {
@@ -151,7 +148,11 @@ func defaultHTTPClient() *http.Client {
 	return &http.Client{Transport: transport}
 }
 
-func newClientWithBaseURL(token, baseURL string, httpClient *http.Client) *Client {
+// NewClientWithBaseURL creates an Actions client for a complete API v8 base URL.
+func NewClientWithBaseURL(token, baseURL string, httpClient *http.Client) *Client {
+	if httpClient == nil {
+		httpClient = defaultHTTPClient()
+	}
 	// Keep credentials in the shared Authorization header instead of the
 	// documented access_token query parameter so URLs, redirects, and errors do
 	// not expose the token.

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -22,6 +23,95 @@ type Config interface {
 	GetToken() (string, error)
 	GetUser() (string, error)
 	GetHost() string
+}
+
+type tokenOverrideConfig struct {
+	Config
+	token       *string
+	resolveUser func(string) (string, error)
+
+	mu            sync.Mutex
+	resolvedToken string
+	resolvedUser  string
+}
+
+// WithTokenOverride returns a configuration view whose token can be
+// overridden for a single command invocation. The override is kept only in
+// memory and is never written to the credential store.
+func WithTokenOverride(base Config, token *string, resolveUser func(string) (string, error)) Config {
+	if existing, ok := base.(*tokenOverrideConfig); ok && existing.token == token {
+		existing.mu.Lock()
+		existing.resolveUser = resolveUser
+		existing.mu.Unlock()
+		return existing
+	}
+	return &tokenOverrideConfig{Config: base, token: token, resolveUser: resolveUser}
+}
+
+func (c *tokenOverrideConfig) GetToken() (string, error) {
+	if c.token == nil {
+		if c.Config == nil {
+			return "", ErrNotAuthenticated
+		}
+		return c.Config.GetToken()
+	}
+	token := c.overrideToken()
+	if token == "" {
+		return "", ErrNotAuthenticated
+	}
+	return token, nil
+}
+
+func (c *tokenOverrideConfig) GetUser() (string, error) {
+	if c.token == nil {
+		if c.Config == nil {
+			return "", ErrNotAuthenticated
+		}
+		return c.Config.GetUser()
+	}
+	token := c.overrideToken()
+	if token == "" {
+		return "", ErrNotAuthenticated
+	}
+
+	c.mu.Lock()
+	if c.resolvedToken == token {
+		user := c.resolvedUser
+		c.mu.Unlock()
+		return user, nil
+	}
+	resolveUser := c.resolveUser
+	c.mu.Unlock()
+	if resolveUser == nil {
+		return "", errors.New("cannot resolve the user for the command-line token")
+	}
+
+	// User resolution may perform a network request. Do not hold the cache lock
+	// while invoking it; concurrent misses may resolve more than once, but only
+	// successful results are cached and failures remain retryable.
+	user, err := resolveUser(token)
+	if err != nil {
+		return "", err
+	}
+	c.mu.Lock()
+	c.resolvedUser = user
+	c.resolvedToken = token
+	c.mu.Unlock()
+	return user, nil
+}
+
+func (c *tokenOverrideConfig) GetHost() string {
+	if c.Config == nil {
+		return defaultHost
+	}
+	return c.Config.GetHost()
+}
+
+func (c *tokenOverrideConfig) overrideToken() string {
+	if c.token == nil {
+		return ""
+	}
+	return strings.TrimSpace(*c.token)
 }
 
 type config struct {

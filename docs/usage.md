@@ -194,6 +194,7 @@ ag-cli auth logout --all
 ```
 
 - `ok` 为布尔值；本地状态正常且未请求验证，或请求的验证通过时为 `true`，退出码为 0；其他运行时结果为 `false`，退出码为 1，诊断写入 stderr。
+- `host` 默认为 `atomgit.com`；显式传入 `--base-url` 时，会反映该命令级 API 服务的主机。
 - `credentialsPresent` 为 `true`（已读到完整的活动凭据）、`false`（没有凭据文件）或 `null`（配置不完整、损坏或无法读取，不能确认）。`localAccount` 为账号字符串，无法确定时为 `null`；`localStatus` 为 `configured`、`missing` 或 `invalid`。
 - `verification.requested` 表示是否传入 `--verify`；`performed` 表示是否已尝试 API 请求，不表示验证成功。无可用本地凭据时跳过请求。
 - `verification.status` 为 `not_requested`、`skipped`、`verified`、`identity_mismatch`、`unauthorized`（401）、`forbidden`（403）、`server_error`（5xx）、`http_error`（其他非预期 HTTP 状态）、`network_error`、`timeout`、`canceled`、`invalid_response` 或 `client_error`。403 和网络错误不等同于令牌过期。
@@ -225,6 +226,9 @@ ag-cli repo list --limit 100
 
 # 输出 JSON 数组
 ag-cli repo list --json
+
+# 仅为本次调用临时指定 token 和服务根地址
+ag-cli repo list --token "$TOKEN" --base-url "$BASE_URL"
 
 # 查看仓库详情
 ag-cli repo view
@@ -316,6 +320,12 @@ printf '%s\n' "$PASSWORD" | ag-cli repo transfer source-organization/repo --to t
 ag-cli repo delete --yes
 ag-cli repo delete owner/repo --yes
 ```
+
+使用自定义 `--base-url` 创建仓库时，CLI 只采用创建接口返回、通过路径校验且属于所选部署的仓库 URL。除同一主机外，也支持可验证的 API/Web 主机命名对应，例如去掉 `api.` 前缀或 `-api` 后缀；内置公网 API 也允许已知的 AtomGit/GitCode Web 主机。若响应未提供可用 URL，仓库仍会创建成功，但 CLI 不会回退到默认公网地址；同时指定 `--clone` 时会明确报告已跳过克隆。CLI 仅向同一主机或通过上述命名对应验证的 HTTPS 克隆主机复用当前命令凭据，不会向无关响应主机转发 API token。
+
+普通 `repo clone` 也使用相同的部署边界。在自定义 `--base-url` 下传入 `owner/repo` 或短仓库名时，CLI 会先从所选 API 读取并校验仓库 URL，不会默认指向公网 AtomGit。显式传入的 URL 仍交给 Git 处理，但只有属于所选部署的 HTTPS 主机才会收到当前命令 token。
+
+`--token` 和 `--base-url` 是全局参数，只在当前命令进程中生效，不会写入凭据文件或其他配置。`--base-url` 默认为 `https://api.atomgit.com`，不传该参数时使用同一地址；远程服务必须使用不含路径的 HTTPS 根地址，只有回环地址允许使用 HTTP。API v5 和 Actions v8 命令会分别自动添加 `/api/v5` 和 `/api/v8`。需要当前用户名的命令会通过临时 token 查询所选服务，不会继续使用本地持久化账户的用户名。命令行中的 token 可能出现在 shell 历史或系统进程列表中；无需临时覆盖时，建议继续使用 `ag-cli auth login` 保存的凭据。
 
 `ag-cli repo edit` 仅发送命令行中明确指定的字段，支持 `--name`、`--description`、`--default-branch` 和 `--visibility public|private`。`--public`、`--private` 是可见性的便利选项；它们与 `--visibility` 三者互斥。名称或可见性修改需要交互确认，可使用 `--yes` 跳过确认。成功后命令会显示更新后的仓库名称和浏览器 URL。
 
