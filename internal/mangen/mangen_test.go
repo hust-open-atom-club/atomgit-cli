@@ -205,6 +205,69 @@ func TestWriteAndCheck(t *testing.T) {
 	}
 }
 
+func TestWriteRejectsInvalidFilenames(t *testing.T) {
+	for _, mode := range []struct {
+		name  string
+		check bool
+	}{{"write", false}, {"check", true}} {
+		t.Run(mode.name, func(t *testing.T) {
+			directory := t.TempDir()
+			outside := filepath.Join(t.TempDir(), "outside.1")
+			if err := os.WriteFile(outside, []byte("unchanged"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			for _, name := range []string{"../escape.1", outside, filepath.Join("nested", "escape.1"), "manual.txt"} {
+				err := mangen.Write(directory, []mangen.Page{{Name: name, Data: []byte("new")}}, mode.check)
+				if err == nil {
+					t.Fatalf("accepted invalid filename %q", name)
+				}
+			}
+			data, err := os.ReadFile(outside)
+			if err != nil || string(data) != "unchanged" {
+				t.Fatalf("outside file = %q, error = %v", data, err)
+			}
+		})
+	}
+}
+
+func TestWriteRejectsManualSymlinks(t *testing.T) {
+	for _, mode := range []struct {
+		name  string
+		check bool
+	}{{"write", false}, {"check", true}} {
+		t.Run(mode.name, func(t *testing.T) {
+			for _, location := range []string{"inside", "outside"} {
+				t.Run(location, func(t *testing.T) {
+					directory := t.TempDir()
+					targetDir := directory
+					if location == "outside" {
+						targetDir = t.TempDir()
+					}
+					target := filepath.Join(targetDir, "target.txt")
+					if err := os.WriteFile(target, []byte("unchanged"), 0o600); err != nil {
+						t.Fatal(err)
+					}
+					if err := os.Symlink(target, filepath.Join(directory, "manual.1")); err != nil {
+						t.Skipf("symlinks unavailable: %v", err)
+					}
+					// Matching content ensures check mode must reject the link itself.
+					pages := []mangen.Page{{Name: "manual.1", Data: []byte("unchanged")}}
+					if !mode.check {
+						pages[0].Data = []byte("new")
+					}
+					if err := mangen.Write(directory, pages, mode.check); err == nil {
+						t.Fatal("accepted manual symlink")
+					}
+					data, err := os.ReadFile(target)
+					if err != nil || string(data) != "unchanged" {
+						t.Fatalf("symlink target = %q, error = %v", data, err)
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestManParser(t *testing.T) {
 	mandoc, err := exec.LookPath("mandoc")
 	if err != nil {
