@@ -1,6 +1,8 @@
 package config
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -23,8 +25,67 @@ func TestLoadAliasesMissingFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadAliases() error = %v", err)
 	}
-	if len(aliases) != 0 {
+	if aliases == nil || len(aliases) != 0 {
 		t.Fatalf("LoadAliases() = %v, want empty map", aliases)
+	}
+}
+
+func TestLoadAliasesReportsPathLookupFailure(t *testing.T) {
+	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	t.Setenv("XDG_CONFIG_HOME", "")
+	aliases, err := LoadAliases()
+	access, ok := errors.AsType[*FileAccessError](err)
+	if aliases != nil || !ok || access.Err == nil || errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("LoadAliases() = %v, %v, want configuration path lookup failure", aliases, err)
+	}
+}
+
+func TestLoadAliasesPreservesReadAndDecodeCauses(t *testing.T) {
+	for _, tc := range []struct {
+		name, body string
+		directory  bool
+		syntax     bool
+	}{
+		{name: "read failure", directory: true},
+		{name: "invalid JSON", body: `{not json`, syntax: true},
+		{name: "invalid alias field type", body: `{"aliases":{"pl":42}}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			isolateConfig(t)
+			path, err := AliasFilePath()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if tc.directory {
+				if err := os.Mkdir(path, 0o700); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := os.WriteFile(path, []byte(tc.body), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			aliases, err := LoadAliases()
+			_, access := errors.AsType[*FileAccessError](err)
+			_, decode := errors.AsType[*FileDecodeError](err)
+			if aliases != nil || access != tc.directory || decode == tc.directory {
+				t.Fatalf("LoadAliases() = %v, %v, want the matching failure class", aliases, err)
+			}
+			if tc.directory {
+				cause, ok := errors.AsType[*os.PathError](err)
+				if !ok || cause.Path != path || !errors.Is(err, cause.Err) {
+					t.Fatalf("read error lost its native cause: %v", err)
+				}
+				return
+			}
+			_, syntax := errors.AsType[*json.SyntaxError](err)
+			_, fieldType := errors.AsType[*json.UnmarshalTypeError](err)
+			if syntax != tc.syntax || fieldType == tc.syntax {
+				t.Fatalf("decode error lost its JSON cause: %v", err)
+			}
+		})
 	}
 }
 

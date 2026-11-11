@@ -912,29 +912,44 @@ func TestExpandAliasCorruptConfigFallsBack(t *testing.T) {
 	}
 }
 
-func TestExpandAliasCorruptConfigWarnsOnStderr(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	path, err := config.AliasFilePath()
-	if err != nil {
-		t.Fatalf("AliasFilePath() error = %v", err)
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatalf("MkdirAll() error = %v", err)
-	}
-	if err := os.WriteFile(path, []byte("{not valid json"), 0o600); err != nil {
-		t.Fatalf("WriteFile() error = %v", err)
-	}
-
-	var stderr bytes.Buffer
-	cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, io.Discard, &stderr)
-	if err != nil {
-		t.Fatalf("newCmdRootWithWriters() error = %v", err)
-	}
-	if _, err := ExpandAlias(cmd, []string{"pl"}); err != nil {
-		t.Fatalf("ExpandAlias() error = %v, want nil (fallback to no aliases)", err)
-	}
-	if !strings.Contains(stderr.String(), "warning: failed to load aliases") {
-		t.Errorf("stderr = %q, want warning about failed alias load", stderr.String())
+func TestExpandAliasConfigFailureWarnsOnStderr(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		directory bool
+	}{
+		{name: "decode failure"},
+		{name: "read failure", directory: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+			path, err := config.AliasFilePath()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if tc.directory {
+				if err := os.Mkdir(path, 0o700); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := os.WriteFile(path, []byte("{not valid json"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			var stderr bytes.Buffer
+			cmd, err := newCmdRootWithWriters(&cmdutil.Factory{}, io.Discard, &stderr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			args := []string{"pl"}
+			got, err := ExpandAlias(cmd, args)
+			if err != nil || !reflect.DeepEqual(got, args) {
+				t.Fatalf("ExpandAlias() = %v, %v, want original arguments", got, err)
+			}
+			if !strings.Contains(stderr.String(), "warning: failed to load aliases") {
+				t.Errorf("stderr = %q, want warning about failed alias load", stderr.String())
+			}
+		})
 	}
 }
 
