@@ -70,6 +70,16 @@ func (e *CredentialFileSafetyError) Error() string {
 func (e *CredentialFileSafetyError) Unwrap() error        { return e.Err }
 func (e *CredentialFileSafetyError) Is(target error) bool { return target == ErrInvalidCredentials }
 
+// CredentialValidationError records invalid content in decoded stored credentials.
+// Err retains the reason for rejecting the credential data.
+type CredentialValidationError struct {
+	Err error
+}
+
+func (e *CredentialValidationError) Error() string        { return e.Err.Error() }
+func (e *CredentialValidationError) Unwrap() error        { return e.Err }
+func (e *CredentialValidationError) Is(target error) bool { return target == ErrInvalidCredentials }
+
 // CredentialFormatError describes a credential decoder failure. Offset and
 // InvalidFieldType are format facts exposed by config, independently of the
 // concrete parser cause retained in Err.

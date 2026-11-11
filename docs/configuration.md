@@ -116,6 +116,8 @@ ag-cli auth setup-git
 
 符号链接、打开期间文件变化、Unix owner-read 校验失败等安全拒绝会报告凭据配置无效，并给出对应的检查建议。`doctor` 检查凭据时，还会拒绝非普通文件和超过 1 MiB 的文件。
 
+使用本地凭据时，存储版本、账号记录或活动账号引用无效会导致命令失败，并提示检查这些内容。主凭据文件内容无效时，查找在该文件处停止。
+
 帮助和版本入口不需要读取凭据：`ag-cli --help`、`ag-cli help <command>`、子命令的 `-h`/`--help`、`ag-cli --version`、`ag-cli version` 和 `ag-cli version --json` 在凭据缺失、损坏或无法读取时仍可使用。
 
 部分公开只读命令（例如 `ag-cli discussion list` 和 `ag-cli discussion view`）在尚未登录时会以匿名方式请求。凭据文件损坏、权限错误或其他存储故障**不会**降级为匿名访问。

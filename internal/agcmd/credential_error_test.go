@@ -263,3 +263,50 @@ func TestCredentialSafetyAndOuterOperationRoles(t *testing.T) {
 		})
 	}
 }
+
+func TestInvalidCredentialDataStopsFallback(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("XDG_CONFIG_HOME", "")
+	cfg, err := config.NewConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	path, err := config.PrimaryTokenPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	body := []byte(`{"version":2,"active":"private-account","accounts":[{"user":"alice","access_token":"fixture"}]}`)
+	if err := os.WriteFile(path, body, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	legacy := []byte(`{"user":"bob","access_token":"legacy"}`)
+	if err := os.WriteFile(filepath.Join(home, ".atomgit_personal_token.json"), legacy, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	factory := &cmdutil.Factory{}
+	err = loadCommandConfig(nil, factory, config.NewConfig)
+	if !errors.Is(err, config.ErrInvalidCredentials) || factory.Config != nil {
+		t.Fatalf("startup must reject invalid primary credentials: %v", err)
+	}
+	var out bytes.Buffer
+	renderCommandError(&out, fmt.Errorf("failed to load config: %w", err))
+	want := "Error: Credential configuration is invalid.\n\nThe stored credential data failed validation.\n\n" +
+		"Check the credential store version, account records, and active account.\n"
+	if out.String() != want {
+		t.Fatalf("diagnostic = %q, want %q", out.String(), want)
+	}
+	factory.Config = cfg
+	factory.HttpClient = func() (*http.Client, error) {
+		t.Fatal("invalid credentials must stop before creating an anonymous client")
+		return nil, nil
+	}
+	client, err := factory.OptionalAPIClient()
+	if client != nil || !errors.Is(err, config.ErrInvalidCredentials) || errors.Is(err, config.ErrNotAuthenticated) {
+		t.Fatalf("optional authentication must reject invalid credentials: %v", err)
+	}
+}

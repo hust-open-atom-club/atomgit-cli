@@ -63,10 +63,10 @@ func parseCredentialStore(data []byte) (*CredentialStore, bool, error) {
 		return nil, false, err
 	}
 	if envelope.Version != 0 && envelope.Version != credentialStoreVersion {
-		return nil, false, fmt.Errorf("unsupported credential store version %d", envelope.Version)
+		return nil, false, &CredentialValidationError{Err: fmt.Errorf("unsupported credential store version %d", envelope.Version)}
 	}
 	if envelope.Version == 0 && envelope.Accounts != nil {
-		return nil, false, fmt.Errorf("credential store version is required when accounts are present")
+		return nil, false, &CredentialValidationError{Err: fmt.Errorf("credential store version is required when accounts are present")}
 	}
 	var store CredentialStore
 	if err := decodeCredentialData(data, &store); err != nil {
@@ -74,24 +74,24 @@ func parseCredentialStore(data []byte) (*CredentialStore, bool, error) {
 	}
 	if store.Version == credentialStoreVersion {
 		if len(store.Accounts) == 0 {
-			return nil, false, fmt.Errorf("token file has no accounts")
+			return nil, false, &CredentialValidationError{Err: fmt.Errorf("token file has no accounts")}
 		}
 		store.Active = strings.ToLower(strings.TrimSpace(store.Active))
 		seen := make(map[string]bool, len(store.Accounts))
 		for index := range store.Accounts {
 			account, err := normalizeAccount(store.Accounts[index])
 			if err != nil {
-				return nil, false, fmt.Errorf("invalid account %d: %w", index, err)
+				return nil, false, &CredentialValidationError{Err: fmt.Errorf("invalid account %d: %w", index, err)}
 			}
 			key := account.Key()
 			if seen[key] {
-				return nil, false, fmt.Errorf("duplicate account %s", key)
+				return nil, false, &CredentialValidationError{Err: fmt.Errorf("duplicate account %s", key)}
 			}
 			seen[key] = true
 			store.Accounts[index] = account
 		}
 		if !seen[store.Active] {
-			return nil, false, fmt.Errorf("active account %q was not found", store.Active)
+			return nil, false, &CredentialValidationError{Err: fmt.Errorf("active account %q was not found", store.Active)}
 		}
 		store.Version = credentialStoreVersion
 		return &store, false, nil
@@ -103,7 +103,7 @@ func parseCredentialStore(data []byte) (*CredentialStore, bool, error) {
 	}
 	legacy, err := normalizeAccount(legacy)
 	if err != nil {
-		return nil, false, fmt.Errorf("token file has empty access_token or invalid account: %w", err)
+		return nil, false, &CredentialValidationError{Err: fmt.Errorf("token file has empty access_token or invalid account: %w", err)}
 	}
 	return &CredentialStore{Version: credentialStoreVersion, Active: legacy.Key(), Accounts: []StoredCredentials{legacy}}, true, nil
 }
@@ -136,7 +136,7 @@ func (s *CredentialStore) ActiveAccount() (*StoredCredentials, error) {
 			return &accountCopy, nil
 		}
 	}
-	return nil, fmt.Errorf("active account %q was not found", s.Active)
+	return nil, &CredentialValidationError{Err: fmt.Errorf("active account %q was not found", s.Active)}
 }
 
 // ResolveAccount finds an account by its case-insensitive username.

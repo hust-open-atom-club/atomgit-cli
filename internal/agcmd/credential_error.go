@@ -69,6 +69,14 @@ func credentialDiagnostic(err error) (commandDiagnostic, bool) {
 		}
 		return d, true
 	}
+	//nolint:errorlint // Match the selected error without searching its causes.
+	if _, ok := err.(*config.CredentialValidationError); ok {
+		return commandDiagnostic{
+			summary: "Credential configuration is invalid.",
+			detail:  "The stored credential data failed validation.",
+			hint:    "Check the credential store version, account records, and active account.",
+		}, true
+	}
 	if format, ok := errors.AsType[*config.CredentialFormatError](err); ok {
 		d := commandDiagnostic{
 			summary: "Credential configuration is invalid.",
