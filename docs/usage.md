@@ -534,6 +534,22 @@ ag-cli org runner-job-history hust-open-atom-club \
   --limit 100 --json
 ```
 
+组织资料编辑使用独立命令：
+
+```bash
+ag-cli org edit my-team --name 'My Team' --description 'Team projects'
+# 显式发送空字符串请求清空公开邮箱；未指定字段保持不变
+ag-cli org edit my-team --email '' --location Wuhan --yes
+# 网站可以使用服务端支持的字符串格式，不强制添加协议
+ag-cli org edit my-team --website www.example.com --json --yes
+```
+
+`org edit <org>` 通过 `PATCH /orgs/{org}` 只发送显式指定的字段。`--name` 是显示名称，不能为空，不会修改组织 path；`--description`（`-d`）、`--email`、`--location` 和 `--website` 可以显式传空字符串请求清空。`--website` 对应请求的 `html_url`，表示组织站点，不是可由 CLI 拼造的组织主页链接。没有字段变更时在认证和网络请求前报错。
+
+修改默认在 stderr 显示目标组织和提交字段并要求确认，`--yes` 跳过；取消或 EOF 不读取凭据、不发送请求。PATCH 只接受 HTTP 200，不自动重试或跟随重定向。响应必须具有正整数 `id` 及匹配的 `path`。身份无法确认、传输/读取/解码失败或非预期的 2xx、3xx、5xx 均会提示资料可能已经改变，应先在 AtomGit 确认再决定是否重试；明确的 4xx 拒绝保留普通 API 诊断。
+
+文本输出确认的组织身份及“已提交、未经独立回读验证”的字段，不将缺失响应字段当作已验证远端状态，也不自动访问额外的查询接口。JSON 为 `organization: {id, path}`、`submitted_fields` 和固定 `verification: "identity_only"`；`submitted_fields` 是发送内容，不代表当前完整资料。测试仅使用离线 mock，不声明服务端写入已验收。
+
 `ag-cli org create <path>` 要求认证并显式指定组织路径，不会从 Git remote 推断。可选的 `--name`、`--description`（`-d`）和 `--visibility` 只有显式指定时才发送给 API；省略时由服务端采用名称等于路径、可见性为 `public` 的默认值。`--description=""` 会显式发送空描述。路径、空名称和可见性枚举在认证与网络请求前校验。
 
 创建使用 API v5 `POST /orgs`，只接受 HTTP 200，并校验返回的组织 ID 和路径。成功时显示组织路径以及服务端返回的 `web_url`；缺少 URL 时只显示路径，不拼接链接。写请求不会自动重试或跟随重定向；如果请求执行、响应读取或校验失败，或收到非预期的其他 2xx、3xx 或 5xx 响应，组织可能已经创建，命令会提示先在 AtomGit 确认状态再决定是否重试。
