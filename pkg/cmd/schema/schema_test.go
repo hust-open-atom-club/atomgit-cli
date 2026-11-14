@@ -34,6 +34,8 @@ func TestRegisteredCommands(t *testing.T) {
 		{[]string{"discussion", "create"}, 0, 1, "text", "write"},
 		{[]string{"discussion", "delete"}, 1, 2, "text", "write"},
 		{[]string{"org", "create"}, 1, 1, "text", "write"},
+		{[]string{"org", "member", "invite"}, 2, 2, "text", "write"},
+		{[]string{"org", "member", "remove"}, 2, 2, "text", "write"},
 		{[]string{"repo", "cla", "list"}, 0, 1, "text,json", "read"},
 		{[]string{"repo", "cla", "set"}, 0, 1, "text", "write"},
 		{[]string{"repo", "cla", "disable"}, 0, 1, "text", "write"},
@@ -103,6 +105,17 @@ func TestRegisteredCommands(t *testing.T) {
 					if i < 0 || detail.Flags[i].Required || detail.Flags[i].Default != defaultValue || detail.Flags[i].Type != "string" {
 						t.Fatalf("incorrect optional flag metadata for %s", name)
 					}
+				}
+			}
+			if detail.Path == "ag-cli org member invite" {
+				for name, defaultValue := range map[string]string{"permission": "push", "role-id": ""} {
+					i := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == name })
+					if i < 0 || detail.Flags[i].Required || detail.Flags[i].Default != defaultValue || detail.Flags[i].Type != "string" {
+						t.Fatalf("incorrect conditional flag metadata for %s", name)
+					}
+				}
+				if !strings.Contains(strings.Join(detail.Notes, " "), "required for customized and forbidden otherwise") {
+					t.Fatal("missing conditional role constraint")
 				}
 			}
 			if detail.Path == "ag-cli discussion create" || detail.Path == "ag-cli org discussion create" {

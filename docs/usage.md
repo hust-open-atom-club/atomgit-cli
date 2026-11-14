@@ -513,6 +513,17 @@ ag-cli org view hust-open-atom-club --json
 ag-cli org members hust-open-atom-club
 ag-cli org members hust-open-atom-club --limit 100 --json
 
+# 邀请成员，默认请求 push 权限，确认后发送邀请
+ag-cli org member invite my-team alice
+ag-cli org member invite my-team alice --permission pull --yes
+
+# 使用自定义角色邀请成员
+ag-cli org member invite my-team alice --permission customized --role-id role-123
+
+# 移除组织成员，默认要求确认
+ag-cli org member remove my-team alice
+ag-cli org member remove my-team alice --yes
+
 # 列出组织仓库及其可见性、默认分支和活跃度信息
 ag-cli org repos hust-open-atom-club
 ag-cli org repos hust-open-atom-club --limit 100 --json
@@ -539,6 +550,10 @@ ag-cli org runner-job-history hust-open-atom-club \
 创建使用 API v5 `POST /orgs`，只接受 HTTP 200，并校验返回的组织 ID 和路径。成功时显示组织路径以及服务端返回的 `web_url`；缺少 URL 时只显示路径，不拼接链接。写请求不会自动重试或跟随重定向；如果请求执行、响应读取或校验失败，或收到非预期的其他 2xx、3xx 或 5xx 响应，组织可能已经创建，命令会提示先在 AtomGit 确认状态再决定是否重试。
 
 `view` 输出组织路径、名称、可见性、描述和公开 URL。`members` 与 `repos` 支持分页，并在认证和网络请求前校验 `--limit`；空结果的 JSON 输出为 `[]`。仓库输出还包含描述、默认分支、主要语言、Star、Fork 和更新时间。
+
+`ag-cli org member invite <org> <username>` 与 `remove <org> <username>` 要求认证并显式指定组织路径和用户名，不从 Git remote 推断。`invite` 的 `--permission` 支持 `pull`、`push`、`admin`、`customized`，默认 `push`；`customized` 必须提供非空 `--role-id`，其他权限不得传入该选项。参数在确认与认证前校验。这两个命令仅管理组织成员，不管理仓库协作者、企业成员或修改现有成员角色；原有 `org members` 列表命令保持不变。
+
+两个写命令默认显示组织和用户名并要求输入 `y` 或 `yes` 确认；邀请还显示请求的权限及自定义角色 ID。空输入、EOF 或其他回答取消操作且不发请求；`--yes`（`-y`）跳过确认。命令分别调用 API v5 `POST` / `DELETE /orgs/{org}/memberships/{username}`，只接受 HTTP 200（允许空响应），不会自动重试或跟随重定向。邀请成功仅表示服务端接收了邀请请求，不表示用户已经接受邀请或成为正式成员。失败时返回非零退出码；结果不确定时应先在 AtomGit 核实状态，再决定是否重试。
 
 `ag-cli org runner-group` 使用 Actions API v8，只读检查组织级 Runner Group；它与 `ag-cli runner list/shared` 查看仓库直接配置或共享的主机 Runner 不同。`list`、`runners`、`runner-sets` 和 `namespaces` 默认最多返回 30 条并要求 `--limit` 为正数；文本输出包含组织和 Group ID，JSON 保留对应官方响应的固定 snake_case 字段。权限不足、Group 不存在或分页响应不完整时命令会明确失败，不会把部分数据当作完整结果。`namespaces` 会先查询 Group 详情，确认其存在且可访问，再读取共享仓库；不存在时返回非零退出码，存在但没有共享仓库时仍正常返回空列表。
 
