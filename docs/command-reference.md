@@ -242,6 +242,7 @@
 - [ag-cli user edit](#ag-cli-user-edit) — Edit the authenticated user's profile
 - [ag-cli user emails](#ag-cli-user-emails) — List email addresses for the authenticated user
 - [ag-cli user events](#ag-cli-user-events) — List personal activity events for a user
+- [ag-cli user followers](#ag-cli-user-followers) — List followers of a user
 - [ag-cli user namespaces](#ag-cli-user-namespaces) — List namespaces for the authenticated user
 - [ag-cli user starred](#ag-cli-user-starred) — List starred repositories for a user
 - [ag-cli user view](#ag-cli-user-view) — View the current user or a public user profile
@@ -6455,7 +6456,7 @@ Usage: `ag-cli user`
 
 View AtomGit users, repositories, namespaces, and activity
 
-View AtomGit user profiles, email addresses, starred and watched repositories, authenticated namespaces, and personal activity events.
+View AtomGit user profiles, followers, email addresses, starred and watched repositories, authenticated namespaces, and personal activity events.
 
 ### Flags
 
@@ -6557,6 +6558,34 @@ ag-cli user events
 ag-cli user events alice
 ag-cli user events alice --year 2026 --limit 50
 ag-cli user events alice --json
+```
+
+
+## ag-cli user followers
+
+Usage: `ag-cli user followers <username> [flags]`
+
+List followers of a user
+
+List followers of an explicitly specified user. Uses authentication when configured; otherwise reads publicly available followers anonymously. The limit applies across all pages.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--json` | Output followers as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-L, --limit` | Maximum total number of followers to list | `30` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli user followers alice
+ag-cli user followers alice --limit 100
+ag-cli user followers alice --json
 ```
 
 
