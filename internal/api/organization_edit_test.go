@@ -103,6 +103,50 @@ func TestEditOrganizationResponseIdentity(t *testing.T) {
 	}
 }
 
+func TestEditOrganizationCanonicalPath(t *testing.T) {
+	for _, tc := range []struct {
+		name, requested, returned string
+		valid                     bool
+	}{
+		{"uppercase input", "TEAM", "team", true},
+		{"mixed case input", "My-Team", "my-team", true},
+		{"mixed case response", "my-team", "My-Team", true},
+		{"different organization", "TEAM", "other", false},
+		{"different suffix", "TEAM", "team-other", false},
+		{"empty path", "TEAM", "", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			client := NewClientWithHTTPClient("fixture", &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				calls++
+				if r.Method != http.MethodPatch || r.URL.Path != "/api/v5/orgs/"+tc.requested {
+					t.Fatalf("request=%s %s", r.Method, r.URL)
+				}
+				body, err := json.Marshal(EditedOrganization{ID: 42, Path: tc.returned})
+				if err != nil {
+					t.Fatal(err)
+				}
+				return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(string(body))), Request: r}, nil
+			})})
+			name := "New display name"
+			got, err := EditOrganization(client, tc.requested, OrganizationEditRequest{Name: &name})
+			if (err == nil) != tc.valid || calls != 1 {
+				t.Fatalf("result=%+v error=%v calls=%d", got, err, calls)
+			}
+			if tc.valid {
+				if got.ID != 42 || got.Path != tc.returned {
+					t.Fatalf("response identity changed: %+v", got)
+				}
+			} else {
+				var uncertain *OrganizationEditUncertainError
+				if !errors.As(err, &uncertain) || !errors.Is(err, ErrInvalidResponse) {
+					t.Fatalf("lost uncertain invalid response: %v", err)
+				}
+			}
+		})
+	}
+}
+
 func TestEditOrganizationPreservesExecutionAndReadFailures(t *testing.T) {
 	value := "new"
 	cause := errors.New("private failure")

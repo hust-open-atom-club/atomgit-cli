@@ -72,7 +72,7 @@ func EditOrganization(client *Client, organization string, request OrganizationE
 		}
 		return EditedOrganization{}, fmt.Errorf("edit organization: %w", err)
 	}
-	if result.ID <= 0 || result.Path != organization {
+	if result.ID <= 0 || !strings.EqualFold(result.Path, organization) {
 		return EditedOrganization{}, &OrganizationEditUncertainError{Err: fmt.Errorf("%w: missing or mismatched organization identity", ErrInvalidResponse)}
 	}
 	return result, nil
