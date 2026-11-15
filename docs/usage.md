@@ -1031,8 +1031,18 @@ ag-cli pr comment delete owner/repo 123 456
 ag-cli pr comment delete owner/repo 123 456 --yes
 
 # 回复评论（PR 特有）
-ag-cli pr comment reply owner/repo 123 456 --body "Thanks for the feedback!"
+ag-cli pr comment reply owner/repo 123 discussion-id --body "Thanks for the feedback!"
+
+# 解决或重新打开检视讨论：使用 view 输出的 discussion_id，而非评论编号
+ag-cli pr comment resolve owner/repo 123 discussion-id
+ag-cli pr comment unresolve owner/repo 123 discussion-id --yes
+# 也可从当前 Git 仓库推断 owner/repo
+ag-cli pr comment resolve 123 discussion-id --yes
 ```
+
+`pr comment resolve/unresolve [<owner>/<repo>] <number> <discussion-id>` 要求认证，默认显示仓库、PR、讨论 ID 和目标状态并确认，`--yes/-y` 跳过确认；空输入、EOF 或否定回答取消操作，不发送 API 请求。PR 编号必须为正整数；讨论 ID 是 `pr comment view` 中单独显示的 `discussion_id`，不是下方的 note/comment 数字 ID。
+
+命令先核对 PR 身份，再遍历该 PR 的评论分页确认目标是检视讨论（`diff_comment`）；普通评论、其他 PR 的讨论、缺失状态或无法确认身份的响应均不会触发写入。使用 API v5 `PUT /repos/{owner}/{repo}/pulls/{number}/comments/{discussion_id}`，发送显式 `resolved: true/false`，其中 `unresolve` 不会省略 `false`。写请求不自动重试或跟随重定向，只接受 HTTP 200，响应体按官方契约忽略（可为空）。之后回读同一讨论，只有明确状态与请求一致才报告成功；回读失败或状态不一致时返回非零退出码，并提示先在 AtomGit 核对再决定是否重试。该命令不批准、合并或关闭 PR。
 
 ## Issue
 

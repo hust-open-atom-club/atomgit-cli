@@ -30,6 +30,8 @@ func TestRegisteredCommands(t *testing.T) {
 		{[]string{"pr", "create"}, 0, 1, "text", "write"},
 		{[]string{"api"}, 1, 1, "raw", "conditional"},
 		{[]string{"pr", "comment", "create"}, 1, 2, "text", "write"},
+		{[]string{"pr", "comment", "resolve"}, 2, 3, "text", "write"},
+		{[]string{"pr", "comment", "unresolve"}, 2, 3, "text", "write"},
 		{[]string{"discussion", "edit"}, 1, 2, "text", "write"},
 		{[]string{"discussion", "create"}, 0, 1, "text", "write"},
 		{[]string{"discussion", "delete"}, 1, 2, "text", "write"},
