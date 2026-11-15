@@ -242,6 +242,7 @@
 - [ag-cli user edit](#ag-cli-user-edit) — Edit the authenticated user's profile
 - [ag-cli user emails](#ag-cli-user-emails) — List email addresses for the authenticated user
 - [ag-cli user events](#ag-cli-user-events) — List personal activity events for a user
+- [ag-cli user following](#ag-cli-user-following) — List users and organizations followed by a user
 - [ag-cli user namespaces](#ag-cli-user-namespaces) — List namespaces for the authenticated user
 - [ag-cli user starred](#ag-cli-user-starred) — List starred repositories for a user
 - [ag-cli user view](#ag-cli-user-view) — View the current user or a public user profile
@@ -6455,7 +6456,7 @@ Usage: `ag-cli user`
 
 View AtomGit users, repositories, namespaces, and activity
 
-View AtomGit user profiles, email addresses, starred and watched repositories, authenticated namespaces, and personal activity events.
+View AtomGit user profiles, email addresses, starred and watched repositories, authenticated namespaces, followed users and organizations, and personal activity events.
 
 ### Flags
 
@@ -6557,6 +6558,33 @@ ag-cli user events
 ag-cli user events alice
 ag-cli user events alice --year 2026 --limit 50
 ag-cli user events alice --json
+```
+
+
+## ag-cli user following
+
+Usage: `ag-cli user following <username> [flags]`
+
+List users and organizations followed by a user
+
+List followed users and organizations for an explicit username. Missing login credentials allow anonymous access; credential-store failures are reported. This command only reads data and does not infer a user from Git. A hidden or nonexistent user can return HTTP 404.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--json` | Output followed accounts as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-L, --limit` | Maximum total number of followed accounts to list | `30` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli user following alice
+ag-cli user following alice --limit 100 --json
 ```
 
 
