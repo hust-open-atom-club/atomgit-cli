@@ -327,6 +327,24 @@ ag-cli repo delete owner/repo --yes
 
 `--token` 和 `--base-url` 是全局参数，只在当前命令进程中生效，不会写入凭据文件或其他配置。`--base-url` 默认为 `https://api.atomgit.com`，不传该参数时使用同一地址；远程服务必须使用不含路径的 HTTPS 根地址，只有回环地址允许使用 HTTP。API v5 和 Actions v8 命令会分别自动添加 `/api/v5` 和 `/api/v8`。需要当前用户名的命令会通过临时 token 查询所选服务，不会继续使用本地持久化账户的用户名。命令行中的 token 可能出现在 shell 历史或系统进程列表中；无需临时覆盖时，建议继续使用 `ag-cli auth login` 保存的凭据。
 
+组织仓库归档与取消归档使用独立命令：
+
+```bash
+ag-cli repo archive my-org/demo
+ag-cli repo unarchive my-org/demo --yes
+# 可从当前 Git 仓库推断 org/repo；--yes 仅跳过确认
+ag-cli repo archive --yes
+# 若部署要求账户密码，可选择隐藏输入或标准输入
+ag-cli repo archive my-org/demo --with-password
+printf '%s\n' "$PASSWORD" | ag-cli repo unarchive my-org/demo --yes --password-stdin
+```
+
+`archive/unarchive [<org>/<repo>]` 仅支持组织仓库，分别通过 API v5 `PUT /org/{org}/repo/{repo}/status` 发送整数 `status=2/0`；不是删除仓库或修改可见性。命令显示仓库和目标状态并默认要求确认，空输入、EOF 或否定回答取消操作，不发送 API 请求。确认后先读取仓库身份并核对组织归属；个人仓库、身份缺失或不匹配的仓库不会触发写入，`--yes/-y` 不会跳过这些检查。
+
+密码在官方请求契约中为可选字段，默认不发送。`--with-password` 使用终端隐藏输入，`--password-stdin` 必须配合 `--yes`，二者互斥；不提供命令行明文密码参数。标准输入最多接受 64 KiB，仅去除末尾的一组换行，保留密码中的空格；显式读取的密码不能为空。归档与已有仓库转移命令复用密码输入逻辑，不输出密码或服务端完整认证响应。
+
+写入不会自动重试或跟随重定向。只有 HTTP 200、显式整数业务码 `code=0` 和有效响应结构才报告 API 已确认；非零或缺失业务码、非法响应、权限和资源错误均返回非零退出码，不打印服务端 `msg`。这不表示 CLI 已独立回读归档状态；结果无法确认时，应先在 AtomGit 核对再决定是否重试。自动化测试只使用离线 mock，不使用真实仓库执行归档验证。
+
 `ag-cli repo edit` 仅发送命令行中明确指定的字段，支持 `--name`、`--description`、`--default-branch` 和 `--visibility public|private`。`--public`、`--private` 是可见性的便利选项；它们与 `--visibility` 三者互斥。名称或可见性修改需要交互确认，可使用 `--yes` 跳过确认。成功后命令会显示更新后的仓库名称和浏览器 URL。
 
 该命令不会修改仓库 URL 路径、所有者、主页、LFS、模块开关、合并策略，也不会接受后静默忽略 GitHub CLI 的其他仓库设置选项。

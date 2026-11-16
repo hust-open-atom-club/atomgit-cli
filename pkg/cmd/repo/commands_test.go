@@ -41,6 +41,8 @@ func repoFactory(config repoCommandConfig, transport forkRoundTripFunc) *cmdutil
 func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	cmd := NewCmdRepo(&cmdutil.Factory{})
 	want := map[string][]string{
+		"archive":   {"yes", "password-stdin", "with-password"},
+		"unarchive": {"yes", "password-stdin", "with-password"},
 		"clone":     {"branch"},
 		"content":   nil,
 		"create":    {"clone", "description", "private", "public"},

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"unicode"
@@ -13,11 +12,9 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 )
 
 const (
-	maxTransferPasswordBytes  = 64 << 10
 	transferNamespacePageSize = 100
 	maxTransferNamespacePages = 100
 )
@@ -287,37 +284,7 @@ func classifyRepositoryOwner(repository api.Repository, expectedOwner string) (r
 }
 
 func readTransferPassword(cmd *cobra.Command, fromStdin bool) (string, error) {
-	if fromStdin {
-		contents, err := io.ReadAll(io.LimitReader(cmd.InOrStdin(), maxTransferPasswordBytes+1))
-		if err != nil {
-			return "", fmt.Errorf("read organization-transfer password from stdin: %w", err)
-		}
-		if len(contents) > maxTransferPasswordBytes {
-			return "", fmt.Errorf("organization-transfer password from stdin exceeds %d bytes", maxTransferPasswordBytes)
-		}
-		password := strings.TrimSuffix(strings.TrimSuffix(string(contents), "\n"), "\r")
-		if password == "" {
-			return "", fmt.Errorf("organization-transfer password must not be empty")
-		}
-		return password, nil
-	}
-
-	file, ok := cmd.InOrStdin().(*os.File)
-	if !ok || !term.IsTerminal(int(file.Fd())) {
-		return "", fmt.Errorf("organization-owned repository transfer requires an interactive password; use --yes --password-stdin for non-interactive use")
-	}
-	if _, err := fmt.Fprint(cmd.ErrOrStderr(), "AtomGit password: "); err != nil {
-		return "", fmt.Errorf("write password prompt: %w", err)
-	}
-	contents, err := term.ReadPassword(int(file.Fd()))
-	fmt.Fprintln(cmd.ErrOrStderr())
-	if err != nil {
-		return "", fmt.Errorf("read organization-transfer password: %w", err)
-	}
-	if len(contents) == 0 {
-		return "", fmt.Errorf("organization-transfer password must not be empty")
-	}
-	return string(contents), nil
+	return readRepositoryPassword(cmd, fromStdin, "organization-transfer")
 }
 
 func readBackTransferredRepository(client *api.Client, owner, repo string) (api.Repository, error) {

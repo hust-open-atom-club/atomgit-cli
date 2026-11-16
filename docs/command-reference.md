@@ -158,6 +158,7 @@
 - [ag-cli release upload](#ag-cli-release-upload) — Upload an attachment to a release
 - [ag-cli release view](#ag-cli-release-view) — View a release by tag
 - [ag-cli repo](#ag-cli-repo) — Manage repositories
+- [ag-cli repo archive](#ag-cli-repo-archive) — Archive an organization repository
 - [ag-cli repo cla](#ag-cli-repo-cla) — Manage repository CLA configuration
 - [ag-cli repo cla disable](#ag-cli-repo-cla-disable) — Disable repository CLA
 - [ag-cli repo cla list](#ag-cli-repo-cla-list) — List available CLAs
@@ -201,6 +202,7 @@
 - [ag-cli repo read-file](#ag-cli-repo-read-file) — Read a file from a repository
 - [ag-cli repo sync](#ag-cli-repo-sync) — Synchronize a fork with its upstream repository
 - [ag-cli repo transfer](#ag-cli-repo-transfer) — Transfer a repository to an organization
+- [ag-cli repo unarchive](#ag-cli-repo-unarchive) — Unarchive an organization repository
 - [ag-cli repo view](#ag-cli-repo-view) — View a repository
 - [ag-cli repo webhook](#ag-cli-repo-webhook) — Manage repository webhooks
 - [ag-cli repo webhook create](#ag-cli-repo-webhook-create) — Create a repository webhook
@@ -4166,7 +4168,7 @@ Usage: `ag-cli repo`
 
 Manage repositories
 
-Create, clone, edit, fork, sync, transfer, view, browse contents, and manage repository collaborators and webhooks. Use `ag-cli repo fork list` to inspect existing forks; `ag-cli repo fork` creates a fork.
+Create, clone, edit, archive or unarchive organization repositories, fork, sync, transfer, view, browse contents, and manage repository collaborators and webhooks. Use `ag-cli repo fork list` to inspect existing forks; `ag-cli repo fork` creates a fork.
 
 For repository-scoped commands, OWNER/REPO may be omitted and inferred from the current Git repository.
 
@@ -4178,6 +4180,38 @@ For repository-scoped commands, OWNER/REPO may be omitted and inferred from the 
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli repo archive
+
+Usage: `ag-cli repo archive [<org>/<repo>] [flags]`
+
+Archive an organization repository
+
+Set the archive state of an organization-owned repository. Personal repositories are not supported by this endpoint. Archive sends integer status=2; unarchive sends status=0. The repository and target state are shown before confirmation; --yes skips only confirmation. Password is optional: use --with-password for hidden terminal input, or --yes --password-stdin for standard input. No plaintext password flag is provided. Writes are never automatically retried or redirected. Success requires HTTP 200 and business code 0; an uncertain result must be checked on AtomGit before retrying.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--password-stdin` | Read an optional account password from standard input (requires --yes) | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `--with-password` | Read an optional account password from a hidden terminal prompt | `false` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip the confirmation prompt | `false` | local |
+
+### Example
+
+```bash
+ag-cli repo archive my-org/demo
+ag-cli repo archive my-org/demo --yes
+ag-cli repo archive my-org/demo --with-password
+printf '%s\n' "$PASSWORD" | ag-cli repo archive my-org/demo --yes --password-stdin
+```
 
 
 ## ag-cli repo cla
@@ -5474,6 +5508,38 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ag-cli repo transfer owner/repo --to target-organization
 ag-cli repo transfer owner/repo --to target-organization --yes
 printf '%s\n' "$PASSWORD" | ag-cli repo transfer source-organization/repo --to target-organization --yes --password-stdin
+```
+
+
+## ag-cli repo unarchive
+
+Usage: `ag-cli repo unarchive [<org>/<repo>] [flags]`
+
+Unarchive an organization repository
+
+Set the archive state of an organization-owned repository. Personal repositories are not supported by this endpoint. Archive sends integer status=2; unarchive sends status=0. The repository and target state are shown before confirmation; --yes skips only confirmation. Password is optional: use --with-password for hidden terminal input, or --yes --password-stdin for standard input. No plaintext password flag is provided. Writes are never automatically retried or redirected. Success requires HTTP 200 and business code 0; an uncertain result must be checked on AtomGit before retrying.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--password-stdin` | Read an optional account password from standard input (requires --yes) | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `--with-password` | Read an optional account password from a hidden terminal prompt | `false` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip the confirmation prompt | `false` | local |
+
+### Example
+
+```bash
+ag-cli repo unarchive my-org/demo
+ag-cli repo unarchive my-org/demo --yes
+ag-cli repo unarchive my-org/demo --with-password
+printf '%s\n' "$PASSWORD" | ag-cli repo unarchive my-org/demo --yes --password-stdin
 ```
 
 
