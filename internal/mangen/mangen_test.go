@@ -103,6 +103,11 @@ func TestActualTreeIsOfflineCompleteAndDeterministic(t *testing.T) {
 		t.Fatal(err)
 	}
 	first := pageMap(t, root)
+	for _, want := range []string{`\-\-json`, "selected=false", "Requires authentication", "unknown fields", "No roles are modified"} {
+		if !strings.Contains(first["ag-cli-repo-permissions.1"], want) {
+			t.Errorf("repository permissions manual missing %q", want)
+		}
+	}
 	second := pageMap(t, root)
 	if !reflect.DeepEqual(first, second) {
 		t.Fatal("generation is not deterministic")

@@ -41,21 +41,22 @@ func repoFactory(config repoCommandConfig, transport forkRoundTripFunc) *cmdutil
 func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	cmd := NewCmdRepo(&cmdutil.Factory{})
 	want := map[string][]string{
-		"clone":     {"branch"},
-		"content":   nil,
-		"create":    {"clone", "description", "private", "public"},
-		"delete":    {"yes"},
-		"edit":      {"default-branch", "description", "name", "private", "public", "visibility", "yes"},
-		"fork":      {"clone", "description", "name", "private", "public"},
-		"insights":  nil,
-		"list":      {"limit"},
-		"mirror":    nil,
-		"push-rule": nil,
-		"read-dir":  {"json", "ref"},
-		"read-file": {"json", "ref"},
-		"sync":      {"branch", "force", "yes"},
-		"transfer":  {"password-stdin", "to", "yes"},
-		"view":      {"web"},
+		"clone":       {"branch"},
+		"content":     nil,
+		"create":      {"clone", "description", "private", "public"},
+		"delete":      {"yes"},
+		"edit":        {"default-branch", "description", "name", "private", "public", "visibility", "yes"},
+		"fork":        {"clone", "description", "name", "private", "public"},
+		"insights":    nil,
+		"list":        {"limit"},
+		"mirror":      nil,
+		"permissions": {"json"},
+		"push-rule":   nil,
+		"read-dir":    {"json", "ref"},
+		"read-file":   {"json", "ref"},
+		"sync":        {"branch", "force", "yes"},
+		"transfer":    {"password-stdin", "to", "yes"},
+		"view":        {"web"},
 	}
 	for _, name := range []string{"languages", "contributors", "events", "watchers", "stargazers", "downloads"} {
 		child, _, err := cmd.Find([]string{"insights", name})
