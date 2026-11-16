@@ -124,7 +124,7 @@ ag-cli doctor owner/repo --live --json
 
 凭据文件因符号链接、打开期间发生变化或 Unix 所有者无读取权限而被安全检查拒绝时，也会输出 `Credential configuration is invalid.`，并给出对应的检查建议；此类拒绝不会降级为匿名请求。
 
-同一命令读到 JSON 语法或字段类型错误的凭据文件时，会输出 `Credential configuration is invalid.` 及格式检查提示，并返回非零退出码；语法错误还会标明字节位置。
+同一命令读到 JSON 语法或字段类型错误的凭据文件时，会输出 `Credential configuration is invalid.` 及格式检查提示，并返回非零退出码；语法错误还会标明字节位置。 JSON 可解码但凭据内容无效时，诊断会提示检查存储版本、账号记录和活动账号。
 
 ```bash
 # 浏览器 OAuth 登录并写入令牌文件

@@ -38,7 +38,7 @@ func commandErrorRole(err error) error {
 		switch err.(type) {
 		case *api.HTTPError, *actions.HTTPError, *actions.JobNotFoundError, *api.RequestExecutionError, *api.ResponseReadError,
 			*api.OrganizationCreationUncertainError, *config.CredentialFormatError, *config.CredentialAccessError, *config.CredentialFileSafetyError,
-			*config.CredentialPermissionRepairError:
+			*config.CredentialValidationError, *config.CredentialPermissionRepairError:
 			return err
 		}
 		//nolint:errorlint // Inspect the wrapping protocol to traverse error layers explicitly.
