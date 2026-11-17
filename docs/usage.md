@@ -211,6 +211,8 @@ ag-cli auth logout --all
 
 可选环境变量（覆盖默认 OAuth 应用）：`AG_OAUTH_CLIENT_ID`、`AG_OAUTH_CLIENT_SECRET`；若本机 **8765** 端口被占用，可设置 **`AG_OAUTH_REDIRECT_PORT`**（需与 AtomGit 应用配置的回调地址一致）。
 
+在支持 OSC 8 超链接的终端中，`auth login` 打印的授权 URL 是整段链接，换行后点击任意一行都会打开完整地址。不支持超链接的终端、`TERM=dumb` 或输出被重定向时，仍输出纯文本 URL。
+
 ## 仓库 (repo)
 
 ```bash
