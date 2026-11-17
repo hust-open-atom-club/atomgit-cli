@@ -251,7 +251,7 @@ func TestCredentialFileSafetyDiagnostics(t *testing.T) {
 		{"changed", config.ErrTokenFileChanged, "The credential file changed while it was being opened.", "Check the credential file before retrying."},
 		{"owner unreadable", &config.TokenPermissionError{Path: "/private/credential", Err: config.ErrTokenFileUnreadable}, "The credential file is not readable by its owner.", ownerHint},
 		{"nonregular", config.ErrTokenFileNotRegular, "The credential file is not a regular file.", "Use a regular credential file owned by the current user."},
-		{"oversized", config.ErrTokenFileTooLarge, "The credential file exceeds the inspection size limit.", "Check the credential file size; inspection accepts at most 1 MiB."},
+		{"oversized", config.ErrTokenFileTooLarge, "The credential file exceeds the size limit.", "Check the credential file size; credentials are limited to 1 MiB."},
 		{"private cause", errors.New("private-token and private-cause"), "The credential file failed a safety check.", "Check the credential file before retrying."},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
