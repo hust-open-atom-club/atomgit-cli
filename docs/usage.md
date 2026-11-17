@@ -124,6 +124,8 @@ ag-cli doctor owner/repo --live --json
 
 同一命令读到 JSON 语法或字段类型错误的凭据文件时，会输出 `Credential configuration is invalid.` 及格式检查提示，并返回非零退出码；语法错误还会标明字节位置。 JSON 可解码但凭据内容无效时，诊断会提示检查存储版本、账号记录和活动账号。
 
+登录、刷新或切换账号时，如果凭据保存失败，CLI 会报告失败阶段并以非零状态退出。看到 `Unable to save credentials.` 和权限提示时，检查受影响路径及其父目录的所有权和写入权限。
+
 ```bash
 # 浏览器 OAuth 登录并写入令牌文件
 ag-cli auth login

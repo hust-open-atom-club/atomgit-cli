@@ -36,6 +36,8 @@ func commandErrorRole(err error) error {
 		}
 		//nolint:errorlint // Inspect this layer before its causes so an inner role cannot replace an outer one.
 		switch err.(type) {
+		case *config.CredentialSaveError:
+			return err
 		case *api.HTTPError, *actions.HTTPError, *actions.JobNotFoundError, *api.RequestExecutionError, *api.ResponseReadError,
 			*api.OrganizationCreationUncertainError, *config.CredentialFormatError, *config.CredentialAccessError, *config.CredentialFileSafetyError,
 			*config.CredentialValidationError:
@@ -49,8 +51,13 @@ func commandErrorRole(err error) error {
 			// Unclassified multi-cause wrappers retain depth-first traversal
 			// order. A classified composite handles its own primary/cleanup
 			// fields instead of reaching this branch.
-			for _, cause := range wrapped.Unwrap() {
+			causes := wrapped.Unwrap()
+			for _, cause := range causes {
 				if role := commandErrorRole(cause); role != nil {
+					//nolint:errorlint // Match the selected role so Git rollback failures stay visible.
+					if _, saving := role.(*config.CredentialSaveError); saving && len(causes) > 1 {
+						return nil
+					}
 					return role
 				}
 			}
