@@ -76,14 +76,18 @@ expected_checksum() {
 }
 
 # sha256_of prints the SHA-256 of one file. macOS ships shasum instead of
-# sha256sum; openssl is the last fallback.
+# sha256sum; openssl is the last fallback. Each branch captures the tool output
+# first: a pipeline would hide the hash tool's status behind awk.
 sha256_of() {
   if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | awk '{print $1}'
+    out=$(sha256sum "$1") || return 1
+    printf '%s\n' "${out%% *}"
   elif command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$1" | awk '{print $1}'
+    out=$(shasum -a 256 "$1") || return 1
+    printf '%s\n' "${out%% *}"
   elif command -v openssl >/dev/null 2>&1; then
-    openssl dgst -sha256 "$1" | awk '{print $NF}'
+    out=$(openssl dgst -sha256 "$1") || return 1
+    printf '%s\n' "${out##* }"
   else
     return 1
   fi
@@ -111,6 +115,9 @@ verify_archive() {
 
   actual=$(sha256_of "${tmpdir}/${asset}") ||
     die "无法计算 ${asset} 的 SHA-256；需要 sha256sum、shasum 或 openssl"
+  if [ -z "$actual" ]; then
+    die "无法计算 ${asset} 的 SHA-256；需要 sha256sum、shasum 或 openssl"
+  fi
 
   if [ "$actual" != "$expected" ]; then
     die "校验和不匹配: ${asset}（期望 ${expected}，实际 ${actual}）；为安全起见已停止安装"

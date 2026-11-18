@@ -1,6 +1,6 @@
 // Shared fixture for tests that run install.sh without network access.
 //
-// The installer now refuses to continue unless the downloaded archive matches
+// The installer refuses to continue unless the downloaded archive matches
 // release checksums.txt, so every Unix installer test must serve both files
 // through the fake curl below.
 
@@ -13,14 +13,25 @@ const { spawnSync } = require("node:child_process");
 const root = path.resolve(__dirname, "..");
 const asset = "ag_linux_amd64.tar.gz";
 
+// Tools the installer needs from PATH. Hash tools are intentionally absent so
+// hideHashTools can prove the "no verification tool" branch fails closed.
+const baseTools = ["awk", "cp", "install", "mkdir", "mktemp", "rm", "tar", "gzip"];
+
 function sha256(buffer) {
   return crypto.createHash("sha256").update(buffer).digest("hex");
 }
 
 // createUnixInstallFixture prepares a fake release containing ag_linux_amd64
 // and a checksums.txt entry. Pass checksumOverride to simulate a tampered
-// archive or a malformed checksum file.
-function createUnixInstallFixture(t, { checksumOverride, checksumsContent } = {}) {
+// archive, checksumsContent to replace the file, failMatch to make the fake
+// curl fail for a URL substring, or hideHashTools to remove every SHA-256 tool
+// from PATH.
+function createUnixInstallFixture(t, {
+  checksumOverride,
+  checksumsContent,
+  failMatch,
+  hideHashTools,
+} = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "atomgit-install-"));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
@@ -42,15 +53,49 @@ function createUnixInstallFixture(t, { checksumOverride, checksumsContent } = {}
     checksumsContent ?? `${archiveHash}  ${asset}\n`,
   );
 
+  writeFakeCommands(commands);
+  const binPath = hideHashTools
+    ? buildRestrictedPath(dir, commands)
+    : commands + path.delimiter + process.env.PATH;
+
+  const urlLog = path.join(dir, "urls");
+  const env = {
+    ...process.env,
+    PATH: binPath,
+    AG_VERSION: "v1.2.3",
+    AG_FROM_SOURCE: "0",
+    AG_INSTALL_DIR: destination,
+    AG_REPO_OWNER: "fixture",
+    AG_REPO_NAME: "repo",
+    FAKE_ARCHIVE: archive,
+    FAKE_CHECKSUMS: checksumsPath,
+    URL_LOG: urlLog,
+  };
+  if (failMatch) env.FAIL_MATCH = failMatch;
+
+  return {
+    archive,
+    destination,
+    dir,
+    env,
+    urlLog,
+    run() {
+      // Resolve sh explicitly so a restricted PATH cannot hide the interpreter.
+      return spawnSync("/bin/sh", [path.join(root, "install.sh")], { encoding: "utf8", env });
+    },
+  };
+}
+
+function writeFakeCommands(dir) {
   fs.writeFileSync(
-    path.join(commands, "uname"),
+    path.join(dir, "uname"),
     '#!/bin/sh\nif [ "$1" = -s ]; then echo Linux; else echo x86_64; fi\n',
     { mode: 0o755 },
   );
   // Real curl receives -fsSL <url> -o <destination>. Serve checksums.txt and
-  // the archive by URL and record each request for assertions.
+  // the archive by URL, record each request, and fail on FAIL_MATCH.
   fs.writeFileSync(
-    path.join(commands, "curl"),
+    path.join(dir, "curl"),
     `#!/bin/sh
 url=""
 dest=""
@@ -62,6 +107,11 @@ while [ $# -gt 0 ]; do
   esac
 done
 printf "%s\\n" "$url" >> "$URL_LOG"
+if [ -n "\${FAIL_MATCH:-}" ]; then
+  case "$url" in
+  *"$FAIL_MATCH"*) exit 7 ;;
+  esac
+fi
 case "$url" in
 */checksums.txt) cp "$FAKE_CHECKSUMS" "$dest" ;;
 *) cp "$FAKE_ARCHIVE" "$dest" ;;
@@ -69,31 +119,29 @@ esac
 `,
     { mode: 0o755 },
   );
+}
 
-  const urlLog = path.join(dir, "urls");
-  const env = {
-    ...process.env,
-    PATH: commands + path.delimiter + process.env.PATH,
-    AG_VERSION: "v1.2.3",
-    AG_FROM_SOURCE: "0",
-    AG_INSTALL_DIR: destination,
-    AG_REPO_OWNER: "fixture",
-    AG_REPO_NAME: "repo",
-    FAKE_ARCHIVE: archive,
-    FAKE_CHECKSUMS: checksumsPath,
-    URL_LOG: urlLog,
-  };
-
-  return {
-    archive,
-    destination,
-    dir,
-    env,
-    urlLog,
-    run() {
-      return spawnSync("sh", [path.join(root, "install.sh")], { encoding: "utf8", env });
-    },
-  };
+// buildRestrictedPath returns a PATH containing only the fake commands and
+// symlinks to the base tools, so no SHA-256 implementation is reachable.
+function buildRestrictedPath(dir, commands) {
+  const bin = path.join(dir, "bin");
+  fs.mkdirSync(bin);
+  for (const name of fs.readdirSync(commands)) {
+    fs.symlinkSync(path.join(commands, name), path.join(bin, name));
+  }
+  for (const name of baseTools) {
+    const resolved = spawnSync("sh", ["-c", `command -v ${name}`], { encoding: "utf8" });
+    const target = resolved.stdout.trim();
+    if (resolved.status !== 0 || !target) continue;
+    fs.symlinkSync(target, path.join(bin, name));
+  }
+  // A hash tool must not leak in through the caller's environment.
+  for (const name of ["sha256sum", "shasum", "openssl"]) {
+    if (fs.existsSync(path.join(bin, name))) {
+      throw new Error(`restricted PATH still contains ${name}`);
+    }
+  }
+  return bin;
 }
 
 module.exports = { asset, createUnixInstallFixture, sha256 };
