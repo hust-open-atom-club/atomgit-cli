@@ -60,6 +60,64 @@ pick_install_dir() {
   echo "$prefix/bin"
 }
 
+# expected_checksum prints the SHA-256 for $asset from checksums.txt. The file
+# covers every archive and both installers, so replacing one attachment alone
+# breaks the check.
+expected_checksum() {
+  awk -v want="$asset" '
+    {
+      gsub(/\r/, "")
+      name = $2
+      sub(/^\*/, "", name)
+      sub(/^\.\//, "", name)
+      if (name == want) { print tolower($1); exit }
+    }
+  ' "${tmpdir}/checksums.txt"
+}
+
+# sha256_of prints the SHA-256 of one file. macOS ships shasum instead of
+# sha256sum; openssl is the last fallback.
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  elif command -v openssl >/dev/null 2>&1; then
+    openssl dgst -sha256 "$1" | awk '{print $NF}'
+  else
+    return 1
+  fi
+}
+
+# verify_archive refuses to continue unless checksums.txt lists $asset and the
+# downloaded bytes match. The check fails closed: installing an unverified
+# archive would leave HTTPS as the only defence against a tampered release.
+verify_archive() {
+  checksums_url="${BASE_URL}/releases/download/${tag}/checksums.txt"
+  if ! curl -fsSL "$checksums_url" -o "${tmpdir}/checksums.txt"; then
+    die "无法下载校验文件 ${checksums_url}；为安全起见已停止安装"
+  fi
+
+  expected=$(expected_checksum) || die "无法解析校验文件 ${tmpdir}/checksums.txt"
+  if [ -z "$expected" ]; then
+    die "校验文件中没有 ${asset} 的记录；为安全起见已停止安装"
+  fi
+  if [ "${#expected}" -ne 64 ]; then
+    die "校验文件中 ${asset} 的 SHA-256 格式无效；为安全起见已停止安装"
+  fi
+  case "$expected" in
+  *[!0-9a-f]*) die "校验文件中 ${asset} 的 SHA-256 格式无效；为安全起见已停止安装" ;;
+  esac
+
+  actual=$(sha256_of "${tmpdir}/${asset}") ||
+    die "无法计算 ${asset} 的 SHA-256；需要 sha256sum、shasum 或 openssl"
+
+  if [ "$actual" != "$expected" ]; then
+    die "校验和不匹配: ${asset}（期望 ${expected}，实际 ${actual}）；为安全起见已停止安装"
+  fi
+  echo "Checksum verified: ${asset}"
+}
+
 install_binary() {
   if [ "$VERSION" = "__AG_RELEASE_TAG__" ]; then
     die "源码安装器模板尚未绑定发布版本；请设置 AG_VERSION=vX.Y.Z，或使用 AG_FROM_SOURCE=1 从源码安装"
@@ -78,6 +136,8 @@ install_binary() {
   if ! curl -fsSL "$url" -o "${tmpdir}/${asset}"; then
     die "无法下载预编译包（请确认已发布 ${tag} 且附件名为 ${asset}）。也可使用: AG_FROM_SOURCE=1 sh install.sh"
   fi
+
+  verify_archive
 
   (cd "$tmpdir" && tar -xzf "$asset")
   if [ ! -f "${tmpdir}/ag-cli" ]; then

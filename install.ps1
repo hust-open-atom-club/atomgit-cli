@@ -53,24 +53,66 @@ function Get-InstallDir {
     return Join-Path $prefix "bin"
 }
 
+function Get-ExpectedHash {
+    param([string]$ChecksumsPath, [string]$AssetName)
+    foreach ($line in Get-Content -LiteralPath $ChecksumsPath) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed) { continue }
+        $fields = @($trimmed -split '\s+')
+        if ($fields.Count -lt 2) { continue }
+        $name = $fields[1].TrimStart('*')
+        if ($name.StartsWith('./')) { $name = $name.Substring(2) }
+        if ($name -ne $AssetName) { continue }
+        if ($fields[0] -notmatch '^[0-9a-fA-F]{64}$') {
+            Die "Invalid checksum entry for $AssetName in checksums.txt"
+        }
+        return $fields[0].ToLowerInvariant()
+    }
+    Die "checksums.txt does not contain an entry for $AssetName; refusing to install"
+}
+
+# Verification fails closed: installing an unverified archive would leave HTTPS
+# as the only defence against a tampered release. checksums.txt also covers both
+# installers, so the archive and its checksum cannot be replaced independently.
+function Assert-ArchiveChecksum {
+    param([string]$ChecksumsPath, [string]$ArchivePath, [string]$AssetName)
+    $expectedHash = Get-ExpectedHash -ChecksumsPath $ChecksumsPath -AssetName $AssetName
+    $actualHash = (Get-FileHash -LiteralPath $ArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actualHash -ne $expectedHash) {
+        Die "Checksum mismatch for $AssetName (expected $expectedHash, got $actualHash); refusing to install"
+    }
+    Write-Host "Checksum verified: $AssetName"
+}
+
 $arch = Get-GoArch
 $asset = "ag_windows_${arch}.zip"
 $url = "$BaseUrl/releases/download/$Version/$asset"
+$checksumsUrl = "$BaseUrl/releases/download/$Version/checksums.txt"
 
 $tmp = Join-Path $env:TEMP ("ag-install-" + [guid]::NewGuid().ToString())
 New-Item -ItemType Directory -Path $tmp | Out-Null
 try {
     Write-Host "Downloading $url ..."
+    $archivePath = Join-Path $tmp $asset
     try {
-        Invoke-WebRequest -Uri $url -OutFile (Join-Path $tmp $asset) -UseBasicParsing
+        Invoke-WebRequest -Uri $url -OutFile $archivePath -UseBasicParsing
     }
     catch {
         Die "Failed to download the prebuilt archive. Verify that $Version is published with an asset named $asset. Error: $_"
     }
 
+    $checksumsPath = Join-Path $tmp "checksums.txt"
+    try {
+        Invoke-WebRequest -Uri $checksumsUrl -OutFile $checksumsPath -UseBasicParsing
+    }
+    catch {
+        Die "Failed to download checksums.txt. Verify that $Version is published with a checksums.txt asset. Error: $_"
+    }
+    Assert-ArchiveChecksum -ChecksumsPath $checksumsPath -ArchivePath $archivePath -AssetName $asset
+
     $extract = Join-Path $tmp "extract"
     New-Item -ItemType Directory -Path $extract | Out-Null
-    Expand-Archive -Path (Join-Path $tmp $asset) -DestinationPath $extract -Force
+    Expand-Archive -Path $archivePath -DestinationPath $extract -Force
 
     $exe = Join-Path $extract "ag-cli.exe"
     if (-not (Test-Path -LiteralPath $exe)) {

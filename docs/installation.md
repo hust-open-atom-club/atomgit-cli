@@ -543,6 +543,8 @@ sudo dnf copr remove cubelitblade/atomgit-cli
 
 安装脚本会识别当前操作系统（支持 Linux、Windows 和 macOS）与处理器架构（Linux 支持 amd64、arm64 和 loong64，macOS 与 Windows 支持 amd64 和 arm64），下载匹配的预编译文件并安装 `ag-cli`。
 
+两个脚本都会下载同一 Release 的 `checksums.txt`，并在解压前校验归档的 SHA-256。校验和不匹配、`checksums.txt` 缺少对应记录或本地无法计算 SHA-256 时，脚本会中止安装并以非零状态退出，不写入任何文件。
+
 #### macOS 和 Linux
 
 请在终端执行：
@@ -592,6 +594,18 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 | Windows | 常见 64 位 PC（amd64） | `ag_windows_amd64.zip` |
 
 macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应 arm64，`x86_64` 对应 amd64，Linux 上的 `loongarch64` 或 `loong64` 对应 loong64。Windows 可在 PowerShell 中执行 `$env:PROCESSOR_ARCHITECTURE`；`ARM64` 对应 arm64，`AMD64` 对应 amd64。
+
+下载后把同一 Release 的 `checksums.txt` 放在归档所在目录，校验通过后再解压：
+
+```bash
+# Linux
+sha256sum -c checksums.txt --ignore-missing
+
+# macOS
+shasum -a 256 -c checksums.txt
+```
+
+Windows 可执行 `Get-FileHash .\ag_windows_amd64.zip -Algorithm SHA256`，并与 `checksums.txt` 中对应行的值逐字比对。
 
 #### macOS 和 Linux
 
