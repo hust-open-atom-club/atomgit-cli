@@ -44,7 +44,7 @@
 
 3. **开发规范**
 
-   - 最低支持 Go 1.26.6，开发和正式发布建议使用 Go 1.26.8
+   - 最低支持 Go 1.26.6，开发和正式发布建议使用 Go 1.26.11
    - 使用 `gofmt` 格式化修改的 Go 文件
    - 为新增或修复的行为添加测试
    - 保持与现有代码风格一致
@@ -96,7 +96,7 @@
    应确认当前 PR 提交的 CI 检查通过，合并后继续跟踪 `main` 上的验证结果。
 
    CI 先运行 `Fast quality gate`：Go 1.26.6 执行一次完整的 `go test ./...`，随后
-   Go 1.26.8 执行格式检查、`go vet`、命令参考检查和本机构建。Go 1.26.8 的全包
+   Go 1.26.11 执行格式检查、`go vet`、命令参考检查和本机构建。Go 1.26.11 的全包
    测试语义由后续 `go test -race ./...` 覆盖，不在门禁中重复执行普通测试。只有
    门禁成功后，race、发布目标交叉编译、平台测试编译和漏洞扫描才会并行启动；npm
    测试不依赖 Go 门禁。这样失败提交会释放昂贵的 Go Runner，绿色运行仍保留全部
@@ -134,14 +134,14 @@
    [AtomGit 托管 Runner 文档](https://docs.gitcode.com/docs/help/home/org_project/pipeline/runner-management/using-hosted-runners/)。
 
    `go.mod` 的 `go` 行规定源码构建所需的最低版本 Go 1.26.6，`toolchain` 行规定
-   开发和正式发布建议使用的精确版本 Go 1.26.8。普通 Make 目标固定使用建议版本，
+   开发和正式发布建议使用的精确版本 Go 1.26.11。普通 Make 目标固定使用建议版本，
    `make test-min-go` 则专门验证最低版本兼容性。AtomGit 的 `setup-go` 当前只提供到
    Go 1.26.1，因此 CI 先将其作为引导命令，再下载并验证这两个版本。工具链下载
    遵循 `GOPROXY`，并通过 `GOSUMDB` 配置的校验和数据库验证。参见
    [AtomGit setup 工具支持列表](https://docs.gitcode.com/docs/help/home/org_project/pipeline/syntax-reference/setup-supported-tools/)
    和 [Go 工具链文档](https://go.dev/doc/toolchain)。
 
-   `make vulncheck` 使用 Go 1.26.8、`CGO_ENABLED=0` 顺序构建 Linux
+   `make vulncheck` 使用 Go 1.26.11、`CGO_ENABLED=0` 顺序构建 Linux
    amd64/arm64/loong64、macOS amd64/arm64 和 Windows amd64/arm64 七个实际发布
    二进制，再用固定版本的 `govulncheck` 对每个二进制执行可达性扫描。任一目标发现
    可达漏洞都会使门禁失败。扫描还会输出一次 module 清单，以及 Linux、macOS 和
