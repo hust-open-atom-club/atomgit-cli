@@ -602,7 +602,7 @@ macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应
 sha256sum -c checksums.txt --ignore-missing
 
 # macOS
-shasum -a 256 -c checksums.txt
+shasum -a 256 -c checksums.txt --ignore-missing
 ```
 
 Windows 可执行 `Get-FileHash .\ag_windows_amd64.zip -Algorithm SHA256`，并与 `checksums.txt` 中对应行的值逐字比对。
