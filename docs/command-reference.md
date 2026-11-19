@@ -137,6 +137,7 @@
 - [ag-cli pr comment create](#ag-cli-pr-comment-create) — Create a comment on a pull request
 - [ag-cli pr comment delete](#ag-cli-pr-comment-delete) — Delete a comment on a pull request
 - [ag-cli pr comment edit](#ag-cli-pr-comment-edit) — Edit a comment on a pull request
+- [ag-cli pr comment refresh-position](#ag-cli-pr-comment-refresh-position) — Refresh PR comment positions and outdated status
 - [ag-cli pr comment reply](#ag-cli-pr-comment-reply) — Reply to a comment thread on a pull request
 - [ag-cli pr comment resolve](#ag-cli-pr-comment-resolve) — Resolve a PR review discussion
 - [ag-cli pr comment unresolve](#ag-cli-pr-comment-unresolve) — Unresolve a PR review discussion
@@ -3549,7 +3550,7 @@ Usage: `ag-cli pr comment`
 
 Manage pull request comments
 
-Create, view, edit, delete, and reply to pull request comments, and resolve or unresolve review discussions.
+Create, view, edit, delete, reply to, and refresh positions of pull request comments, and resolve or unresolve review discussions.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -3625,6 +3626,38 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--token` | Use an access token for this command only | `` | inherited |
 | `-b, --body` | New comment body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli pr comment refresh-position
+
+Usage: `ag-cli pr comment refresh-position [<owner>/<repo>] <number> [flags]`
+
+Refresh PR comment positions and outdated status
+
+Refresh comment positions and outdated status for one pull request. Select exactly one scope: repeat --path for files, use --comment-id for one comment, or explicitly use --all. Scopes cannot be combined. File paths are sent literally, without glob expansion. Requests are never automatically retried or redirected.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--all` | Explicitly refresh all comments on the PR | `false` | local |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--comment-id` | Comment ID to refresh | `` | local |
+| `--json` | Output refreshed note IDs as JSON | `false` | local |
+| `--path` | File path to refresh (repeat for multiple files; literal paths) | `[]` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli pr comment refresh-position owner/repo 123 --path src/main.go --path docs/usage.md
+ag-cli pr comment refresh-position 123 --comment-id 456
+ag-cli pr comment refresh-position owner/repo 123 --all --json
+```
 
 
 ## ag-cli pr comment reply

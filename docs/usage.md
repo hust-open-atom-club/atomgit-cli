@@ -1125,11 +1125,24 @@ ag-cli pr comment resolve owner/repo 123 discussion-id
 ag-cli pr comment unresolve owner/repo 123 discussion-id --yes
 # 也可从当前 Git 仓库推断 owner/repo
 ag-cli pr comment resolve 123 discussion-id --yes
+
+# 按文件刷新评论位置和过期状态（可重复 --path，逗号属于路径本身）
+ag-cli pr comment refresh-position owner/repo 123 --path src/main.go --path docs/usage.md
+
+# 按评论 ID 刷新；省略仓库时使用当前 AtomGit remote
+ag-cli pr comment refresh-position 123 --comment-id 456
+
+# 显式刷新全部评论，并输出固定字段 JSON
+ag-cli pr comment refresh-position owner/repo 123 --all --json
 ```
 
 `pr comment resolve/unresolve [<owner>/<repo>] <number> <discussion-id>` 要求认证，默认显示仓库、PR、讨论 ID 和目标状态并确认，`--yes/-y` 跳过确认；空输入、EOF 或否定回答取消操作，不发送 API 请求。PR 编号必须为正整数；讨论 ID 是 `pr comment view` 中单独显示的 `discussion_id`，不是下方的 note/comment 数字 ID。
 
 命令先核对 PR 身份，再遍历该 PR 的评论分页确认目标是检视讨论（`diff_comment`）；普通评论、其他 PR 的讨论、缺失状态或无法确认身份的响应均不会触发写入。使用 API v5 `PUT /repos/{owner}/{repo}/pulls/{number}/comments/{discussion_id}`，发送显式 `resolved: true/false`，其中 `unresolve` 不会省略 `false`。写请求不自动重试或跟随重定向，只接受 HTTP 200，响应体按官方契约忽略（可为空）。之后回读同一讨论，只有明确状态与请求一致才报告成功；回读失败或状态不一致时返回非零退出码，并提示先在 AtomGit 核对再决定是否重试。该命令不批准、合并或关闭 PR。
+
+`pr comment refresh-position [<owner>/<repo>] <number>` 调用 `POST /repos/{owner}/{repo}/pulls/{number}/refresh_position`，要求认证。必须且只能选择一个范围：重复 `--path` 发送 `refresh_by_paths` 字符串数组，`--comment-id` 发送 `refresh_by_note_id` 字符串，或显式 `--all` 发送空对象。未指定范围、空路径/ID、混用范围及非正整数 PR 编号均在认证和网络请求前拒绝。路径按原样发送，不读本地文件、不展开通配符；不要将评论 ID 与讨论线程 ID 混淆。显式仓库优先于 Git remote 推断。
+
+服务端在不传筛选字段时会刷新全部评论，因此 CLI 不允许以省略参数隐式触发全部刷新，也不为文件路径与评论 ID 的组合定义额外语义。请求继承命令上下文，只接受 HTTP 200，不自动重试或跟随重定向；失败后不应盲目重试，应先确认 AtomGit 上的评论状态。响应必须包含非空值的整数数组 `note_ids`（允许空数组）；文本输出 PR 编号、返回数量及每行一个 ID，JSON 为固定 `{ "note_ids": [...] }`，空结果为 `{ "note_ids": [] }`。该列表是接口返回的评论 ID，不表示新建了评论，也不额外推断每条评论的新位置或过期状态。写入仅通过离线 mock 验证。
 
 ## Issue
 

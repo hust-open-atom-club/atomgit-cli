@@ -9,7 +9,7 @@ func NewCmdComment(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "comment",
 		Short: "Manage pull request comments",
-		Long:  `Create, view, edit, delete, and reply to pull request comments, and resolve or unresolve review discussions.`,
+		Long:  `Create, view, edit, delete, reply to, and refresh positions of pull request comments, and resolve or unresolve review discussions.`,
 	}
 
 	cmd.AddCommand(newCmdCreate(f))
@@ -17,6 +17,7 @@ func NewCmdComment(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdEdit(f))
 	cmd.AddCommand(newCmdDelete(f))
 	cmd.AddCommand(newCmdReply(f))
+	cmd.AddCommand(newCmdRefreshPosition(f))
 	cmd.AddCommand(newCmdResolve(f, true))
 	cmd.AddCommand(newCmdResolve(f, false))
 
