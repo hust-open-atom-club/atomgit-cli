@@ -692,6 +692,10 @@ ag-cli user view
 # 查看公开用户资料（无需登录）
 ag-cli user view alice
 
+# 列出指定用户的粉丝（默认最多 30 条，无需登录）
+ag-cli user followers alice
+ag-cli user followers alice --limit 100 --json
+
 # 输出 JSON
 ag-cli user view alice --json
 
@@ -742,6 +746,10 @@ ag-cli user watching
 # 列出指定用户 watch 的仓库
 ag-cli user watching alice --limit 100 --json
 ```
+
+`ag-cli user followers <username>` 必须显式指定用户名，不从 Git remote 推断。`--limit`（`-L`）必须为正数，默认 30，限制跨页返回的总条数。未配置凭据时匿名读取；已有凭据损坏或无法读取时直接报错，不降级为匿名请求。任一页失败时不输出部分结果。
+
+粉丝列表文本输出为 TSV，字段中的制表符、换行、回车和反斜杠会转义；`--json` 输出固定字段 `id`、`login`、`name`、`type`、`url`、`avatarUrl`，ID 保留为字符串，缺失或 null 字符串输出为空字符串，不补造 URL。空列表输出 `[]`。
 
 `ag-cli user view --json` 输出稳定的 JSON 对象，字段始终齐全（空字符串、零计数和空数组也会输出，便于自动化区分"值为零/空"与"字段缺失"）：
 
