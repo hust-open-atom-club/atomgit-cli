@@ -31,13 +31,14 @@ func NewCmdOrg(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "org",
 		Short: "Manage organizations",
-		Long:  "Create and edit organizations, list organizations associated with your AtomGit account, inspect organization details, members, followers, repositories, Actions runner groups, and runner job history, and manage organization discussions.",
+		Long:  "Create and edit organizations, list organizations associated with your AtomGit account, invite or remove members, inspect organization details, members, followers, repositories, Actions runner groups, and runner job history, and manage organization discussions.",
 	}
 	cmd.AddCommand(newCmdOrgList(f))
 	cmd.AddCommand(newCmdOrgCreate(f))
 	cmd.AddCommand(newCmdOrgEdit(f))
 	cmd.AddCommand(newCmdOrgView(f))
 	cmd.AddCommand(newCmdOrgMembers(f))
+	cmd.AddCommand(newCmdOrgMember(f))
 	cmd.AddCommand(newCmdOrgFollowers(f))
 	cmd.AddCommand(newCmdOrgRepos(f))
 	cmd.AddCommand(newCmdOrgRunnerGroup(f))
