@@ -138,6 +138,8 @@
 - [ag-cli pr comment delete](#ag-cli-pr-comment-delete) — Delete a comment on a pull request
 - [ag-cli pr comment edit](#ag-cli-pr-comment-edit) — Edit a comment on a pull request
 - [ag-cli pr comment reply](#ag-cli-pr-comment-reply) — Reply to a comment thread on a pull request
+- [ag-cli pr comment resolve](#ag-cli-pr-comment-resolve) — Resolve a PR review discussion
+- [ag-cli pr comment unresolve](#ag-cli-pr-comment-unresolve) — Unresolve a PR review discussion
 - [ag-cli pr comment view](#ag-cli-pr-comment-view) — View all comments on a pull request
 - [ag-cli pr commits](#ag-cli-pr-commits) — List commits in a pull request
 - [ag-cli pr create](#ag-cli-pr-create) — Create a pull request
@@ -3543,7 +3545,7 @@ Usage: `ag-cli pr comment`
 
 Manage pull request comments
 
-Create, view, edit, delete, and reply to pull request comments.
+Create, view, edit, delete, and reply to pull request comments, and resolve or unresolve review discussions.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -3640,6 +3642,62 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--token` | Use an access token for this command only | `` | inherited |
 | `-b, --body` | Reply body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli pr comment resolve
+
+Usage: `ag-cli pr comment resolve [<owner>/<repo>] <number> <discussion-id> [flags]`
+
+Resolve a PR review discussion
+
+Set the resolved state of a PR review discussion using its discussion_id, not its numeric comment/note ID. Get the discussion_id from pr comment view. Requires authentication and confirmation unless --yes is supplied. The PR and review discussion are verified before writing; success is reported only after reading back the requested state. Writes are never automatically retried or redirected.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip confirmation prompt | `false` | local |
+
+### Example
+
+```bash
+ag-cli pr comment resolve owner/repo 123 discussion-id --yes
+ag-cli pr comment resolve 123 discussion-id
+```
+
+
+## ag-cli pr comment unresolve
+
+Usage: `ag-cli pr comment unresolve [<owner>/<repo>] <number> <discussion-id> [flags]`
+
+Unresolve a PR review discussion
+
+Set the resolved state of a PR review discussion using its discussion_id, not its numeric comment/note ID. Get the discussion_id from pr comment view. Requires authentication and confirmation unless --yes is supplied. The PR and review discussion are verified before writing; success is reported only after reading back the requested state. Writes are never automatically retried or redirected.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip confirmation prompt | `false` | local |
+
+### Example
+
+```bash
+ag-cli pr comment unresolve owner/repo 123 discussion-id --yes
+ag-cli pr comment unresolve 123 discussion-id
+```
 
 
 ## ag-cli pr comment view
