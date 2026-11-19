@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -13,7 +14,7 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
-const repoPermissionsFixture = `{"role_info":{"role_uuid":"custom-7","name":"Audit\trole\n\\\u001b[31m","cn_name":"审计员","roles_type":2,"access_level":17,"future_role":9007199254740993123},"resource_trees":[{"resource_id":22,"name":"code","scope":"code","path":"repo/code","is_own":0,"order_num":5,"unknown_resource":{"flag":false},"actions":[{"permission_id":9007199254740993124,"action":"push","name":"push\rnow","selected":false,"unknown_permission":{"flag":false}}]}],"future_matrix":true}`
+const repoPermissionsFixture = `{"role_info":{"role_uuid":"custom-7","name":"Audit\trole\n\\\u001b[31m","cn_name":"审计员","roles_type":2,"access_level":17,"future_role":9007199254740993123},"resource_trees":[{"resource_id":22,"name":"code","scope":"code","path":"repo/code","is_own":0,"order_num":5,"unknown_resource":{"flag":false},"actions":[{"permission_id":9007199254740993124,"action":"push","name":"push\rnow","selected":false,"unknown_permission":{"flag":false}}]}],"future_matrix":true,"control":"\u007f"}`
 
 func executePermissions(t *testing.T, f *cmdutil.Factory, args ...string) (string, error) {
 	t.Helper()
@@ -62,16 +63,43 @@ func TestRepoPermissionsContextAndOutput(t *testing.T) {
 					if err := json.Unmarshal([]byte(out), &result); err != nil {
 						t.Fatal(err)
 					}
-					if result.Repository != "team/demo" || len(result.Permissions) != 3 {
+					if result.Repository != "team/demo" || len(result.Permissions) != 4 {
 						t.Fatalf("result=%s", out)
 					}
 				} else if !strings.HasPrefix(out, "Repository: team/demo\n") {
 					t.Fatalf("output=%s", out)
 				}
-				for _, want := range []string{`"selected": false`, `9007199254740993124`, `"unknown_permission"`, `"future_role"`, `"role_uuid": "custom-7"`, `"future_matrix": true`} {
-					if !strings.Contains(out, want) {
-						t.Fatalf("output missing %s: %s", want, out)
+				matrix := out
+				if asJSON {
+					var envelope struct {
+						Permissions json.RawMessage `json:"permissions"`
 					}
+					if err := json.Unmarshal([]byte(out), &envelope); err != nil {
+						t.Fatal(err)
+					}
+					matrix = string(envelope.Permissions)
+				} else {
+					parts := strings.SplitN(out, "\n", 3)
+					if len(parts) != 3 {
+						t.Fatalf("missing matrix: %q", out)
+					}
+					matrix = parts[2]
+				}
+				var got, want any
+				decode := func(input string, target *any) {
+					d := json.NewDecoder(strings.NewReader(input))
+					d.UseNumber()
+					if err := d.Decode(target); err != nil {
+						t.Fatal(err)
+					}
+				}
+				decode(matrix, &got)
+				decode(repoPermissionsFixture, &want)
+				if !reflect.DeepEqual(got, want) {
+					t.Fatalf("matrix fields changed: %s", matrix)
+				}
+				if strings.ContainsRune(out, '\x7f') || !strings.Contains(out, `\u007f`) {
+					t.Fatalf("DEL not JSON escaped: %q", out)
 				}
 			})
 		}

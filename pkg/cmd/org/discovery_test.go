@@ -23,6 +23,7 @@ func TestNewCmdOrgRegistersDiscoveryCommands(t *testing.T) {
 	}{
 		{name: "view", flags: []string{"json"}},
 		{name: "members", flags: []string{"limit", "json"}},
+		{name: "followers", flags: []string{"limit", "json"}},
 		{name: "repos", flags: []string{"limit", "json"}},
 	}
 	for _, tt := range tests {

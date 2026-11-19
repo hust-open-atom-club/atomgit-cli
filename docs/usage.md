@@ -120,9 +120,13 @@ ag-cli doctor owner/repo --live --json
 
 例如，`ag-cli api /user` 找不到凭据时，会输出 `No credentials are configured.` 及 `ag-cli auth login` 登录提示，并返回非零退出码。
 
+读取凭据时尝试收紧文件权限失败，会输出 `Unable to secure the credential file.` 并返回非零退出码。
+
 凭据文件因符号链接、打开期间发生变化或 Unix 所有者无读取权限而被安全检查拒绝时，也会输出 `Credential configuration is invalid.`，并给出对应的检查建议；此类拒绝不会降级为匿名请求。
 
 同一命令读到 JSON 语法或字段类型错误的凭据文件时，会输出 `Credential configuration is invalid.` 及格式检查提示，并返回非零退出码；语法错误还会标明字节位置。 JSON 可解码但凭据内容无效时，诊断会提示检查存储版本、账号记录和活动账号。
+
+登录、刷新或切换账号时，如果凭据保存失败，CLI 会报告失败阶段并以非零状态退出。看到 `Unable to save credentials.` 和权限提示时，检查受影响路径及其父目录的所有权和写入权限。
 
 ```bash
 # 浏览器 OAuth 登录并写入令牌文件
@@ -529,6 +533,10 @@ ag-cli org view hust-open-atom-club --json
 ag-cli org members hust-open-atom-club
 ag-cli org members hust-open-atom-club --limit 100 --json
 
+# 列出组织关注者（与组织成员不同）
+ag-cli org followers hust-open-atom-club
+ag-cli org followers hust-open-atom-club --limit 100 --json
+
 # 列出组织仓库及其可见性、默认分支和活跃度信息
 ag-cli org repos hust-open-atom-club
 ag-cli org repos hust-open-atom-club --limit 100 --json
@@ -555,6 +563,8 @@ ag-cli org runner-job-history hust-open-atom-club \
 创建使用 API v5 `POST /orgs`，只接受 HTTP 200，并校验返回的组织 ID 和路径。成功时显示组织路径以及服务端返回的 `web_url`；缺少 URL 时只显示路径，不拼接链接。写请求不会自动重试或跟随重定向；如果请求执行、响应读取或校验失败，或收到非预期的其他 2xx、3xx 或 5xx 响应，组织可能已经创建，命令会提示先在 AtomGit 确认状态再决定是否重试。
 
 `view` 输出组织路径、名称、可见性、描述和公开 URL。`members` 与 `repos` 支持分页，并在认证和网络请求前校验 `--limit`；空结果的 JSON 输出为 `[]`。仓库输出还包含描述、默认分支、主要语言、Star、Fork 和更新时间。
+
+`ag-cli org followers <org>` 使用 API v5 `GET /orgs/{owner}/followers`，要求认证并显式指定组织路径。`--limit/-L` 默认为 30，必须为正数，表示跨页输出总数上限，每页最多请求 100 条。文本输出账号、名称和关注时间，空值显示为 `-`；JSON 保留 `id`、`login`、`name`、`avatar_url` 和 `watch_at`，空列表为 `[]`。`watch_at` 是关注时间而非加入组织时间，保留服务端原始时间及其时区；关注者不等同于组织成员。认证、权限、组织不存在、限流或响应解析失败均返回非零退出码，不输出部分列表。
 
 `ag-cli org runner-group` 使用 Actions API v8，只读检查组织级 Runner Group；它与 `ag-cli runner list/shared` 查看仓库直接配置或共享的主机 Runner 不同。`list`、`runners`、`runner-sets` 和 `namespaces` 默认最多返回 30 条并要求 `--limit` 为正数；文本输出包含组织和 Group ID，JSON 保留对应官方响应的固定 snake_case 字段。权限不足、Group 不存在或分页响应不完整时命令会明确失败，不会把部分数据当作完整结果。`namespaces` 会先查询 Group 详情，确认其存在且可访问，再读取共享仓库；不存在时返回非零退出码，存在但没有共享仓库时仍正常返回空列表。
 

@@ -44,6 +44,8 @@ func validateRepositoryPermissions(result RepositoryPermissions) error {
 		if err := json.Unmarshal(resource["actions"], &actions); err != nil || actions == nil {
 			return fmt.Errorf("resource_trees[%d].actions must be an array", i)
 		}
+		// This endpoint documents selected as a JSON boolean; other wire types
+		// must not be interpreted as granting or denying a permission.
 		for j, action := range actions {
 			var selected *bool
 			if err := json.Unmarshal(action["selected"], &selected); err != nil || selected == nil {

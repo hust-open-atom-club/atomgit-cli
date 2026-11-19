@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
@@ -45,12 +44,10 @@ func newCmdRepoPermissions(f *cmdutil.Factory) *cobra.Command {
 			}
 			// JSON quoting keeps embedded tabs, newlines, and control characters
 			// inside remote field names and values from becoming text structure.
-			formatted, err := json.MarshalIndent(permissions, "", "  ")
-			if err != nil {
-				return fmt.Errorf("format repository permissions: %w", err)
+			if _, err := fmt.Fprintf(cmd.OutOrStdout(), "Repository: %s\nRole and permission matrix (selected is reported by the server):\n", cmdutil.EscapeTSVField(repository.String())); err != nil {
+				return err
 			}
-			_, err = fmt.Fprintf(cmd.OutOrStdout(), "Repository: %s\nRole and permission matrix (selected is reported by the server):\n%s\n", cmdutil.EscapeTSVField(repository.String()), formatted)
-			return err
+			return cmdutil.WriteJSON(cmd.OutOrStdout(), permissions)
 		},
 	}
 	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output repository and the complete permission matrix as JSON")
