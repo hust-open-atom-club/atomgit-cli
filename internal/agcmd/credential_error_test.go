@@ -137,6 +137,42 @@ func TestCredentialFormatDiagnosticKeepsCausePrivate(t *testing.T) {
 	}
 }
 
+func TestCredentialSaveDiagnostics(t *testing.T) {
+	const path = "/fixture/token.json"
+	save := &config.CredentialSaveError{
+		Stage:     config.CredentialSaveWrite,
+		Path:      path,
+		Err:       fmt.Errorf("private cause: %w", os.ErrPermission),
+		CloseErr:  errors.New("private close cause"),
+		RemoveErr: errors.New("private remove cause"),
+	}
+	var out bytes.Buffer
+	renderCommandError(&out, fmt.Errorf("save account: %w", save))
+	want := "Error: Unable to save credentials.\n\nFailed to write temporary file.\n" +
+		"Path: \"/fixture/token.json\".\nClosing the temporary credential file also failed.\n" +
+		"Removing the temporary credential file also failed. It may still be present.\n\n" +
+		"Check ownership and write permissions for the affected path and its parent directory.\n"
+	if out.String() != want {
+		t.Fatalf("diagnostic = %q, want %q", out.String(), want)
+	}
+}
+
+func TestCredentialSaveDiagnosticKeepsGitRollbackFailure(t *testing.T) {
+	save := &config.CredentialSaveError{
+		Stage: config.CredentialSaveReplace,
+		Err:   os.ErrPermission,
+	}
+	rollback := errors.New("Git rollback fixture failure")
+	err := fmt.Errorf("switch account: %w; additionally failed to restore Git identity: %w", save, rollback)
+	var out bytes.Buffer
+	renderCommandError(&out, err)
+	for _, message := range []string{"replace file", "failed to restore Git identity", rollback.Error()} {
+		if !strings.Contains(out.String(), message) {
+			t.Fatalf("diagnostic = %q, missing %q", out.String(), message)
+		}
+	}
+}
+
 func TestCredentialAccessDiagnostics(t *testing.T) {
 	private := errors.New("private-token and private-cause")
 	for _, tc := range []struct {
@@ -308,5 +344,30 @@ func TestInvalidCredentialDataStopsFallback(t *testing.T) {
 	client, err := factory.OptionalAPIClient()
 	if client != nil || !errors.Is(err, config.ErrInvalidCredentials) || errors.Is(err, config.ErrNotAuthenticated) {
 		t.Fatalf("optional authentication must reject invalid credentials: %v", err)
+	}
+}
+
+func TestCredentialPermissionRepairDiagnostics(t *testing.T) {
+	const path = "/fixture/token.json"
+	for _, tc := range []struct {
+		name  string
+		cause error
+		hint  string
+	}{
+		{"permission denied", os.ErrPermission, "\nCheck the file ownership and permission to change its mode.\n"},
+		{"closed file", os.ErrClosed, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := &config.CredentialPermissionRepairError{
+				Path: path,
+				Err:  &os.PathError{Op: "chmod", Path: path, Err: fmt.Errorf("private cause: %w", tc.cause)},
+			}
+			var out bytes.Buffer
+			renderCommandError(&out, fmt.Errorf("failed to load config: %w", err))
+			want := "Error: Unable to secure the credential file.\n\nCredential file: \"/fixture/token.json\".\n" + tc.hint
+			if out.String() != want {
+				t.Fatalf("diagnostic = %q, want %q", out.String(), want)
+			}
+		})
 	}
 }

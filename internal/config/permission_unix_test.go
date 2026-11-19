@@ -200,3 +200,36 @@ func TestValidateAndFixTokenFilePerm(t *testing.T) {
 		}
 	})
 }
+
+func TestCredentialPermissionRepairPreservesChmodFailure(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "token.json")
+	if err := os.WriteFile(path, []byte(`{"access_token":"fixture"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	err = validateAndFixTokenFilePerm(f, path, info)
+	repair, ok := errors.AsType[*CredentialPermissionRepairError](err)
+	if !ok || repair.Path != path || !errors.Is(err, os.ErrClosed) {
+		t.Fatalf("error = %v, want permission repair failure with its cause", err)
+	}
+	cause, ok := errors.AsType[*os.PathError](err)
+	if !ok || cause.Op != "chmod" || cause.Path != path {
+		t.Fatalf("error = %v, want original chmod PathError", err)
+	}
+	if errors.Is(err, ErrInvalidCredentials) || errors.Is(err, ErrCredentialAccess) || errors.Is(err, ErrTokenNotFound) || errors.Is(err, ErrNotAuthenticated) {
+		t.Fatalf("permission repair failure was assigned another credential category: %v", err)
+	}
+}

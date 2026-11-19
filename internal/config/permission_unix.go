@@ -32,7 +32,7 @@ func validateAndFixTokenFilePerm(f *os.File, path string, info os.FileInfo) erro
 	}
 	if fixed != perm {
 		if err := f.Chmod(fixed); err != nil {
-			return tokenSecurePermissionError(path, err)
+			return &CredentialPermissionRepairError{Path: path, Err: err}
 		}
 	}
 
