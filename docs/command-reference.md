@@ -199,6 +199,7 @@
 - [ag-cli repo mirror](#ag-cli-repo-mirror) — Inspect repository remote mirrors
 - [ag-cli repo mirror list](#ag-cli-repo-mirror-list) — List configured push remote mirrors
 - [ag-cli repo mirror view](#ag-cli-repo-mirror-view) — View repository remote mirror state
+- [ag-cli repo permissions](#ag-cli-repo-permissions) — View your repository role and permission points
 - [ag-cli repo policy](#ag-cli-repo-policy) — View and edit repository policy settings
 - [ag-cli repo policy edit](#ag-cli-repo-policy-edit) — Edit one repository policy section
 - [ag-cli repo policy view](#ag-cli-repo-policy-view) — View repository policy settings
@@ -5394,6 +5395,36 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ```bash
 ag-cli repo mirror view owner/repo
 ag-cli repo mirror view --json
+```
+
+
+## ag-cli repo permissions
+
+Usage: `ag-cli repo permissions [<owner>/<repo>] [flags]`
+
+View your repository role and permission points
+
+View the currently authenticated account's role and resource/action permission matrix.
+Requires authentication; anonymous access is not used to determine account permissions.
+Preserves explicit selected=false values and unknown fields. A successful request or a role name does not imply all permissions. No roles are modified.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--json` | Output repository and the complete permission matrix as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli repo permissions owner/repo
+ag-cli repo permissions --json
 ```
 
 

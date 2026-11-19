@@ -470,6 +470,22 @@ ag-cli repo content delete owner/repo docs/guide.md --branch main --message "Rem
 
 `create`、`update` 和 `delete` 分别发送 POST、PUT 和 DELETE 到 `/contents/:path`。三者都必须显式指定 `--branch` 和 `--message`，不会回退到仓库默认分支。`--file` 读取本地文件，`-` 读取 stdin；原始字节按 Base64 放入 JSON，不裁剪、不按文本重编码，空文件和二进制文件都有效。`--sha` 是目标文件当前的 Blob SHA，不是 commit SHA；更新或删除遇到 SHA 冲突时返回非零并停止，不会读取新 SHA 后重试。创建不会先查询再改成覆盖。删除默认要求确认，`--yes` 跳过确认，取消不发送请求。成功输出基于响应里实际存在的 commit SHA 和文件 Blob SHA，不要求三种操作返回相同结构。这些命令一次只处理一个文件，不提交多个文件、不递归删除目录，也不修改本地 Git 工作区。
 
+### 当前账号的仓库权限
+
+```bash
+# 查看当前登录账号在显式仓库中的角色和权限点
+ag-cli repo permissions owner/repo
+
+# 通过当前 Git 仓库推断目标，以 JSON 输出
+ag-cli repo permissions --json
+```
+
+`repo permissions` 读取 `GET /repos/{owner}/{repo}/collaborators/self-permission`，需要登录；即使接口支持匿名访问，本命令也不把匿名权限当作当前账号权限。显式 `owner/repo` 优先于 Git 推断。
+
+JSON 顶层固定为 `repository` 和 `permissions`，其中 `permissions` 保留接口返回的 `role_info`、`resource_trees`、嵌套 `actions` 和未知字段，包括自定义角色、权限标识、大整数 ID、`selected=false` 和空数组。文本显示仓库名及缩进的完整角色/权限矩阵，对远端字段名和值中的制表符、换行和终端控制字符使用 JSON 转义。无资源树时显示 `[]`，不推断任何权限；响应缺少角色对象、资源数组、操作数组或布尔 `selected` 时报告错误，不输出不完整矩阵。
+
+角色名称、粗粒度 `pull/push/admin` 和请求成功都不代表拥有全部权限。权限以服务器返回的具体操作及其 `selected` 为准，命令不会修改角色。权限查询与 `repo policy view --section permission` 的仓库权限管理模式设置是不同信息。
+
 ### 仓库协作者
 
 ```bash
