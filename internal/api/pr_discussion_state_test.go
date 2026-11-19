@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -138,17 +137,34 @@ func TestSetPRDiscussionResolvedFailuresNeverRetry(t *testing.T) {
 }
 
 func TestSetPRDiscussionResolvedDoesNotFollowRedirect(t *testing.T) {
-	calls := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		calls++
-		w.Header().Set("Location", "/replayed")
-		w.WriteHeader(http.StatusTemporaryRedirect)
-	}))
-	defer server.Close()
-	client := NewClientWithBaseURL("token", server.URL+APIVersion, server.Client())
-	err := SetPullRequestDiscussionResolved(client, "alice", "demo", 8, "thread", true)
-	var httpErr *HTTPError
-	if !errors.As(err, &httpErr) || httpErr.StatusCode != 307 || calls != 1 {
-		t.Fatalf("calls=%d err=%v", calls, err)
+	for _, status := range []int{301, 302, 303, 307, 308} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			calls, redirects := 0, 0
+			hc := &http.Client{
+				CheckRedirect: func(*http.Request, []*http.Request) error { redirects++; return nil },
+				Transport: discussionStateTransport(func(req *http.Request) (*http.Response, error) {
+					calls++
+					if calls > 1 {
+						t.Fatal("redirected or replayed write")
+					}
+					if req.Method != http.MethodPut {
+						t.Fatalf("method=%s", req.Method)
+					}
+					response := discussionStateResponse(status, "")
+					response.Header.Set("Location", "https://redirect.test/replayed")
+					response.Request = req
+					return response, nil
+				}),
+			}
+			client := NewClientWithBaseURL("token", "https://example.test/api/v5", hc)
+			err := SetPullRequestDiscussionResolved(client, "alice", "demo", 8, "thread", true)
+			var httpErr *HTTPError
+			if !errors.As(err, &httpErr) || httpErr.StatusCode != status || calls != 1 || redirects != 0 {
+				t.Fatalf("calls=%d redirects=%d err=%v", calls, redirects, err)
+			}
+			if err := hc.CheckRedirect(nil, nil); err != nil || redirects != 1 {
+				t.Fatalf("caller redirect policy was changed: redirects=%d err=%v", redirects, err)
+			}
+		})
 	}
 }

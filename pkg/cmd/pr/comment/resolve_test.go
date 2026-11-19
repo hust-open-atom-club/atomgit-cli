@@ -13,52 +13,76 @@ import (
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
+type resolveCountingReader struct {
+	io.Reader
+	reads int
+}
+
+func (r *resolveCountingReader) Read(p []byte) (int, error) {
+	r.reads++
+	return r.Reader.Read(p)
+}
+
 func TestResolveAndUnresolveVerifyState(t *testing.T) {
 	for _, resolved := range []bool{true, false} {
-		for _, explicit := range []bool{true, false} {
-			t.Run(fmt.Sprintf("resolved=%t/explicit=%t", resolved, explicit), func(t *testing.T) {
-				puts, reads := 0, 0
-				f := &cmdutil.Factory{Config: prCommentTestConfig{userErr: errors.New("must not restrict to comment author")}, RepositoryResolver: func() (cmdutil.Repository, error) {
-					if explicit {
-						t.Fatal("explicit repository must take precedence")
+		for _, explicitRepo := range []bool{true, false} {
+			for _, yes := range []bool{true, false} {
+				t.Run(fmt.Sprintf("resolved=%t/explicit=%t/yes=%t", resolved, explicitRepo, yes), func(t *testing.T) {
+					puts, reads := 0, 0
+					f := &cmdutil.Factory{Config: prCommentTestConfig{userErr: errors.New("must not restrict to comment author")}, RepositoryResolver: func() (cmdutil.Repository, error) {
+						if explicitRepo {
+							t.Fatal("explicit repository must take precedence")
+						}
+						return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+					}, HttpClient: func() (*http.Client, error) {
+						return &http.Client{Transport: prCommentRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+							if req.Method == http.MethodPut {
+								puts++
+								return prJSONResponse(200, ""), nil
+							}
+							if req.URL.Path == "/api/v5/repos/alice/demo/pulls/8" {
+								return prJSONResponse(200, `{"number":8}`), nil
+							}
+							reads++
+							value := !resolved
+							if puts > 0 {
+								value = resolved
+							}
+							return prJSONResponse(200, fmt.Sprintf(`[{"id":99,"discussion_id":"thread-id","comment_type":"diff_comment","resolved":%t}]`, value)), nil
+						})}, nil
+					}}
+					cmd := newCmdResolve(f, resolved)
+					args := []string{"8", "thread-id"}
+					input := &resolveCountingReader{Reader: strings.NewReader("YES\n")}
+					cmd.SetIn(input)
+					if yes {
+						args = append(args, "--yes")
 					}
-					return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
-				}, HttpClient: func() (*http.Client, error) {
-					return &http.Client{Transport: prCommentRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-						if req.Method == http.MethodPut {
-							puts++
-							return prJSONResponse(200, ""), nil
+					if explicitRepo {
+						args = append([]string{"alice/demo"}, args...)
+					}
+					var out, stderr bytes.Buffer
+					cmd.SetOut(&out)
+					cmd.SetErr(&stderr)
+					cmd.SetArgs(args)
+					if err := cmd.Execute(); err != nil {
+						t.Fatal(err)
+					}
+					if puts != 1 || reads != 2 || !strings.Contains(out.String(), "(verified)") {
+						t.Fatalf("puts=%d reads=%d out=%s", puts, reads, &out)
+					}
+					if yes {
+						if input.reads != 0 || stderr.Len() != 0 {
+							t.Fatalf("--yes read stdin %d times or prompted: %q", input.reads, stderr.String())
 						}
-						if req.URL.Path == "/api/v5/repos/alice/demo/pulls/8" {
-							return prJSONResponse(200, `{"number":8}`), nil
+					} else {
+						want := fmt.Sprintf("Set resolved=%t for discussion thread-id on alice/demo PR #8? [y/N]: ", resolved)
+						if input.reads == 0 || stderr.String() != want {
+							t.Fatalf("stdin reads=%d prompt=%q want=%q", input.reads, stderr.String(), want)
 						}
-						reads++
-						value := !resolved
-						if puts > 0 {
-							value = resolved
-						}
-						return prJSONResponse(200, fmt.Sprintf(`[{"id":99,"discussion_id":"thread-id","comment_type":"diff_comment","resolved":%t}]`, value)), nil
-					})}, nil
-				}}
-				cmd := newCmdResolve(f, resolved)
-				args := []string{"8", "thread-id"}
-				cmd.SetIn(strings.NewReader("YES\n"))
-				if explicit {
-					args = append(args, "--yes")
-				}
-				if explicit {
-					args = append([]string{"alice/demo"}, args...)
-				}
-				var out bytes.Buffer
-				cmd.SetOut(&out)
-				cmd.SetArgs(args)
-				if err := cmd.Execute(); err != nil {
-					t.Fatal(err)
-				}
-				if puts != 1 || reads != 2 || !strings.Contains(out.String(), "(verified)") {
-					t.Fatalf("puts=%d reads=%d out=%s", puts, reads, &out)
-				}
-			})
+					}
+				})
+			}
 		}
 	}
 }
