@@ -48,8 +48,10 @@ func (e *OrganizationEditUncertainError) Unwrap() error { return e.Err }
 
 // EditOrganization sends one PATCH without retries or redirect replay. Only
 // HTTP 200 with a matching organization identity establishes an acknowledged update.
+// Leading and trailing whitespace is removed from the organization path.
 func EditOrganization(client *Client, organization string, request OrganizationEditRequest) (EditedOrganization, error) {
-	if strings.TrimSpace(organization) == "" {
+	organization = strings.TrimSpace(organization)
+	if organization == "" {
 		return EditedOrganization{}, fmt.Errorf("organization must not be empty")
 	}
 	if err := request.Validate(); err != nil {

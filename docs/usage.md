@@ -552,7 +552,7 @@ ag-cli org edit my-team --email '' --location Wuhan --yes
 ag-cli org edit my-team --website www.example.com --json --yes
 ```
 
-`org edit <org>` 通过 `PATCH /orgs/{org}` 只发送显式指定的字段。`--name` 是显示名称，不能为空，不会修改组织 path；`--description`（`-d`）、`--email`、`--location` 和 `--website` 可以显式传空字符串请求清空。`--website` 对应请求的 `html_url`，表示组织站点，不是可由 CLI 拼造的组织主页链接。没有字段变更时在认证和网络请求前报错。
+`org edit <org>` 通过 `PATCH /orgs/{org}` 只发送显式指定的字段，组织路径会去除首尾空白。`--name` 是显示名称，不能为空，不会修改组织 path；`--description`（`-d`）、`--email`、`--location` 和 `--website` 可以显式传空字符串请求清空。`--website` 对应请求的 `html_url`，表示组织站点，不是可由 CLI 拼造的组织主页链接。必须至少显式指定一个修改字段，该约束也通过 schema 的 `atLeastOneRequired` 标志组提供；没有字段变更时在认证和网络请求前报错。
 
 修改默认在 stderr 显示目标组织和提交字段并要求确认，`--yes` 跳过；取消或 EOF 不读取凭据、不发送请求。PATCH 只接受 HTTP 200，不自动重试或跟随重定向。响应必须具有正整数 `id` 及匹配的 `path`。身份无法确认、传输/读取/解码失败或非预期的 2xx、3xx、5xx 均会提示资料可能已经改变，应先在 AtomGit 确认再决定是否重试；明确的 4xx 拒绝保留普通 API 诊断。
 

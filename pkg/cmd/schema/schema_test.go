@@ -107,6 +107,14 @@ func TestRegisteredCommands(t *testing.T) {
 					}
 				}
 			}
+			if detail.Path == "ag-cli org edit" {
+				want := []commandschema.FlagGroup{
+					{Kind: "atLeastOneRequired", Flags: []string{"description", "email", "location", "name", "website"}},
+				}
+				if !reflect.DeepEqual(detail.FlagGroups, want) {
+					t.Fatalf("organization edit constraints = %+v", detail.FlagGroups)
+				}
+			}
 			if detail.Path == "ag-cli discussion create" || detail.Path == "ag-cli org discussion create" {
 				for _, name := range []string{"title", "category"} {
 					i := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == name })

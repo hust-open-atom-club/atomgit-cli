@@ -2966,8 +2966,9 @@ Usage: `ag-cli org edit <org> [flags]`
 Edit an organization profile
 
 Edit the display name, description, public email, location, or website of an organization.
-Only explicitly supplied fields are sent. Name cannot be empty; pass an empty
-string to clear description, email, location, or website. This does not rename
+At least one profile field must be supplied; only explicitly supplied fields are sent.
+Name cannot be empty; pass an empty string to clear description, email, location,
+or website. This does not rename
 the organization path. --website maps to html_url, the profile's website field.
 All updates require confirmation unless --yes is supplied. PATCH requests are
 never automatically retried or redirected. The response identity is checked;

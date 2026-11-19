@@ -25,8 +25,9 @@ func newCmdOrgEdit(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "edit <org>", Short: "Edit an organization profile",
 		Long: `Edit the display name, description, public email, location, or website of an organization.
-Only explicitly supplied fields are sent. Name cannot be empty; pass an empty
-string to clear description, email, location, or website. This does not rename
+At least one profile field must be supplied; only explicitly supplied fields are sent.
+Name cannot be empty; pass an empty string to clear description, email, location,
+or website. This does not rename
 the organization path. --website maps to html_url, the profile's website field.
 All updates require confirmation unless --yes is supplied. PATCH requests are
 never automatically retried or redirected. The response identity is checked;
@@ -83,6 +84,7 @@ If the result cannot be confirmed, check AtomGit before retrying.`,
 	cmd.Flags().StringVar(&opts.Website, "website", "", "Organization website, sent as html_url (empty clears)")
 	cmd.Flags().BoolVarP(&opts.Yes, "yes", "y", false, "Skip update confirmation")
 	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output acknowledged identity and submitted fields as JSON")
+	cmd.MarkFlagsOneRequired("name", "description", "email", "location", "website")
 	commandschema.Annotate(cmd, commandschema.Metadata{
 		Positionals: &commandschema.Positionals{MinCount: 1, MaxCount: 1, Description: "Explicit organization path; Git repository context is not used."},
 		Output:      "text,json", Effects: "write", Notes: []string{"Only explicitly supplied fields are sent; name is a display name, not the path.", "Requires confirmation unless --yes is supplied. No automatic PATCH retries or redirects.", "Output reports the response identity and submitted fields, not an independently verified complete profile."},

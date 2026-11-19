@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -28,13 +27,22 @@ func TestEditOrganizationRequestAndContext(t *testing.T) {
 		if r.Header.Get("Authorization") != "Bearer fixture" || r.Header.Get("Content-Type") != "application/json" {
 			t.Fatal("unexpected headers")
 		}
-		var got map[string]string
+		var got map[string]json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
 			t.Fatal(err)
 		}
 		want := map[string]string{"name": name, "description": "", "email": "", "location": "", "html_url": website}
-		if !reflect.DeepEqual(got, want) {
+		if len(got) != len(want) {
 			t.Fatalf("body=%v want=%v", got, want)
+		}
+		for key, value := range want {
+			encoded, err := json.Marshal(value)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got[key]) != string(encoded) {
+				t.Fatalf("body[%q]=%s want=%s", key, got[key], encoded)
+			}
 		}
 		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"id":42,"path":"team space"}`)), Request: r}, nil
 	})})
@@ -111,6 +119,7 @@ func TestEditOrganizationCanonicalPath(t *testing.T) {
 		{"uppercase input", "TEAM", "team", true},
 		{"mixed case input", "My-Team", "my-team", true},
 		{"mixed case response", "my-team", "My-Team", true},
+		{"padded input", " \tTEAM\n", "team", true},
 		{"different organization", "TEAM", "other", false},
 		{"different suffix", "TEAM", "team-other", false},
 		{"empty path", "TEAM", "", false},
@@ -119,7 +128,7 @@ func TestEditOrganizationCanonicalPath(t *testing.T) {
 			calls := 0
 			client := NewClientWithHTTPClient("fixture", &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 				calls++
-				if r.Method != http.MethodPatch || r.URL.Path != "/api/v5/orgs/"+tc.requested {
+				if r.Method != http.MethodPatch || r.URL.Path != "/api/v5/orgs/"+strings.TrimSpace(tc.requested) {
 					t.Fatalf("request=%s %s", r.Method, r.URL)
 				}
 				body, err := json.Marshal(EditedOrganization{ID: 42, Path: tc.returned})
@@ -177,7 +186,9 @@ func TestEditOrganizationValidationBeforeRequest(t *testing.T) {
 			t.Fatal("accepted invalid request")
 		}
 	}
-	if _, err := EditOrganization(c, "", OrganizationEditRequest{Description: &empty}); err == nil {
-		t.Fatal("accepted empty organization")
+	for _, organization := range []string{"", " \t\n"} {
+		if _, err := EditOrganization(c, organization, OrganizationEditRequest{Description: &empty}); err == nil {
+			t.Fatal("accepted blank organization")
+		}
 	}
 }

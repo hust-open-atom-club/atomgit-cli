@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/config"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
@@ -43,23 +44,32 @@ func TestOrgEditExplicitFields(t *testing.T) {
 			calls := 0
 			f := orgFactory(orgTestConfig{}, func(r *http.Request) (*http.Response, error) {
 				calls++
-				if r.Method != "PATCH" || r.URL.EscapedPath() != "/api/v5/orgs/team%20space" || r.URL.RawQuery != "" {
+				if r.Method != "PATCH" || r.URL.EscapedPath() != "/api/v5/orgs/team%3Fx" || r.URL.RawQuery != "" {
 					t.Fatalf("request=%s %s", r.Method, r.URL)
 				}
-				var got map[string]string
+				var got map[string]json.RawMessage
 				if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
 					t.Fatal(err)
 				}
-				if !reflect.DeepEqual(got, tc.want) {
+				if len(got) != len(tc.want) {
 					t.Fatalf("body=%v want=%v", got, tc.want)
 				}
-				return orgResponse(200, `{"id":42,"path":"team space"}`), nil
+				for key, value := range tc.want {
+					encoded, err := json.Marshal(value)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if string(got[key]) != string(encoded) {
+						t.Fatalf("body[%q]=%s want=%s", key, got[key], encoded)
+					}
+				}
+				return orgResponse(200, `{"id":42,"path":"team?x"}`), nil
 			})
 			f.RepositoryResolver = func() (cmdutil.Repository, error) {
 				t.Fatal("inferred a Git repository for org edit")
 				return cmdutil.Repository{}, nil
 			}
-			args := append([]string{"team space", "--yes", "--json"}, tc.args...)
+			args := append([]string{"team?x", "--yes", "--json"}, tc.args...)
 			out, stderr, err := executeOrgEdit(t, f, "", args...)
 			if err != nil || stderr != "" || calls != 1 {
 				t.Fatalf("error=%v stderr=%q calls=%d", err, stderr, calls)
@@ -75,7 +85,7 @@ func TestOrgEditExplicitFields(t *testing.T) {
 			if err := json.Unmarshal([]byte(out), &result); err != nil {
 				t.Fatal(err)
 			}
-			if result.Organization.ID != 42 || result.Organization.Path != "team space" || result.Verification != "identity_only" || !reflect.DeepEqual(result.Submitted, tc.want) {
+			if result.Organization.ID != 42 || result.Organization.Path != "team?x" || result.Verification != "identity_only" || !reflect.DeepEqual(result.Submitted, tc.want) {
 				t.Fatalf("output=%s", out)
 			}
 		})
@@ -133,6 +143,52 @@ func TestOrgEditAuthenticationFailure(t *testing.T) {
 	out, _, err := executeOrgEdit(t, f, "", "team", "--location", "Wuhan", "--yes")
 	if !errors.Is(err, cause) || out != "" {
 		t.Fatalf("error=%v output=%q", err, out)
+	}
+}
+
+func TestOrgEditFailuresDoNotReplay(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		status    int
+		cause     error
+		uncertain bool
+	}{
+		{name: "forbidden", status: http.StatusForbidden},
+		{name: "not found", status: http.StatusNotFound},
+		{name: "rate limited", status: http.StatusTooManyRequests},
+		{name: "server error", status: http.StatusBadGateway, uncertain: true},
+		{name: "timeout", cause: context.DeadlineExceeded, uncertain: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			f := orgFactory(orgTestConfig{}, func(r *http.Request) (*http.Response, error) {
+				calls++
+				if r.Method != http.MethodPatch || r.URL.Path != "/api/v5/orgs/team" {
+					t.Fatalf("unexpected request: %s %s", r.Method, r.URL)
+				}
+				if tc.cause != nil {
+					return nil, tc.cause
+				}
+				response := orgResponse(tc.status, `{}`)
+				response.Header.Set("Retry-After", "0")
+				return response, nil
+			})
+			out, _, err := executeOrgEdit(t, f, "", "team", "--description", "New", "--yes")
+			if err == nil || calls != 1 || out != "" {
+				t.Fatalf("error=%v calls=%d stdout=%q", err, calls, out)
+			}
+			var uncertain *api.OrganizationEditUncertainError
+			if errors.As(err, &uncertain) != tc.uncertain {
+				t.Fatalf("unexpected uncertainty classification: %v", err)
+			}
+			if tc.cause != nil {
+				if !errors.Is(err, tc.cause) {
+					t.Fatalf("lost error cause: %v", err)
+				}
+			} else if !api.IsHTTPStatus(err, tc.status) {
+				t.Fatalf("lost HTTP status: %v", err)
+			}
+		})
 	}
 }
 
