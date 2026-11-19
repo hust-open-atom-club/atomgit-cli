@@ -61,10 +61,9 @@ func TestListUserFollowingInvalidResponses(t *testing.T) {
 	}
 	for _, status := range []int{201, 204, 400, 401, 403, 404, 429, 500} {
 		t.Run(fmt.Sprint(status), func(t *testing.T) {
-			c := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(status); fmt.Fprint(w, `[]`) })
-			c.httpClient.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			c := NewClientWithHTTPClient("test-token", &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 				return &http.Response{StatusCode: status, Header: http.Header{"Retry-After": {"9999"}}, Body: io.NopCloser(strings.NewReader(`[]`)), Request: r}, nil
-			})
+			})})
 			items, err := ListUserFollowing(c, "alice", 30)
 			if err == nil || items != nil || !IsHTTPStatus(err, status) {
 				t.Fatalf("items=%v err=%v", items, err)

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -48,7 +49,7 @@ func TestUserFollowingMixedOutputAndAuthentication(t *testing.T) {
 					if r.Header.Get("Authorization") != want {
 						t.Fatalf("authorization mismatch")
 					}
-					return userResponse(200, `[{"id":"9007199254740993","object_id":"hex","login":"bob","name":"B\tO\nB","type":"User","following_url":"/user/bob/following"},{"id":"org","login":"team","name":null,"type":"Organization"}]`), nil
+					return userResponse(200, `[{"id":"9007199254740993","object_id":"hex","login":"bob","name":"B\tO\nB","type":"User","html_url":"https://example.test/bob","url":"https://example.test/api/users/bob","following_url":"/user/bob/following"},{"id":"org","login":"team","name":null,"type":"Organization","url":"https://example.test/api/orgs/team"}]`), nil
 				})
 				f.RepositoryResolver = func() (cmdutil.Repository, error) { t.Fatal("inferred Git context"); return cmdutil.Repository{}, nil }
 				args := []string{"alice%2Fadmin"}
@@ -64,10 +65,21 @@ func TestUserFollowingMixedOutputAndAuthentication(t *testing.T) {
 					if err := json.Unmarshal([]byte(out), &items); err != nil {
 						t.Fatal(err)
 					}
-					if len(items) != 2 || len(items[0]) != 10 || len(items[1]) != 10 || items[0]["id"] != "9007199254740993" || items[1]["type"] != "Organization" || items[1]["following_url"] != "" || items[1]["html_url"] != "" {
+					if len(items) != 2 || len(items[0]) != 10 || len(items[1]) != 10 || items[0]["id"] != "9007199254740993" || items[0]["html_url"] != "https://example.test/bob" || items[0]["following_url"] != "/user/bob/following" || items[1]["type"] != "Organization" || items[1]["following_url"] != "" || items[1]["html_url"] != "" {
 						t.Fatalf("output=%s", out)
 					}
 				} else {
+					lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
+					if len(lines) != 3 {
+						t.Fatalf("unexpected output rows: %q", out)
+					}
+					wantUser := []string{"bob", `B\tO\nB`, "User", "https://example.test/bob"}
+					if !reflect.DeepEqual(strings.Fields(lines[1]), wantUser) {
+						t.Fatalf("user row = %q, want %v", lines[1], wantUser)
+					}
+					if !reflect.DeepEqual(strings.Fields(lines[2]), []string{"team", "Organization"}) {
+						t.Fatalf("organization row should have no synthesized URL: %q", lines[2])
+					}
 					for _, want := range []string{"LOGIN", "NAME", "TYPE", "URL", "User", "Organization", `B\tO\nB`} {
 						if !strings.Contains(out, want) {
 							t.Fatalf("missing %q output=%q", want, out)
