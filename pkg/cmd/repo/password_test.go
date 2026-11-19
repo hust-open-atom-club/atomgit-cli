@@ -3,6 +3,8 @@ package repo
 import (
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
 func TestParseRepositoryPassword(t *testing.T) {
@@ -54,5 +56,15 @@ func TestParseRepositoryPasswordLineEndings(t *testing.T) {
 				t.Fatal("password line endings were handled incorrectly")
 			}
 		})
+	}
+}
+
+func TestTransferPasswordNonInteractiveContext(t *testing.T) {
+	cmd := &cobra.Command{}
+	cmd.SetIn(strings.NewReader(""))
+	_, err := readTransferPassword(cmd, false)
+	want := "organization-owned repository transfer requires an interactive password; use --yes --password-stdin for non-interactive use"
+	if err == nil || err.Error() != want {
+		t.Fatalf("error=%v want=%q", err, want)
 	}
 }

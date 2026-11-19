@@ -274,56 +274,68 @@ func RemoveAccount(selector string) (string, bool, error) {
 	return key, false, saveCredentialStore(store)
 }
 
-func saveCredentialStore(store *CredentialStore) (resultErr error) {
+func saveCredentialStore(store *CredentialStore) error {
 	if store == nil || len(store.Accounts) == 0 {
 		return fmt.Errorf("credential store has no accounts")
 	}
 	store.Version = credentialStoreVersion
 	path, err := PrimaryTokenPath()
 	if err != nil {
-		return err
+		return &CredentialSaveError{Stage: CredentialSaveLocate, Err: err}
 	}
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		if isPermissionErr(err) {
-			return permissionError("cannot create config directory", dir, err, "check the directory ownership and owner write permission")
-		}
-		return fmt.Errorf("create config directory: %w", err)
+		return &CredentialSaveError{Stage: CredentialSaveMkdir, Path: dir, Err: err}
 	}
 	data, err := json.MarshalIndent(store, "", "  ")
 	if err != nil {
-		return err
+		return &CredentialSaveError{Stage: CredentialSaveEncode, Path: path, Err: err}
 	}
 	temporary, err := os.CreateTemp(dir, ".token-*.tmp")
 	if err != nil {
-		return fmt.Errorf("create temporary credential file: %w", err)
+		return &CredentialSaveError{Stage: CredentialSaveCreateTemp, Path: dir, Err: err}
 	}
+	if failure := finishCredentialSave(temporary, path, data); failure != nil {
+		return failure
+	}
+	return nil
+}
+
+type credentialTempFile interface {
+	Name() string
+	Chmod(os.FileMode) error
+	Write([]byte) (int, error)
+	Sync() error
+	Close() error
+}
+
+func finishCredentialSave(temporary credentialTempFile, path string, data []byte) (failure *CredentialSaveError) {
 	temporaryPath := temporary.Name()
-	defer func() { removeTemporaryConfig(temporaryPath, &resultErr) }()
-	// On failure, discard the temporary file and preserve the operation error.
-	// A successful write must pass Sync and Close before replacement.
+	closeAttempted := false
+	defer func() {
+		if failure != nil {
+			if !closeAttempted {
+				failure.CloseErr = temporary.Close()
+			}
+			removeTemporaryConfig(temporaryPath, &failure.RemoveErr)
+		}
+	}()
 	if err := temporary.Chmod(0o600); err != nil {
-		_ = temporary.Close()
-		return fmt.Errorf("secure temporary credential file: %w", err)
+		return &CredentialSaveError{Stage: CredentialSaveSetMode, Path: temporaryPath, Err: err}
 	}
 	if _, err := temporary.Write(data); err != nil {
-		_ = temporary.Close()
-		return fmt.Errorf("write temporary credential file: %w", err)
+		return &CredentialSaveError{Stage: CredentialSaveWrite, Path: temporaryPath, Err: err}
 	}
 	if err := temporary.Sync(); err != nil {
-		_ = temporary.Close()
-		return fmt.Errorf("sync temporary credential file: %w", err)
+		return &CredentialSaveError{Stage: CredentialSaveSync, Path: temporaryPath, Err: err}
 	}
+	closeAttempted = true
 	if err := temporary.Close(); err != nil {
-		return fmt.Errorf("close temporary credential file: %w", err)
+		return &CredentialSaveError{Stage: CredentialSaveClose, Path: temporaryPath, Err: err}
 	}
 	if err := os.Rename(temporaryPath, path); err != nil {
-		if isPermissionErr(err) {
-			return permissionError("cannot write token file", path, err, "check the file and parent directory ownership and owner write permission")
-		}
-		return fmt.Errorf("replace credential file: %w", err)
+		return &CredentialSaveError{Stage: CredentialSaveReplace, Path: path, Err: err}
 	}
-	temporaryPath = "" // The rename transferred ownership to the destination.
 	return nil
 }
 

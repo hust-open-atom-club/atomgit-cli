@@ -53,11 +53,13 @@ func SetOrganizationRepositoryArchiveStatus(client *Client, organization, reposi
 	if response.Code == nil {
 		return fmt.Errorf("organization repository archive response: %w: missing business code", ErrInvalidResponse)
 	}
-	if response.Message == nil {
-		return fmt.Errorf("organization repository archive response: %w: missing response message", ErrInvalidResponse)
-	}
 	if *response.Code != 0 {
 		return fmt.Errorf("organization repository archive request rejected with business code %d", *response.Code)
+	}
+	// The documented success response requires a non-null string msg. Never
+	// expose its contents, because a deployment may echo submitted credentials.
+	if response.Message == nil {
+		return fmt.Errorf("organization repository archive response: %w: missing response message", ErrInvalidResponse)
 	}
 	return nil
 }

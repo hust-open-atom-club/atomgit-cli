@@ -284,7 +284,7 @@ func classifyRepositoryOwner(repository api.Repository, expectedOwner string) (r
 }
 
 func readTransferPassword(cmd *cobra.Command, fromStdin bool) (string, error) {
-	return readRepositoryPassword(cmd, fromStdin, "organization-transfer")
+	return readRepositoryPassword(cmd, fromStdin, "organization-owned repository transfer")
 }
 
 func readBackTransferredRepository(client *api.Client, owner, repo string) (api.Repository, error) {

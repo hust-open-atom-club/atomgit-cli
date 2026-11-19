@@ -112,6 +112,7 @@
 - [ag-cli org discussion edit](#ag-cli-org-discussion-edit) — Edit an organization discussion
 - [ag-cli org discussion list](#ag-cli-org-discussion-list) — List organization discussions
 - [ag-cli org discussion view](#ag-cli-org-discussion-view) — View an organization discussion
+- [ag-cli org followers](#ag-cli-org-followers) — List organization followers
 - [ag-cli org list](#ag-cli-org-list) — List organizations for the authenticated user
 - [ag-cli org members](#ag-cli-org-members) — List organization members
 - [ag-cli org repos](#ag-cli-org-repos) — List organization repositories
@@ -2587,7 +2588,7 @@ Usage: `ag-cli org`
 
 Manage organizations
 
-Create organizations, list organizations associated with your AtomGit account, inspect organization details, members, repositories, Actions runner groups, and runner job history, and manage organization discussions.
+Create organizations, list organizations associated with your AtomGit account, inspect organization details, members, followers, repositories, Actions runner groups, and runner job history, and manage organization discussions.
 
 ### Flags
 
@@ -2956,6 +2957,34 @@ Hidden, deleted, and empty bodies are shown as explicit placeholders.
 ag-cli org discussion view my-organization 1
 ag-cli org discussion view my-organization 1 --comments
 ag-cli org discussion view my-organization 1 --comments --json
+```
+
+
+## ag-cli org followers
+
+Usage: `ag-cli org followers <org> [flags]`
+
+List organization followers
+
+List users following an explicitly specified organization. Followers are distinct from organization members. Follow timestamps retain the server's timezone.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--json` | Output followers as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-L, --limit` | Maximum number of followers to list | `30` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli org followers hust-open-atom-club
+ag-cli org followers hust-open-atom-club --limit 100
+ag-cli org followers hust-open-atom-club --json
 ```
 
 
@@ -4188,7 +4217,7 @@ Usage: `ag-cli repo archive [<org>/<repo>] [flags]`
 
 Archive an organization repository
 
-Set the archive state of an organization-owned repository. Personal repositories are not supported by this endpoint. Archive sends integer status=2; unarchive sends status=0. The repository and target state are shown before confirmation; --yes skips only confirmation. Password is optional: use --with-password for hidden terminal input, or --yes --password-stdin for standard input. No plaintext password flag is provided. Writes are never automatically retried or redirected. Success requires HTTP 200 and business code 0; an uncertain result must be checked on AtomGit before retrying.
+Set the archive state of an organization-owned repository. Personal repositories are not supported by this endpoint. Archive sends integer status=2; unarchive sends status=0. The repository and target state are shown before confirmation; --yes skips only confirmation. Password is optional: use --with-password for hidden terminal input, or --yes --password-stdin for standard input. No plaintext password flag is provided. Writes are never automatically retried or redirected. Success requires HTTP 200, business code 0, and a non-null string msg; an uncertain result must be checked on AtomGit before retrying.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -5517,7 +5546,7 @@ Usage: `ag-cli repo unarchive [<org>/<repo>] [flags]`
 
 Unarchive an organization repository
 
-Set the archive state of an organization-owned repository. Personal repositories are not supported by this endpoint. Archive sends integer status=2; unarchive sends status=0. The repository and target state are shown before confirmation; --yes skips only confirmation. Password is optional: use --with-password for hidden terminal input, or --yes --password-stdin for standard input. No plaintext password flag is provided. Writes are never automatically retried or redirected. Success requires HTTP 200 and business code 0; an uncertain result must be checked on AtomGit before retrying.
+Set the archive state of an organization-owned repository. Personal repositories are not supported by this endpoint. Archive sends integer status=2; unarchive sends status=0. The repository and target state are shown before confirmation; --yes skips only confirmation. Password is optional: use --with-password for hidden terminal input, or --yes --password-stdin for standard input. No plaintext password flag is provided. Writes are never automatically retried or redirected. Success requires HTTP 200, business code 0, and a non-null string msg; an uncertain result must be checked on AtomGit before retrying.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 

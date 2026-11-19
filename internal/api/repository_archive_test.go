@@ -123,3 +123,13 @@ func TestOrganizationRepositoryArchiveDoesNotFollowRedirect(t *testing.T) {
 		t.Fatalf("calls=%d err=%v", calls, err)
 	}
 }
+
+func TestRepositoryArchiveBusinessRejectionPrecedesMissingMessage(t *testing.T) {
+	for _, body := range []string{`{"code":9}`, `{"code":9,"msg":null}`, `{"code":9,"msg":"private-password"}`} {
+		client := NewClientWithHTTPClient("token", &http.Client{Transport: archiveRoundTrip(func(*http.Request) (*http.Response, error) { return archiveResponse(200, body), nil })})
+		err := SetOrganizationRepositoryArchiveStatus(client, "team", "demo", 2, nil)
+		if err == nil || errors.Is(err, ErrInvalidResponse) || !strings.Contains(err.Error(), "business code 9") || strings.Contains(err.Error(), "private-password") {
+			t.Fatalf("unexpected rejection: %v", err)
+		}
+	}
+}

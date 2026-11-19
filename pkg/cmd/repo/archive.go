@@ -22,7 +22,7 @@ func newCmdRepoArchive(f *cmdutil.Factory, archived bool) *cobra.Command {
 		Use:          action + " [<org>/<repo>]",
 		Short:        map[bool]string{true: "Archive an organization repository", false: "Unarchive an organization repository"}[archived],
 		SilenceUsage: true,
-		Long:         "Set the archive state of an organization-owned repository. Personal repositories are not supported by this endpoint. Archive sends integer status=2; unarchive sends status=0. The repository and target state are shown before confirmation; --yes skips only confirmation. Password is optional: use --with-password for hidden terminal input, or --yes --password-stdin for standard input. No plaintext password flag is provided. Writes are never automatically retried or redirected. Success requires HTTP 200 and business code 0; an uncertain result must be checked on AtomGit before retrying.",
+		Long:         "Set the archive state of an organization-owned repository. Personal repositories are not supported by this endpoint. Archive sends integer status=2; unarchive sends status=0. The repository and target state are shown before confirmation; --yes skips only confirmation. Password is optional: use --with-password for hidden terminal input, or --yes --password-stdin for standard input. No plaintext password flag is provided. Writes are never automatically retried or redirected. Success requires HTTP 200, business code 0, and a non-null string msg; an uncertain result must be checked on AtomGit before retrying.",
 		Example: `  ag-cli repo ` + action + ` my-org/demo
   ag-cli repo ` + action + ` my-org/demo --yes
   ag-cli repo ` + action + ` my-org/demo --with-password
@@ -35,9 +35,6 @@ func newCmdRepoArchive(f *cmdutil.Factory, archived bool) *cobra.Command {
 			}
 			if opts.PasswordStdin && !opts.Yes {
 				return fmt.Errorf("--password-stdin requires --yes because standard input cannot also answer confirmation")
-			}
-			if opts.WithPassword && opts.PasswordStdin {
-				return fmt.Errorf("--with-password and --password-stdin are mutually exclusive")
 			}
 			client, err := f.AuthenticatedAPIClient()
 			if err != nil {
@@ -87,7 +84,7 @@ func newCmdRepoArchive(f *cmdutil.Factory, archived bool) *cobra.Command {
 	commandschema.Annotate(cmd, commandschema.Metadata{
 		Positionals: &commandschema.Positionals{MinCount: 0, MaxCount: 1, Description: "Optional org/repo, otherwise inferred from Git. Only organization-owned repositories are supported."},
 		Output:      "text", Effects: "write",
-		Notes: []string{"Requires authentication and confirmation unless --yes is supplied. Archive sends status=2; unarchive sends status=0. Password is optional; --with-password uses hidden terminal input, --password-stdin requires --yes. Personal or unverifiable repository ownership is rejected. Writes are not retried or redirected. Success requires HTTP 200 and code=0, not an independent archive-state readback."},
+		Notes: []string{"Requires authentication and confirmation unless --yes is supplied. Archive sends status=2; unarchive sends status=0. Password is optional; --with-password uses hidden terminal input, --password-stdin requires --yes. Personal or unverifiable repository ownership is rejected. Writes are not retried or redirected. Success requires HTTP 200, code=0, and a non-null string msg, not an independent archive-state readback."},
 	})
 	return cmd
 }
