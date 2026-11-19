@@ -310,6 +310,16 @@ type OrganizationMember struct {
 	MemberRole string `json:"member_role"`
 }
 
+// OrganizationFollower is a user following an organization, not a member.
+// WatchAt preserves the server's follow timestamp and timezone unchanged.
+type OrganizationFollower struct {
+	ID        int64  `json:"id"`
+	Login     string `json:"login"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
+	WatchAt   string `json:"watch_at"`
+}
+
 // SSHKey represents a public SSH key registered with an AtomGit account.
 type SSHKey struct {
 	ID          int64  `json:"id"`

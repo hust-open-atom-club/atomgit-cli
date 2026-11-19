@@ -515,6 +515,10 @@ ag-cli org view hust-open-atom-club --json
 ag-cli org members hust-open-atom-club
 ag-cli org members hust-open-atom-club --limit 100 --json
 
+# 列出组织关注者（与组织成员不同）
+ag-cli org followers hust-open-atom-club
+ag-cli org followers hust-open-atom-club --limit 100 --json
+
 # 列出组织仓库及其可见性、默认分支和活跃度信息
 ag-cli org repos hust-open-atom-club
 ag-cli org repos hust-open-atom-club --limit 100 --json
@@ -541,6 +545,8 @@ ag-cli org runner-job-history hust-open-atom-club \
 创建使用 API v5 `POST /orgs`，只接受 HTTP 200，并校验返回的组织 ID 和路径。成功时显示组织路径以及服务端返回的 `web_url`；缺少 URL 时只显示路径，不拼接链接。写请求不会自动重试或跟随重定向；如果请求执行、响应读取或校验失败，或收到非预期的其他 2xx、3xx 或 5xx 响应，组织可能已经创建，命令会提示先在 AtomGit 确认状态再决定是否重试。
 
 `view` 输出组织路径、名称、可见性、描述和公开 URL。`members` 与 `repos` 支持分页，并在认证和网络请求前校验 `--limit`；空结果的 JSON 输出为 `[]`。仓库输出还包含描述、默认分支、主要语言、Star、Fork 和更新时间。
+
+`ag-cli org followers <org>` 使用 API v5 `GET /orgs/{owner}/followers`，要求认证并显式指定组织路径。`--limit/-L` 默认为 30，必须为正数，表示跨页输出总数上限，每页最多请求 100 条。文本输出账号、名称和关注时间，空值显示为 `-`；JSON 保留 `id`、`login`、`name`、`avatar_url` 和 `watch_at`，空列表为 `[]`。`watch_at` 是关注时间而非加入组织时间，保留服务端原始时间及其时区；关注者不等同于组织成员。认证、权限、组织不存在、限流或响应解析失败均返回非零退出码，不输出部分列表。
 
 `ag-cli org runner-group` 使用 Actions API v8，只读检查组织级 Runner Group；它与 `ag-cli runner list/shared` 查看仓库直接配置或共享的主机 Runner 不同。`list`、`runners`、`runner-sets` 和 `namespaces` 默认最多返回 30 条并要求 `--limit` 为正数；文本输出包含组织和 Group ID，JSON 保留对应官方响应的固定 snake_case 字段。权限不足、Group 不存在或分页响应不完整时命令会明确失败，不会把部分数据当作完整结果。`namespaces` 会先查询 Group 详情，确认其存在且可访问，再读取共享仓库；不存在时返回非零退出码，存在但没有共享仓库时仍正常返回空列表。
 
