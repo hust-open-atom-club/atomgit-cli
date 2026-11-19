@@ -310,3 +310,28 @@ func TestInvalidCredentialDataStopsFallback(t *testing.T) {
 		t.Fatalf("optional authentication must reject invalid credentials: %v", err)
 	}
 }
+
+func TestCredentialPermissionRepairDiagnostics(t *testing.T) {
+	const path = "/fixture/token.json"
+	for _, tc := range []struct {
+		name  string
+		cause error
+		hint  string
+	}{
+		{"permission denied", os.ErrPermission, "\nCheck the file ownership and permission to change its mode.\n"},
+		{"closed file", os.ErrClosed, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := &config.CredentialPermissionRepairError{
+				Path: path,
+				Err:  &os.PathError{Op: "chmod", Path: path, Err: fmt.Errorf("private cause: %w", tc.cause)},
+			}
+			var out bytes.Buffer
+			renderCommandError(&out, fmt.Errorf("failed to load config: %w", err))
+			want := "Error: Unable to secure the credential file.\n\nCredential file: \"/fixture/token.json\".\n" + tc.hint
+			if out.String() != want {
+				t.Fatalf("diagnostic = %q, want %q", out.String(), want)
+			}
+		})
+	}
+}

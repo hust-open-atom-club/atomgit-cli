@@ -41,6 +41,17 @@ func credentialDiagnostic(err error) (commandDiagnostic, bool) {
 		}
 		return d, true
 	}
+	//nolint:errorlint // Match the selected error without searching its causes.
+	if repair, ok := err.(*config.CredentialPermissionRepairError); ok {
+		d := commandDiagnostic{
+			summary: "Unable to secure the credential file.",
+			detail:  fmt.Sprintf("Credential file: %q.", repair.Path),
+		}
+		if errors.Is(repair.Err, os.ErrPermission) {
+			d.hint = "Check the file ownership and permission to change its mode."
+		}
+		return d, true
+	}
 	//nolint:errorlint // errors.As could misclassify a format error with a nested safety error.
 	if safety, ok := err.(*config.CredentialFileSafetyError); ok {
 		d := commandDiagnostic{

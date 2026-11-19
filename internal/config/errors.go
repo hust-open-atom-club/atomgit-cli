@@ -73,6 +73,18 @@ func (e *CredentialAccessError) Error() string {
 func (e *CredentialAccessError) Unwrap() error        { return e.Err }
 func (e *CredentialAccessError) Is(target error) bool { return target == ErrCredentialAccess }
 
+// CredentialPermissionRepairError records a failed attempt to secure a credential file.
+type CredentialPermissionRepairError struct {
+	Path string
+	Err  error
+}
+
+func (e *CredentialPermissionRepairError) Error() string {
+	return fmt.Sprintf("cannot secure token file %q: %v", e.Path, e.Err)
+}
+
+func (e *CredentialPermissionRepairError) Unwrap() error { return e.Err }
+
 // CredentialFileSafetyError records a credential file rejected by a safety check.
 // Err retains the specific rejection reason independently of CLI guidance.
 type CredentialFileSafetyError struct {
@@ -133,15 +145,6 @@ func (e *TokenPermissionError) Unwrap() error {
 // isPermissionErr reports whether err is a permission-related error.
 func isPermissionErr(err error) bool {
 	return errors.Is(err, os.ErrPermission) || errors.Is(err, syscall.EACCES) || errors.Is(err, syscall.EPERM)
-}
-
-// tokenSecurePermissionError returns an error indicating that the token file
-// could not be secured (e.g., Chmod failed).
-func tokenSecurePermissionError(path string, err error) error {
-	return permissionError(
-		"cannot secure token file", path, err,
-		"make sure the file is owned by the current user",
-	)
 }
 
 // permissionError formats a permission-related error with a hint message.
