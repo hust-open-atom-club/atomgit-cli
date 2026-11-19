@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestRefreshPRCommentsScopes(t *testing.T) {
@@ -17,7 +20,7 @@ func TestRefreshPRCommentsScopes(t *testing.T) {
 		request PullRequestCommentRefreshRequest
 		want    map[string]any
 	}{
-		{"paths", PullRequestCommentRefreshRequest{Paths: []string{"src/a,b.go", "docs/a b.md"}}, map[string]any{"refresh_by_paths": []any{"src/a,b.go", "docs/a b.md"}}},
+		{"paths", PullRequestCommentRefreshRequest{Paths: []string{"src/a,b.go", "docs/a b.md", " src/spaced.go "}}, map[string]any{"refresh_by_paths": []any{"src/a,b.go", "docs/a b.md", " src/spaced.go "}}},
 		{"comment", PullRequestCommentRefreshRequest{NoteID: "hex-comment-id"}, map[string]any{"refresh_by_note_id": "hex-comment-id"}},
 		{"all", PullRequestCommentRefreshRequest{All: true}, map[string]any{}},
 	} {
@@ -51,25 +54,27 @@ func TestRefreshPRCommentsScopes(t *testing.T) {
 }
 
 func TestRefreshPRCommentsNoReplay(t *testing.T) {
-	for _, status := range []int{201, 204, 301, 302, 303, 307, 308, 400, 401, 403, 404, 429, 500, 503} {
-		t.Run(http.StatusText(status), func(t *testing.T) {
-			calls, redirects := 0, 0
-			hc := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { redirects++; return nil }, Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
-				calls++
-				if calls > 1 {
-					t.Fatal("write replayed")
+	for _, timeout := range []time.Duration{0, 30 * time.Second} {
+		for _, status := range []int{201, 204, 301, 302, 303, 307, 308, 400, 401, 403, 404, 429, 500, 503} {
+			t.Run(fmt.Sprintf("timeout=%s/%s", timeout, http.StatusText(status)), func(t *testing.T) {
+				calls, redirects := 0, 0
+				hc := &http.Client{Timeout: timeout, CheckRedirect: func(*http.Request, []*http.Request) error { redirects++; return nil }, Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+					calls++
+					if calls > 1 {
+						t.Fatal("write replayed")
+					}
+					return &http.Response{StatusCode: status, Header: http.Header{"Location": {"https://other.test/"}, "Retry-After": {"0"}}, Body: io.NopCloser(strings.NewReader(`{"note_ids":[]}`)), Request: r}, nil
+				})}
+				_, err := RefreshPullRequestCommentPositions(NewClientWithHTTPClient("fixture", hc), "team", "repo", 1, PullRequestCommentRefreshRequest{All: true})
+				if !IsHTTPStatus(err, status) || calls != 1 || redirects != 0 {
+					t.Fatalf("err=%v calls=%d redirects=%d", err, calls, redirects)
 				}
-				return &http.Response{StatusCode: status, Header: http.Header{"Location": {"https://other.test/"}, "Retry-After": {"0"}}, Body: io.NopCloser(strings.NewReader(`{"note_ids":[]}`)), Request: r}, nil
-			})}
-			_, err := RefreshPullRequestCommentPositions(NewClientWithHTTPClient("fixture", hc), "team", "repo", 1, PullRequestCommentRefreshRequest{All: true})
-			if !IsHTTPStatus(err, status) || calls != 1 || redirects != 0 {
-				t.Fatalf("err=%v calls=%d redirects=%d", err, calls, redirects)
-			}
-			_ = hc.CheckRedirect(nil, nil)
-			if redirects != 1 {
-				t.Fatal("modified caller redirect policy")
-			}
-		})
+				_ = hc.CheckRedirect(httptest.NewRequest(http.MethodGet, "https://other.test/", nil), nil)
+				if redirects != 1 {
+					t.Fatal("modified caller redirect policy")
+				}
+			})
+		}
 	}
 	cause := errors.New("network failed")
 	calls := 0

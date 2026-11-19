@@ -26,9 +26,6 @@ func newCmdRefreshPosition(f *cmdutil.Factory) *cobra.Command {
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			request := api.PullRequestCommentRefreshRequest{Paths: opts.Paths, NoteID: opts.CommentID, All: opts.All}
-			if cmd.Flags().Changed("path") && len(opts.Paths) == 0 {
-				return fmt.Errorf("file paths must not be empty")
-			}
 			if cmd.Flags().Changed("comment-id") && strings.TrimSpace(opts.CommentID) == "" {
 				return fmt.Errorf("comment ID must not be empty")
 			}
