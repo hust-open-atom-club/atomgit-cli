@@ -113,6 +113,7 @@
 - [ag-cli org discussion list](#ag-cli-org-discussion-list) — List organization discussions
 - [ag-cli org discussion view](#ag-cli-org-discussion-view) — View an organization discussion
 - [ag-cli org edit](#ag-cli-org-edit) — Edit an organization profile
+- [ag-cli org followers](#ag-cli-org-followers) — List organization followers
 - [ag-cli org list](#ag-cli-org-list) — List organizations for the authenticated user
 - [ag-cli org members](#ag-cli-org-members) — List organization members
 - [ag-cli org repos](#ag-cli-org-repos) — List organization repositories
@@ -2586,7 +2587,7 @@ Usage: `ag-cli org`
 
 Manage organizations
 
-Create and edit organizations, list organizations associated with your AtomGit account, inspect organization details, members, repositories, Actions runner groups, and runner job history, and manage organization discussions.
+Create and edit organizations, list organizations associated with your AtomGit account, inspect organization details, members, followers, repositories, Actions runner groups, and runner job history, and manage organization discussions.
 
 ### Flags
 
@@ -2995,6 +2996,34 @@ If the result cannot be confirmed, check AtomGit before retrying.
 ag-cli org edit my-team --name 'My Team' --description 'Team projects'
 ag-cli org edit my-team --email '' --location Wuhan --yes
 ag-cli org edit my-team --website www.example.com --json --yes
+```
+
+
+## ag-cli org followers
+
+Usage: `ag-cli org followers <org> [flags]`
+
+List organization followers
+
+List users following an explicitly specified organization. Followers are distinct from organization members. Follow timestamps retain the server's timezone.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--json` | Output followers as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-L, --limit` | Maximum number of followers to list | `30` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli org followers hust-open-atom-club
+ag-cli org followers hust-open-atom-club --limit 100
+ag-cli org followers hust-open-atom-club --json
 ```
 
 
