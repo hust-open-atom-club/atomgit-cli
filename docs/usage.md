@@ -555,6 +555,22 @@ ag-cli org runner-job-history hust-open-atom-club \
   --limit 100 --json
 ```
 
+组织资料编辑使用独立命令：
+
+```bash
+ag-cli org edit my-team --name 'My Team' --description 'Team projects'
+# 显式发送空字符串请求清空公开邮箱；未指定字段保持不变
+ag-cli org edit my-team --email '' --location Wuhan --yes
+# 网站可以使用服务端支持的字符串格式，不强制添加协议
+ag-cli org edit my-team --website www.example.com --json --yes
+```
+
+`org edit <org>` 通过 `PATCH /orgs/{org}` 只发送显式指定的字段，组织路径会去除首尾空白。`--name` 是显示名称，不能为空，不会修改组织 path；`--description`（`-d`）、`--email`、`--location` 和 `--website` 可以显式传空字符串请求清空。`--website` 对应请求的 `html_url`，表示组织站点，不是可由 CLI 拼造的组织主页链接。必须至少显式指定一个修改字段，该约束也通过 schema 的 `atLeastOneRequired` 标志组提供；没有字段变更时在认证和网络请求前报错。
+
+修改默认在 stderr 显示目标组织和提交字段并要求确认，`--yes` 跳过；取消或 EOF 不读取凭据、不发送请求。PATCH 只接受 HTTP 200，不自动重试或跟随重定向。响应必须具有正整数 `id` 及匹配的 `path`。身份无法确认、传输/读取/解码失败或非预期的 2xx、3xx、5xx 均会提示资料可能已经改变，应先在 AtomGit 确认再决定是否重试；明确的 4xx 拒绝保留普通 API 诊断。
+
+文本输出确认的组织身份及“已提交、未经独立回读验证”的字段，不将缺失响应字段当作已验证远端状态，也不自动访问额外的查询接口。JSON 为 `organization: {id, path}`、`submitted_fields` 和固定 `verification: "identity_only"`；`submitted_fields` 是发送内容，不代表当前完整资料。测试仅使用离线 mock，不声明服务端写入已验收。
+
 `ag-cli org create <path>` 要求认证并显式指定组织路径，不会从 Git remote 推断。可选的 `--name`、`--description`（`-d`）和 `--visibility` 只有显式指定时才发送给 API；省略时由服务端采用名称等于路径、可见性为 `public` 的默认值。`--description=""` 会显式发送空描述。路径、空名称和可见性枚举在认证与网络请求前校验。
 
 创建使用 API v5 `POST /orgs`，只接受 HTTP 200，并校验返回的组织 ID 和路径。成功时显示组织路径以及服务端返回的 `web_url`；缺少 URL 时只显示路径，不拼接链接。写请求不会自动重试或跟随重定向；如果请求执行、响应读取或校验失败，或收到非预期的其他 2xx、3xx 或 5xx 响应，组织可能已经创建，命令会提示先在 AtomGit 确认状态再决定是否重试。
@@ -1068,8 +1084,18 @@ ag-cli pr comment delete owner/repo 123 456
 ag-cli pr comment delete owner/repo 123 456 --yes
 
 # 回复评论（PR 特有）
-ag-cli pr comment reply owner/repo 123 456 --body "Thanks for the feedback!"
+ag-cli pr comment reply owner/repo 123 discussion-id --body "Thanks for the feedback!"
+
+# 解决或重新打开检视讨论：使用 view 输出的 discussion_id，而非评论编号
+ag-cli pr comment resolve owner/repo 123 discussion-id
+ag-cli pr comment unresolve owner/repo 123 discussion-id --yes
+# 也可从当前 Git 仓库推断 owner/repo
+ag-cli pr comment resolve 123 discussion-id --yes
 ```
+
+`pr comment resolve/unresolve [<owner>/<repo>] <number> <discussion-id>` 要求认证，默认显示仓库、PR、讨论 ID 和目标状态并确认，`--yes/-y` 跳过确认；空输入、EOF 或否定回答取消操作，不发送 API 请求。PR 编号必须为正整数；讨论 ID 是 `pr comment view` 中单独显示的 `discussion_id`，不是下方的 note/comment 数字 ID。
+
+命令先核对 PR 身份，再遍历该 PR 的评论分页确认目标是检视讨论（`diff_comment`）；普通评论、其他 PR 的讨论、缺失状态或无法确认身份的响应均不会触发写入。使用 API v5 `PUT /repos/{owner}/{repo}/pulls/{number}/comments/{discussion_id}`，发送显式 `resolved: true/false`，其中 `unresolve` 不会省略 `false`。写请求不自动重试或跟随重定向，只接受 HTTP 200，响应体按官方契约忽略（可为空）。之后回读同一讨论，只有明确状态与请求一致才报告成功；回读失败或状态不一致时返回非零退出码，并提示先在 AtomGit 核对再决定是否重试。该命令不批准、合并或关闭 PR。
 
 ## Issue
 

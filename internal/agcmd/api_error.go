@@ -22,6 +22,11 @@ func apiDiagnostic(err error) (commandDiagnostic, bool) {
 		d.summary = "Organization creation could not be confirmed."
 		d.hint = "Organization creation may have succeeded. Check AtomGit before retrying."
 		return d, true
+	case *api.OrganizationEditUncertainError:
+		d, _ := apiDiagnostic(failure.Err)
+		d.summary = "Organization profile update could not be confirmed."
+		d.hint = "The organization profile may have changed. Check AtomGit before retrying."
+		return d, true
 	case *api.HTTPError:
 		return apiStatusDiagnostic(failure.StatusCode, failure.ReadError != nil), true
 	case *actions.HTTPError:
