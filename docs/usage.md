@@ -215,6 +215,8 @@ ag-cli auth logout --all
 
 可选环境变量（覆盖默认 OAuth 应用）：`AG_OAUTH_CLIENT_ID`、`AG_OAUTH_CLIENT_SECRET`；若本机 **8765** 端口被占用，可设置 **`AG_OAUTH_REDIRECT_PORT`**（需与 AtomGit 应用配置的回调地址一致）。
 
+在支持 OSC 8 超链接的终端中，`auth login` 打印的授权 URL 是整段链接，换行后点击任意一行都会打开完整地址。不支持超链接的终端、`TERM=dumb` 或输出被重定向时，仍输出纯文本 URL。
+
 ## 仓库 (repo)
 
 ```bash
@@ -330,6 +332,24 @@ ag-cli repo delete owner/repo --yes
 普通 `repo clone` 也使用相同的部署边界。在自定义 `--base-url` 下传入 `owner/repo` 或短仓库名时，CLI 会先从所选 API 读取并校验仓库 URL，不会默认指向公网 AtomGit。显式传入的 URL 仍交给 Git 处理，但只有属于所选部署的 HTTPS 主机才会收到当前命令 token。
 
 `--token` 和 `--base-url` 是全局参数，只在当前命令进程中生效，不会写入凭据文件或其他配置。`--base-url` 默认为 `https://api.atomgit.com`，不传该参数时使用同一地址；远程服务必须使用不含路径的 HTTPS 根地址，只有回环地址允许使用 HTTP。API v5 和 Actions v8 命令会分别自动添加 `/api/v5` 和 `/api/v8`。需要当前用户名的命令会通过临时 token 查询所选服务，不会继续使用本地持久化账户的用户名。命令行中的 token 可能出现在 shell 历史或系统进程列表中；无需临时覆盖时，建议继续使用 `ag-cli auth login` 保存的凭据。
+
+组织仓库归档与取消归档使用独立命令：
+
+```bash
+ag-cli repo archive my-org/demo
+ag-cli repo unarchive my-org/demo --yes
+# 可从当前 Git 仓库推断 org/repo；--yes 仅跳过确认
+ag-cli repo archive --yes
+# 若部署要求账户密码，可选择隐藏输入或标准输入
+ag-cli repo archive my-org/demo --with-password
+printf '%s\n' "$PASSWORD" | ag-cli repo unarchive my-org/demo --yes --password-stdin
+```
+
+`archive/unarchive [<org>/<repo>]` 仅支持组织仓库，分别通过 API v5 `PUT /org/{org}/repo/{repo}/status` 发送整数 `status=2/0`；不是删除仓库或修改可见性。命令先检查本地凭据，再显示仓库和目标状态并默认要求确认；未配置凭据时直接返回认证错误，不显示确认提示。空输入、EOF 或否定回答取消操作，不发送 API 请求。确认后先读取仓库身份并核对组织归属；个人仓库、身份缺失或不匹配的仓库不会触发写入，`--yes/-y` 不会跳过这些检查。
+
+密码在官方请求契约中为可选字段，默认不发送。`--with-password` 使用终端隐藏输入，`--password-stdin` 必须配合 `--yes`，二者互斥；不提供命令行明文密码参数。终端与标准输入读取的密码均校验 64 KiB 上限；标准输入在去除末尾的一组换行前校验长度，保留密码中的空格；显式读取的密码不能为空。归档与已有仓库转移命令复用密码输入逻辑，不输出密码或服务端完整认证响应。
+
+写入不会自动重试或跟随重定向。只有 HTTP 200、显式整数业务码 `code=0`、非 null 字符串 `msg` 和有效响应结构才报告 API 已确认；非零或缺失业务码、非法响应、权限和资源错误均返回非零退出码，不打印服务端 `msg`。这不表示 CLI 已独立回读归档状态；结果无法确认时，应先在 AtomGit 核对再决定是否重试。自动化测试只使用离线 mock，不使用真实仓库执行归档验证。
 
 `ag-cli repo edit` 仅发送命令行中明确指定的字段，支持 `--name`、`--description`、`--default-branch` 和 `--visibility public|private`。`--public`、`--private` 是可见性的便利选项；它们与 `--visibility` 三者互斥。名称或可见性修改需要交互确认，可使用 `--yes` 跳过确认。成功后命令会显示更新后的仓库名称和浏览器 URL。
 
@@ -533,6 +553,17 @@ ag-cli org view hust-open-atom-club --json
 ag-cli org members hust-open-atom-club
 ag-cli org members hust-open-atom-club --limit 100 --json
 
+# 邀请成员，默认请求 push 权限，确认后发送邀请
+ag-cli org member invite my-team alice
+ag-cli org member invite my-team alice --permission pull --yes
+
+# 使用自定义角色邀请成员
+ag-cli org member invite my-team alice --permission customized --role-id role-123
+
+# 移除组织成员，默认要求确认
+ag-cli org member remove my-team alice
+ag-cli org member remove my-team alice --yes
+
 # 列出组织关注者（与组织成员不同）
 ag-cli org followers hust-open-atom-club
 ag-cli org followers hust-open-atom-club --limit 100 --json
@@ -558,11 +589,33 @@ ag-cli org runner-job-history hust-open-atom-club \
   --limit 100 --json
 ```
 
+组织资料编辑使用独立命令：
+
+```bash
+ag-cli org edit my-team --name 'My Team' --description 'Team projects'
+# 显式发送空字符串请求清空公开邮箱；未指定字段保持不变
+ag-cli org edit my-team --email '' --location Wuhan --yes
+# 网站可以使用服务端支持的字符串格式，不强制添加协议
+ag-cli org edit my-team --website www.example.com --json --yes
+```
+
+`org edit <org>` 通过 `PATCH /orgs/{org}` 只发送显式指定的字段，组织路径会去除首尾空白。`--name` 是显示名称，不能为空，不会修改组织 path；`--description`（`-d`）、`--email`、`--location` 和 `--website` 可以显式传空字符串请求清空。`--website` 对应请求的 `html_url`，表示组织站点，不是可由 CLI 拼造的组织主页链接。必须至少显式指定一个修改字段，该约束也通过 schema 的 `atLeastOneRequired` 标志组提供；没有字段变更时在认证和网络请求前报错。
+
+修改默认在 stderr 显示目标组织和提交字段并要求确认，`--yes` 跳过；取消或 EOF 不读取凭据、不发送请求。PATCH 只接受 HTTP 200，不自动重试或跟随重定向。响应必须具有正整数 `id` 及匹配的 `path`。身份无法确认、传输/读取/解码失败或非预期的 2xx、3xx、5xx 均会提示资料可能已经改变，应先在 AtomGit 确认再决定是否重试；明确的 4xx 拒绝保留普通 API 诊断。
+
+文本输出确认的组织身份及“已提交、未经独立回读验证”的字段，不将缺失响应字段当作已验证远端状态，也不自动访问额外的查询接口。JSON 为 `organization: {id, path}`、`submitted_fields` 和固定 `verification: "identity_only"`；`submitted_fields` 是发送内容，不代表当前完整资料。测试仅使用离线 mock，不声明服务端写入已验收。
+
 `ag-cli org create <path>` 要求认证并显式指定组织路径，不会从 Git remote 推断。可选的 `--name`、`--description`（`-d`）和 `--visibility` 只有显式指定时才发送给 API；省略时由服务端采用名称等于路径、可见性为 `public` 的默认值。`--description=""` 会显式发送空描述。路径、空名称和可见性枚举在认证与网络请求前校验。
 
 创建使用 API v5 `POST /orgs`，只接受 HTTP 200，并校验返回的组织 ID 和路径。成功时显示组织路径以及服务端返回的 `web_url`；缺少 URL 时只显示路径，不拼接链接。写请求不会自动重试或跟随重定向；如果请求执行、响应读取或校验失败，或收到非预期的其他 2xx、3xx 或 5xx 响应，组织可能已经创建，命令会提示先在 AtomGit 确认状态再决定是否重试。
 
 `view` 输出组织路径、名称、可见性、描述和公开 URL。`members` 与 `repos` 支持分页，并在认证和网络请求前校验 `--limit`；空结果的 JSON 输出为 `[]`。仓库输出还包含描述、默认分支、主要语言、Star、Fork 和更新时间。
+
+`ag-cli org member` 不带子命令时显示帮助；漏写或拼错子命令并传入其他参数时返回非零退出码，不执行成员写操作。
+
+`ag-cli org member invite <org> <username>` 与 `remove <org> <username>` 要求认证并显式指定组织路径和用户名，不从 Git remote 推断。`invite` 的 `--permission` 支持 `pull`、`push`、`admin`、`customized`，默认 `push`；`customized` 必须提供非空 `--role-id`，其他权限不得传入该选项。参数在确认与认证前校验。这两个命令仅管理组织成员，不管理仓库协作者、企业成员或修改现有成员角色；原有 `org members` 列表命令保持不变。
+
+两个写命令默认显示组织和用户名并要求输入 `y` 或 `yes` 确认；邀请还显示请求的权限及自定义角色 ID。空输入、EOF 或其他回答取消操作且不发请求；`--yes`（`-y`）跳过确认。命令分别调用 API v5 `POST` / `DELETE /orgs/{org}/memberships/{username}`，只接受 HTTP 200（允许空响应），不会自动重试或跟随重定向。邀请成功仅表示服务端接收了邀请请求，不表示用户已经接受邀请或成为正式成员。失败时返回非零退出码；结果不确定时应先在 AtomGit 核实状态，再决定是否重试。
 
 `ag-cli org followers <org>` 使用 API v5 `GET /orgs/{owner}/followers`，要求认证并显式指定组织路径。`--limit/-L` 默认为 30，必须为正数，表示跨页输出总数上限，每页最多请求 100 条。文本输出账号、名称和关注时间，空值显示为 `-`；JSON 保留 `id`、`login`、`name`、`avatar_url` 和 `watch_at`，空列表为 `[]`。`watch_at` 是关注时间而非加入组织时间，保留服务端原始时间及其时区；关注者不等同于组织成员。认证、权限、组织不存在、限流或响应解析失败均返回非零退出码，不输出部分列表。
 
@@ -655,6 +708,10 @@ ag-cli user view
 # 查看公开用户资料（无需登录）
 ag-cli user view alice
 
+# 列出指定用户的粉丝（默认最多 30 条，无需登录）
+ag-cli user followers alice
+ag-cli user followers alice --limit 100 --json
+
 # 输出 JSON
 ag-cli user view alice --json
 
@@ -705,6 +762,10 @@ ag-cli user watching
 # 列出指定用户 watch 的仓库
 ag-cli user watching alice --limit 100 --json
 ```
+
+`ag-cli user followers <username>` 必须显式指定用户名，不从 Git remote 推断。`--limit`（`-L`）必须为正数，默认 30，限制跨页返回的总条数。未配置凭据时匿名读取；已有凭据损坏或无法读取时直接报错，不降级为匿名请求。任一页失败时不输出部分结果。
+
+粉丝列表文本输出为 TSV，字段中的制表符、换行、回车和反斜杠会转义；`--json` 输出固定字段 `id`、`login`、`name`、`type`、`url`、`avatarUrl`，ID 保留为字符串，缺失或 null 字符串输出为空字符串，不补造 URL。空列表输出 `[]`。
 
 `ag-cli user view --json` 输出稳定的 JSON 对象，字段始终齐全（空字符串、零计数和空数组也会输出，便于自动化区分"值为零/空"与"字段缺失"）：
 
@@ -1057,8 +1118,18 @@ ag-cli pr comment delete owner/repo 123 456
 ag-cli pr comment delete owner/repo 123 456 --yes
 
 # 回复评论（PR 特有）
-ag-cli pr comment reply owner/repo 123 456 --body "Thanks for the feedback!"
+ag-cli pr comment reply owner/repo 123 discussion-id --body "Thanks for the feedback!"
+
+# 解决或重新打开检视讨论：使用 view 输出的 discussion_id，而非评论编号
+ag-cli pr comment resolve owner/repo 123 discussion-id
+ag-cli pr comment unresolve owner/repo 123 discussion-id --yes
+# 也可从当前 Git 仓库推断 owner/repo
+ag-cli pr comment resolve 123 discussion-id --yes
 ```
+
+`pr comment resolve/unresolve [<owner>/<repo>] <number> <discussion-id>` 要求认证，默认显示仓库、PR、讨论 ID 和目标状态并确认，`--yes/-y` 跳过确认；空输入、EOF 或否定回答取消操作，不发送 API 请求。PR 编号必须为正整数；讨论 ID 是 `pr comment view` 中单独显示的 `discussion_id`，不是下方的 note/comment 数字 ID。
+
+命令先核对 PR 身份，再遍历该 PR 的评论分页确认目标是检视讨论（`diff_comment`）；普通评论、其他 PR 的讨论、缺失状态或无法确认身份的响应均不会触发写入。使用 API v5 `PUT /repos/{owner}/{repo}/pulls/{number}/comments/{discussion_id}`，发送显式 `resolved: true/false`，其中 `unresolve` 不会省略 `false`。写请求不自动重试或跟随重定向，只接受 HTTP 200，响应体按官方契约忽略（可为空）。之后回读同一讨论，只有明确状态与请求一致才报告成功；回读失败或状态不一致时返回非零退出码，并提示先在 AtomGit 核对再决定是否重试。该命令不批准、合并或关闭 PR。
 
 ## Issue
 

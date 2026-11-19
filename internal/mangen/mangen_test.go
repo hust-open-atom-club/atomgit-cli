@@ -108,6 +108,11 @@ func TestActualTreeIsOfflineCompleteAndDeterministic(t *testing.T) {
 			t.Errorf("repository permissions manual missing %q", want)
 		}
 	}
+	for _, want := range []string{`\-\-limit`, `\-\-json`, "<username>", "anonymously"} {
+		if !strings.Contains(first["ag-cli-user-followers.1"], want) {
+			t.Errorf("user followers manual missing %q", want)
+		}
+	}
 	second := pageMap(t, root)
 	if !reflect.DeepEqual(first, second) {
 		t.Fatal("generation is not deterministic")
@@ -153,6 +158,11 @@ func TestActualTreeIsOfflineCompleteAndDeterministic(t *testing.T) {
 	}
 	if strings.Contains(first["ag-cli-repo-cla-disable.1"], `\-\-enforce\-check`) {
 		t.Fatal("disable manual exposes an enable-only option")
+	}
+	for _, want := range []string{`\-\-name`, `\-\-description`, `\-\-email`, `\-\-location`, `\-\-website`, `\-\-yes`, `\-\-json`, "html_url", "never automatically retried"} {
+		if !strings.Contains(first["ag-cli-org-edit.1"], want) {
+			t.Errorf("organization edit manual missing %q", want)
+		}
 	}
 	for _, want := range []string{`\-\-name`, `\-\-description`, `\-\-visibility`, "public", "never automatically retried"} {
 		if !strings.Contains(first["ag-cli-org-create.1"], want) {

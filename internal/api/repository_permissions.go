@@ -47,6 +47,9 @@ func validateRepositoryPermissions(result RepositoryPermissions) error {
 		// This endpoint documents selected as a JSON boolean; other wire types
 		// must not be interpreted as granting or denying a permission.
 		for j, action := range actions {
+			if action == nil {
+				return fmt.Errorf("resource_trees[%d].actions[%d] must be an object", i, j)
+			}
 			var selected *bool
 			if err := json.Unmarshal(action["selected"], &selected); err != nil || selected == nil {
 				return fmt.Errorf("resource_trees[%d].actions[%d].selected must be a boolean", i, j)

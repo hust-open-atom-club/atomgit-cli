@@ -30,11 +30,20 @@ func TestRegisteredCommands(t *testing.T) {
 		{[]string{"pr", "create"}, 0, 1, "text", "write"},
 		{[]string{"api"}, 1, 1, "raw", "conditional"},
 		{[]string{"pr", "comment", "create"}, 1, 2, "text", "write"},
+		{[]string{"pr", "comment", "resolve"}, 2, 3, "text", "write"},
+		{[]string{"pr", "comment", "unresolve"}, 2, 3, "text", "write"},
 		{[]string{"discussion", "edit"}, 1, 2, "text", "write"},
 		{[]string{"discussion", "create"}, 0, 1, "text", "write"},
 		{[]string{"discussion", "delete"}, 1, 2, "text", "write"},
 		{[]string{"org", "create"}, 1, 1, "text", "write"},
+		{[]string{"user", "followers"}, 1, 1, "text,json", "read"},
+		{[]string{"org", "edit"}, 1, 1, "text,json", "write"},
+		{[]string{"org", "member"}, 0, 0, "text", "none"},
+		{[]string{"org", "member", "invite"}, 2, 2, "text", "write"},
+		{[]string{"org", "member", "remove"}, 2, 2, "text", "write"},
 		{[]string{"org", "followers"}, 1, 1, "text,json", "read"},
+		{[]string{"repo", "archive"}, 0, 1, "text", "write"},
+		{[]string{"repo", "unarchive"}, 0, 1, "text", "write"},
 		{[]string{"repo", "permissions"}, 0, 1, "text,json", "read"},
 		{[]string{"repo", "cla", "list"}, 0, 1, "text,json", "read"},
 		{[]string{"repo", "cla", "set"}, 0, 1, "text", "write"},
@@ -105,6 +114,25 @@ func TestRegisteredCommands(t *testing.T) {
 					if i < 0 || detail.Flags[i].Required || detail.Flags[i].Default != defaultValue || detail.Flags[i].Type != "string" {
 						t.Fatalf("incorrect optional flag metadata for %s", name)
 					}
+				}
+			}
+			if detail.Path == "ag-cli org edit" {
+				want := []commandschema.FlagGroup{
+					{Kind: "atLeastOneRequired", Flags: []string{"description", "email", "location", "name", "website"}},
+				}
+				if !reflect.DeepEqual(detail.FlagGroups, want) {
+					t.Fatalf("organization edit constraints = %+v", detail.FlagGroups)
+				}
+			}
+			if detail.Path == "ag-cli org member invite" {
+				for name, defaultValue := range map[string]string{"permission": "push", "role-id": ""} {
+					i := slices.IndexFunc(detail.Flags, func(f commandschema.Flag) bool { return f.Name == name })
+					if i < 0 || detail.Flags[i].Required || detail.Flags[i].Default != defaultValue || detail.Flags[i].Type != "string" {
+						t.Fatalf("incorrect conditional flag metadata for %s", name)
+					}
+				}
+				if !strings.Contains(strings.Join(detail.Notes, " "), "required for customized and forbidden otherwise") {
+					t.Fatal("missing conditional role constraint")
 				}
 			}
 			if detail.Path == "ag-cli discussion create" || detail.Path == "ag-cli org discussion create" {

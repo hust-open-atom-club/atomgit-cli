@@ -72,7 +72,7 @@ func TestRepoPermissionsContextAndOutput(t *testing.T) {
 				} else if !strings.HasPrefix(out, "Repository: team/demo\n") {
 					t.Fatalf("output=%s", out)
 				}
-				matrix := out
+				var matrix string
 				if asJSON {
 					var envelope struct {
 						Permissions json.RawMessage `json:"permissions"`
@@ -168,5 +168,60 @@ func TestRepoPermissionsValidationAndAuthentication(t *testing.T) {
 	f.RepositoryResolver = func() (cmdutil.Repository, error) { return cmdutil.Repository{}, cause }
 	if out, err := executePermissions(t, f); !errors.Is(err, cause) || out != "" {
 		t.Fatalf("output=%q error=%v", out, err)
+	}
+}
+
+func TestRepoPermissionsBidiUsesSafeWriter(t *testing.T) {
+	for _, asJSON := range []bool{false, true} {
+		t.Run(fmt.Sprintf("json=%t", asJSON), func(t *testing.T) {
+			const name = "role\u202eoverride\u2066isolate"
+			body := `{"role_info":{"name":"` + name + `"},"resource_trees":[]}`
+			f := policyFactory(t, func(*http.Request) (int, string) { return 200, body })
+			cmd := newCmdRepoPermissions(f)
+			var out bytes.Buffer
+			writer := cmdutil.NewSanitizingWriter(&out)
+			cmd.SetOut(writer)
+			args := []string{"team/demo"}
+			if asJSON {
+				args = append(args, "--json")
+			}
+			cmd.SetArgs(args)
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if err := cmdutil.FlushWriter(writer); err != nil {
+				t.Fatal(err)
+			}
+			if strings.ContainsAny(out.String(), "\u202e\u2066") || !strings.Contains(out.String(), `\u202e`) || !strings.Contains(out.String(), `\u2066`) {
+				t.Fatalf("unsafe bidi output: %q", out.String())
+			}
+			matrix := out.Bytes()
+			if asJSON {
+				var envelope struct {
+					Permissions json.RawMessage `json:"permissions"`
+				}
+				if err := json.Unmarshal(matrix, &envelope); err != nil {
+					t.Fatal(err)
+				}
+				matrix = envelope.Permissions
+			} else {
+				parts := bytes.SplitN(matrix, []byte("\n"), 3)
+				if len(parts) != 3 {
+					t.Fatalf("missing matrix: %q", matrix)
+				}
+				matrix = parts[2]
+			}
+			var decoded struct {
+				Role struct {
+					Name string `json:"name"`
+				} `json:"role_info"`
+			}
+			if err := json.Unmarshal(matrix, &decoded); err != nil {
+				t.Fatal(err)
+			}
+			if decoded.Role.Name != name {
+				t.Fatal("safe output changed field value")
+			}
+		})
 	}
 }

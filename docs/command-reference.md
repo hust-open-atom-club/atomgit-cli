@@ -112,8 +112,12 @@
 - [ag-cli org discussion edit](#ag-cli-org-discussion-edit) — Edit an organization discussion
 - [ag-cli org discussion list](#ag-cli-org-discussion-list) — List organization discussions
 - [ag-cli org discussion view](#ag-cli-org-discussion-view) — View an organization discussion
+- [ag-cli org edit](#ag-cli-org-edit) — Edit an organization profile
 - [ag-cli org followers](#ag-cli-org-followers) — List organization followers
 - [ag-cli org list](#ag-cli-org-list) — List organizations for the authenticated user
+- [ag-cli org member](#ag-cli-org-member) — Invite or remove organization members
+- [ag-cli org member invite](#ag-cli-org-member-invite) — Invite a user to an organization
+- [ag-cli org member remove](#ag-cli-org-member-remove) — Remove a member from an organization
 - [ag-cli org members](#ag-cli-org-members) — List organization members
 - [ag-cli org repos](#ag-cli-org-repos) — List organization repositories
 - [ag-cli org runner-group](#ag-cli-org-runner-group) — Inspect organization Actions runner groups
@@ -134,6 +138,8 @@
 - [ag-cli pr comment delete](#ag-cli-pr-comment-delete) — Delete a comment on a pull request
 - [ag-cli pr comment edit](#ag-cli-pr-comment-edit) — Edit a comment on a pull request
 - [ag-cli pr comment reply](#ag-cli-pr-comment-reply) — Reply to a comment thread on a pull request
+- [ag-cli pr comment resolve](#ag-cli-pr-comment-resolve) — Resolve a PR review discussion
+- [ag-cli pr comment unresolve](#ag-cli-pr-comment-unresolve) — Unresolve a PR review discussion
 - [ag-cli pr comment view](#ag-cli-pr-comment-view) — View all comments on a pull request
 - [ag-cli pr commits](#ag-cli-pr-commits) — List commits in a pull request
 - [ag-cli pr create](#ag-cli-pr-create) — Create a pull request
@@ -159,6 +165,7 @@
 - [ag-cli release upload](#ag-cli-release-upload) — Upload an attachment to a release
 - [ag-cli release view](#ag-cli-release-view) — View a release by tag
 - [ag-cli repo](#ag-cli-repo) — Manage repositories
+- [ag-cli repo archive](#ag-cli-repo-archive) — Archive an organization repository
 - [ag-cli repo cla](#ag-cli-repo-cla) — Manage repository CLA configuration
 - [ag-cli repo cla disable](#ag-cli-repo-cla-disable) — Disable repository CLA
 - [ag-cli repo cla list](#ag-cli-repo-cla-list) — List available CLAs
@@ -203,6 +210,7 @@
 - [ag-cli repo read-file](#ag-cli-repo-read-file) — Read a file from a repository
 - [ag-cli repo sync](#ag-cli-repo-sync) — Synchronize a fork with its upstream repository
 - [ag-cli repo transfer](#ag-cli-repo-transfer) — Transfer a repository to an organization
+- [ag-cli repo unarchive](#ag-cli-repo-unarchive) — Unarchive an organization repository
 - [ag-cli repo view](#ag-cli-repo-view) — View a repository
 - [ag-cli repo webhook](#ag-cli-repo-webhook) — Manage repository webhooks
 - [ag-cli repo webhook create](#ag-cli-repo-webhook-create) — Create a repository webhook
@@ -244,6 +252,7 @@
 - [ag-cli user edit](#ag-cli-user-edit) — Edit the authenticated user's profile
 - [ag-cli user emails](#ag-cli-user-emails) — List email addresses for the authenticated user
 - [ag-cli user events](#ag-cli-user-events) — List personal activity events for a user
+- [ag-cli user followers](#ag-cli-user-followers) — List followers of a user
 - [ag-cli user namespaces](#ag-cli-user-namespaces) — List namespaces for the authenticated user
 - [ag-cli user starred](#ag-cli-user-starred) — List starred repositories for a user
 - [ag-cli user view](#ag-cli-user-view) — View the current user or a public user profile
@@ -2587,7 +2596,7 @@ Usage: `ag-cli org`
 
 Manage organizations
 
-Create organizations, list organizations associated with your AtomGit account, inspect organization details, members, followers, repositories, Actions runner groups, and runner job history, and manage organization discussions.
+Create and edit organizations, list organizations associated with your AtomGit account, invite or remove members, inspect organization details, members, followers, repositories, Actions runner groups, and runner job history, and manage organization discussions.
 
 ### Flags
 
@@ -2959,6 +2968,47 @@ ag-cli org discussion view my-organization 1 --comments --json
 ```
 
 
+## ag-cli org edit
+
+Usage: `ag-cli org edit <org> [flags]`
+
+Edit an organization profile
+
+Edit the display name, description, public email, location, or website of an organization.
+At least one profile field must be supplied; only explicitly supplied fields are sent.
+Name cannot be empty; pass an empty string to clear description, email, location,
+or website. This does not rename
+the organization path. --website maps to html_url, the profile's website field.
+All updates require confirmation unless --yes is supplied. PATCH requests are
+never automatically retried or redirected. The response identity is checked;
+submitted fields are shown without claiming an independent profile readback.
+If the result cannot be confirmed, check AtomGit before retrying.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--email` | Public email address (empty clears) | `` | local |
+| `--json` | Output acknowledged identity and submitted fields as JSON | `false` | local |
+| `--location` | Organization location (empty clears) | `` | local |
+| `--name` | Organization display name (non-empty; does not change path) | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `--website` | Organization website, sent as html_url (empty clears) | `` | local |
+| `-d, --description` | Organization description (empty clears) | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip update confirmation | `false` | local |
+
+### Example
+
+```bash
+ag-cli org edit my-team --name 'My Team' --description 'Team projects'
+ag-cli org edit my-team --email '' --location Wuhan --yes
+ag-cli org edit my-team --website www.example.com --json --yes
+```
+
+
 ## ag-cli org followers
 
 Usage: `ag-cli org followers <org> [flags]`
@@ -3010,6 +3060,96 @@ List organizations for the authenticated user
 ag-cli org list
 ag-cli org list --limit 100
 ag-cli org list --json
+```
+
+
+## ag-cli org member
+
+Usage: `ag-cli org member`
+
+Invite or remove organization members
+
+Invite users to an organization or remove organization members.
+
+Use "ag-cli org members <org>" to list members. These commands manage
+organization membership, not repository collaborators or enterprise members.
+They do not provide an interface to edit an existing member's role.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli org member invite
+
+Usage: `ag-cli org member invite <org> <username> [flags]`
+
+Invite a user to an organization
+
+Submit an invitation with pull, push, admin, or customized permission.
+
+Permission defaults to push. Customized permission requires a non-empty
+--role-id; --role-id is not accepted with other permissions.
+Confirm the organization, username and requested permission with y or yes,
+or pass --yes. Empty input, EOF or another answer cancels without a request.
+Success means the invitation request was sent, not that the user accepted it.
+Writes are not automatically retried or redirected; check AtomGit before
+retrying an uncertain result.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--permission` | Requested permission: pull, push, admin, or customized | `push` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--role-id` | Custom role ID (required only for customized permission) | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip invitation confirmation | `false` | local |
+
+### Example
+
+```bash
+ag-cli org member invite my-org alice
+ag-cli org member invite my-org alice --permission pull --yes
+ag-cli org member invite my-org alice --permission customized --role-id role-123
+```
+
+
+## ag-cli org member remove
+
+Usage: `ag-cli org member remove <org> <username> [flags]`
+
+Remove a member from an organization
+
+Remove a user from the explicitly named organization.
+
+Confirm with y or yes, or pass --yes. Empty input, EOF or another answer
+cancels without a request. This affects organization membership, not a
+repository collaborator or an enterprise member. Writes are not automatically
+retried or redirected; check AtomGit before retrying an uncertain result.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip removal confirmation | `false` | local |
+
+### Example
+
+```bash
+ag-cli org member remove my-org alice
+ag-cli org member remove my-org alice --yes
 ```
 
 
@@ -3409,7 +3549,7 @@ Usage: `ag-cli pr comment`
 
 Manage pull request comments
 
-Create, view, edit, delete, and reply to pull request comments.
+Create, view, edit, delete, and reply to pull request comments, and resolve or unresolve review discussions.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -3506,6 +3646,62 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--token` | Use an access token for this command only | `` | inherited |
 | `-b, --body` | Reply body text | `` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli pr comment resolve
+
+Usage: `ag-cli pr comment resolve [<owner>/<repo>] <number> <discussion-id> [flags]`
+
+Resolve a PR review discussion
+
+Set the resolved state of a PR review discussion using its discussion_id, not its numeric comment/note ID. Get the discussion_id from pr comment view. Requires authentication and confirmation unless --yes is supplied. The PR and review discussion are verified before writing; success is reported only after reading back the requested state. Writes are never automatically retried or redirected.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip confirmation prompt | `false` | local |
+
+### Example
+
+```bash
+ag-cli pr comment resolve owner/repo 123 discussion-id --yes
+ag-cli pr comment resolve 123 discussion-id
+```
+
+
+## ag-cli pr comment unresolve
+
+Usage: `ag-cli pr comment unresolve [<owner>/<repo>] <number> <discussion-id> [flags]`
+
+Unresolve a PR review discussion
+
+Set the resolved state of a PR review discussion using its discussion_id, not its numeric comment/note ID. Get the discussion_id from pr comment view. Requires authentication and confirmation unless --yes is supplied. The PR and review discussion are verified before writing; success is reported only after reading back the requested state. Writes are never automatically retried or redirected.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip confirmation prompt | `false` | local |
+
+### Example
+
+```bash
+ag-cli pr comment unresolve owner/repo 123 discussion-id --yes
+ag-cli pr comment unresolve 123 discussion-id
+```
 
 
 ## ag-cli pr comment view
@@ -4196,7 +4392,7 @@ Usage: `ag-cli repo`
 
 Manage repositories
 
-Create, clone, edit, fork, sync, transfer, view, browse contents, and manage repository collaborators and webhooks. Use `ag-cli repo fork list` to inspect existing forks; `ag-cli repo fork` creates a fork.
+Create, clone, edit, archive or unarchive organization repositories, fork, sync, transfer, view, browse contents, and manage repository collaborators and webhooks. Use `ag-cli repo fork list` to inspect existing forks; `ag-cli repo fork` creates a fork.
 
 For repository-scoped commands, OWNER/REPO may be omitted and inferred from the current Git repository.
 
@@ -4208,6 +4404,38 @@ For repository-scoped commands, OWNER/REPO may be omitted and inferred from the 
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli repo archive
+
+Usage: `ag-cli repo archive [<org>/<repo>] [flags]`
+
+Archive an organization repository
+
+Set the archive state of an organization-owned repository. Personal repositories are not supported by this endpoint. Archive sends integer status=2; unarchive sends status=0. The repository and target state are shown before confirmation; --yes skips only confirmation. Password is optional: use --with-password for hidden terminal input, or --yes --password-stdin for standard input. No plaintext password flag is provided. Writes are never automatically retried or redirected. Success requires HTTP 200, business code 0, and a non-null string msg; an uncertain result must be checked on AtomGit before retrying.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--password-stdin` | Read an optional account password from standard input (requires --yes) | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `--with-password` | Read an optional account password from a hidden terminal prompt | `false` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip the confirmation prompt | `false` | local |
+
+### Example
+
+```bash
+ag-cli repo archive my-org/demo
+ag-cli repo archive my-org/demo --yes
+ag-cli repo archive my-org/demo --with-password
+printf '%s\n' "$PASSWORD" | ag-cli repo archive my-org/demo --yes --password-stdin
+```
 
 
 ## ag-cli repo cla
@@ -5537,6 +5765,38 @@ printf '%s\n' "$PASSWORD" | ag-cli repo transfer source-organization/repo --to t
 ```
 
 
+## ag-cli repo unarchive
+
+Usage: `ag-cli repo unarchive [<org>/<repo>] [flags]`
+
+Unarchive an organization repository
+
+Set the archive state of an organization-owned repository. Personal repositories are not supported by this endpoint. Archive sends integer status=2; unarchive sends status=0. The repository and target state are shown before confirmation; --yes skips only confirmation. Password is optional: use --with-password for hidden terminal input, or --yes --password-stdin for standard input. No plaintext password flag is provided. Writes are never automatically retried or redirected. Success requires HTTP 200, business code 0, and a non-null string msg; an uncertain result must be checked on AtomGit before retrying.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--password-stdin` | Read an optional account password from standard input (requires --yes) | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `--with-password` | Read an optional account password from a hidden terminal prompt | `false` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip the confirmation prompt | `false` | local |
+
+### Example
+
+```bash
+ag-cli repo unarchive my-org/demo
+ag-cli repo unarchive my-org/demo --yes
+ag-cli repo unarchive my-org/demo --with-password
+printf '%s\n' "$PASSWORD" | ag-cli repo unarchive my-org/demo --yes --password-stdin
+```
+
+
 ## ag-cli repo view
 
 Usage: `ag-cli repo view [<owner>/<repo>] [flags]`
@@ -6515,7 +6775,7 @@ Usage: `ag-cli user`
 
 View AtomGit users, repositories, namespaces, and activity
 
-View AtomGit user profiles, email addresses, starred and watched repositories, authenticated namespaces, and personal activity events.
+View AtomGit user profiles, followers, email addresses, starred and watched repositories, authenticated namespaces, and personal activity events.
 
 ### Flags
 
@@ -6617,6 +6877,34 @@ ag-cli user events
 ag-cli user events alice
 ag-cli user events alice --year 2026 --limit 50
 ag-cli user events alice --json
+```
+
+
+## ag-cli user followers
+
+Usage: `ag-cli user followers <username> [flags]`
+
+List followers of a user
+
+List followers of an explicitly specified user. Uses authentication when configured; otherwise reads publicly available followers anonymously. The limit applies across all pages.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--json` | Output followers as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-L, --limit` | Maximum total number of followers to list | `30` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli user followers alice
+ag-cli user followers alice --limit 100
+ag-cli user followers alice --json
 ```
 
 

@@ -109,3 +109,11 @@ func TestRepositoryPermissionsCancellation(t *testing.T) {
 		t.Fatal("token exposed")
 	}
 }
+
+func TestRepositoryPermissionsNullActionDiagnostic(t *testing.T) {
+	result := RepositoryPermissions{"role_info": json.RawMessage(`{}`), "resource_trees": json.RawMessage(`[{"actions":[null]}]`)}
+	err := validateRepositoryPermissions(result)
+	if err == nil || err.Error() != "resource_trees[0].actions[0] must be an object" {
+		t.Fatalf("unexpected diagnostic: %v", err)
+	}
+}

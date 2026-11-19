@@ -42,13 +42,15 @@ func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "repo",
 		Short: "Manage repositories",
-		Long:  "Create, clone, edit, fork, sync, transfer, view, browse contents, and manage repository collaborators and webhooks. Use `ag-cli repo fork list` to inspect existing forks; `ag-cli repo fork` creates a fork.\n\nFor repository-scoped commands, OWNER/REPO may be omitted and inferred from the current Git repository.",
+		Long:  "Create, clone, edit, archive or unarchive organization repositories, fork, sync, transfer, view, browse contents, and manage repository collaborators and webhooks. Use `ag-cli repo fork list` to inspect existing forks; `ag-cli repo fork` creates a fork.\n\nFor repository-scoped commands, OWNER/REPO may be omitted and inferred from the current Git repository.",
 	}
 
 	cmd.AddCommand(newCmdRepoList(f))
 	cmd.AddCommand(newCmdRepoView(f))
 	cmd.AddCommand(newCmdRepoCreate(f))
 	cmd.AddCommand(newCmdRepoEdit(f))
+	cmd.AddCommand(newCmdRepoArchive(f, true))
+	cmd.AddCommand(newCmdRepoArchive(f, false))
 	cmd.AddCommand(newCmdRepoPushRule(f))
 	cmd.AddCommand(newCmdRepoPolicy(f))
 	cmd.AddCommand(newCmdRepoPermissions(f))
