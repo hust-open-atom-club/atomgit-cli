@@ -95,6 +95,10 @@ ag-cli repo list --token "$TOKEN" --base-url "$BASE_URL"
 
 `ag-cli auth status [--json]` 只读检查当前活动凭据，不迁移旧格式、不修正文件权限，也不刷新或切换账号；配置损坏仍会输出状态结果并返回非零。加上 `--verify` 才会请求 v5 `/user` 验证身份（30 秒超时），不会据此推断其他资源的访问权限。状态输出完全省略令牌及其片段；字段和退出码见[认证命令说明](usage.md#认证)。
 
+### 组织仓库归档的可选密码
+
+`repo archive/unarchive` 通过既有访问令牌认证，默认不发送账户密码。部署需要额外密码时，`--with-password` 从交互终端隐藏读取；自动化使用 `--yes --password-stdin`，不要把密码放在命令行参数中。密码只保存在本次进程内存并放入该次 PUT 的 JSON 请求体，不写入配置、日志或仓库 URL。服务端业务消息和完整失败响应不会显示；归档写入不自动重试或跟随重定向，失败时应先核对远端状态。详见[归档命令说明](usage.md#仓库-repo)。
+
 ### 认证 HTTPS 克隆的凭据使用
 
 `ag-cli repo clone` 在克隆 URL 使用 `https://` 且主机为一级 AtomGit 域名（`atomgit.com` 或其 `gitcode.com` 镜像）时，会自动把当前激活账号存储的访问令牌交给 git 完成认证，无需手动输入用户名或令牌：

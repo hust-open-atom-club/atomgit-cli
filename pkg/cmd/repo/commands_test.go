@@ -41,6 +41,8 @@ func repoFactory(config repoCommandConfig, transport forkRoundTripFunc) *cmdutil
 func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 	cmd := NewCmdRepo(&cmdutil.Factory{})
 	want := map[string][]string{
+		"archive":   {"yes", "password-stdin", "with-password"},
+		"unarchive": {"yes", "password-stdin", "with-password"},
 		"clone":     {"branch"},
 		"content":   nil,
 		"create":    {"clone", "description", "private", "public"},
@@ -1017,6 +1019,8 @@ func TestRepoInteractiveCommandsAuthenticateBeforePrompt(t *testing.T) {
 		configure func(*cobra.Command)
 		args      []string
 	}{
+		{name: "archive", new: func(f *cmdutil.Factory) *cobra.Command { return newCmdRepoArchive(f, true) }, args: []string{"team/demo"}},
+		{name: "unarchive", new: func(f *cmdutil.Factory) *cobra.Command { return newCmdRepoArchive(f, false) }, args: []string{"team/demo"}},
 		{
 			name: "edit",
 			new:  newCmdRepoEdit,
@@ -1038,6 +1042,7 @@ func TestRepoInteractiveCommandsAuthenticateBeforePrompt(t *testing.T) {
 			cmd.SetIn(strings.NewReader("yes\n"))
 			var output bytes.Buffer
 			cmd.SetOut(&output)
+			cmd.SetErr(&output)
 
 			err := cmd.RunE(cmd, tt.args)
 			if err == nil || !strings.Contains(err.Error(), config.ErrNotAuthenticated.Error()) {
