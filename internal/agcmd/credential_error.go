@@ -27,6 +27,29 @@ func renderDiagnostic(w io.Writer, d commandDiagnostic) {
 }
 
 func credentialDiagnostic(err error) (commandDiagnostic, bool) {
+	//nolint:errorlint // Match the selected save failure, not its causes.
+	if save, ok := err.(*config.CredentialSaveError); ok {
+		d := commandDiagnostic{
+			summary: "Unable to save credentials.",
+			detail:  fmt.Sprintf("Failed to %s.", save.Stage),
+		}
+		if save.Path != "" {
+			d.detail += fmt.Sprintf("\nPath: %q.", save.Path)
+		}
+		if save.CloseErr != nil {
+			d.detail += "\nClosing the temporary credential file also failed."
+		}
+		if save.RemoveErr != nil {
+			d.detail += "\nRemoving the temporary credential file also failed. It may still be present."
+		}
+		switch {
+		case save.Stage == config.CredentialSaveLocate:
+			d.hint = "Check the home directory and XDG_CONFIG_HOME settings."
+		case errors.Is(save.Err, os.ErrPermission):
+			d.hint = "Check ownership and write permissions for the affected path and its parent directory."
+		}
+		return d, true
+	}
 	//nolint:errorlint // Only the selected operation supplies access facts, not an inner cause.
 	if access, ok := err.(*config.CredentialAccessError); ok {
 		d := commandDiagnostic{summary: "Unable to read credentials."}
@@ -38,6 +61,17 @@ func credentialDiagnostic(err error) (commandDiagnostic, bool) {
 			if errors.Is(access.Err, os.ErrPermission) {
 				d.hint = "Check the file and parent directory ownership and read permissions."
 			}
+		}
+		return d, true
+	}
+	//nolint:errorlint // Match the selected error without searching its causes.
+	if repair, ok := err.(*config.CredentialPermissionRepairError); ok {
+		d := commandDiagnostic{
+			summary: "Unable to secure the credential file.",
+			detail:  fmt.Sprintf("Credential file: %q.", repair.Path),
+		}
+		if errors.Is(repair.Err, os.ErrPermission) {
+			d.hint = "Check the file ownership and permission to change its mode."
 		}
 		return d, true
 	}
