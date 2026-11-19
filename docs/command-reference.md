@@ -112,6 +112,7 @@
 - [ag-cli org discussion edit](#ag-cli-org-discussion-edit) — Edit an organization discussion
 - [ag-cli org discussion list](#ag-cli-org-discussion-list) — List organization discussions
 - [ag-cli org discussion view](#ag-cli-org-discussion-view) — View an organization discussion
+- [ag-cli org edit](#ag-cli-org-edit) — Edit an organization profile
 - [ag-cli org followers](#ag-cli-org-followers) — List organization followers
 - [ag-cli org list](#ag-cli-org-list) — List organizations for the authenticated user
 - [ag-cli org member](#ag-cli-org-member) — Invite or remove organization members
@@ -2589,7 +2590,7 @@ Usage: `ag-cli org`
 
 Manage organizations
 
-Create organizations, list organizations associated with your AtomGit account, invite or remove members, inspect organization details, members, followers, repositories, Actions runner groups, and runner job history, and manage organization discussions.
+Create and edit organizations, list organizations associated with your AtomGit account, invite or remove members, inspect organization details, members, followers, repositories, Actions runner groups, and runner job history, and manage organization discussions.
 
 ### Flags
 
@@ -2958,6 +2959,47 @@ Hidden, deleted, and empty bodies are shown as explicit placeholders.
 ag-cli org discussion view my-organization 1
 ag-cli org discussion view my-organization 1 --comments
 ag-cli org discussion view my-organization 1 --comments --json
+```
+
+
+## ag-cli org edit
+
+Usage: `ag-cli org edit <org> [flags]`
+
+Edit an organization profile
+
+Edit the display name, description, public email, location, or website of an organization.
+At least one profile field must be supplied; only explicitly supplied fields are sent.
+Name cannot be empty; pass an empty string to clear description, email, location,
+or website. This does not rename
+the organization path. --website maps to html_url, the profile's website field.
+All updates require confirmation unless --yes is supplied. PATCH requests are
+never automatically retried or redirected. The response identity is checked;
+submitted fields are shown without claiming an independent profile readback.
+If the result cannot be confirmed, check AtomGit before retrying.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--email` | Public email address (empty clears) | `` | local |
+| `--json` | Output acknowledged identity and submitted fields as JSON | `false` | local |
+| `--location` | Organization location (empty clears) | `` | local |
+| `--name` | Organization display name (non-empty; does not change path) | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `--website` | Organization website, sent as html_url (empty clears) | `` | local |
+| `-d, --description` | Organization description (empty clears) | `` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip update confirmation | `false` | local |
+
+### Example
+
+```bash
+ag-cli org edit my-team --name 'My Team' --description 'Team projects'
+ag-cli org edit my-team --email '' --location Wuhan --yes
+ag-cli org edit my-team --website www.example.com --json --yes
 ```
 
 
