@@ -85,7 +85,11 @@ func TestRepoArchiveCancellationAndValidationSendNoRequests(t *testing.T) {
 		{"conflicting passwords", []string{"team/demo", "--yes", "--password-stdin", "--with-password"}, "secret", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			cmd := newCmdRepoArchive(&cmdutil.Factory{HttpClient: func() (*http.Client, error) { t.Fatal("unexpected client"); return nil, nil }}, true)
+			factory := repoFactory(repoCommandConfig{token: "token"}, forkRoundTripFunc(func(*http.Request) (*http.Response, error) {
+				t.Fatal("unexpected request")
+				return nil, nil
+			}))
+			cmd := newCmdRepoArchive(factory, true)
 			cmd.SilenceErrors = true
 			cmd.SetOut(io.Discard)
 			cmd.SetErr(io.Discard)

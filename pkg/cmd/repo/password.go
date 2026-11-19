@@ -20,14 +20,7 @@ func readRepositoryPassword(cmd *cobra.Command, fromStdin bool, purpose string) 
 		if err != nil {
 			return "", fmt.Errorf("read %s password from stdin: %w", purpose, err)
 		}
-		if len(contents) > maxRepositoryPasswordBytes {
-			return "", fmt.Errorf("%s password from stdin exceeds %d bytes", purpose, maxRepositoryPasswordBytes)
-		}
-		password := strings.TrimSuffix(strings.TrimSuffix(string(contents), "\n"), "\r")
-		if password == "" {
-			return "", fmt.Errorf("%s password must not be empty", purpose)
-		}
-		return password, nil
+		return parseRepositoryPassword(contents, true, purpose)
 	}
 
 	file, ok := cmd.InOrStdin().(*os.File)
@@ -42,8 +35,23 @@ func readRepositoryPassword(cmd *cobra.Command, fromStdin bool, purpose string) 
 	if err != nil {
 		return "", fmt.Errorf("read %s password: %w", purpose, err)
 	}
-	if len(contents) == 0 {
+	return parseRepositoryPassword(contents, false, purpose)
+}
+
+func parseRepositoryPassword(contents []byte, fromStdin bool, purpose string) (string, error) {
+	if len(contents) > maxRepositoryPasswordBytes {
+		source := "terminal"
+		if fromStdin {
+			source = "stdin"
+		}
+		return "", fmt.Errorf("%s password from %s exceeds %d bytes", purpose, source, maxRepositoryPasswordBytes)
+	}
+	password := string(contents)
+	if fromStdin {
+		password = strings.TrimSuffix(strings.TrimSuffix(password, "\n"), "\r")
+	}
+	if password == "" {
 		return "", fmt.Errorf("%s password must not be empty", purpose)
 	}
-	return string(contents), nil
+	return password, nil
 }

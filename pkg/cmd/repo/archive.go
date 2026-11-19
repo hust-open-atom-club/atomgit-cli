@@ -39,6 +39,10 @@ func newCmdRepoArchive(f *cmdutil.Factory, archived bool) *cobra.Command {
 			if opts.WithPassword && opts.PasswordStdin {
 				return fmt.Errorf("--with-password and --password-stdin are mutually exclusive")
 			}
+			client, err := f.AuthenticatedAPIClient()
+			if err != nil {
+				return err
+			}
 			if _, err := fmt.Fprintf(cmd.OutOrStdout(), "Repository: %s\nTarget archive state: %s (status=%d)\n", repository, state, status); err != nil {
 				return err
 			}
@@ -51,10 +55,6 @@ func newCmdRepoArchive(f *cmdutil.Factory, archived bool) *cobra.Command {
 					_, err := fmt.Fprintln(cmd.OutOrStdout(), "Repository archive update canceled.")
 					return err
 				}
-			}
-			client, err := f.AuthenticatedAPIClient()
-			if err != nil {
-				return err
 			}
 			var source api.Repository
 			if err := client.Get(api.RepositoryPath(repository.Owner, repository.Name), &source); err != nil {
