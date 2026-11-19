@@ -55,6 +55,55 @@ type FileDecodeError struct {
 func (e *FileDecodeError) Error() string { return e.Err.Error() }
 func (e *FileDecodeError) Unwrap() error { return e.Err }
 
+// CredentialSaveStage identifies the operation that failed while saving credentials.
+type CredentialSaveStage string
+
+const (
+	CredentialSaveLocate     CredentialSaveStage = "locate file"
+	CredentialSaveMkdir      CredentialSaveStage = "create directory"
+	CredentialSaveEncode     CredentialSaveStage = "encode data"
+	CredentialSaveCreateTemp CredentialSaveStage = "create temporary file"
+	CredentialSaveSetMode    CredentialSaveStage = "set temporary file permissions"
+	CredentialSaveWrite      CredentialSaveStage = "write temporary file"
+	CredentialSaveSync       CredentialSaveStage = "sync temporary file"
+	CredentialSaveClose      CredentialSaveStage = "close temporary file"
+	CredentialSaveReplace    CredentialSaveStage = "replace file"
+)
+
+// CredentialSaveError keeps the primary failure and any temporary file cleanup failures.
+type CredentialSaveError struct {
+	Stage     CredentialSaveStage
+	Path      string
+	Err       error
+	CloseErr  error
+	RemoveErr error
+}
+
+func (e *CredentialSaveError) Error() string {
+	operation := string(e.Stage)
+	if e.Path != "" {
+		operation = fmt.Sprintf("%s %q", operation, e.Path)
+	}
+	message := fmt.Sprintf("save credentials: %s: %v", operation, e.Err)
+	if e.CloseErr != nil {
+		message += fmt.Sprintf("\nclose temporary credential file: %v", e.CloseErr)
+	}
+	if e.RemoveErr != nil {
+		message += "\n" + e.RemoveErr.Error()
+	}
+	return message
+}
+
+func (e *CredentialSaveError) Unwrap() []error {
+	var causes []error
+	for _, err := range []error{e.Err, e.CloseErr, e.RemoveErr} {
+		if err != nil {
+			causes = append(causes, err)
+		}
+	}
+	return causes
+}
+
 // CredentialAccessError records a failed credential source lookup or read.
 // Operation and Path describe the attempted access; Err retains its cause.
 type CredentialAccessError struct {
