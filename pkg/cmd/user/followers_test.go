@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestUserFollowersOutput(t *testing.T) {
 					if (r.Header.Get("Authorization") == "") != anonymous {
 						t.Fatal("unexpected authorization")
 					}
-					return userResponse(200, `[{"id":"0009007199254740993","login":"bob","name":"B\tC\nD\rE\\F","type":"User","html_url":"","avatar_url":null}]`), nil
+					return userResponse(200, `[{"id":"0009007199254740993","login":"bob","name":"B\tC\nD\rE\\F","type":"User","html_url":"https://atomgit.com/bob","avatar_url":"https://cdn.example/bob.png"}]`), nil
 				})
 				cmd := newCmdUserFollowers(f)
 				var out bytes.Buffer
@@ -45,10 +46,11 @@ func TestUserFollowersOutput(t *testing.T) {
 					if err := json.Unmarshal(out.Bytes(), &items); err != nil {
 						t.Fatal(err)
 					}
-					if len(items) != 1 || len(items[0]) != 6 || items[0]["id"] != "0009007199254740993" || items[0]["avatarUrl"] != "" || items[0]["url"] != "" {
+					want := []map[string]any{{"id": "0009007199254740993", "login": "bob", "name": "B\tC\nD\rE\\F", "type": "User", "url": "https://atomgit.com/bob", "avatarUrl": "https://cdn.example/bob.png"}}
+					if !reflect.DeepEqual(items, want) {
 						t.Fatalf("output=%s", out.String())
 					}
-				} else if out.String() != "ID\tLOGIN\tNAME\tTYPE\tURL\n0009007199254740993\tbob\tB\\tC\\nD\\rE\\\\F\tUser\t\n" {
+				} else if out.String() != "ID\tLOGIN\tNAME\tTYPE\tURL\n0009007199254740993\tbob\tB\\tC\\nD\\rE\\\\F\tUser\thttps://atomgit.com/bob\n" {
 					t.Fatalf("output=%q", out.String())
 				}
 			})

@@ -2,8 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"testing"
 )
@@ -49,20 +51,22 @@ func TestListUserFollowersResponseContract(t *testing.T) {
 	for _, tt := range []struct {
 		name, body string
 		status     int
-		fail       bool
+		want       []UserFollower
 	}{
-		{"empty", "[]", 200, false},
-		{"nullable fields", `[{"id":"9007199254740993123","login":null,"name":null,"avatar_url":null}]`, 200, false},
-		{"null", "null", 200, true},
-		{"null item", "[null]", 200, true},
-		{"object", "{}", 200, true},
-		{"numeric ID", `[{"id":123}]`, 200, true},
-		{"malformed", "[", 200, true},
-		{"created", "[]", 201, true},
-		{"unauthorized", "{}", 401, true},
-		{"forbidden", "{}", 403, true},
-		{"not found", "{}", 404, true},
-		{"rate limited", "{}", 429, true},
+		{"empty", "[]", 200, []UserFollower{}},
+		{"nullable fields", `[{"id":"9007199254740993123","login":null,"name":null,"type":null,"html_url":null,"avatar_url":null}]`, 200, []UserFollower{{ID: "9007199254740993123"}}},
+		{"nullable ID", `[{"id":null,"login":"bob"}]`, 200, []UserFollower{{Login: "bob"}}},
+		{"field mapping", `[{"id":"000496","login":"bob","name":"Bob","type":"User","html_url":"https://atomgit.com/bob","avatar_url":"https://cdn.example/bob.png"}]`, 200, []UserFollower{{ID: "000496", Login: "bob", Name: "Bob", Type: "User", HTMLURL: "https://atomgit.com/bob", AvatarURL: "https://cdn.example/bob.png"}}},
+		{"null", "null", 200, nil},
+		{"null item", "[null]", 200, nil},
+		{"object", "{}", 200, nil},
+		{"numeric ID", `[{"id":123}]`, 200, nil},
+		{"malformed", "[", 200, nil},
+		{"created", "[]", 201, nil},
+		{"unauthorized", "{}", 401, nil},
+		{"forbidden", "{}", 403, nil},
+		{"not found", "{}", 404, nil},
+		{"rate limited", "{}", 429, nil},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -71,14 +75,21 @@ func TestListUserFollowersResponseContract(t *testing.T) {
 				_, _ = w.Write([]byte(tt.body))
 			})
 			items, err := ListUserFollowers(client, "alice", 30)
-			if (err != nil) != tt.fail {
-				t.Fatalf("items=%#v error=%v", items, err)
+			if tt.want == nil {
+				if err == nil || items != nil {
+					t.Fatalf("items=%#v error=%v", items, err)
+				}
+				if tt.status != http.StatusOK {
+					if !IsHTTPStatus(err, tt.status) {
+						t.Fatalf("lost HTTP status %d: %v", tt.status, err)
+					}
+				} else if !errors.Is(err, ErrInvalidResponse) {
+					t.Fatalf("expected invalid response error: %v", err)
+				}
+				return
 			}
-			if !tt.fail && items == nil {
-				t.Fatal("empty result must be a non-nil slice")
-			}
-			if tt.name == "nullable fields" && items[0].ID != "9007199254740993123" {
-				t.Fatal("ID changed")
+			if err != nil || !reflect.DeepEqual(items, tt.want) {
+				t.Fatalf("items=%#v want=%#v error=%v", items, tt.want, err)
 			}
 		})
 	}
