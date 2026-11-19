@@ -99,6 +99,41 @@ func TestBuildAuthorizeURL(t *testing.T) {
 	}
 }
 
+func TestAuthorizeURLForTerminal(t *testing.T) {
+	urlText := "https://atomgit.com/oauth/authorize?client_id=example&state=abc"
+	linked := "\x1b]8;;" + urlText + "\x1b\\" + urlText + "\x1b]8;;" + "\x1b\\"
+	getenv := func(values map[string]string) func(string) string {
+		return func(key string) string { return values[key] }
+	}
+
+	for _, tc := range []struct {
+		name       string
+		rawURL     string
+		isTerminal bool
+		goos       string
+		termName   string
+		env        map[string]string
+		want       string
+	}{
+		{"non-terminal", urlText, false, "linux", "xterm-256color", nil, urlText},
+		{"dumb terminal", urlText, true, "linux", "dumb", nil, urlText},
+		{"missing TERM", urlText, true, "linux", "", nil, urlText},
+		{"linux terminal", urlText, true, "linux", "xterm-256color", nil, linked},
+		{"windows terminal", urlText, true, "windows", "xterm-256color", map[string]string{"WT_SESSION": "session"}, linked},
+		{"windows VS Code", urlText, true, "windows", "xterm-256color", map[string]string{"TERM_PROGRAM": "vscode"}, linked},
+		{"windows ConEmu", urlText, true, "windows", "xterm-256color", map[string]string{"ConEmuANSI": "ON"}, linked},
+		{"legacy windows console", urlText, true, "windows", "xterm-256color", nil, urlText},
+		{"control character", "https://atomgit.com/\n", true, "linux", "xterm-256color", nil, "https://atomgit.com/\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := authorizeURLForTerminal(tc.rawURL, tc.isTerminal, tc.goos, tc.termName, getenv(tc.env))
+			if got != tc.want {
+				t.Fatalf("link = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestRandomState(t *testing.T) {
 	first, err := randomState()
 	if err != nil {
