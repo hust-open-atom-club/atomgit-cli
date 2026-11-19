@@ -55,6 +55,55 @@ type FileDecodeError struct {
 func (e *FileDecodeError) Error() string { return e.Err.Error() }
 func (e *FileDecodeError) Unwrap() error { return e.Err }
 
+// CredentialSaveStage identifies the operation that failed while saving credentials.
+type CredentialSaveStage string
+
+const (
+	CredentialSaveLocate     CredentialSaveStage = "locate file"
+	CredentialSaveMkdir      CredentialSaveStage = "create directory"
+	CredentialSaveEncode     CredentialSaveStage = "encode data"
+	CredentialSaveCreateTemp CredentialSaveStage = "create temporary file"
+	CredentialSaveSetMode    CredentialSaveStage = "set temporary file permissions"
+	CredentialSaveWrite      CredentialSaveStage = "write temporary file"
+	CredentialSaveSync       CredentialSaveStage = "sync temporary file"
+	CredentialSaveClose      CredentialSaveStage = "close temporary file"
+	CredentialSaveReplace    CredentialSaveStage = "replace file"
+)
+
+// CredentialSaveError keeps the primary failure and any temporary file cleanup failures.
+type CredentialSaveError struct {
+	Stage     CredentialSaveStage
+	Path      string
+	Err       error
+	CloseErr  error
+	RemoveErr error
+}
+
+func (e *CredentialSaveError) Error() string {
+	operation := string(e.Stage)
+	if e.Path != "" {
+		operation = fmt.Sprintf("%s %q", operation, e.Path)
+	}
+	message := fmt.Sprintf("save credentials: %s: %v", operation, e.Err)
+	if e.CloseErr != nil {
+		message += fmt.Sprintf("\nclose temporary credential file: %v", e.CloseErr)
+	}
+	if e.RemoveErr != nil {
+		message += "\n" + e.RemoveErr.Error()
+	}
+	return message
+}
+
+func (e *CredentialSaveError) Unwrap() []error {
+	var causes []error
+	for _, err := range []error{e.Err, e.CloseErr, e.RemoveErr} {
+		if err != nil {
+			causes = append(causes, err)
+		}
+	}
+	return causes
+}
+
 // CredentialAccessError records a failed credential source lookup or read.
 // Operation and Path describe the attempted access; Err retains its cause.
 type CredentialAccessError struct {
@@ -72,6 +121,18 @@ func (e *CredentialAccessError) Error() string {
 
 func (e *CredentialAccessError) Unwrap() error        { return e.Err }
 func (e *CredentialAccessError) Is(target error) bool { return target == ErrCredentialAccess }
+
+// CredentialPermissionRepairError records a failed attempt to secure a credential file.
+type CredentialPermissionRepairError struct {
+	Path string
+	Err  error
+}
+
+func (e *CredentialPermissionRepairError) Error() string {
+	return fmt.Sprintf("cannot secure token file %q: %v", e.Path, e.Err)
+}
+
+func (e *CredentialPermissionRepairError) Unwrap() error { return e.Err }
 
 // CredentialFileSafetyError records a credential file rejected by a safety check.
 // Err retains the specific rejection reason independently of CLI guidance.
@@ -133,15 +194,6 @@ func (e *TokenPermissionError) Unwrap() error {
 // isPermissionErr reports whether err is a permission-related error.
 func isPermissionErr(err error) bool {
 	return errors.Is(err, os.ErrPermission) || errors.Is(err, syscall.EACCES) || errors.Is(err, syscall.EPERM)
-}
-
-// tokenSecurePermissionError returns an error indicating that the token file
-// could not be secured (e.g., Chmod failed).
-func tokenSecurePermissionError(path string, err error) error {
-	return permissionError(
-		"cannot secure token file", path, err,
-		"make sure the file is owned by the current user",
-	)
 }
 
 // permissionError formats a permission-related error with a hint message.
