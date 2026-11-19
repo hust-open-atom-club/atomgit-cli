@@ -29,6 +29,9 @@ func executePermissions(t *testing.T, f *cmdutil.Factory, args ...string) (strin
 }
 
 func TestRepoPermissionsContextAndOutput(t *testing.T) {
+	// RawMessage preserves JSON escapes, so send a literal DEL byte to exercise
+	// the output escaping instead of relying on an already escaped fixture.
+	responseBody := strings.ReplaceAll(repoPermissionsFixture, `\u007f`, "\x7f")
 	for _, explicit := range []bool{false, true} {
 		for _, asJSON := range []bool{false, true} {
 			t.Run(fmt.Sprintf("explicit=%t/json=%t", explicit, asJSON), func(t *testing.T) {
@@ -36,7 +39,7 @@ func TestRepoPermissionsContextAndOutput(t *testing.T) {
 					if r.Method != "GET" || r.URL.Path != "/api/v5/repos/team/demo/collaborators/self-permission" || r.URL.RawQuery != "" || r.Header.Get("Authorization") != "Bearer synthetic" {
 						t.Fatalf("unexpected request: %s %s", r.Method, r.URL)
 					}
-					return 200, repoPermissionsFixture
+					return 200, responseBody
 				})
 				f.RepositoryResolver = func() (cmdutil.Repository, error) {
 					if explicit {
