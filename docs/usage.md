@@ -559,6 +559,8 @@ ag-cli org runner-job-history hust-open-atom-club \
 
 `view` 输出组织路径、名称、可见性、描述和公开 URL。`members` 与 `repos` 支持分页，并在认证和网络请求前校验 `--limit`；空结果的 JSON 输出为 `[]`。仓库输出还包含描述、默认分支、主要语言、Star、Fork 和更新时间。
 
+`ag-cli org member` 不带子命令时显示帮助；漏写或拼错子命令并传入其他参数时返回非零退出码，不执行成员写操作。
+
 `ag-cli org member invite <org> <username>` 与 `remove <org> <username>` 要求认证并显式指定组织路径和用户名，不从 Git remote 推断。`invite` 的 `--permission` 支持 `pull`、`push`、`admin`、`customized`，默认 `push`；`customized` 必须提供非空 `--role-id`，其他权限不得传入该选项。参数在确认与认证前校验。这两个命令仅管理组织成员，不管理仓库协作者、企业成员或修改现有成员角色；原有 `org members` 列表命令保持不变。
 
 两个写命令默认显示组织和用户名并要求输入 `y` 或 `yes` 确认；邀请还显示请求的权限及自定义角色 ID。空输入、EOF 或其他回答取消操作且不发请求；`--yes`（`-y`）跳过确认。命令分别调用 API v5 `POST` / `DELETE /orgs/{org}/memberships/{username}`，只接受 HTTP 200（允许空响应），不会自动重试或跟随重定向。邀请成功仅表示服务端接收了邀请请求，不表示用户已经接受邀请或成为正式成员。失败时返回非零退出码；结果不确定时应先在 AtomGit 核实状态，再决定是否重试。

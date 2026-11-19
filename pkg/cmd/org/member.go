@@ -24,8 +24,17 @@ func newCmdOrgMember(f *cmdutil.Factory) *cobra.Command {
 Use "ag-cli org members <org>" to list members. These commands manage
 organization membership, not repository collaborators or enterprise members.
 They do not provide an interface to edit an existing member's role.`,
+		Args:         cobra.NoArgs,
+		SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmd.Help()
+		},
 	}
 	cmd.AddCommand(newCmdOrgMemberInvite(f), newCmdOrgMemberRemove(f))
+	commandschema.Annotate(cmd, commandschema.Metadata{
+		Positionals: &commandschema.Positionals{MinCount: 0, MaxCount: 0},
+		Output:      "text", Effects: "none",
+	})
 	return cmd
 }
 

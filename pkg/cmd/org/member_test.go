@@ -110,6 +110,7 @@ func TestOrgMemberCancellation(t *testing.T) {
 
 func TestOrgMemberInvalidArgumentsBeforeAuthentication(t *testing.T) {
 	cases := [][]string{
+		{"team", "alice"}, {"invte", "team", "alice"},
 		{"invite"}, {"invite", "team"}, {"invite", "team", "alice", "extra"},
 		{"remove"}, {"remove", "team"}, {"remove", "team", "alice", "extra"},
 		{"invite", "team", "alice", "--permission", "owner"},
@@ -141,6 +142,28 @@ func TestOrgMemberInvalidArgumentsBeforeAuthentication(t *testing.T) {
 				t.Fatal("accepted invalid input")
 			}
 			if tokens != 0 || out.Len() != 0 {
+				t.Fatalf("tokens=%d output=%q", tokens, out.String())
+			}
+		})
+	}
+}
+
+func TestOrgMemberGroupHelp(t *testing.T) {
+	for _, args := range [][]string{{"member"}, {"member", "--help"}} {
+		t.Run(strings.Join(args, "/"), func(t *testing.T) {
+			tokens := 0
+			cmd := NewCmdOrg(orgFactory(orgTestConfig{tokenCalls: &tokens}, func(*http.Request) (*http.Response, error) {
+				t.Fatal("help made a request")
+				return nil, nil
+			}))
+			var out bytes.Buffer
+			cmd.SetOut(&out)
+			cmd.SetErr(&out)
+			cmd.SetArgs(args)
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if tokens != 0 || !strings.Contains(out.String(), "invite") || !strings.Contains(out.String(), "remove") {
 				t.Fatalf("tokens=%d output=%q", tokens, out.String())
 			}
 		})

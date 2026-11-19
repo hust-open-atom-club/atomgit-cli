@@ -34,6 +34,7 @@ func TestRegisteredCommands(t *testing.T) {
 		{[]string{"discussion", "create"}, 0, 1, "text", "write"},
 		{[]string{"discussion", "delete"}, 1, 2, "text", "write"},
 		{[]string{"org", "create"}, 1, 1, "text", "write"},
+		{[]string{"org", "member"}, 0, 0, "text", "none"},
 		{[]string{"org", "member", "invite"}, 2, 2, "text", "write"},
 		{[]string{"org", "member", "remove"}, 2, 2, "text", "write"},
 		{[]string{"org", "followers"}, 1, 1, "text,json", "read"},
