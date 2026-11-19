@@ -114,6 +114,9 @@
 - [ag-cli org discussion view](#ag-cli-org-discussion-view) — View an organization discussion
 - [ag-cli org followers](#ag-cli-org-followers) — List organization followers
 - [ag-cli org list](#ag-cli-org-list) — List organizations for the authenticated user
+- [ag-cli org member](#ag-cli-org-member) — Invite or remove organization members
+- [ag-cli org member invite](#ag-cli-org-member-invite) — Invite a user to an organization
+- [ag-cli org member remove](#ag-cli-org-member-remove) — Remove a member from an organization
 - [ag-cli org members](#ag-cli-org-members) — List organization members
 - [ag-cli org repos](#ag-cli-org-repos) — List organization repositories
 - [ag-cli org runner-group](#ag-cli-org-runner-group) — Inspect organization Actions runner groups
@@ -2586,7 +2589,7 @@ Usage: `ag-cli org`
 
 Manage organizations
 
-Create organizations, list organizations associated with your AtomGit account, inspect organization details, members, followers, repositories, Actions runner groups, and runner job history, and manage organization discussions.
+Create organizations, list organizations associated with your AtomGit account, invite or remove members, inspect organization details, members, followers, repositories, Actions runner groups, and runner job history, and manage organization discussions.
 
 ### Flags
 
@@ -3009,6 +3012,96 @@ List organizations for the authenticated user
 ag-cli org list
 ag-cli org list --limit 100
 ag-cli org list --json
+```
+
+
+## ag-cli org member
+
+Usage: `ag-cli org member`
+
+Invite or remove organization members
+
+Invite users to an organization or remove organization members.
+
+Use "ag-cli org members <org>" to list members. These commands manage
+organization membership, not repository collaborators or enterprise members.
+They do not provide an interface to edit an existing member's role.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli org member invite
+
+Usage: `ag-cli org member invite <org> <username> [flags]`
+
+Invite a user to an organization
+
+Submit an invitation with pull, push, admin, or customized permission.
+
+Permission defaults to push. Customized permission requires a non-empty
+--role-id; --role-id is not accepted with other permissions.
+Confirm the organization, username and requested permission with y or yes,
+or pass --yes. Empty input, EOF or another answer cancels without a request.
+Success means the invitation request was sent, not that the user accepted it.
+Writes are not automatically retried or redirected; check AtomGit before
+retrying an uncertain result.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--permission` | Requested permission: pull, push, admin, or customized | `push` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--role-id` | Custom role ID (required only for customized permission) | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip invitation confirmation | `false` | local |
+
+### Example
+
+```bash
+ag-cli org member invite my-org alice
+ag-cli org member invite my-org alice --permission pull --yes
+ag-cli org member invite my-org alice --permission customized --role-id role-123
+```
+
+
+## ag-cli org member remove
+
+Usage: `ag-cli org member remove <org> <username> [flags]`
+
+Remove a member from an organization
+
+Remove a user from the explicitly named organization.
+
+Confirm with y or yes, or pass --yes. Empty input, EOF or another answer
+cancels without a request. This affects organization membership, not a
+repository collaborator or an enterprise member. Writes are not automatically
+retried or redirected; check AtomGit before retrying an uncertain result.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip removal confirmation | `false` | local |
+
+### Example
+
+```bash
+ag-cli org member remove my-org alice
+ag-cli org member remove my-org alice --yes
 ```
 
 
