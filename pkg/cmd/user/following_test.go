@@ -49,7 +49,7 @@ func TestUserFollowingMixedOutputAndAuthentication(t *testing.T) {
 					if r.Header.Get("Authorization") != want {
 						t.Fatalf("authorization mismatch")
 					}
-					return userResponse(200, `[{"id":"9007199254740993","object_id":"hex","login":"bob","name":"B\tO\nB","type":"User","html_url":"https://example.test/bob","url":"https://example.test/api/users/bob","following_url":"/user/bob/following"},{"id":"org","login":"team","name":null,"type":"Organization","url":"https://example.test/api/orgs/team"}]`), nil
+					return userResponse(200, `[{"id":"9007199254740993","object_id":"hex","login":"bob","name":"B\tO\nB","type":"User","avatar_url":"https://example.test/avatar/bob","followers_url":"/user/bob/followers","html_url":"https://example.test/bob","url":"https://example.test/api/users/bob","following_url":"/user/bob/following"},{"id":"org","login":"team","name":null,"type":"Organization","url":"https://example.test/api/orgs/team"}]`), nil
 				})
 				f.RepositoryResolver = func() (cmdutil.Repository, error) { t.Fatal("inferred Git context"); return cmdutil.Repository{}, nil }
 				args := []string{"alice%2Fadmin"}
@@ -65,8 +65,15 @@ func TestUserFollowingMixedOutputAndAuthentication(t *testing.T) {
 					if err := json.Unmarshal([]byte(out), &items); err != nil {
 						t.Fatal(err)
 					}
-					if len(items) != 2 || len(items[0]) != 10 || len(items[1]) != 10 || items[0]["id"] != "9007199254740993" || items[0]["html_url"] != "https://example.test/bob" || items[0]["following_url"] != "/user/bob/following" || items[1]["type"] != "Organization" || items[1]["following_url"] != "" || items[1]["html_url"] != "" {
-						t.Fatalf("output=%s", out)
+					want := []map[string]any{
+						{"id": "9007199254740993", "object_id": "hex", "login": "bob", "name": "B\tO\nB", "type": "User",
+							"html_url": "https://example.test/bob", "url": "https://example.test/api/users/bob",
+							"avatar_url": "https://example.test/avatar/bob", "followers_url": "/user/bob/followers", "following_url": "/user/bob/following"},
+						{"id": "org", "object_id": "", "login": "team", "name": "", "type": "Organization", "html_url": "",
+							"url": "https://example.test/api/orgs/team", "avatar_url": "", "followers_url": "", "following_url": ""},
+					}
+					if !reflect.DeepEqual(items, want) {
+						t.Fatalf("output = %s, want %+v", out, want)
 					}
 				} else {
 					lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")

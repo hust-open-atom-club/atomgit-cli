@@ -12,13 +12,16 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	internalapi "atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/browser"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
+	"golang.org/x/term"
 )
 
 // Defaults match AtomCode / AtomGit OAuth app (see project oauth reference); override with env.
@@ -73,6 +76,40 @@ func redirectPort() string {
 
 func redirectURI() string {
 	return fmt.Sprintf("http://127.0.0.1:%s/callback", redirectPort())
+}
+
+// hyperlinkTerminator ends an OSC 8 hyperlink with the standard String
+// Terminator sequence.
+const hyperlinkTerminator = "\x1b\\"
+
+// supportsHyperlink reports whether the terminal can render OSC 8 hyperlinks.
+// Legacy Windows consoles may print the escape bytes as text, so Windows also
+// requires a marker set by Windows Terminal, VS Code, or ConEmu.
+func supportsHyperlink(isTerminal bool, goos, termName string, getenv func(string) string) bool {
+	if !isTerminal {
+		return false
+	}
+	termName = strings.TrimSpace(termName)
+	if termName == "" || strings.EqualFold(termName, "dumb") {
+		return false
+	}
+	if goos == "windows" {
+		return getenv("WT_SESSION") != "" ||
+			getenv("TERM_PROGRAM") != "" ||
+			strings.EqualFold(getenv("ConEmuANSI"), "ON")
+	}
+	return true
+}
+
+// authorizeURLForTerminal wraps rawURL in an OSC 8 hyperlink when the terminal
+// supports it. The visible text does not change, but a URL that wraps across
+// rows stays one clickable link. Control characters keep the value as plain
+// text so a URL cannot inject another terminal sequence.
+func authorizeURLForTerminal(rawURL string, isTerminal bool, goos, termName string, getenv func(string) string) string {
+	if !supportsHyperlink(isTerminal, goos, termName, getenv) || strings.ContainsFunc(rawURL, unicode.IsControl) {
+		return rawURL
+	}
+	return "\x1b]8;;" + rawURL + hyperlinkTerminator + rawURL + "\x1b]8;;" + hyperlinkTerminator
 }
 
 // LoginResult contains tokens and user identity for persisting after authorization.
@@ -150,7 +187,13 @@ func Login(ctx context.Context) (*LoginResult, error) {
 
 	fmt.Println("Opening browser for AtomGit authorization…")
 	fmt.Println("If it does not open, visit:")
-	fmt.Println(authURL)
+	fmt.Println(authorizeURLForTerminal(
+		authURL,
+		term.IsTerminal(int(os.Stdout.Fd())),
+		runtime.GOOS,
+		os.Getenv("TERM"),
+		os.Getenv,
+	))
 	fmt.Println()
 	fmt.Printf("Waiting for callback on %s …\n", redir)
 

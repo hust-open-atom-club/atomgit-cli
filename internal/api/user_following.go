@@ -46,7 +46,8 @@ func (p *followingPage) UnmarshalJSON(data []byte) error {
 // ListUserFollowing reads page-based public data and returns no partial result
 // when any page fails. The page size follows the endpoint's 30 default and 100 cap.
 func ListUserFollowing(client *Client, username string, limit int) ([]FollowedAccount, error) {
-	if strings.TrimSpace(username) == "" {
+	username = strings.TrimSpace(username)
+	if username == "" {
 		return nil, fmt.Errorf("username must not be empty")
 	}
 	endpoint := "/users/" + url.PathEscape(username) + "/following"

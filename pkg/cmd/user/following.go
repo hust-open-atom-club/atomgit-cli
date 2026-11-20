@@ -11,6 +11,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// followingJSON is the stable, documented JSON schema for user following.
+type followingJSON struct {
+	ID           string `json:"id"`
+	ObjectID     string `json:"object_id"`
+	Login        string `json:"login"`
+	Name         string `json:"name"`
+	Type         string `json:"type"`
+	AvatarURL    string `json:"avatar_url"`
+	HTMLURL      string `json:"html_url"`
+	URL          string `json:"url"`
+	FollowersURL string `json:"followers_url"`
+	FollowingURL string `json:"following_url"`
+}
+
 type followingOptions struct {
 	Limit int
 	JSON  bool
@@ -41,7 +55,15 @@ func newCmdUserFollowing(f *cmdutil.Factory) *cobra.Command {
 			}
 			out := cmd.OutOrStdout()
 			if opts.JSON {
-				return cmdutil.WriteJSON(out, items)
+				result := make([]followingJSON, 0, len(items))
+				for _, item := range items {
+					result = append(result, followingJSON{
+						ID: item.ID, ObjectID: item.ObjectID, Login: item.Login, Name: item.Name,
+						Type: item.Type, AvatarURL: item.AvatarURL, HTMLURL: item.HTMLURL,
+						URL: item.URL, FollowersURL: item.FollowersURL, FollowingURL: item.FollowingURL,
+					})
+				}
+				return cmdutil.WriteJSON(out, result)
 			}
 			if len(items) == 0 {
 				_, err := fmt.Fprintln(out, "No followed users or organizations found.")

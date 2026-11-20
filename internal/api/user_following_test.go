@@ -101,8 +101,10 @@ func TestListUserFollowingEmptyAndInvalid(t *testing.T) {
 			t.Fatal("accepted invalid limit")
 		}
 	}
-	if _, err := ListUserFollowing(c, "", 30); err == nil {
-		t.Fatal("accepted empty username")
+	for _, username := range []string{"", " ", "\t\n"} {
+		if _, err := ListUserFollowing(c, username, 30); err == nil {
+			t.Fatalf("accepted empty username %q", username)
+		}
 	}
 	if calls != 0 {
 		t.Fatal("invalid inputs made requests")
@@ -110,5 +112,32 @@ func TestListUserFollowingEmptyAndInvalid(t *testing.T) {
 	items, err := ListUserFollowing(c, "alice", 30)
 	if err != nil || items == nil || len(items) != 0 {
 		t.Fatalf("items=%v err=%v", items, err)
+	}
+}
+
+func TestListUserFollowingTrimsUsername(t *testing.T) {
+	for _, status := range []int{http.StatusOK, http.StatusNotFound} {
+		t.Run(fmt.Sprint(status), func(t *testing.T) {
+			calls := 0
+			c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				calls++
+				if r.URL.EscapedPath() != "/users/alice/following" {
+					t.Errorf("path = %q", r.URL.EscapedPath())
+				}
+				w.WriteHeader(status)
+				fmt.Fprint(w, `[]`)
+			})
+			items, err := ListUserFollowing(c, " \talice\n ", 30)
+			if calls != 1 {
+				t.Fatalf("calls = %d", calls)
+			}
+			if status == http.StatusOK {
+				if err != nil || items == nil || len(items) != 0 {
+					t.Fatalf("items = %v, err = %v", items, err)
+				}
+			} else if !IsHTTPStatus(err, status) || !strings.Contains(err.Error(), `user "alice"`) || items != nil {
+				t.Fatalf("items = %v, err = %v", items, err)
+			}
+		})
 	}
 }
