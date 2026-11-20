@@ -1,23 +1,24 @@
 #!/bin/sh
-# AtomGit CLI (ag-cli) — 一键安装
-# 仓库: https://atomgit.com/hust-open-atom-club/atomgit-cli
+# AtomGit CLI (ag-cli) — one-line installer
+# Repository: https://atomgit.com/hust-open-atom-club/atomgit-cli
 #
-# 用法:
+# Usage:
 #   curl -fsSL https://atomgit.com/hust-open-atom-club/atomgit-cli/releases/download/latest/install.sh | sh
 #   AG_VERSION=vX.Y.Z sh install.sh
-#   AG_FROM_SOURCE=1 sh install.sh    # 从本仓库源码构建（需 git、Go）
+#   AG_FROM_SOURCE=1 sh install.sh    # build from this repository source (requires git and Go)
 
 set -eu
 
 REPO_OWNER="${AG_REPO_OWNER:-hust-open-atom-club}"
 REPO_NAME="${AG_REPO_NAME:-atomgit-cli}"
 BASE_URL="https://atomgit.com/${REPO_OWNER}/${REPO_NAME}"
-# Release 构建会将占位符替换为当前 tag；直接运行源码模板时需设置 AG_VERSION，或使用 AG_FROM_SOURCE=1。
+# Release builds replace this placeholder with the current tag. When running
+# the source template directly, set AG_VERSION or use AG_FROM_SOURCE=1.
 _BUNDLED_TAG="__AG_RELEASE_TAG__"
 DEFAULT_VERSION="${AG_DEFAULT_VERSION:-${_BUNDLED_TAG}}"
 VERSION="${AG_VERSION:-$DEFAULT_VERSION}"
 
-# 与 AtomGit 默认分支一致（当前为 main）
+# Matches the AtomGit default branch (currently main).
 GIT_REF="${AG_GIT_REF:-main}"
 
 die() {
@@ -99,35 +100,35 @@ sha256_of() {
 verify_archive() {
   checksums_url="${BASE_URL}/releases/download/${tag}/checksums.txt"
   if ! curl -fsSL "$checksums_url" -o "${tmpdir}/checksums.txt"; then
-    die "无法下载校验文件 ${checksums_url}；为安全起见已停止安装"
+    die "Failed to download checksums.txt from ${checksums_url}; refusing to install"
   fi
 
-  expected=$(expected_checksum) || die "无法解析校验文件 ${tmpdir}/checksums.txt"
+  expected=$(expected_checksum) || die "Failed to parse checksums.txt at ${tmpdir}/checksums.txt"
   if [ -z "$expected" ]; then
-    die "校验文件中没有 ${asset} 的记录；为安全起见已停止安装"
+    die "checksums.txt does not contain an entry for ${asset}; refusing to install"
   fi
   if [ "${#expected}" -ne 64 ]; then
-    die "校验文件中 ${asset} 的 SHA-256 格式无效；为安全起见已停止安装"
+    die "Invalid checksum entry for ${asset} in checksums.txt; refusing to install"
   fi
   case "$expected" in
-  *[!0-9a-f]*) die "校验文件中 ${asset} 的 SHA-256 格式无效；为安全起见已停止安装" ;;
+  *[!0-9a-f]*) die "Invalid checksum entry for ${asset} in checksums.txt; refusing to install" ;;
   esac
 
   actual=$(sha256_of "${tmpdir}/${asset}") ||
-    die "无法计算 ${asset} 的 SHA-256；需要 sha256sum、shasum 或 openssl"
+    die "Failed to compute SHA-256 for ${asset}; install sha256sum, shasum, or openssl"
   if [ -z "$actual" ]; then
-    die "无法计算 ${asset} 的 SHA-256；需要 sha256sum、shasum 或 openssl"
+    die "Failed to compute SHA-256 for ${asset}; install sha256sum, shasum, or openssl"
   fi
 
   if [ "$actual" != "$expected" ]; then
-    die "校验和不匹配: ${asset}（期望 ${expected}，实际 ${actual}）；为安全起见已停止安装"
+    die "Checksum mismatch for ${asset} (expected ${expected}, got ${actual}); refusing to install"
   fi
   echo "Checksum verified: ${asset}"
 }
 
 install_binary() {
   if [ "$VERSION" = "__AG_RELEASE_TAG__" ]; then
-    die "源码安装器模板尚未绑定发布版本；请设置 AG_VERSION=vX.Y.Z，或使用 AG_FROM_SOURCE=1 从源码安装"
+    die "The source installer template is not bound to a release. Set AG_VERSION=vX.Y.Z, or use AG_FROM_SOURCE=1 to install from source"
   fi
 
   os=$(detect_os)
@@ -141,14 +142,14 @@ install_binary() {
 
   echo "Downloading ${url} ..."
   if ! curl -fsSL "$url" -o "${tmpdir}/${asset}"; then
-    die "无法下载预编译包（请确认已发布 ${tag} 且附件名为 ${asset}）。也可使用: AG_FROM_SOURCE=1 sh install.sh"
+    die "Failed to download the prebuilt archive. Verify that ${tag} is published with an asset named ${asset}. You can also use: AG_FROM_SOURCE=1 sh install.sh"
   fi
 
   verify_archive
 
   (cd "$tmpdir" && tar -xzf "$asset")
   if [ ! -f "${tmpdir}/ag-cli" ]; then
-    die "压缩包内未找到名为 ag-cli 的可执行文件"
+    die "ag-cli was not found in the archive"
   fi
 
   dest=$(pick_install_dir)
@@ -164,18 +165,18 @@ install_binary() {
   case ":${PATH:-}:" in
   *:"$dest":*) ;;
   *)
-    echo "请将目录加入 PATH，例如在 ~/.profile 中追加:"
+    echo "Add this directory to PATH, for example by appending to ~/.profile:"
     echo "  export PATH=\"$dest:\$PATH\""
     ;;
   esac
 
   "${dest}/ag-cli" --help >/dev/null 2>&1 || true
-  echo "ag-cli 已安装: ${dest}/ag-cli"
+  echo "ag-cli installed: ${dest}/ag-cli"
 }
 
 install_from_source() {
-  command -v git >/dev/null 2>&1 || die "需要 git"
-  command -v go >/dev/null 2>&1 || die "需要 Go 工具链"
+  command -v git >/dev/null 2>&1 || die "git is required"
+  command -v go >/dev/null 2>&1 || die "Go toolchain is required"
 
   tmpdir=$(mktemp -d)
   trap "rm -rf \"$tmpdir\"" EXIT INT HUP
@@ -196,7 +197,7 @@ install_from_source() {
     install -m 0755 "${tmpdir}/ag-cli" "${dest}/ag-cli"
   fi
 
-  echo "ag-cli 已安装: ${dest}/ag-cli"
+  echo "ag-cli installed: ${dest}/ag-cli"
 }
 
 main() {

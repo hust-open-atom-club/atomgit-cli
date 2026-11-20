@@ -543,7 +543,7 @@ sudo dnf copr remove cubelitblade/atomgit-cli
 
 安装脚本会识别当前操作系统（支持 Linux、Windows 和 macOS）与处理器架构（Linux 支持 amd64、arm64 和 loong64，macOS 与 Windows 支持 amd64 和 arm64），下载匹配的预编译文件并安装 `ag-cli`。
 
-两个脚本都会下载同一 Release 的 `checksums.txt`，并在解压前校验归档的 SHA-256。校验和不匹配、`checksums.txt` 缺少对应记录或本地无法计算 SHA-256 时，脚本会中止安装并以非零状态退出，不写入任何文件。
+两个脚本都会下载同一 Release 的 `checksums.txt`，并在解压前校验归档的 SHA-256。校验和不匹配、`checksums.txt` 缺少对应记录或本地无法计算 SHA-256 时，脚本会中止安装并以非零状态退出，不写入任何文件。两个脚本的安装提示信息均使用英文。
 
 #### macOS 和 Linux
 
@@ -577,7 +577,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 脚本默认安装到 `%USERPROFILE%\.local\bin`，并将该目录加入当前用户的 `Path`。
 
-`install.ps1` 保持纯 ASCII，以兼容 Windows PowerShell 5.1 在不同系统代码页下的脚本下载、保存和执行；安装过程中的提示信息使用英文。
+`install.ps1` 保持纯 ASCII，以兼容 Windows PowerShell 5.1 在不同系统代码页下的脚本下载、保存和执行。
 
 ### 手动安装
 

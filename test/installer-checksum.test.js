@@ -37,7 +37,7 @@ test("Unix installer refuses a tampered archive", skipOnWindows, (t) => {
   });
   const result = fixture.run();
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /校验和不匹配/);
+  assert.match(result.stderr, /Checksum mismatch/);
   assert.equal(fs.existsSync(path.join(fixture.destination, "ag-cli")), false);
 });
 
@@ -47,7 +47,7 @@ test("Unix installer refuses a checksums.txt without the archive entry", skipOnW
   });
   const result = fixture.run();
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /没有 ag_linux_amd64\.tar\.gz 的记录/);
+  assert.match(result.stderr, /does not contain an entry for ag_linux_amd64\.tar\.gz/);
   assert.equal(fs.existsSync(path.join(fixture.destination, "ag-cli")), false);
 });
 
@@ -57,7 +57,7 @@ test("Unix installer refuses a malformed checksum entry", skipOnWindows, (t) => 
   });
   const result = fixture.run();
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /SHA-256 格式无效/);
+  assert.match(result.stderr, /Invalid checksum entry for ag_linux_amd64\.tar\.gz/);
   assert.equal(fs.existsSync(path.join(fixture.destination, "ag-cli")), false);
 });
 
@@ -65,7 +65,7 @@ test("Unix installer refuses to install when checksums.txt cannot be downloaded"
   const fixture = createUnixInstallFixture(t, { failMatch: "checksums.txt" });
   const result = fixture.run();
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /无法下载校验文件/);
+  assert.match(result.stderr, /Failed to download checksums\.txt/);
   assert.equal(fs.existsSync(path.join(fixture.destination, "ag-cli")), false);
 });
 
@@ -73,7 +73,7 @@ test("Unix installer refuses to install without a SHA-256 tool", skipOnWindows, 
   const fixture = createUnixInstallFixture(t, { hideHashTools: true });
   const result = fixture.run();
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /无法计算 ag_linux_amd64\.tar\.gz 的 SHA-256/);
+  assert.match(result.stderr, /Failed to compute SHA-256 for ag_linux_amd64\.tar\.gz/);
   assert.equal(fs.existsSync(path.join(fixture.destination, "ag-cli")), false);
 });
 
@@ -84,8 +84,8 @@ test("Unix installer reports a hash tool failure as a tool error", skipOnWindows
     "#!/bin/sh\nexit 1\n", { mode: 0o755 });
   const result = fixture.run();
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /无法计算 ag_linux_amd64\.tar\.gz 的 SHA-256/);
-  assert.doesNotMatch(result.stderr, /校验和不匹配/);
+  assert.match(result.stderr, /Failed to compute SHA-256 for ag_linux_amd64\.tar\.gz/);
+  assert.doesNotMatch(result.stderr, /Checksum mismatch/);
 });
 
 // Windows PowerShell cannot run on every hosted Linux runner, so the static
