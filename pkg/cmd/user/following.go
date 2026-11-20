@@ -39,8 +39,8 @@ func newCmdUserFollowing(f *cmdutil.Factory) *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			username := strings.TrimSpace(args[0])
-			if !validLogin(username) {
-				return fmt.Errorf("invalid login %q: expected a non-empty user name without path or query separators", args[0])
+			if !validFollowUsername(username) {
+				return fmt.Errorf("invalid username %q: expected a user name without whitespace, control characters, or path/query separators", args[0])
 			}
 			if opts.Limit <= 0 {
 				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)

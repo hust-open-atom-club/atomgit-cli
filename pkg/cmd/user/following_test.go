@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"reflect"
@@ -99,7 +100,7 @@ func TestUserFollowingMixedOutputAndAuthentication(t *testing.T) {
 }
 
 func TestUserFollowingValidatesBeforeCredentials(t *testing.T) {
-	for _, args := range [][]string{nil, {"alice", "bob"}, {""}, {"a/b"}, {"a?b"}, {"a#b"}, {"a\nb"}, {"alice", "--limit=0"}, {"alice", "--limit=-1"}} {
+	for _, args := range [][]string{nil, {"alice", "bob"}, {""}, {"a/b"}, {"a?b"}, {"a#b"}, {"a\nb"}, {"a\\b"}, {"."}, {".."}, {"a\u00a0b"}, {"a\u0085b"}, {"a\u009fb"}, {"alice", "--limit=0"}, {"alice", "--limit=-1"}} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			cfg := &namespaceCountingConfig{}
 			f := &cmdutil.Factory{Config: cfg, HttpClient: func() (*http.Client, error) { t.Fatal("created HTTP client"); return nil, nil }}
@@ -137,6 +138,9 @@ func TestUserFollowingContextAndNoPartialOutput(t *testing.T) {
 	calls := 0
 	f := userFactory(userTestConfig{}, func(r *http.Request) (*http.Response, error) {
 		calls++
+		if r.URL.EscapedPath() != "/api/v5/users/alice/following" || r.URL.RawQuery != fmt.Sprintf("page=%d&per_page=100", calls) {
+			t.Fatalf("unexpected request: %s", r.URL)
+		}
 		if calls == 2 {
 			return userResponse(404, `{"message":"hidden"}`), nil
 		}
@@ -163,5 +167,56 @@ func TestUserFollowingContextAndNoPartialOutput(t *testing.T) {
 	cmd.SetContext(ctx)
 	if err := cmd.RunE(cmd, []string{"alice"}); !errors.Is(err, context.Canceled) {
 		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestUserFollowingPaginationAndLimit(t *testing.T) {
+	for _, limit := range []int{1, 101} {
+		for _, asJSON := range []bool{false, true} {
+			t.Run(fmt.Sprintf("limit=%d/json=%t", limit, asJSON), func(t *testing.T) {
+				calls := 0
+				f := userFactory(userTestConfig{}, func(r *http.Request) (*http.Response, error) {
+					calls++
+					if calls > (limit+99)/100 {
+						t.Fatal("requested another page after reaching limit")
+					}
+					if r.URL.EscapedPath() != "/api/v5/users/alice/following" || r.URL.RawQuery != fmt.Sprintf("page=%d&per_page=%d", calls, min(limit, 100)) {
+						t.Fatalf("unexpected request: %s", r.URL)
+					}
+					// Return a full page even when fewer entries remain in the output budget.
+					items := make([]map[string]string, 100)
+					for i := range items {
+						items[i] = map[string]string{"id": fmt.Sprint((calls-1)*100 + i), "login": fmt.Sprintf("user-%d", (calls-1)*100+i), "type": "User"}
+					}
+					body, err := json.Marshal(items)
+					if err != nil {
+						t.Fatal(err)
+					}
+					return userResponse(200, string(body)), nil
+				})
+				args := []string{" alice ", "--limit", fmt.Sprint(limit)}
+				if asJSON {
+					args = append(args, "--json")
+				}
+				out, err := runFollowing(t, f, args...)
+				if err != nil || calls != (limit+99)/100 {
+					t.Fatalf("calls=%d err=%v", calls, err)
+				}
+				if asJSON {
+					var items []map[string]any
+					if err := json.Unmarshal([]byte(out), &items); err != nil {
+						t.Fatal(err)
+					}
+					if len(items) != limit || items[0]["id"] != "0" || items[limit-1]["id"] != fmt.Sprint(limit-1) {
+						t.Fatalf("unexpected output: %s", out)
+					}
+				} else {
+					lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
+					if len(lines) != limit+1 || strings.Fields(lines[limit])[0] != fmt.Sprintf("user-%d", limit-1) {
+						t.Fatalf("unexpected output: %s", out)
+					}
+				}
+			})
+		}
 	}
 }

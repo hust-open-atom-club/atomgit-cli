@@ -51,7 +51,7 @@ func ListUserFollowing(client *Client, username string, limit int) ([]FollowedAc
 		return nil, fmt.Errorf("username must not be empty")
 	}
 	endpoint := "/users/" + url.PathEscape(username) + "/following"
-	return getPaginated[FollowedAccount](limit, min(limit, 100), true, nil, func(page, perPage int) ([]FollowedAccount, error) {
+	return getPaginated[FollowedAccount](limit, min(limit, defaultMaxPerPage), true, nil, func(page, perPage int) ([]FollowedAccount, error) {
 		var items followingPage
 		err := client.doJSONRequest(http.MethodGet, pageQuery(endpoint, page, perPage), nil, "", "application/json", RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: true}, &items)
 		if err != nil {

@@ -803,7 +803,7 @@ ag-cli user following alice --limit 100 --json
 
 `ag-cli user starred [<username>]` 和 `ag-cli user watching [<username>]` 需要认证，分别列出 star 和 watch 的仓库集合。省略用户名时使用认证用户端点；显式用户名使用对应的公开用户端点，且用户名会作为单个 URL 路径段转义。两个命令的 `--limit` 均控制跨页返回的总仓库数（默认 `30`，必须为正整数）。文本模式输出无歧义的完整仓库名和 URL；`--json` 输出固定的 `id`、`fullName`、`url` 字段数组。空集合在文本模式下输出明确提示，在 JSON 模式下输出 `[]`。这些命令只读，不会 star、取消 star、watch 或取消 watch 仓库，也不会改变 `ag-cli repo list` 的所有权及成员关系语义。
 
-`ag-cli user following <username>` 显式指定用户名，不从 Git remote 推断；仅列出关注对象，不执行关注或取消关注，也不是粉丝列表。`--limit/-L` 是跨页输出总数上限（默认 `30`，必须为正数），从第 1 页开始，`per_page` 为 `min(limit, 100)`（默认 `30`）；读取到短页或达到上限时停止。参数在认证和网络请求前校验，用户名作为单个 URL 路径段转义。未登录时可匿名读取；已有凭据会正常使用，配置或凭据读取失败会报错，不会静默匿名降级。请求继承命令的取消上下文。
+`ag-cli user following <username>` 显式指定用户名，不从 Git remote 推断；仅列出关注对象，不执行关注或取消关注，也不是粉丝列表。`--limit/-L` 是跨页输出总数上限（默认 `30`，必须为正数），从第 1 页开始，`per_page` 为 `min(limit, 100)`（默认 `30`）；读取到短页或达到上限时停止。参数在认证和网络请求前校验；用户名先裁剪首尾空白，拒绝 `.`、`..`、反斜杠、路径或查询分隔符，以及内部空白和控制字符，再作为单个 URL 路径段转义。未登录时可匿名读取；已有凭据会正常使用，配置或凭据读取失败会报错，不会静默匿名降级。请求继承命令的取消上下文。
 
 文本列为 `LOGIN`、`NAME`、`TYPE`、`URL`，区分 `User` 与 `Organization`，字段中的制表符和换行会转义，输出仍经过安全 writer。JSON 输出固定的 `id`、`object_id`、`login`、`name`、`type`、`avatar_url`、`html_url`、`url`、`followers_url`、`following_url` 字段，ID 保留字符串；可空或省略的字符串字段输出空字符串。组织可以没有 `following_url`，CLI 不拼造缺失 URL。空结果文本为 `No followed users or organizations found.`，JSON 为 `[]`。仅接受 HTTP 200 数组；异常响应或任何一页失败都返回错误，不输出部分列表。不存在或隐藏个人信息的用户可能返回 404，此状态不会被当作空列表。
 
