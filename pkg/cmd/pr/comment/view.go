@@ -18,6 +18,7 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "view [<owner>/<repo>] <number>",
 		Short: "View all comments on a pull request",
+		Long:  "Read every page of pull request comments before printing. Includes ordinary comments, review discussions, and nested replies. The total counts top-level comments only; replies are displayed under their parent. Reading fails if no empty page is reached within 100 pages or the 30-second traversal timeout expires; no partial list is printed.",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
@@ -44,11 +45,10 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			var comments []api.Comment
 			// view=all returns both 普通评论 (pr_comment) and 检视意见 (diff_comment),
 			// with replies nested under each comment's `reply` field.
-			path := fmt.Sprintf("/repos/%s/%s/pulls/%d/comments?view=all", owner, repo, number)
-			if err := client.Get(path, &comments); err != nil {
+			comments, err := api.ListPullRequestComments(client.WithContext(cmd.Context()), owner, repo, number)
+			if err != nil {
 				return err
 			}
 
@@ -195,7 +195,7 @@ func cleanHTMLTags(html string) string {
 
 // sortCommentsByTime orders comments from oldest to newest by created_at.
 func sortCommentsByTime(comments []api.Comment) {
-	sort.Slice(comments, func(i, j int) bool {
+	sort.SliceStable(comments, func(i, j int) bool {
 		t1, _ := time.Parse(time.RFC3339, comments[i].CreatedAt)
 		t2, _ := time.Parse(time.RFC3339, comments[j].CreatedAt)
 		return t1.Before(t2)
