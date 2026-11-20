@@ -387,9 +387,24 @@ func TestSaveTokenRejectsRenameToExistingAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := SaveToken("replacement-token", "bob")
-	if err == nil || !strings.Contains(err.Error(), "account already exists") {
+	path, err := PrimaryTokenPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = SaveToken("replacement-token", "bob")
+	if conflict, ok := errors.AsType[*AccountConflictError](err); !ok || conflict.Account != "alice" || conflict.ExistingAccount != "bob" {
 		t.Fatalf("error = %v", err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) {
+		t.Fatal("rejected rename changed the credential file")
 	}
 	store, loadErr := LoadCredentialStore()
 	if loadErr != nil {
