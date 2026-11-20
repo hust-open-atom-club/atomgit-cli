@@ -200,6 +200,8 @@
 - [ag-cli repo mirror](#ag-cli-repo-mirror) — Inspect repository remote mirrors
 - [ag-cli repo mirror list](#ag-cli-repo-mirror-list) — List configured push remote mirrors
 - [ag-cli repo mirror view](#ag-cli-repo-mirror-view) — View repository remote mirror state
+- [ag-cli repo module](#ag-cli-repo-module) — Manage repository module switches
+- [ag-cli repo module edit](#ag-cli-repo-module-edit) — Edit repository module switches
 - [ag-cli repo permissions](#ag-cli-repo-permissions) — View your repository role and permission points
 - [ag-cli repo policy](#ag-cli-repo-policy) — View and edit repository policy settings
 - [ag-cli repo policy edit](#ag-cli-repo-policy-edit) — Edit one repository policy section
@@ -5428,6 +5430,62 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ```bash
 ag-cli repo mirror view owner/repo
 ag-cli repo mirror view --json
+```
+
+
+## ag-cli repo module
+
+Usage: `ag-cli repo module`
+
+Manage repository module switches
+
+Edit repository module switches. Omitted switches remain unchanged; this command does not query current settings.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli repo module edit
+
+Usage: `ag-cli repo module edit [<owner>/<repo>] [flags]`
+
+Edit repository module switches
+
+Enable or disable wiki, issue, security, merge request, fork, analysis, and discussion modules. Only explicitly supplied switches are sent; omitted fields keep their existing values. Use --issue=false to disable a module. Changes require confirmation unless --yes is supplied. Writes are never automatically retried or redirected. Success requires HTTP 200, integer code=1, and msg=success. Output describes submitted changes, not independently verified current settings; no GET module/setting request is made.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--analysis` | Enable analysis (use =false to disable) | `false` | local |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--discussion` | Enable discussions (use =false to disable) | `false` | local |
+| `--fork` | Enable forks (use =false to disable) | `false` | local |
+| `--issue` | Enable issues (use =false to disable) | `false` | local |
+| `--json` | Output the repository and submitted fields as JSON | `false` | local |
+| `--merge-request` | Enable merge requests (use =false to disable) | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--security` | Enable security (use =false to disable) | `false` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `--wiki` | Enable wiki (use =false to disable) | `false` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip update confirmation | `false` | local |
+
+### Example
+
+```bash
+ag-cli repo module edit owner/repo --wiki=true --issue=false
+ag-cli repo module edit --discussion=true --yes --json
 ```
 
 

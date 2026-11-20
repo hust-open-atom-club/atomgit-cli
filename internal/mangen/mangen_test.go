@@ -136,6 +136,11 @@ func TestActualTreeIsOfflineCompleteAndDeterministic(t *testing.T) {
 			t.Errorf("comment refresh manual missing %q", want)
 		}
 	}
+	for _, want := range []string{`\-\-wiki`, `\-\-issue`, `\-\-security`, `\-\-merge\-request`, `\-\-fork`, `\-\-analysis`, `\-\-discussion`, `\-\-yes`, `\-\-json`, "code=1", "never automatically retried"} {
+		if !strings.Contains(first["ag-cli-repo-module-edit.1"], want) {
+			t.Errorf("module edit manual missing %q", want)
+		}
+	}
 	for _, excluded := range []string{"ag-cli-auth-git-credential.1", "ag-cli-check-update.1", "ag-cli-completion.1"} {
 		if _, ok := first[excluded]; ok {
 			t.Errorf("included internal/deprecated/helper command %s", excluded)
