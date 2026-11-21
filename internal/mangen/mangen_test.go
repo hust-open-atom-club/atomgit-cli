@@ -103,6 +103,16 @@ func TestActualTreeIsOfflineCompleteAndDeterministic(t *testing.T) {
 		t.Fatal(err)
 	}
 	first := pageMap(t, root)
+	for _, want := range []string{`\-\-action\-pipeline\-enabled`, `\-\-branch\-name\-regex`, `\-\-yes`, "never automatically retried or redirected", "no independent readback"} {
+		if !strings.Contains(first["ag-cli-repo-settings-edit.1"], want) {
+			t.Errorf("repository settings edit manual missing %q", want)
+		}
+	}
+	for _, want := range []string{`\-\-json`, "null", "Requires authentication"} {
+		if !strings.Contains(first["ag-cli-repo-settings-view.1"], want) {
+			t.Errorf("repository settings view manual missing %q", want)
+		}
+	}
 	for _, want := range []string{`\-\-json`, "selected=false", "Requires authentication", "unknown fields", "No roles are modified"} {
 		if !strings.Contains(first["ag-cli-repo-permissions.1"], want) {
 			t.Errorf("repository permissions manual missing %q", want)

@@ -376,6 +376,46 @@ ag-cli repo cla disable owner/repo --yes
 
 接口依据：[可用 CLA 列表](https://docs.atomgit.com/docs/apis/get-api-v-5-repos-owner-repo-clas/)、[CLA 配置](https://docs.atomgit.com/docs/apis/put-api-v-5-repos-owner-repo-clas/)。
 
+#### 仓库通用设置
+
+```bash
+# 查看设置；省略仓库时从当前 Git 仓库推断
+ag-cli repo settings view owner/repo
+ag-cli repo settings view --json
+
+# 显式 false 也会发送；默认显示目标和修改字段并要求确认
+ag-cli repo settings edit owner/repo --action-pipeline-enabled=false
+ag-cli repo settings edit owner/repo --disable-fork --block-cross-repo-pr-trigger --yes
+
+# 空字符串请求清除规则或白名单，未指定字段不发送
+ag-cli repo settings edit owner/repo --branch-name-regex '' --tag-name-regex '' --json --yes
+ag-cli repo settings edit owner/repo --forbidden-developer-create-branch-user-ids '' --yes
+```
+
+`repo settings view/edit` 使用 API v5 `GET/PUT /repos/{owner}/{repo}/repo_settings`，需要认证，显式仓库优先于 Git 推断。它不改变仓库名称、可见性、PR 合并策略、push-rule 或受保护分支/标签规则。
+
+可写参数与官方请求字段一一对应（将字段名中的下划线换成连字符）：
+
+| 参数 | 类型 | 作用 |
+| --- | --- | --- |
+| `--action-pipeline-enabled` | boolean | 开启 Actions 流水线 |
+| `--block-cross-repo-pr-trigger` | boolean | 阻止跨仓 PR 触发 Actions |
+| `--disable-fork` | boolean | 禁止 Fork |
+| `--forbidden-developer-create-branch` | boolean | 禁止开发者创建分支 |
+| `--forbidden-developer-create-tag` | boolean | 禁止开发者创建标签 |
+| `--forbidden-committer-create-branch` | boolean | 禁止提交者创建分支 |
+| `--forbidden-developer-create-branch-user-ids` | string | 创建分支的白名单用户 ID，保留服务端字符串格式 |
+| `--branch-name-regex` / `--tag-name-regex` | string | 分支/标签名称规则 |
+| `--generate-pre-merge-ref` | boolean | 生成预合并引用 |
+| `--rebase-disable-trigger-webhook` | boolean | rebase 时不触发 Webhook |
+| `--open-gpg-verified` | boolean | 公开 GPG 公钥验证 |
+| `--include-lfs-objects` | boolean | 下载归档时包含 LFS 对象 |
+| `--show-branch-creator` | boolean | 显示分支创建者 |
+
+`edit` 至少指定一个设置，支持显式 `--flag=false` 和字符串 `--flag=''`；只提交指定字段，不先读取再覆写整份设置。CLI 不用 Go 的正则引擎校验服务端规则，也不推断白名单 ID 的分隔格式，具体内容由 AtomGit 校验。`forbidden_gitlab_access` 只有读取契约，不提供未经文档定义的写入参数。参数、无修改请求在认证和 HTTP 前拒绝；取消或 EOF 不读取凭据、不发送请求。`--yes/-y` 跳过确认；PUT 不重试、不跟随重定向。
+
+`view --json` 顶层固定为 `repository` 和 `settings`。设置中的 boolean、字符串及白名单对象按官方类型解析，缺失或 null 字段显示为 `null`，不会补成 false、空字符串或空数组；服务端明确返回的空白名单保留为 `[]`。`edit --json` 包含 `repository`、`submitted_fields`、`settings` 和固定 `verification: "response_only"`：提交字段与 PUT 返回的设置分开呈现，不声称已独立回读，也不把未返回的提交字段当作已验证。文本输出使用同一组信息并通过 JSON 转义保护远端字段。只接受 HTTP 200 对象及至少一个已知非 null 设置值；响应形状或类型非法时不输出部分结果。写入结果无法确认时，应先检查 AtomGit 再决定是否重试；测试只使用离线 mock。
+
 #### 仓库策略设置
 
 ```bash
