@@ -37,6 +37,7 @@ func newCmdRepoModuleEdit(f *cmdutil.Factory) *cobra.Command {
 			if err := cobra.MaximumNArgs(1)(cmd, args); err != nil {
 				return err
 			}
+			// Reject empty updates before root credential handling; PreRunE is too late.
 			return buildModuleUpdate(cmd, opts).Validate()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {

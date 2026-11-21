@@ -59,7 +59,9 @@ func UpdateRepositoryModules(client *Client, owner, repo string, request Reposit
 	err = client.doJSONRequestContext(client.requestContext(), &hc, http.MethodPut, path, bytes.NewReader(body), "application/json", "application/json", RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: false}, &response)
 	if err != nil {
 		var status *HTTPError
-		if errors.Is(err, ErrRequestPreparation) || errors.As(err, &status) && status.StatusCode >= 400 && status.StatusCode < 500 {
+		isHTTP := errors.As(err, &status)
+		definiteFailure := isHTTP && status.StatusCode >= 400 && status.StatusCode < 500
+		if errors.Is(err, ErrRequestPreparation) || definiteFailure {
 			return fmt.Errorf("update repository modules: %w", err)
 		}
 		return &RepositoryModuleUpdateUncertainError{Err: err}

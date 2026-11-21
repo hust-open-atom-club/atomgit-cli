@@ -148,8 +148,12 @@ func TestModuleEditErrorsAndContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	cmd.SetContext(ctx)
-	_ = cmd.Flags().Set("wiki", "false")
-	_ = cmd.Flags().Set("yes", "true")
+	if err := cmd.Flags().Set("wiki", "false"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Flags().Set("yes", "true"); err != nil {
+		t.Fatal(err)
+	}
 	if err := cmd.RunE(cmd, []string{"team/demo"}); !errors.Is(err, context.Canceled) {
 		t.Fatalf("err=%v", err)
 	}

@@ -57,7 +57,10 @@ func TestModuleNoChangesFailsBeforeCredentialLoading(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "token.json"), []byte(`{`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	args, _ := json.Marshal([]string{"repo", "module", "edit", "team/demo", "--yes"})
+	args, marshalErr := json.Marshal([]string{"repo", "module", "edit", "team/demo", "--yes"})
+	if marshalErr != nil {
+		t.Fatal(marshalErr)
+	}
 	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestAPIErrorProcess$")
