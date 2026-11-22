@@ -1374,7 +1374,7 @@ ag-cli milestone delete owner/repo 12 --yes
 
 ## Actions 运行记录 (run)
 
-`ag-cli run` 提供工作流运行检查能力，并支持删除单个 artifact；不会触发、重跑、取消或删除工作流运行。
+`ag-cli run` 可检查、停止和重跑工作流运行，也可重试失败任务。它还支持删除单个 artifact。触发新运行请使用 `ag-cli workflow run`。
 
 ```bash
 # 列出运行记录（默认最多 30 条）
@@ -1407,6 +1407,14 @@ ag-cli run view owner/repo <run-id> --job <job-id> --log-file job-logs.zip --ove
 ag-cli run view owner/repo <run-id> --artifact <artifact-id>
 ag-cli run view owner/repo <run-id> --artifact <artifact-id> --artifact-file build.zip --overwrite
 
+# 停止运行中的工作流，或重跑整个工作流
+ag-cli run stop owner/repo <run-id>
+ag-cli run rerun owner/repo <run-id>
+
+# 重试全部失败任务，或指定一个任务执行 ID
+ag-cli run retry owner/repo <run-id>
+ag-cli run retry owner/repo <run-id> --job <job-run-id>
+
 # 按 step ID 分页拉取步骤日志；默认输出到 stdout
 ag-cli run step-log owner/repo <run-id> <job-id> <step-id>
 ag-cli run step-log owner/repo <run-id> <job-id> <step-id> --output step.log
@@ -1425,6 +1433,8 @@ ag-cli run artifact delete <artifact-id> --yes
 `--log` 会先把 AtomGit 返回的日志 ZIP 流式写入临时文件，再逐项输出其中的日志文本；纯文本响应也受相同限制并保持兼容。日志展示的响应上限为 64 MiB，用于限制临时文件；单条解压日志上限为 128 MiB，允许其达到最大归档响应的两倍；全部解压日志累计上限为 256 MiB，允许两条最大日志并限制多条日志的总展开量。累计量不含条目间补入的换行。ZIP 元数据会用于提前拒绝超限内容，实际读取仍会执行限制；恰好达到上限可正常输出，超限则返回错误。错误可能发生在已有部分日志输出之后，请勿将非零退出的部分输出当作完整日志。无法识别为 ZIP 的文本响应按纯文本处理；带 ZIP 签名但格式损坏的响应会报错。
 
 `--log-file` 保留服务端原始 ZIP 下载行为，不应用上述展示限制。`ag-cli run view --artifact` 下载的是 artifact 归档，而 `ag-cli run artifact view` 只读取元数据。`ag-cli run artifact delete` 会先读取 artifact 元数据并显示仓库、ID、名称、workflow run ID 和过期时间，只有输入 `y` 或 `yes` 才会继续；`--yes` 可跳过确认，但不会跳过元数据读取。artifact 删除后无法恢复。日志、step-log `--output` 和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
+
+`run retry` 默认查询失败任务，并将其 `exec_id` 作为 `job_run_ids` 发送。`--job` 可重复使用；它直接接收任务执行 ID。没有失败任务或任务缺少执行 ID 时，命令不会发送重试请求。
 
 ## Actions 工作流管理 (workflow)
 
