@@ -153,6 +153,7 @@
 - [ag-cli pr list](#ag-cli-pr-list) — List pull requests
 - [ag-cli pr merge](#ag-cli-pr-merge) — Merge a pull request
 - [ag-cli pr reactions](#ag-cli-pr-reactions) — List reactions on a pull request
+- [ag-cli pr ready](#ag-cli-pr-ready) — Mark a draft pull request as ready for review
 - [ag-cli pr reopen](#ag-cli-pr-reopen) — Reopen a pull request
 - [ag-cli pr review](#ag-cli-pr-review) — Approve a pull request review
 - [ag-cli pr unlink-issues](#ag-cli-pr-unlink-issues) — Unlink issues from a pull request
@@ -4066,6 +4067,35 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 ```bash
 ag-cli pr reactions owner/repo 42
 ag-cli pr reactions owner/repo 42 --limit 50 --json
+```
+
+
+## ag-cli pr ready
+
+Usage: `ag-cli pr ready [<owner>/<repo>] <number> [flags]`
+
+Mark a draft pull request as ready for review
+
+Mark a draft pull request as ready for review. Use --undo to make it a draft again.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `--undo` | Convert the pull request to a draft | `false` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli pr ready owner/repo 123
+ag-cli pr ready 123
+ag-cli pr ready owner/repo 123 --undo
 ```
 
 

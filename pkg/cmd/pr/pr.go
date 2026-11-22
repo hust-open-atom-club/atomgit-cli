@@ -27,6 +27,7 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdPRView(f))
 	cmd.AddCommand(newCmdPRCreate(f))
 	cmd.AddCommand(newCmdPREdit(f))
+	cmd.AddCommand(newCmdPRReady(f))
 	cmd.AddCommand(newCmdPRClose(f))
 	cmd.AddCommand(newCmdPRReopen(f))
 	cmd.AddCommand(newCmdPRReview(f))

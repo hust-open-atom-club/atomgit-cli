@@ -993,6 +993,10 @@ ag-cli pr edit owner/repo 123 --body "Updated description"
 ag-cli pr edit owner/repo 123 --body-file description.md
 cat description.md | ag-cli pr edit owner/repo 123 --body-file -
 
+# 标记草稿 PR 可供审查；--undo 将其改回草稿
+ag-cli pr ready owner/repo 123
+ag-cli pr ready 123 --undo
+
 # 查看 PR diff
 ag-cli pr diff owner/repo 123
 
@@ -1069,6 +1073,8 @@ ag-cli pr history owner/repo 42 --limit 50 --json
 跨仓库创建 PR 时 `--head` 的写法请参阅[跨仓库 PR 示例](cross_repo_pr_demo.md)。
 
 负责人（assignee）负责后续工作，批准审查人（approval reviewer）负责批准变更，测试人（tester）负责验证变更；三个 AtomGit 角色相互独立。用户账号、标签和里程碑会在修改 PR 前解析，标签和里程碑必须已存在。`pr edit` 只修改显式传入的字段；`--body-file -` 从标准输入读取正文，`--body` 与 `--body-file` 互斥，显式传入空正文会清空现有正文。添加和移除参数可重复使用，也可用逗号一次传入多个值。
+
+`pr ready` 只修改 PR 的 `draft` 状态。已处于目标状态时不会发送更新请求。命令会在更新后重新读取 PR；若状态未改变或无法验证，则返回错误。关闭或已合并的 PR 不允许切换草稿状态。
 
 #### PR 评审
 
