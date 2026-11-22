@@ -151,6 +151,64 @@ func TestRandomState(t *testing.T) {
 	}
 }
 
+func TestCallbackRejectsWrongStateWithoutEndingLogin(t *testing.T) {
+	results := make(chan callbackResult, 1)
+	handler := newCallbackHandler("expected-state", results)
+
+	for _, target := range []string{
+		"/callback?code=wrong-code&state=wrong-state",
+		"/callback?error=access_denied&state=wrong-state",
+		"/callback?state=wrong-state",
+		"/callback?code=wrong-code",
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, target, nil))
+		if response.Code != http.StatusBadRequest {
+			t.Fatalf("callback %q returned %d", target, response.Code)
+		}
+		if strings.Contains(response.Body.String(), "Authorization successful") {
+			t.Fatalf("callback %q showed success", target)
+		}
+		select {
+		case result := <-results:
+			t.Fatalf("callback %q ended login: %#v", target, result)
+		default:
+		}
+	}
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/callback?code=valid-code&state=expected-state", nil))
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "Authorization successful") {
+		t.Fatalf("valid callback returned %d: %q", response.Code, response.Body.String())
+	}
+	select {
+	case result := <-results:
+		if result.code != "valid-code" || result.err != nil {
+			t.Fatalf("valid callback result = %#v", result)
+		}
+	default:
+		t.Fatal("valid callback did not end login")
+	}
+}
+
+func TestCallbackAcceptsMatchingStateError(t *testing.T) {
+	results := make(chan callbackResult, 1)
+	handler := newCallbackHandler("expected-state", results)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/callback?error=access_denied&state=expected-state", nil))
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("error callback returned %d", response.Code)
+	}
+	select {
+	case result := <-results:
+		if result.err == nil || !strings.Contains(result.err.Error(), "access_denied") {
+			t.Fatalf("error callback result = %#v", result)
+		}
+	default:
+		t.Fatal("error callback did not end login")
+	}
+}
+
 func TestExchangeCode(t *testing.T) {
 	withDefaultHTTPClient(t, func(req *http.Request) (*http.Response, error) {
 		if req.Method != http.MethodPost || req.URL.String() != tokenURL {

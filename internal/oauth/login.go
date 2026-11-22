@@ -134,38 +134,9 @@ func Login(ctx context.Context) (*LoginResult, error) {
 	authURL := buildAuthorizeURL(clientID(), redir, state)
 
 	resultCh := make(chan callbackResult, 1)
-	var once sync.Once
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		q := r.URL.Query()
-		if errStr := q.Get("error"); errStr != "" {
-			desc := q.Get("error_description")
-			once.Do(func() {
-				resultCh <- callbackResult{err: fmt.Errorf("oauth error: %s %s", errStr, desc)}
-			})
-			http.Error(w, errStr, http.StatusBadRequest)
-			return
-		}
-		code := q.Get("code")
-		st := q.Get("state")
-		if code == "" {
-			once.Do(func() {
-				resultCh <- callbackResult{err: fmt.Errorf("no authorization code in callback")}
-			})
-			http.Error(w, "missing code", http.StatusBadRequest)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = io.WriteString(w, successHTML)
-		once.Do(func() {
-			resultCh <- callbackResult{code: code, state: st}
-		})
-	})
+	mux.HandleFunc("/callback", newCallbackHandler(state, resultCh))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 	})
@@ -236,6 +207,42 @@ func Login(ctx context.Context) (*LoginResult, error) {
 
 	case <-ctx.Done():
 		return nil, fmt.Errorf("login cancelled or timed out: %w", ctx.Err())
+	}
+}
+
+func newCallbackHandler(state string, resultCh chan<- callbackResult) http.HandlerFunc {
+	var once sync.Once
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		q := r.URL.Query()
+		if q.Get("state") != state {
+			http.Error(w, "oauth state mismatch", http.StatusBadRequest)
+			return
+		}
+		if errStr := q.Get("error"); errStr != "" {
+			desc := q.Get("error_description")
+			once.Do(func() {
+				resultCh <- callbackResult{err: fmt.Errorf("oauth error: %s %s", errStr, desc)}
+			})
+			http.Error(w, errStr, http.StatusBadRequest)
+			return
+		}
+		code := q.Get("code")
+		if code == "" {
+			once.Do(func() {
+				resultCh <- callbackResult{err: fmt.Errorf("no authorization code in callback")}
+			})
+			http.Error(w, "missing code", http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = io.WriteString(w, successHTML)
+		once.Do(func() {
+			resultCh <- callbackResult{code: code, state: state}
+		})
 	}
 }
 

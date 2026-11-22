@@ -15,6 +15,8 @@
 
 - 使用 OAuth 登录（推荐）：运行 `ag-cli auth login`，在浏览器中完成 AtomGit 授权。登录成功后，`ag-cli` 会自动将认证信息写入令牌文件。
 
+  浏览器回调的 `state` 不匹配时，CLI 会拒绝该请求并继续等待本次登录的有效回调。
+
   > [!IMPORTANT]
   > 使用 Actions/流水线或项目讨论相关功能时，OAuth 应用需要提供 “Action” 和“项目讨论”的读写权限。运行 `ag-cli auth login --force` 会重新打开授权确认；如果授权页面未提供这两项权限，请使用已具备相应权限的访问令牌通过 `ag-cli auth login --with-token --force` 登录。
 
