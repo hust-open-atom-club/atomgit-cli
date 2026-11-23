@@ -16,6 +16,7 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "view [<owner>/<repo>] <number>",
 		Short: "View all comments on an issue",
+		Long:  "Read every page of issue comments before printing, then sort by creation time. The total counts top-level comments. Reading fails if no empty page is reached within 100 pages or the 30-second traversal timeout expires; no partial list is printed.",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
@@ -39,9 +40,8 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			var comments []api.Comment
-			path := fmt.Sprintf("/repos/%s/%s/issues/%d/comments", owner, repo, number)
-			if err := client.Get(path, &comments); err != nil {
+			comments, err := api.ListIssueComments(client.WithContext(cmd.Context()), owner, repo, number)
+			if err != nil {
 				return err
 			}
 
@@ -54,7 +54,7 @@ func newCmdView(f *cmdutil.Factory) *cobra.Command {
 			fmt.Fprintf(out, "Issue #%d 的评论 (共 %d 条):\n\n", number, len(comments))
 
 			// Sort comments by creation time
-			sort.Slice(comments, func(i, j int) bool {
+			sort.SliceStable(comments, func(i, j int) bool {
 				t1, _ := time.Parse(time.RFC3339, comments[i].CreatedAt)
 				t2, _ := time.Parse(time.RFC3339, comments[j].CreatedAt)
 				return t1.Before(t2)

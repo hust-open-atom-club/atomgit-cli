@@ -158,6 +158,10 @@ CI 在一个 Runner 中顺序处理七个目标，并复用每个已构建二进
 - `npm/` 下的七个平台二进制包、一个主启动包和独立的 `npm/checksums.txt`。
 - 仅覆盖 AtomGit Release 附件（七个归档和两个安装脚本）的根 `checksums.txt`。
 
+两个安装脚本在运行时下载同一 Release 的根 `checksums.txt`，并在解压前校验归档的 SHA-256。
+校验失败、缺少对应记录或无法计算校验和时，脚本会中止安装并以非零状态退出。
+因此根 `checksums.txt` 必须随每个正式 Release 一起发布；删除它会让自动安装不可用。
+
 仓库根目录的 `install.sh` 和 `install.ps1` 是不绑定具体版本的源码模板，使用 `__AG_RELEASE_TAG__` 占位符。发布构建只替换安装器中的绑定变量，生成的 Release 附件默认下载本次 tag；模板中的使用示例始终保持为 `latest` 和 `vX.Y.Z`，无需随版本手工修改。
 
 `install.ps1` 必须保持纯 ASCII，确保 Windows PowerShell 5.1 在无 `charset` 的 HTTP 响应以及使用系统 ANSI 代码页读取本地脚本时都能正确解析。发布制品校验会拒绝包含非 ASCII 字节的 PowerShell 安装器。

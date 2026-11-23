@@ -211,6 +211,8 @@ ag-cli auth logout --all
 
 `auth switch` 默认同时切换活动凭据并写入当前仓库的 `git config --local user.name/user.email`；只有 `--global` 才修改全局配置，`--no-git` 可明确禁用同步。API 邮箱缺失时 CLI 不会猜测邮箱，必须通过登录时的 `--git-email`、切换时的 `--git-email` 或 `--no-git` 明确处理。Git identity 写入失败不会切换活动凭据；凭据切换失败时会尝试恢复原 Git identity。该流程使用补偿式回滚降低半完成风险，但不承诺跨凭据文件和 Git 配置的完整原子性。
 
+本地已有凭据但指定账号未保存时，`auth switch` 和 `auth logout --account` 会提示用 `ag-cli auth list` 查看可用账号。
+
 `auth logout` 默认删除活动账号。为避免删除动作隐式选择另一个账号并造成 Git identity 错配，当仍有其他账号时不能删除活动账号；应先执行 `auth switch <account>`，再用 `auth logout --account <old-account>` 删除原账号。`--account` 可直接删除非活动账号，`--all` 明确删除全部账号。access token、refresh token 不会写入 Git 配置、remote URL、账号列表或错误信息。
 
 可选环境变量（覆盖默认 OAuth 应用）：`AG_OAUTH_CLIENT_ID`、`AG_OAUTH_CLIENT_SECRET`；若本机 **8765** 端口被占用，可设置 **`AG_OAUTH_REDIRECT_PORT`**（需与 AtomGit 应用配置的回调地址一致）。
@@ -801,6 +803,10 @@ ag-cli user watching
 
 # 列出指定用户 watch 的仓库
 ag-cli user watching alice --limit 100 --json
+
+# 列出指定用户关注的用户与组织（只读，未登录时可匿名访问）
+ag-cli user following alice
+ag-cli user following alice --limit 100 --json
 ```
 
 `ag-cli user followers <username>` 必须显式指定用户名，不从 Git remote 推断。`--limit`（`-L`）必须为正数，默认 30，限制跨页返回的总条数。未配置凭据时匿名读取；已有凭据损坏或无法读取时直接报错，不降级为匿名请求。任一页失败时不输出部分结果。
@@ -838,6 +844,11 @@ ag-cli user watching alice --limit 100 --json
 `ag-cli user events` 需要认证，用于列出用户个人动态。省略用户名时默认使用当前认证账号，显式用户名优先。`--year` 用于按年份过滤（`0` 表示不过滤，合法范围为 `1970`–`9999`）；`--limit` 控制跨游标页返回的总条数（默认 `30`，必须为正整数）。命令会跟随 API 返回的 `next` 游标继续请求，直到满足条数或没有更多游标，并检测重复游标以避免无限翻页。文本模式按日期从新到旧输出 `DATE`、`ACTION`、`PROJECT`、`TITLE` 四列；`--json` 输出稳定的数组（不是 API 按日期分组的对象），每个元素包含 `date`、`action`、`actionName`、`authorId`、`authorUsername`、`authorName`、`authorUrl`、`createdAt`、`projectId`、`projectName`、`targetId`、`targetIid`、`targetTitle`、`targetType`、`targetTypeFormat` 字段。没有动态时，文本模式输出 `No events found.`，JSON 模式输出 `[]`。
 
 `ag-cli user starred [<username>]` 和 `ag-cli user watching [<username>]` 需要认证，分别列出 star 和 watch 的仓库集合。省略用户名时使用认证用户端点；显式用户名使用对应的公开用户端点，且用户名会作为单个 URL 路径段转义。两个命令的 `--limit` 均控制跨页返回的总仓库数（默认 `30`，必须为正整数）。文本模式输出无歧义的完整仓库名和 URL；`--json` 输出固定的 `id`、`fullName`、`url` 字段数组。空集合在文本模式下输出明确提示，在 JSON 模式下输出 `[]`。这些命令只读，不会 star、取消 star、watch 或取消 watch 仓库，也不会改变 `ag-cli repo list` 的所有权及成员关系语义。
+
+`ag-cli user following <username>` 显式指定用户名，不从 Git remote 推断；仅列出关注对象，不执行关注或取消关注，也不是粉丝列表。`--limit/-L` 是跨页输出总数上限（默认 `30`，必须为正数），从第 1 页开始，`per_page` 为 `min(limit, 100)`（默认 `30`）；读取到短页或达到上限时停止。参数在认证和网络请求前校验；用户名先裁剪首尾空白，拒绝 `.`、`..`、反斜杠、路径或查询分隔符，以及内部空白和控制字符，再作为单个 URL 路径段转义。未登录时可匿名读取；已有凭据会正常使用，配置或凭据读取失败会报错，不会静默匿名降级。请求继承命令的取消上下文。
+
+文本列为 `LOGIN`、`NAME`、`TYPE`、`URL`，区分 `User` 与 `Organization`，字段中的制表符和换行会转义，输出仍经过安全 writer。JSON 输出固定的 `id`、`object_id`、`login`、`name`、`type`、`avatar_url`、`html_url`、`url`、`followers_url`、`following_url` 字段，ID 保留字符串；可空或省略的字符串字段输出空字符串。组织可以没有 `following_url`，CLI 不拼造缺失 URL。空结果文本为 `No followed users or organizations found.`，JSON 为 `[]`。仅接受 HTTP 200 数组；异常响应或任何一页失败都返回错误，不输出部分列表。不存在或隐藏个人信息的用户可能返回 404，此状态不会被当作空列表。
+
 
 ## Branch
 
@@ -1176,6 +1187,8 @@ ag-cli pr comment refresh-position 123 --comment-id 456
 ag-cli pr comment refresh-position owner/repo 123 --all --json
 ```
 
+`pr comment view [<owner>/<repo>] <number>` 在全部分页读取完成后，按创建时间从早到晚显示普通评论和检视意见。标题中的“共 N 条”仅统计顶层评论，不把嵌套回复重复计入；回复继续显示在对应评论下。即使服务端将每页数量限制得小于请求值，也会继续读取到空页。最多遍历 100 页（含确认结束的空页），整个读取过程限时 30 秒，并遵循调用方更短的截止时间及取消信号；中途请求失败、未在页数上限内读到空页或超时均返回错误，不输出部分评论列表。
+
 `pr comment resolve/unresolve [<owner>/<repo>] <number> <discussion-id>` 要求认证，默认显示仓库、PR、讨论 ID 和目标状态并确认，`--yes/-y` 跳过确认；空输入、EOF 或否定回答取消操作，不发送 API 请求。PR 编号必须为正整数；讨论 ID 是 `pr comment view` 中单独显示的 `discussion_id`，不是下方的 note/comment 数字 ID。
 
 命令先核对 PR 身份，再遍历该 PR 的评论分页确认目标是检视讨论（`diff_comment`）；普通评论、其他 PR 的讨论、缺失状态或无法确认身份的响应均不会触发写入。使用 API v5 `PUT /repos/{owner}/{repo}/pulls/{number}/comments/{discussion_id}`，发送显式 `resolved: true/false`，其中 `unresolve` 不会省略 `false`。写请求不自动重试或跟随重定向，只接受 HTTP 200，响应体按官方契约忽略（可为空）。之后回读同一讨论，只有明确状态与请求一致才报告成功；回读失败或状态不一致时返回非零退出码，并提示先在 AtomGit 核对再决定是否重试。该命令不批准、合并或关闭 PR。
@@ -1314,6 +1327,8 @@ ag-cli issue comment delete owner/repo 42 789
 ag-cli issue comment delete owner/repo 42 789 --yes
 ```
 
+`issue comment view [<owner>/<repo>] <number>` 同样读取全部分页后再按创建时间排序，标题总数为顶层评论数。它使用与 PR 评论查看相同的空页结束规则、100 页上限、30 秒总超时及取消处理；读取失败时不输出部分评论列表。这些分页行为不改变评论创建、编辑或删除命令。
+
 ## Tag
 
 ```bash
@@ -1414,7 +1429,7 @@ ag-cli milestone delete owner/repo 12 --yes
 
 ## Actions 运行记录 (run)
 
-`ag-cli run` 提供工作流运行检查能力，并支持删除单个 artifact；不会触发、重跑、取消或删除工作流运行。
+`ag-cli run` 可检查、停止和重跑工作流运行，也可重试失败任务。它还支持删除单个 artifact。触发新运行请使用 `ag-cli workflow run`。
 
 ```bash
 # 列出运行记录（默认最多 30 条）
@@ -1447,6 +1462,14 @@ ag-cli run view owner/repo <run-id> --job <job-id> --log-file job-logs.zip --ove
 ag-cli run view owner/repo <run-id> --artifact <artifact-id>
 ag-cli run view owner/repo <run-id> --artifact <artifact-id> --artifact-file build.zip --overwrite
 
+# 停止运行中的工作流，或重跑整个工作流
+ag-cli run stop owner/repo <run-id>
+ag-cli run rerun owner/repo <run-id>
+
+# 重试全部失败任务，或指定一个任务执行 ID
+ag-cli run retry owner/repo <run-id>
+ag-cli run retry owner/repo <run-id> --job <job-run-id>
+
 # 按 step ID 分页拉取步骤日志；默认输出到 stdout
 ag-cli run step-log owner/repo <run-id> <job-id> <step-id>
 ag-cli run step-log owner/repo <run-id> <job-id> <step-id> --output step.log
@@ -1465,6 +1488,8 @@ ag-cli run artifact delete <artifact-id> --yes
 `--log` 会先把 AtomGit 返回的日志 ZIP 流式写入临时文件，再逐项输出其中的日志文本；纯文本响应也受相同限制并保持兼容。日志展示的响应上限为 64 MiB，用于限制临时文件；单条解压日志上限为 128 MiB，允许其达到最大归档响应的两倍；全部解压日志累计上限为 256 MiB，允许两条最大日志并限制多条日志的总展开量。累计量不含条目间补入的换行。ZIP 元数据会用于提前拒绝超限内容，实际读取仍会执行限制；恰好达到上限可正常输出，超限则返回错误。错误可能发生在已有部分日志输出之后，请勿将非零退出的部分输出当作完整日志。无法识别为 ZIP 的文本响应按纯文本处理；带 ZIP 签名但格式损坏的响应会报错。
 
 `--log-file` 保留服务端原始 ZIP 下载行为，不应用上述展示限制。`ag-cli run view --artifact` 下载的是 artifact 归档，而 `ag-cli run artifact view` 只读取元数据。`ag-cli run artifact delete` 会先读取 artifact 元数据并显示仓库、ID、名称、workflow run ID 和过期时间，只有输入 `y` 或 `yes` 才会继续；`--yes` 可跳过确认，但不会跳过元数据读取。artifact 删除后无法恢复。日志、step-log `--output` 和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
+
+`run retry` 默认查询失败任务，并将其 `exec_id` 作为 `job_run_ids` 发送。`--job` 可重复使用；它直接接收任务执行 ID。没有失败任务或任务缺少执行 ID 时，命令不会发送重试请求。
 
 ## Actions 工作流管理 (workflow)
 

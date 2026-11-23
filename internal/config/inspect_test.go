@@ -120,7 +120,7 @@ func TestInspectCredentialPermissionFailure(t *testing.T) {
 	}
 }
 
-func TestInspectCredentialSafetyRejections(t *testing.T) {
+func TestCredentialFileSafetyRejections(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		reason error
@@ -129,28 +129,38 @@ func TestInspectCredentialSafetyRejections(t *testing.T) {
 		{"oversized", ErrTokenFileTooLarge},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			home := isolateConfig(t)
-			writeCredentialsFile(t, filepath.Join(home, legacyTokenFile), StoredCredentials{AccessToken: "legacy", User: "bob"})
-			path, err := PrimaryTokenPath()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-				t.Fatal(err)
-			}
-			if errors.Is(tc.reason, ErrTokenFileNotRegular) {
-				if err := os.Mkdir(path, 0o700); err != nil {
-					t.Fatal(err)
-				}
-			} else {
-				if err := os.WriteFile(path, make([]byte, (1<<20)+1), 0o600); err != nil {
-					t.Fatal(err)
-				}
-			}
-			_, _, err = InspectCredentials()
-			safety, ok := errors.AsType[*CredentialFileSafetyError](err)
-			if !ok || safety.Path != path || !errors.Is(err, ErrInvalidCredentials) || !errors.Is(err, tc.reason) || errors.Is(err, ErrCredentialAccess) || errors.Is(err, ErrTokenNotFound) {
-				t.Fatalf("error = %v, want safety rejection retaining path and reason", err)
+			for _, loader := range []struct {
+				name string
+				load func() error
+			}{
+				{"loader", func() error { _, err := readCredentialData(); return err }},
+				{"inspection", func() error { _, _, err := InspectCredentials(); return err }},
+			} {
+				t.Run(loader.name, func(t *testing.T) {
+					home := isolateConfig(t)
+					writeCredentialsFile(t, filepath.Join(home, legacyTokenFile), StoredCredentials{AccessToken: "legacy", User: "bob"})
+					path, err := PrimaryTokenPath()
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+						t.Fatal(err)
+					}
+					if errors.Is(tc.reason, ErrTokenFileNotRegular) {
+						if err := os.Mkdir(path, 0o700); err != nil {
+							t.Fatal(err)
+						}
+					} else {
+						if err := os.WriteFile(path, make([]byte, maxCredentialFileSize+1), 0o600); err != nil {
+							t.Fatal(err)
+						}
+					}
+					err = loader.load()
+					safety, ok := errors.AsType[*CredentialFileSafetyError](err)
+					if !ok || safety.Path != path || !errors.Is(err, ErrInvalidCredentials) || !errors.Is(err, tc.reason) || errors.Is(err, ErrCredentialAccess) || errors.Is(err, ErrTokenNotFound) {
+						t.Fatalf("error = %v, want safety rejection retaining path and reason", err)
+					}
+				})
 			}
 		})
 	}

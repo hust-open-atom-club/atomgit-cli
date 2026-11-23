@@ -223,12 +223,15 @@
 - [ag-cli repo webhook list](#ag-cli-repo-webhook-list) — List repository webhooks
 - [ag-cli repo webhook test](#ag-cli-repo-webhook-test) — Send a test payload to a repository webhook
 - [ag-cli repo webhook view](#ag-cli-repo-webhook-view) — View a repository webhook
-- [ag-cli run](#ag-cli-run) — Inspect AtomGit Actions workflow runs and artifacts
+- [ag-cli run](#ag-cli-run) — Inspect and manage AtomGit Actions workflow runs and artifacts
 - [ag-cli run artifact](#ag-cli-run-artifact) — Inspect and manage workflow artifacts
 - [ag-cli run artifact delete](#ag-cli-run-artifact-delete) — Delete a workflow artifact
 - [ag-cli run artifact view](#ag-cli-run-artifact-view) — View artifact metadata without downloading the archive
 - [ag-cli run list](#ag-cli-run-list) — List workflow runs
+- [ag-cli run rerun](#ag-cli-run-rerun) — Rerun a workflow run
+- [ag-cli run retry](#ag-cli-run-retry) — Retry failed jobs in a workflow run
 - [ag-cli run step-log](#ag-cli-run-step-log) — Fetch step-level logs for a workflow job
+- [ag-cli run stop](#ag-cli-run-stop) — Stop a running workflow run
 - [ag-cli run view](#ag-cli-run-view) — View a workflow run, jobs, logs, and artifacts
 - [ag-cli runner](#ag-cli-runner) — Inspect AtomGit Actions host runners
 - [ag-cli runner list](#ag-cli-runner-list) — List host runners configured for a repository
@@ -257,6 +260,7 @@
 - [ag-cli user emails](#ag-cli-user-emails) — List email addresses for the authenticated user
 - [ag-cli user events](#ag-cli-user-events) — List personal activity events for a user
 - [ag-cli user followers](#ag-cli-user-followers) — List followers of a user
+- [ag-cli user following](#ag-cli-user-following) — List users and organizations followed by a user
 - [ag-cli user namespaces](#ag-cli-user-namespaces) — List namespaces for the authenticated user
 - [ag-cli user starred](#ag-cli-user-starred) — List starred repositories for a user
 - [ag-cli user view](#ag-cli-user-view) — View the current user or a public user profile
@@ -1773,7 +1777,7 @@ Usage: `ag-cli issue comment view [<owner>/<repo>] <number>`
 
 View all comments on an issue
 
-View all comments on an issue
+Read every page of issue comments before printing, then sort by creation time. The total counts top-level comments. Reading fails if no empty page is reached within 100 pages or the 30-second traversal timeout expires; no partial list is printed.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -3746,7 +3750,7 @@ Usage: `ag-cli pr comment view [<owner>/<repo>] <number>`
 
 View all comments on a pull request
 
-View all comments on a pull request
+Read every page of pull request comments before printing. Includes ordinary comments, review discussions, and nested replies. The total counts top-level comments only; replies are displayed under their parent. Reading fails if no empty page is reached within 100 pages or the 30-second traversal timeout expires; no partial list is printed.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -6153,12 +6157,12 @@ ag-cli repo webhook view owner/repo 42
 
 Usage: `ag-cli run`
 
-Inspect AtomGit Actions workflow runs and artifacts
+Inspect and manage AtomGit Actions workflow runs and artifacts
 
 List and inspect AtomGit Actions workflow runs, jobs, logs, and artifacts.
 
-Artifacts can also be deleted after confirmation. Workflow run dispatch,
-rerun, cancel, and deletion operations are not supported.
+Stop, rerun, and retry workflow runs. Artifacts can be deleted after confirmation.
+Workflow run dispatch and deletion operations are not supported.
 
 ### Flags
 
@@ -6284,6 +6288,47 @@ ag-cli run list owner/repo --event push --workflow-name CI --limit 50
 ```
 
 
+## ag-cli run rerun
+
+Usage: `ag-cli run rerun [<owner>/<repo>] <run-id>`
+
+Rerun a workflow run
+
+Rerun a workflow run
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli run retry
+
+Usage: `ag-cli run retry [<owner>/<repo>] <run-id> [flags]`
+
+Retry failed jobs in a workflow run
+
+Retry failed jobs in a workflow run
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-j, --job` | Retry this job run ID (repeatable); defaults to all failed jobs | `[]` | local |
+
+
 ## ag-cli run step-log
 
 Usage: `ag-cli run step-log [<owner>/<repo>] <run-id> <job-id> <step-id> [flags]`
@@ -6314,6 +6359,26 @@ ag-cli run step-log <run-id> <job-id> <step-id>
 ag-cli run step-log owner/repo <run-id> <job-id> <step-id> --output step.log
 ag-cli run step-log owner/repo <run-id> <job-id> <step-id> --output step.log --overwrite
 ```
+
+
+## ag-cli run stop
+
+Usage: `ag-cli run stop [<owner>/<repo>] <run-id>`
+
+Stop a running workflow run
+
+Stop a running workflow run
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
 
 
 ## ag-cli run view
@@ -6907,7 +6972,7 @@ Usage: `ag-cli user`
 
 View AtomGit users, repositories, namespaces, and activity
 
-View AtomGit user profiles, followers, email addresses, starred and watched repositories, authenticated namespaces, and personal activity events.
+View AtomGit user profiles, followers, email addresses, starred and watched repositories, authenticated namespaces, followed users and organizations, and personal activity events.
 
 ### Flags
 
@@ -7037,6 +7102,33 @@ List followers of an explicitly specified user. Uses authentication when configu
 ag-cli user followers alice
 ag-cli user followers alice --limit 100
 ag-cli user followers alice --json
+```
+
+
+## ag-cli user following
+
+Usage: `ag-cli user following <username> [flags]`
+
+List users and organizations followed by a user
+
+List followed users and organizations for an explicit username. Missing login credentials allow anonymous access; credential-store failures are reported. This command only reads data and does not infer a user from Git. A hidden or nonexistent user can return HTTP 404.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--json` | Output followed accounts as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-L, --limit` | Maximum total number of followed accounts to list | `30` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli user following alice
+ag-cli user following alice --limit 100 --json
 ```
 
 

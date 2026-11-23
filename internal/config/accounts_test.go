@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -204,7 +205,7 @@ func TestRemoveActiveAccountRequiresExplicitSwitch(t *testing.T) {
 	}
 
 	removed, empty, err := RemoveAccount("bob")
-	if err == nil || !strings.Contains(err.Error(), "ag-cli auth switch <account>") {
+	if refusal, ok := errors.AsType[*ActiveAccountRemovalError](err); !ok || refusal.Account != "bob" || removed != "" || empty {
 		t.Fatalf("removed = %q, empty = %t, error = %v", removed, empty, err)
 	}
 	after, readErr := os.ReadFile(path)
@@ -213,5 +214,54 @@ func TestRemoveActiveAccountRequiresExplicitSwitch(t *testing.T) {
 	}
 	if string(after) != string(before) {
 		t.Fatalf("credential store changed after rejected removal:\n%s", after)
+	}
+}
+
+func TestAccountOperationsRejectUnknownAccount(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		remove bool
+	}{
+		{name: "switch"},
+		{name: "remove", remove: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			isolateConfig(t)
+			if err := SaveAccount(&StoredCredentials{AccessToken: "fixture", User: "alice"}, true); err != nil {
+				t.Fatal(err)
+			}
+			path, err := PrimaryTokenPath()
+			if err != nil {
+				t.Fatal(err)
+			}
+			before, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var key string
+			if tc.remove {
+				var empty bool
+				key, empty, err = RemoveAccount(" Missing ")
+				if empty {
+					t.Fatal("rejected removal reported an empty store")
+				}
+			} else {
+				key, err = SwitchAccount(" Missing ")
+			}
+			missing, ok := errors.AsType[*AccountNotFoundError](err)
+			if !ok || missing.Account != "missing" || key != "" {
+				t.Fatalf("key = %q, error = %v", key, err)
+			}
+			if errors.Is(err, ErrTokenNotFound) || errors.Is(err, ErrNotAuthenticated) || errors.Is(err, ErrInvalidCredentials) {
+				t.Fatalf("account selection was misclassified: %v", err)
+			}
+			after, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(after) != string(before) {
+				t.Fatal("rejected account operation changed the credential file")
+			}
+		})
 	}
 }

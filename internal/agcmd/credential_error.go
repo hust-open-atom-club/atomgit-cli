@@ -98,17 +98,35 @@ func credentialDiagnostic(err error) (commandDiagnostic, bool) {
 			d.detail = "The credential file is not a regular file."
 			d.hint = "Use a regular credential file owned by the current user."
 		case errors.Is(safety.Err, config.ErrTokenFileTooLarge):
-			d.detail = "The credential file exceeds the inspection size limit."
-			d.hint = "Check the credential file size; inspection accepts at most 1 MiB."
+			d.detail = "The credential file exceeds the size limit."
+			d.hint = "Check the credential file size; credentials are limited to 1 MiB."
 		}
 		return d, true
 	}
 	//nolint:errorlint // Match the selected error without searching its causes.
-	if _, ok := err.(*config.CredentialValidationError); ok {
+	switch err.(type) {
+	case *config.CredentialValidationError:
 		return commandDiagnostic{
 			summary: "Credential configuration is invalid.",
 			detail:  "The stored credential data failed validation.",
 			hint:    "Check the credential store version, account records, and active account.",
+		}, true
+	case *config.AccountNotFoundError:
+		return commandDiagnostic{
+			summary: "The requested account is not saved.",
+			hint:    "Run `ag-cli auth list` to view saved accounts.",
+		}, true
+	case *config.AccountConflictError:
+		return commandDiagnostic{
+			summary: "Cannot rename the active account.",
+			detail:  "An account with the new name already exists.",
+			hint:    "Run `ag-cli auth list` to view saved accounts.",
+		}, true
+	case *config.ActiveAccountRemovalError:
+		return commandDiagnostic{
+			summary: "Cannot remove the active account.",
+			detail:  "Other saved accounts remain.",
+			hint:    "Run `ag-cli auth switch <account>` before removing this account.",
 		}, true
 	}
 	if format, ok := errors.AsType[*config.CredentialFormatError](err); ok {
