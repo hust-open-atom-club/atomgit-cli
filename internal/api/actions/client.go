@@ -214,6 +214,41 @@ func (c *Client) GetRun(owner, repo, runID string) (Run, error) {
 	return result, nil
 }
 
+type RetryJobsRequest struct {
+	JobRunIDs []string `json:"job_run_ids"`
+}
+
+type runActionResponse struct {
+	Success bool `json:"success"`
+}
+
+func (c *Client) StopRun(owner, repo, runID string) error {
+	return c.runAction("stop workflow run", owner, repo, runID, "stop", nil)
+}
+
+func (c *Client) RerunRun(owner, repo, runID string) error {
+	return c.runAction("rerun workflow run", owner, repo, runID, "rerun", nil)
+}
+
+func (c *Client) RetryRunJobs(owner, repo, runID string, jobRunIDs []string) error {
+	if len(jobRunIDs) == 0 {
+		return fmt.Errorf("retry workflow run jobs: at least one job run ID is required")
+	}
+	return c.runAction("retry workflow run jobs", owner, repo, runID, "retry", RetryJobsRequest{JobRunIDs: jobRunIDs})
+}
+
+func (c *Client) runAction(operation, owner, repo, runID, action string, payload any) error {
+	path := repositoryPath(owner, repo) + "/actions/runs/" + url.PathEscape(runID) + "/" + action
+	var result runActionResponse
+	if err := c.postJSON(operation, path, payload, &result); err != nil {
+		return err
+	}
+	if !result.Success {
+		return fmt.Errorf("%s: API response did not report success", operation)
+	}
+	return nil
+}
+
 func (c *Client) ListJobs(owner, repo, runID string, opts ListJobsOptions) (JobListResponse, error) {
 	query := url.Values{}
 	setPositiveInt(query, "page", opts.Page)
@@ -455,15 +490,19 @@ func (c *Client) GetStepLog(owner, repo, runID, jobID string, request StepLogReq
 }
 
 func (c *Client) postJSON(operation, path string, payload, result any) error {
-	bodyBytes, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf(
-			"%s: API request POST %s: marshal payload: %w; cause: %w",
-			operation,
-			path,
-			baseapi.ErrRequestPreparation,
-			err,
-		)
+	var bodyBytes []byte
+	if payload != nil {
+		var err error
+		bodyBytes, err = json.Marshal(payload)
+		if err != nil {
+			return fmt.Errorf(
+				"%s: API request POST %s: marshal payload: %w; cause: %w",
+				operation,
+				path,
+				baseapi.ErrRequestPreparation,
+				err,
+			)
+		}
 	}
 
 	resp, err := c.client.DoRequestRawWithBody(http.MethodPost, path, bodyBytes, "application/json", "application/json")

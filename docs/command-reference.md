@@ -220,12 +220,15 @@
 - [ag-cli repo webhook list](#ag-cli-repo-webhook-list) — List repository webhooks
 - [ag-cli repo webhook test](#ag-cli-repo-webhook-test) — Send a test payload to a repository webhook
 - [ag-cli repo webhook view](#ag-cli-repo-webhook-view) — View a repository webhook
-- [ag-cli run](#ag-cli-run) — Inspect AtomGit Actions workflow runs and artifacts
+- [ag-cli run](#ag-cli-run) — Inspect and manage AtomGit Actions workflow runs and artifacts
 - [ag-cli run artifact](#ag-cli-run-artifact) — Inspect and manage workflow artifacts
 - [ag-cli run artifact delete](#ag-cli-run-artifact-delete) — Delete a workflow artifact
 - [ag-cli run artifact view](#ag-cli-run-artifact-view) — View artifact metadata without downloading the archive
 - [ag-cli run list](#ag-cli-run-list) — List workflow runs
+- [ag-cli run rerun](#ag-cli-run-rerun) — Rerun a workflow run
+- [ag-cli run retry](#ag-cli-run-retry) — Retry failed jobs in a workflow run
 - [ag-cli run step-log](#ag-cli-run-step-log) — Fetch step-level logs for a workflow job
+- [ag-cli run stop](#ag-cli-run-stop) — Stop a running workflow run
 - [ag-cli run view](#ag-cli-run-view) — View a workflow run, jobs, logs, and artifacts
 - [ag-cli runner](#ag-cli-runner) — Inspect AtomGit Actions host runners
 - [ag-cli runner list](#ag-cli-runner-list) — List host runners configured for a repository
@@ -6055,12 +6058,12 @@ ag-cli repo webhook view owner/repo 42
 
 Usage: `ag-cli run`
 
-Inspect AtomGit Actions workflow runs and artifacts
+Inspect and manage AtomGit Actions workflow runs and artifacts
 
 List and inspect AtomGit Actions workflow runs, jobs, logs, and artifacts.
 
-Artifacts can also be deleted after confirmation. Workflow run dispatch,
-rerun, cancel, and deletion operations are not supported.
+Stop, rerun, and retry workflow runs. Artifacts can be deleted after confirmation.
+Workflow run dispatch and deletion operations are not supported.
 
 ### Flags
 
@@ -6186,6 +6189,47 @@ ag-cli run list owner/repo --event push --workflow-name CI --limit 50
 ```
 
 
+## ag-cli run rerun
+
+Usage: `ag-cli run rerun [<owner>/<repo>] <run-id>`
+
+Rerun a workflow run
+
+Rerun a workflow run
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli run retry
+
+Usage: `ag-cli run retry [<owner>/<repo>] <run-id> [flags]`
+
+Retry failed jobs in a workflow run
+
+Retry failed jobs in a workflow run
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-j, --job` | Retry this job run ID (repeatable); defaults to all failed jobs | `[]` | local |
+
+
 ## ag-cli run step-log
 
 Usage: `ag-cli run step-log [<owner>/<repo>] <run-id> <job-id> <step-id> [flags]`
@@ -6216,6 +6260,26 @@ ag-cli run step-log <run-id> <job-id> <step-id>
 ag-cli run step-log owner/repo <run-id> <job-id> <step-id> --output step.log
 ag-cli run step-log owner/repo <run-id> <job-id> <step-id> --output step.log --overwrite
 ```
+
+
+## ag-cli run stop
+
+Usage: `ag-cli run stop [<owner>/<repo>] <run-id>`
+
+Stop a running workflow run
+
+Stop a running workflow run
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
 
 
 ## ag-cli run view
