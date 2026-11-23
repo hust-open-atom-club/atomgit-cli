@@ -1147,6 +1147,8 @@ ag-cli pr comment refresh-position 123 --comment-id 456
 ag-cli pr comment refresh-position owner/repo 123 --all --json
 ```
 
+`pr comment view [<owner>/<repo>] <number>` 在全部分页读取完成后，按创建时间从早到晚显示普通评论和检视意见。标题中的“共 N 条”仅统计顶层评论，不把嵌套回复重复计入；回复继续显示在对应评论下。即使服务端将每页数量限制得小于请求值，也会继续读取到空页。最多遍历 100 页（含确认结束的空页），整个读取过程限时 30 秒，并遵循调用方更短的截止时间及取消信号；中途请求失败、未在页数上限内读到空页或超时均返回错误，不输出部分评论列表。
+
 `pr comment resolve/unresolve [<owner>/<repo>] <number> <discussion-id>` 要求认证，默认显示仓库、PR、讨论 ID 和目标状态并确认，`--yes/-y` 跳过确认；空输入、EOF 或否定回答取消操作，不发送 API 请求。PR 编号必须为正整数；讨论 ID 是 `pr comment view` 中单独显示的 `discussion_id`，不是下方的 note/comment 数字 ID。
 
 命令先核对 PR 身份，再遍历该 PR 的评论分页确认目标是检视讨论（`diff_comment`）；普通评论、其他 PR 的讨论、缺失状态或无法确认身份的响应均不会触发写入。使用 API v5 `PUT /repos/{owner}/{repo}/pulls/{number}/comments/{discussion_id}`，发送显式 `resolved: true/false`，其中 `unresolve` 不会省略 `false`。写请求不自动重试或跟随重定向，只接受 HTTP 200，响应体按官方契约忽略（可为空）。之后回读同一讨论，只有明确状态与请求一致才报告成功；回读失败或状态不一致时返回非零退出码，并提示先在 AtomGit 核对再决定是否重试。该命令不批准、合并或关闭 PR。
@@ -1284,6 +1286,8 @@ ag-cli issue comment edit owner/repo 42 789 --body "Updated information"
 ag-cli issue comment delete owner/repo 42 789
 ag-cli issue comment delete owner/repo 42 789 --yes
 ```
+
+`issue comment view [<owner>/<repo>] <number>` 同样读取全部分页后再按创建时间排序，标题总数为顶层评论数。它使用与 PR 评论查看相同的空页结束规则、100 页上限、30 秒总超时及取消处理；读取失败时不输出部分评论列表。这些分页行为不改变评论创建、编辑或删除命令。
 
 ## Tag
 

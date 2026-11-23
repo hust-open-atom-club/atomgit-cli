@@ -1771,7 +1771,7 @@ Usage: `ag-cli issue comment view [<owner>/<repo>] <number>`
 
 View all comments on an issue
 
-View all comments on an issue
+Read every page of issue comments before printing, then sort by creation time. The total counts top-level comments. Reading fails if no empty page is reached within 100 pages or the 30-second traversal timeout expires; no partial list is printed.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -3744,7 +3744,7 @@ Usage: `ag-cli pr comment view [<owner>/<repo>] <number>`
 
 View all comments on a pull request
 
-View all comments on a pull request
+Read every page of pull request comments before printing. Includes ordinary comments, review discussions, and nested replies. The total counts top-level comments only; replies are displayed under their parent. Reading fails if no empty page is reached within 100 pages or the 30-second traversal timeout expires; no partial list is printed.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
