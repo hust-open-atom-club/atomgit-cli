@@ -98,8 +98,8 @@ func credentialDiagnostic(err error) (commandDiagnostic, bool) {
 			d.detail = "The credential file is not a regular file."
 			d.hint = "Use a regular credential file owned by the current user."
 		case errors.Is(safety.Err, config.ErrTokenFileTooLarge):
-			d.detail = "The credential file exceeds the inspection size limit."
-			d.hint = "Check the credential file size; inspection accepts at most 1 MiB."
+			d.detail = "The credential file exceeds the size limit."
+			d.hint = "Check the credential file size; credentials are limited to 1 MiB."
 		}
 		return d, true
 	}
