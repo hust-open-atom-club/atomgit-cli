@@ -40,7 +40,8 @@ func commandErrorRole(err error) error {
 			return err
 		case *api.HTTPError, *actions.HTTPError, *actions.JobNotFoundError, *api.RequestExecutionError, *api.ResponseReadError,
 			*api.RepositoryModuleUpdateUncertainError, *api.OrganizationCreationUncertainError, *api.OrganizationEditUncertainError, *config.CredentialFormatError, *config.CredentialAccessError, *config.CredentialFileSafetyError,
-			*config.CredentialValidationError, *config.CredentialPermissionRepairError:
+			*config.CredentialValidationError, *config.CredentialPermissionRepairError,
+			*config.AccountNotFoundError, *config.AccountConflictError, *config.ActiveAccountRemovalError:
 			return err
 		}
 		//nolint:errorlint // Inspect the wrapping protocol to traverse error layers explicitly.
@@ -54,9 +55,12 @@ func commandErrorRole(err error) error {
 			causes := wrapped.Unwrap()
 			for _, cause := range causes {
 				if role := commandErrorRole(cause); role != nil {
-					//nolint:errorlint // Match the selected role so Git rollback failures stay visible.
-					if _, saving := role.(*config.CredentialSaveError); saving && len(causes) > 1 {
-						return nil
+					if len(causes) > 1 {
+						//nolint:errorlint // Match the selected role so Git rollback failures stay visible.
+						switch role.(type) {
+						case *config.CredentialSaveError, *config.AccountNotFoundError, *config.AccountConflictError, *config.ActiveAccountRemovalError:
+							return nil
+						}
 					}
 					return role
 				}

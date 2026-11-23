@@ -251,7 +251,7 @@ func TestCredentialFileSafetyDiagnostics(t *testing.T) {
 		{"changed", config.ErrTokenFileChanged, "The credential file changed while it was being opened.", "Check the credential file before retrying."},
 		{"owner unreadable", &config.TokenPermissionError{Path: "/private/credential", Err: config.ErrTokenFileUnreadable}, "The credential file is not readable by its owner.", ownerHint},
 		{"nonregular", config.ErrTokenFileNotRegular, "The credential file is not a regular file.", "Use a regular credential file owned by the current user."},
-		{"oversized", config.ErrTokenFileTooLarge, "The credential file exceeds the inspection size limit.", "Check the credential file size; inspection accepts at most 1 MiB."},
+		{"oversized", config.ErrTokenFileTooLarge, "The credential file exceeds the size limit.", "Check the credential file size; credentials are limited to 1 MiB."},
 		{"private cause", errors.New("private-token and private-cause"), "The credential file failed a safety check.", "Check the credential file before retrying."},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -369,5 +369,46 @@ func TestCredentialPermissionRepairDiagnostics(t *testing.T) {
 				t.Fatalf("diagnostic = %q, want %q", out.String(), want)
 			}
 		})
+	}
+}
+
+func TestCredentialAccountDiagnostics(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		err  error
+		want string
+	}{
+		{"missing account", &config.AccountNotFoundError{Account: "private-account"}, "Error: The requested account is not saved.\n\nRun `ag-cli auth list` to view saved accounts.\n"},
+		{"rename conflict", &config.AccountConflictError{Account: "private-account", ExistingAccount: "private-other"}, "Error: Cannot rename the active account.\n\nAn account with the new name already exists.\n\nRun `ag-cli auth list` to view saved accounts.\n"},
+		{"active removal", &config.ActiveAccountRemovalError{Account: "private-account"}, "Error: Cannot remove the active account.\n\nOther saved accounts remain.\n\nRun `ag-cli auth switch <account>` before removing this account.\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, wrapper := range []struct {
+				name string
+				err  error
+			}{
+				{name: "wrapped", err: fmt.Errorf("account operation: %w", tc.err)},
+				{name: "single joined cause", err: errors.Join(tc.err)},
+			} {
+				t.Run(wrapper.name, func(t *testing.T) {
+					var out bytes.Buffer
+					renderCommandError(&out, wrapper.err)
+					if out.String() != tc.want {
+						t.Fatalf("diagnostic = %q, want %q", out.String(), tc.want)
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestCredentialAccountDiagnosticPreservesRollbackFailure(t *testing.T) {
+	missing := &config.AccountNotFoundError{Account: "alice"}
+	rollback := errors.New("failed to write previous identity")
+	err := fmt.Errorf("switch account: %w; additionally failed to restore Git identity: %w", missing, rollback)
+	var out bytes.Buffer
+	renderCommandError(&out, err)
+	if !strings.Contains(out.String(), "failed to restore Git identity") || !strings.Contains(out.String(), rollback.Error()) || !strings.Contains(out.String(), missing.Error()) {
+		t.Fatalf("diagnostic lost part of the switch failure: %q", out.String())
 	}
 }

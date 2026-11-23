@@ -256,6 +256,7 @@
 - [ag-cli user emails](#ag-cli-user-emails) — List email addresses for the authenticated user
 - [ag-cli user events](#ag-cli-user-events) — List personal activity events for a user
 - [ag-cli user followers](#ag-cli-user-followers) — List followers of a user
+- [ag-cli user following](#ag-cli-user-following) — List users and organizations followed by a user
 - [ag-cli user namespaces](#ag-cli-user-namespaces) — List namespaces for the authenticated user
 - [ag-cli user starred](#ag-cli-user-starred) — List starred repositories for a user
 - [ag-cli user view](#ag-cli-user-view) — View the current user or a public user profile
@@ -1772,7 +1773,7 @@ Usage: `ag-cli issue comment view [<owner>/<repo>] <number>`
 
 View all comments on an issue
 
-View all comments on an issue
+Read every page of issue comments before printing, then sort by creation time. The total counts top-level comments. Reading fails if no empty page is reached within 100 pages or the 30-second traversal timeout expires; no partial list is printed.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -3745,7 +3746,7 @@ Usage: `ag-cli pr comment view [<owner>/<repo>] <number>`
 
 View all comments on a pull request
 
-View all comments on a pull request
+Read every page of pull request comments before printing. Includes ordinary comments, review discussions, and nested replies. The total counts top-level comments only; replies are displayed under their parent. Reading fails if no empty page is reached within 100 pages or the 30-second traversal timeout expires; no partial list is printed.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -6866,7 +6867,7 @@ Usage: `ag-cli user`
 
 View AtomGit users, repositories, namespaces, and activity
 
-View AtomGit user profiles, followers, email addresses, starred and watched repositories, authenticated namespaces, and personal activity events.
+View AtomGit user profiles, followers, email addresses, starred and watched repositories, authenticated namespaces, followed users and organizations, and personal activity events.
 
 ### Flags
 
@@ -6996,6 +6997,33 @@ List followers of an explicitly specified user. Uses authentication when configu
 ag-cli user followers alice
 ag-cli user followers alice --limit 100
 ag-cli user followers alice --json
+```
+
+
+## ag-cli user following
+
+Usage: `ag-cli user following <username> [flags]`
+
+List users and organizations followed by a user
+
+List followed users and organizations for an explicit username. Missing login credentials allow anonymous access; credential-store failures are reported. This command only reads data and does not infer a user from Git. A hidden or nonexistent user can return HTTP 404.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--json` | Output followed accounts as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-L, --limit` | Maximum total number of followed accounts to list | `30` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli user following alice
+ag-cli user following alice --limit 100 --json
 ```
 
 
