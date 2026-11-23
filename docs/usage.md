@@ -761,6 +761,10 @@ ag-cli user watching
 
 # 列出指定用户 watch 的仓库
 ag-cli user watching alice --limit 100 --json
+
+# 列出指定用户关注的用户与组织（只读，未登录时可匿名访问）
+ag-cli user following alice
+ag-cli user following alice --limit 100 --json
 ```
 
 `ag-cli user followers <username>` 必须显式指定用户名，不从 Git remote 推断。`--limit`（`-L`）必须为正数，默认 30，限制跨页返回的总条数。未配置凭据时匿名读取；已有凭据损坏或无法读取时直接报错，不降级为匿名请求。任一页失败时不输出部分结果。
@@ -798,6 +802,11 @@ ag-cli user watching alice --limit 100 --json
 `ag-cli user events` 需要认证，用于列出用户个人动态。省略用户名时默认使用当前认证账号，显式用户名优先。`--year` 用于按年份过滤（`0` 表示不过滤，合法范围为 `1970`–`9999`）；`--limit` 控制跨游标页返回的总条数（默认 `30`，必须为正整数）。命令会跟随 API 返回的 `next` 游标继续请求，直到满足条数或没有更多游标，并检测重复游标以避免无限翻页。文本模式按日期从新到旧输出 `DATE`、`ACTION`、`PROJECT`、`TITLE` 四列；`--json` 输出稳定的数组（不是 API 按日期分组的对象），每个元素包含 `date`、`action`、`actionName`、`authorId`、`authorUsername`、`authorName`、`authorUrl`、`createdAt`、`projectId`、`projectName`、`targetId`、`targetIid`、`targetTitle`、`targetType`、`targetTypeFormat` 字段。没有动态时，文本模式输出 `No events found.`，JSON 模式输出 `[]`。
 
 `ag-cli user starred [<username>]` 和 `ag-cli user watching [<username>]` 需要认证，分别列出 star 和 watch 的仓库集合。省略用户名时使用认证用户端点；显式用户名使用对应的公开用户端点，且用户名会作为单个 URL 路径段转义。两个命令的 `--limit` 均控制跨页返回的总仓库数（默认 `30`，必须为正整数）。文本模式输出无歧义的完整仓库名和 URL；`--json` 输出固定的 `id`、`fullName`、`url` 字段数组。空集合在文本模式下输出明确提示，在 JSON 模式下输出 `[]`。这些命令只读，不会 star、取消 star、watch 或取消 watch 仓库，也不会改变 `ag-cli repo list` 的所有权及成员关系语义。
+
+`ag-cli user following <username>` 显式指定用户名，不从 Git remote 推断；仅列出关注对象，不执行关注或取消关注，也不是粉丝列表。`--limit/-L` 是跨页输出总数上限（默认 `30`，必须为正数），从第 1 页开始，`per_page` 为 `min(limit, 100)`（默认 `30`）；读取到短页或达到上限时停止。参数在认证和网络请求前校验；用户名先裁剪首尾空白，拒绝 `.`、`..`、反斜杠、路径或查询分隔符，以及内部空白和控制字符，再作为单个 URL 路径段转义。未登录时可匿名读取；已有凭据会正常使用，配置或凭据读取失败会报错，不会静默匿名降级。请求继承命令的取消上下文。
+
+文本列为 `LOGIN`、`NAME`、`TYPE`、`URL`，区分 `User` 与 `Organization`，字段中的制表符和换行会转义，输出仍经过安全 writer。JSON 输出固定的 `id`、`object_id`、`login`、`name`、`type`、`avatar_url`、`html_url`、`url`、`followers_url`、`following_url` 字段，ID 保留字符串；可空或省略的字符串字段输出空字符串。组织可以没有 `following_url`，CLI 不拼造缺失 URL。空结果文本为 `No followed users or organizations found.`，JSON 为 `[]`。仅接受 HTTP 200 数组；异常响应或任何一页失败都返回错误，不输出部分列表。不存在或隐藏个人信息的用户可能返回 404，此状态不会被当作空列表。
+
 
 ## Branch
 

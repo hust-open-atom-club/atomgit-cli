@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strings"
 	"text/tabwriter"
+	"unicode"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
@@ -15,10 +16,11 @@ func NewCmdUser(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "user",
 		Short: "View AtomGit users, repositories, namespaces, and activity",
-		Long:  "View AtomGit user profiles, followers, email addresses, starred and watched repositories, authenticated namespaces, and personal activity events.",
+		Long:  "View AtomGit user profiles, followers, email addresses, starred and watched repositories, authenticated namespaces, followed users and organizations, and personal activity events.",
 	}
 	cmd.AddCommand(newCmdUserView(f))
 	cmd.AddCommand(newCmdUserFollowers(f))
+	cmd.AddCommand(newCmdUserFollowing(f))
 	cmd.AddCommand(newCmdUserEdit(f))
 	cmd.AddCommand(newCmdUserEmails(f))
 	cmd.AddCommand(newCmdUserStarred(f))
@@ -179,6 +181,13 @@ func validLogin(login string) bool {
 		}
 	}
 	return !strings.ContainsAny(login, "/?#")
+}
+
+// validFollowUsername applies the same path-segment validation to both follow lists.
+func validFollowUsername(username string) bool {
+	return validLogin(username) && username != "." && username != ".." &&
+		!strings.ContainsRune(username, '\\') &&
+		!strings.ContainsFunc(username, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) })
 }
 
 // userProfileURL returns the canonical profile page for user, falling back to
