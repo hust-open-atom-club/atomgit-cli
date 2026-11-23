@@ -3,6 +3,7 @@ package auth
 import (
 	"bytes"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -65,6 +66,57 @@ func TestAuthSwitchWithoutGitChangesActiveAccount(t *testing.T) {
 	active, err := config.LoadStoredCredentials()
 	if err != nil || active.User != "alice" || active.AccessToken != "alice-secret" {
 		t.Fatalf("active = %#v, error = %v", active, err)
+	}
+}
+
+func TestAuthAccountCommandsRejectUnknownAccount(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		logout bool
+	}{
+		{name: "switch"},
+		{name: "logout", logout: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			saveAuthTestAccounts(t)
+			path, err := config.PrimaryTokenPath()
+			if err != nil {
+				t.Fatal(err)
+			}
+			before, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			factory := &cmdutil.Factory{GitConfig: func(...string) (string, error) {
+				t.Fatal("unknown account must be rejected before changing Git identity")
+				return "", nil
+			}}
+			cmd := newCmdAuthSwitch(factory)
+			args := []string{" Missing "}
+			if tc.logout {
+				cmd = newCmdAuthLogout()
+				args = nil
+				if err := cmd.Flags().Set("account", " Missing "); err != nil {
+					t.Fatal(err)
+				}
+			}
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			err = cmd.RunE(cmd, args)
+			if missing, ok := errors.AsType[*config.AccountNotFoundError](err); !ok || missing.Account != "missing" {
+				t.Fatalf("error = %v", err)
+			}
+			if output.Len() != 0 {
+				t.Fatalf("rejected operation reported success: %q", output.String())
+			}
+			after, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(after) != string(before) {
+				t.Fatal("rejected operation changed the credential file")
+			}
+		})
 	}
 }
 
@@ -277,7 +329,7 @@ func TestAuthLogoutActiveAccountRequiresExplicitSwitch(t *testing.T) {
 				_ = cmd.Flags().Set("account", "bob")
 			}
 			err := cmd.RunE(cmd, nil)
-			if err == nil || !strings.Contains(err.Error(), "ag-cli auth switch <account>") {
+			if refusal, ok := errors.AsType[*config.ActiveAccountRemovalError](err); !ok || refusal.Account != "bob" {
 				t.Fatalf("error = %v", err)
 			}
 			accounts, active, loadErr := config.ListAccounts()

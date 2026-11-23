@@ -151,7 +151,7 @@ func (s *CredentialStore) ResolveAccount(selector string) (*StoredCredentials, e
 			return &accountCopy, nil
 		}
 	}
-	return nil, fmt.Errorf("account %q was not found", selector)
+	return nil, &AccountNotFoundError{Account: selector}
 }
 
 // ListAccounts returns accounts sorted by username.
@@ -220,7 +220,7 @@ func replaceActiveAccount(store *CredentialStore, credentials *StoredCredentials
 			continue
 		}
 		if key == replacementKey {
-			return fmt.Errorf("cannot rename active account %s to %s: account already exists", previousKey, replacementKey)
+			return &AccountConflictError{Account: previousKey, ExistingAccount: replacementKey}
 		}
 	}
 	if activeIndex < 0 {
@@ -258,7 +258,7 @@ func RemoveAccount(selector string) (string, bool, error) {
 	}
 	key := account.Key()
 	if store.Active == key && len(store.Accounts) > 1 {
-		return "", false, fmt.Errorf("cannot remove active account %s while other accounts remain; run `ag-cli auth switch <account>` first", key)
+		return "", false, &ActiveAccountRemovalError{Account: key}
 	}
 	remaining := make([]StoredCredentials, 0, len(store.Accounts)-1)
 	for _, candidate := range store.Accounts {

@@ -211,6 +211,8 @@ ag-cli auth logout --all
 
 `auth switch` 默认同时切换活动凭据并写入当前仓库的 `git config --local user.name/user.email`；只有 `--global` 才修改全局配置，`--no-git` 可明确禁用同步。API 邮箱缺失时 CLI 不会猜测邮箱，必须通过登录时的 `--git-email`、切换时的 `--git-email` 或 `--no-git` 明确处理。Git identity 写入失败不会切换活动凭据；凭据切换失败时会尝试恢复原 Git identity。该流程使用补偿式回滚降低半完成风险，但不承诺跨凭据文件和 Git 配置的完整原子性。
 
+本地已有凭据但指定账号未保存时，`auth switch` 和 `auth logout --account` 会提示用 `ag-cli auth list` 查看可用账号。
+
 `auth logout` 默认删除活动账号。为避免删除动作隐式选择另一个账号并造成 Git identity 错配，当仍有其他账号时不能删除活动账号；应先执行 `auth switch <account>`，再用 `auth logout --account <old-account>` 删除原账号。`--account` 可直接删除非活动账号，`--all` 明确删除全部账号。access token、refresh token 不会写入 Git 配置、remote URL、账号列表或错误信息。
 
 可选环境变量（覆盖默认 OAuth 应用）：`AG_OAUTH_CLIENT_ID`、`AG_OAUTH_CLIENT_SECRET`；若本机 **8765** 端口被占用，可设置 **`AG_OAUTH_REDIRECT_PORT`**（需与 AtomGit 应用配置的回调地址一致）。

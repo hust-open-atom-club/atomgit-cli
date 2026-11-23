@@ -85,6 +85,8 @@ ag-cli repo list --token "$TOKEN" --base-url "$BASE_URL"
 }
 ```
 
+本地已有凭据但指定账号未保存时，CLI 会提示用 `ag-cli auth list` 查看可用账号。账号选择失败与凭据缺失、凭据内容损坏分别报告；切换和删除规则见[认证命令说明](usage.md#认证)。
+
 除只读的 `ag-cli auth status` 外，常规 `ag-cli auth` 子命令会检查令牌文件格式；`auth login` 在新凭据验证通过后才执行迁移。旧单账号文件会通过安全的原子写入自动升级为当前多账号格式，已有 `refresh_token` 等 OAuth 字段会保留；当前格式不会重复写入，未知版本会拒绝迁移。手动使用 PAT 时不要自行编造 `refresh_token`、`expires_in` 或 `created_at`。令牌文件使用 `0600` 权限，写入通过同目录临时文件原子替换；不要将它提交到版本控制。
 
 别名配置文件 `config.json` 不存在时，按空别名表处理。读取或解码失败时，`ag-cli alias list` 会报告错误。命令尝试展开别名时遇到这两类故障，会输出警告并继续处理原始参数。
