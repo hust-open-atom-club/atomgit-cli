@@ -313,7 +313,7 @@ npm run publish:npm -- vX.Y.Z dist/vX.Y.Z/npm --publish
 - `stable` 从上游仓库的最新正式 AtomGit Release 源码归档构建，并固定版本、源码 hash 和 `vendorHash`。
 - `latest` 直接从当前 flake revision 的源码构建，因此始终对应检出仓库的最新 commit；工作流只维护其 `vendorHash`。
 
-两个 package 都由 Nix 管理；共享构建参数暂时保留 `Source=nix` 注入，以便仍基于旧版源码的 `stable` 正确报告由 Nix 管理。源码移除发行来源字段后，该兼容参数不会改变版本输出。`default` 和兼容名称 `ag`、`ag-cli` 都指向 `stable`。固定的 v0.7.3 stable 仍从 `cmd/ag` 构建并提供旧 `ag`，后续版本及 `latest` 使用 `cmd/ag-cli`。
+两个 package 都从 `cmd/ag-cli` 构建并提供 `ag-cli` 命令。`default` 和兼容名称 `ag`、`ag-cli` 都指向 `stable`。不要在 `nix/stable.nix` 中用与当前版本相同的字符串字面量作兼容判断：`nix-update` 可能把它和版本声明一起替换。
 
 Nix package 使用 `go` 行声明的最低版本约束，并由锁定的 nixpkgs input 提供实际编译器；它不要求与官方 Release 使用的建议工具链补丁版本完全一致。更新 flake inputs 时仍需确认所有支持平台提供的 Go 版本不低于 1.26.6。
 
