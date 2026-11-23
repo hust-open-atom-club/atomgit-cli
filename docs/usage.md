@@ -512,6 +512,22 @@ ag-cli repo content delete owner/repo docs/guide.md --branch main --message "Rem
 
 `create`、`update` 和 `delete` 分别发送 POST、PUT 和 DELETE 到 `/contents/:path`。三者都必须显式指定 `--branch` 和 `--message`，不会回退到仓库默认分支。`--file` 读取本地文件，`-` 读取 stdin；原始字节按 Base64 放入 JSON，不裁剪、不按文本重编码，空文件和二进制文件都有效。`--sha` 是目标文件当前的 Blob SHA，不是 commit SHA；更新或删除遇到 SHA 冲突时返回非零并停止，不会读取新 SHA 后重试。创建不会先查询再改成覆盖。删除默认要求确认，`--yes` 跳过确认，取消不发送请求。成功输出基于响应里实际存在的 commit SHA 和文件 Blob SHA，不要求三种操作返回相同结构。这些命令一次只处理一个文件，不提交多个文件、不递归删除目录，也不修改本地 Git 工作区。
 
+### 仓库项目模块开关
+
+```bash
+# 仅更新显式指定的模块；false 表示关闭
+ag-cli repo module edit owner/repo --wiki=true --issue=false
+
+# 使用当前 Git 仓库推断目标，跳过确认并输出 JSON
+ag-cli repo module edit --discussion=true --analysis=false --yes --json
+```
+
+`repo module edit [<owner>/<repo>]` 支持 `--wiki`、`--issue`、`--security`、`--merge-request`、`--fork`、`--analysis`、`--discussion`，分别映射 `has_wiki`、`has_issue`、`has_security`、`has_merge_request`、`has_fork`、`has_analysis`、`has_discussion`。布尔标志可传 `=true` 或 `=false`；只传标志表示启用。省略字段保持不变，显式 false 会发送；至少指定一个开关，否则在加载凭据和网络请求前报错。显式仓库优先于 Git remote 推断，命令复用现有认证与安全输出。
+
+默认在 stderr 展示仓库和提交的模块变更并要求确认，`--yes/-y` 跳过。取消、空输入或 EOF 不发送请求。写入使用 `PUT /repos/{owner}/{repo}/module/setting`，不自动重试或跟随重定向；成功必须同时满足 HTTP 200、显式整数 `code=1` 及 `msg="success"`（与归档接口的 `code=0` 不同）。业务码非 1、响应缺字段/类型错误、权限和资源错误均返回非零退出码，不打印服务端消息正文。传输失败、非预期状态或成功确认不完整时，会提示设置可能已改变，先到 AtomGit 核对再决定是否重试。
+
+文本输出 API 已确认及实际提交的字段，不宣称已独立回读当前设置。`--json` 输出固定的 `repository`、`submitted_fields` 和 `verification: "api_acknowledged"`，其中提交字段不代表完整远端配置。命令不提供 `view`，不虚构 `GET module/setting` 查询。自动化测试使用离线 mock，不修改真实仓库。
+
 ### 当前账号的仓库权限
 
 ```bash

@@ -50,6 +50,7 @@ func TestRegisteredCommands(t *testing.T) {
 		{[]string{"repo", "settings"}, 0, 0, "text", "none"},
 		{[]string{"repo", "settings", "view"}, 0, 1, "text,json", "read"},
 		{[]string{"repo", "settings", "edit"}, 0, 1, "text,json", "write"},
+		{[]string{"repo", "module", "edit"}, 0, 1, "text,json", "write"},
 		{[]string{"repo", "cla", "list"}, 0, 1, "text,json", "read"},
 		{[]string{"repo", "cla", "set"}, 0, 1, "text", "write"},
 		{[]string{"repo", "cla", "disable"}, 0, 1, "text", "write"},
@@ -97,6 +98,16 @@ func TestRegisteredCommands(t *testing.T) {
 			target, _, err := cmd.Find(tc.path)
 			if err != nil {
 				t.Fatal(err)
+			}
+			if detail.Path == "ag-cli repo module edit" {
+				// Argument validation also rejects an empty update before config loading.
+				if err := target.Flags().Set("wiki", "false"); err != nil {
+					t.Fatal(err)
+				}
+				want := []commandschema.FlagGroup{{Kind: "atLeastOneRequired", Flags: []string{"analysis", "discussion", "fork", "issue", "merge-request", "security", "wiki"}}}
+				if !reflect.DeepEqual(detail.FlagGroups, want) {
+					t.Fatalf("module constraints = %+v", detail.FlagGroups)
+				}
 			}
 			for n := 0; n <= tc.max+1; n++ {
 				args := make([]string, n)

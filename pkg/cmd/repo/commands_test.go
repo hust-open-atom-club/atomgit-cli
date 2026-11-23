@@ -54,6 +54,7 @@ func TestNewCmdRepoRegistersSubcommandsAndFlags(t *testing.T) {
 		"mirror":      nil,
 		"permissions": {"json"},
 		"settings":    nil,
+		"module":      nil,
 		"push-rule":   nil,
 		"read-dir":    {"json", "ref"},
 		"read-file":   {"json", "ref"},
