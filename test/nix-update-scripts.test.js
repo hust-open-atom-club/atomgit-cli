@@ -8,6 +8,7 @@ const { createHash } = require('node:crypto');
 const root = path.resolve(__dirname, '..');
 const unix = { skip: process.platform === 'win32' };
 const installer = path.join(root, 'scripts/install-nix.sh');
+const updater = path.join(root, 'scripts/update-nix-packages.sh');
 const publisher = path.join(root, 'scripts/publish-nix-update.sh');
 const TOKEN = 'SPEC_TOKEN_DO_NOT_LEAK_0123456789abcdef';
 
@@ -18,14 +19,34 @@ function fixture(t) {
   return dir;
 }
 function script(file, body) { fs.writeFileSync(file, '#!/bin/sh\n' + body, { mode: 0o755 }); }
-function run(file, args, env, cwd) {
+function run(file, args, env, cwd, input) {
   // An explicitly undefined value unsets the variable even when the host
   // environment provides it (CI runners export ATOMGIT_REPOSITORY and
   // ATOMGIT_REF_NAME themselves).
   const merged = { ...process.env, ...env };
   for (const key of Object.keys(env)) if (env[key] === undefined) delete merged[key];
-  return spawnSync('sh', [file, ...args], { encoding: 'utf8', cwd, env: merged });
+  return spawnSync('sh', [file, ...args], { encoding: 'utf8', cwd, env: merged, input });
 }
+
+test('updater rejects missing and malformed metadata credentials without leaking them', unix, async t => {
+  for (const [name, input, message] of [
+    ['missing', '', /NIX_UPDATE_TOKEN is missing/],
+    ['header injection', `${TOKEN}\r\nX-Injected: yes`, /characters not allowed in a Bearer token/],
+  ]) {
+    await t.test(name, t => {
+      const dir = fixture(t);
+      script(path.join(dir, 'bin/curl'), 'exit 99\n');
+      const out = run(updater, [], {
+        HOME: dir,
+        NIX_UPDATE_TOKEN: undefined,
+        PATH: path.join(dir, 'bin') + path.delimiter + process.env.PATH,
+      }, dir, input);
+      assert.equal(out.status, 1, out.stderr);
+      assert.match(out.stderr, message);
+      assert.doesNotMatch(out.stdout + out.stderr, new RegExp(TOKEN));
+    });
+  }
+});
 
 for (const corrupt of [false, true]) {
   test(`pinned Nix installer verifies before execution corrupt=${corrupt}`, unix, t => {

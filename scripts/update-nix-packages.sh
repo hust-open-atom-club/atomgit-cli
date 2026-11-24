@@ -4,8 +4,38 @@
 # and the Nix toolchain all come from the nixpkgs input pinned by the
 # committed flake.lock instead of a moving channel or the runner image:
 #
-#   nix develop --no-update-lock-file . -c bash scripts/update-nix-packages.sh
+# Pass NIX_UPDATE_TOKEN on stdin, not in the Nix environment:
+#   printf '%s' "$NIX_UPDATE_TOKEN" | env -u NIX_UPDATE_TOKEN \
+#     nix develop --no-update-lock-file . -c bash scripts/update-nix-packages.sh
+set +x
 set -eu
+
+if [ -t 0 ]; then
+  echo "Pass NIX_UPDATE_TOKEN on stdin." >&2
+  exit 1
+fi
+unset read_token
+read_token=$(cat)
+case "$read_token" in
+  '')
+    echo "NIX_UPDATE_TOKEN is missing; refusing to query AtomGit anonymously." >&2
+    exit 1
+    ;;
+  *[!A-Za-z0-9._~+/=-]*)
+    echo "NIX_UPDATE_TOKEN contains characters not allowed in a Bearer token." >&2
+    exit 1
+    ;;
+esac
+
+read_atomgit_metadata() {
+  # Read the header from stdin, not curl arguments, a URL, or a file.
+  printf 'Authorization: Bearer %s\n' "$read_token" \
+    | curl --disable --fail --silent --show-error --header @- "$1" || {
+      status=$?
+      printf 'Failed to read AtomGit metadata from %s.\n' "$1" >&2
+      return "$status"
+    }
+}
 
 export GOPROXY="https://goproxy.cn"
 
@@ -17,7 +47,7 @@ cp flake.lock "$lock_before"
 # stale lock is an error, not something this job silently repairs.
 nix flake metadata --no-update-lock-file --json . >/dev/null
 
-release_json=$(curl --fail --silent --show-error \
+release_json=$(read_atomgit_metadata \
   https://api.atomgit.com/api/v5/repos/hust-open-atom-club/atomgit-cli/releases/latest)
 stable_version=$(printf '%s' "$release_json" \
   | jq -er '.tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+([+-].*)?$")) | sub("^v"; "")')
@@ -26,8 +56,9 @@ stable_commit=$(printf '%s' "$release_json" \
 test -n "$stable_version"
 test -n "$stable_commit"
 
-commit_json=$(curl --fail --silent --show-error \
+commit_json=$(read_atomgit_metadata \
   "https://api.atomgit.com/api/v5/repos/hust-open-atom-club/atomgit-cli/commits/$stable_commit")
+unset read_token
 stable_build_date=$(printf '%s' "$commit_json" \
   | jq -er '(.commit.committer.date // .commit.author.date) | select(test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T"))')
 test -n "$stable_build_date"

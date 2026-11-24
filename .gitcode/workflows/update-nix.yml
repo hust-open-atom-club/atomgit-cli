@@ -9,8 +9,8 @@ on:
   workflow_dispatch:
 
 # The workflow's own ATOMGIT_TOKEN only needs to clone the repository.
-# Repository writes go through the separately scoped NIX_UPDATE_TOKEN PAT,
-# which workflow permissions cannot constrain.
+# The authenticated API calls use NIX_UPDATE_TOKEN, a separately managed PAT
+# that workflow permissions cannot constrain.
 permissions:
   repository: read
   project: none
@@ -63,14 +63,17 @@ jobs:
       # come from the nixpkgs input pinned by the committed flake.lock
       # instead of a moving channel, apt, or the runner image.
       - name: Update stable and latest
+        env:
+          NIX_UPDATE_TOKEN: ${{ secrets.NIX_UPDATE_TOKEN }}
         run: |
+          set +x
           set -eu
           export PATH="$HOME/.nix-profile/bin:$PATH"
-          nix develop --no-update-lock-file . -c bash scripts/update-nix-packages.sh
+          printf '%s' "${NIX_UPDATE_TOKEN:-}" |
+            env -u NIX_UPDATE_TOKEN nix develop --no-update-lock-file . -c bash scripts/update-nix-packages.sh
 
-      # The write-back token is scoped to this step's environment and is
-      # sent as an Authorization header; it never appears in a URL, an
-      # artifact, or printed output. See scripts/publish-nix-update.sh.
+      # Contents API writes pass the same PAT in an Authorization header.
+      # See scripts/publish-nix-update.sh.
       - name: Publish updates through Contents API
         env:
           NIX_UPDATE_TOKEN: ${{ secrets.NIX_UPDATE_TOKEN }}

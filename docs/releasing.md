@@ -327,12 +327,15 @@ Nix package 使用 `go` 行声明的最低版本约束，并由锁定的 nixpkgs
 
 `nix-update --build` 的 Go 模块下载仅使用 `goproxy.cn` Go module proxy。
 
+Release 和 commit 元数据查询与 Contents API 写回共用仓库 Secret `NIX_UPDATE_TOKEN`，该令牌需要能读取这些元数据并写入仓库内容。读取步骤经标准输入传递令牌，并在启动 `nix develop` 前从环境中移除它。两个查询均使用 `Authorization: Bearer` 请求头；缺少令牌时直接失败，不回退到匿名查询。
+
 写回凭据以 `Authorization: Bearer` 请求头发送（经临时文件传给 curl，不进入命令行参数），绝不进入 URL、仓库内文件或日志；错误输出仅保留 HTTP 状态、curl 退出码和至多 300 个字符、去除控制字符并脱敏令牌的响应摘要。各脚本的行为由 `test/nix-update-scripts.test.js` 覆盖：上下文拒绝、无变更、缺失令牌、分支名非法、传输错误、API 失败（有界脱敏）、安装器摘要校验以及双文件成功写回。
 
-可在本地复现相同更新；开发环境已包含全部所需工具：
+本地复现更新时，先从凭据管理器将具备元数据读取权限的令牌加载到 `NIX_UPDATE_TOKEN`，再执行：
 
 ```bash
-nix develop --no-update-lock-file . -c bash scripts/update-nix-packages.sh
+printf '%s' "$NIX_UPDATE_TOKEN" |
+  env -u NIX_UPDATE_TOKEN nix develop --no-update-lock-file . -c bash scripts/update-nix-packages.sh
 ```
 
 脚本会依次完成 stable 版本读取、`nix/stable.nix` 元数据改写与回读校验、两个 package 的 `nix-update --build` 更新、stable 二进制 `version --json` 三字段核对，并删除 `result` 链接。`nix-update --build` 会创建 Nix 的 `result` 结果链接；脚本在完成后删除它，仓库也忽略 `result` 和 `result-*`。`nix-update` 会同时维护源码 hash 和 Go `vendorHash`。当前 nixos-unstable 已停止支持 Intel macOS，因此 flake 仅为 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
