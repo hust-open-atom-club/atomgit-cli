@@ -315,7 +315,7 @@ Home Manager 中同样可以将 `unstable.atomgit-cli` 加入 `home.packages`。
 - `stable`：从固定版本的 AtomGit Release 源码归档构建。
 - `latest`：从当前 flake revision 的源码构建。
 
-默认 package 和兼容名称 `ag`、`ag-cli` 均指向 `stable`。当前 stable 固定为 v0.7.3，仍提供旧 `ag` 命令；`latest` 从当前源码构建并提供 `ag-cli`。安装稳定版：
+默认 package 和兼容名称 `ag`、`ag-cli` 均指向 `stable`。`stable` 和 `latest` 都提供 `ag-cli` 命令。安装稳定版：
 
 由于 nixos-unstable 已停止支持 Intel macOS，flake 对 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
 
