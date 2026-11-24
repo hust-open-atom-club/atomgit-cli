@@ -319,6 +319,112 @@ func TestSaveAndClearCredentials(t *testing.T) {
 	}
 }
 
+func TestClearCredentialsRejectsMissingPaths(t *testing.T) {
+	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	t.Setenv("XDG_CONFIG_HOME", "")
+	removed, err := ClearCredentials()
+	failure, ok := errors.AsType[*CredentialClearError](err)
+	if !ok || failure.Operation != "locate credential files" || failure.Path != "" || len(removed) != 0 || len(failure.Removed) != 0 {
+		t.Fatalf("removed = %v, error = %v", removed, err)
+	}
+	if access, ok := errors.AsType[*CredentialAccessError](err); !ok || access.Err == nil || !errors.Is(err, access.Err) {
+		t.Fatalf("path lookup failure was lost: %v", err)
+	}
+	if errors.Is(err, ErrTokenNotFound) || errors.Is(err, ErrNotAuthenticated) {
+		t.Fatalf("path lookup failure was treated as missing credentials: %v", err)
+	}
+}
+
+func TestClearCredentialsSkipsMissingFiles(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		present []int
+	}{
+		{name: "no files"},
+		{name: "legacy only", present: []int{1}},
+		{name: "both files", present: []int{0, 1}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			isolateConfig(t)
+			paths := getTokenFilePaths()
+			var want []string
+			for _, index := range tc.present {
+				path := paths[index]
+				if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(path, []byte("fixture"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				want = append(want, path)
+			}
+			removed, err := ClearCredentials()
+			if err != nil || !equalStrings(removed, want) {
+				t.Fatalf("removed = %v, want %v, error = %v", removed, want, err)
+			}
+			again, err := ClearCredentials()
+			if err != nil || len(again) != 0 {
+				t.Fatalf("second clear = %v, error = %v", again, err)
+			}
+		})
+	}
+}
+
+func TestClearCredentialsRetainsRemovalFailure(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		failIndex int
+	}{
+		{name: "first removal", failIndex: 0},
+		{name: "partial removal", failIndex: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			isolateConfig(t)
+			paths := getTokenFilePaths()
+			for index, path := range paths {
+				if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+					t.Fatal(err)
+				}
+				if index == tc.failIndex {
+					if err := os.Mkdir(path, 0o700); err != nil {
+						t.Fatal(err)
+					}
+					path = filepath.Join(path, "keep")
+				}
+				if err := os.WriteFile(path, []byte("fixture"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			removed, err := ClearCredentials()
+			failure, ok := errors.AsType[*CredentialClearError](err)
+			if !ok || failure.Operation != "remove credential file" || failure.Path != paths[tc.failIndex] || !equalStrings(removed, paths[:tc.failIndex]) || !equalStrings(failure.Removed, removed) {
+				t.Fatalf("removed = %v, error = %v", removed, err)
+			}
+			cause, ok := errors.AsType[*os.PathError](err)
+			if !ok || cause.Path != failure.Path || !errors.Is(err, cause.Err) {
+				t.Fatalf("original removal error was lost: %v", err)
+			}
+			for index, path := range paths {
+				_, statErr := os.Stat(path)
+				if index < tc.failIndex {
+					if !errors.Is(statErr, os.ErrNotExist) {
+						t.Fatalf("removed file %q still exists: %v", path, statErr)
+					}
+				} else if statErr != nil {
+					t.Fatalf("remaining path %q changed: %v", path, statErr)
+				}
+			}
+			if len(removed) > 0 {
+				removed[0] = "changed by caller"
+				if !equalStrings(failure.Removed, paths[:tc.failIndex]) {
+					t.Fatal("returned paths changed the recorded removal result")
+				}
+			}
+		})
+	}
+}
+
 func TestSaveCredentialsValidation(t *testing.T) {
 	isolateConfig(t)
 	tests := []struct {

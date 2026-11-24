@@ -27,6 +27,27 @@ func renderDiagnostic(w io.Writer, d commandDiagnostic) {
 }
 
 func credentialDiagnostic(err error) (commandDiagnostic, bool) {
+	//nolint:errorlint // Match the selected clear failure, not its causes.
+	if clearErr, ok := err.(*config.CredentialClearError); ok {
+		d := commandDiagnostic{summary: "Unable to clear credentials."}
+		if clearErr.Path == "" {
+			d.detail = "Could not locate credential file paths."
+			d.hint = "Check the home directory and XDG_CONFIG_HOME settings."
+		} else {
+			d.detail = fmt.Sprintf("Failed to remove credential file: %q.", clearErr.Path)
+			d.hint = "Credential files may remain; logout is incomplete."
+			if errors.Is(clearErr.Err, os.ErrPermission) {
+				d.hint += "\nCheck the file and parent directory ownership and permissions."
+			}
+		}
+		if len(clearErr.Removed) > 0 {
+			d.detail += "\nRemoved credential files:"
+			for _, path := range clearErr.Removed {
+				d.detail += fmt.Sprintf("\n  %q", path)
+			}
+		}
+		return d, true
+	}
 	//nolint:errorlint // Match the selected save failure, not its causes.
 	if save, ok := err.(*config.CredentialSaveError); ok {
 		d := commandDiagnostic{
