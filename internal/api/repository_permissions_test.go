@@ -72,7 +72,7 @@ func TestRepositoryPermissionsResponseValidation(t *testing.T) {
 		{"rate limited", `{}`, 429, true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("Retry-After", "999999")
 				w.WriteHeader(tt.status)
 				_, _ = w.Write([]byte(tt.body))
