@@ -103,7 +103,7 @@ func TestCreateOrganizationContext(t *testing.T) {
 		if r.Context().Value(contextKey{}) != "request" {
 			t.Error("request context not propagated")
 		}
-		w.Write([]byte(`{"id":42,"path":"team","web_url":"https://example.test/team","visibility":"private"}`))
+		_, _ = w.Write([]byte(`{"id":42,"path":"team","web_url":"https://example.test/team","visibility":"private"}`))
 	})
 	result, err := CreateOrganization(client.WithContext(ctx), OrganizationCreateRequest{Path: "team"})
 	if err != nil || result.ID != 42 || result.Visibility != "private" {
@@ -114,7 +114,7 @@ func TestCreateOrganizationContext(t *testing.T) {
 func TestCreateOrganizationInvalidIdentity(t *testing.T) {
 	for _, body := range []string{`null`, `{}`, `{"id":0,"path":"team"}`, `{"id":1,"path":"another"}`} {
 		t.Run(body, func(t *testing.T) {
-			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte(body)) })
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(body)) })
 			_, err := CreateOrganization(client, OrganizationCreateRequest{Path: "team"})
 			var uncertain *OrganizationCreationUncertainError
 			if !errors.As(err, &uncertain) || !errors.Is(err, ErrInvalidResponse) || !strings.Contains(err.Error(), "creation may have succeeded") {
