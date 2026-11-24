@@ -30,7 +30,7 @@ function run(file, args, env, cwd, input) {
 
 test('updater rejects missing and malformed metadata credentials without leaking them', unix, async t => {
   for (const [name, input, message] of [
-    ['missing', '', /NIX_UPDATE_TOKEN is missing/],
+    ['missing', '', /NIX_UPDATE_TOKEN was not received on stdin/],
     ['header injection', `${TOKEN}\r\nX-Injected: yes`, /characters not allowed in a Bearer token/],
   ]) {
     await t.test(name, t => {

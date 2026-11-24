@@ -18,7 +18,7 @@ unset read_token
 read_token=$(cat)
 case "$read_token" in
   '')
-    echo "NIX_UPDATE_TOKEN is missing; refusing to query AtomGit anonymously." >&2
+    echo "NIX_UPDATE_TOKEN was not received on stdin; refusing to query AtomGit anonymously." >&2
     exit 1
     ;;
   *[!A-Za-z0-9._~+/=-]*)

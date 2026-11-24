@@ -68,8 +68,9 @@ jobs:
         run: |
           set +x
           set -eu
+          : "${NIX_UPDATE_TOKEN:?Repository secret NIX_UPDATE_TOKEN is not available in the update step.}"
           export PATH="$HOME/.nix-profile/bin:$PATH"
-          printf '%s' "${NIX_UPDATE_TOKEN:-}" |
+          printf '%s' "$NIX_UPDATE_TOKEN" |
             env -u NIX_UPDATE_TOKEN nix develop --no-update-lock-file . -c bash scripts/update-nix-packages.sh
 
       # Contents API writes pass the same PAT in an Authorization header.
