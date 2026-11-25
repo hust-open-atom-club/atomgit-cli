@@ -106,6 +106,12 @@ func TestRunRetryWithoutFailedJobIDsDoesNotPost(t *testing.T) {
 			{"id":"job-1","exec_id":"exec-1","status":"FAILED"},
 			{"exec_id":"exec-2","status":"FAILED"}
 		]}`, "failed job has no ID"},
+		{"missing ID with name", `{"total_count":1,"jobs":[
+			{"name":"Build\nLinux","identifier":"build-linux","status":"FAILED"}
+		]}`, `failed job "Build Linux" has no ID`},
+		{"missing ID with identifier", `{"total_count":1,"jobs":[
+			{"name":"\u0000","identifier":"deploy","status":"FAILED"}
+		]}`, `failed job "deploy" has no ID`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -116,9 +122,23 @@ func TestRunRetryWithoutFailedJobIDsDoesNotPost(t *testing.T) {
 				return runResponse(req, http.StatusOK, tt.jobs), nil
 			})
 			cmd := newCmdRunRetry(runFactory(runTestConfig{token: "secret"}, transport))
-			if err := cmd.RunE(cmd, []string{"team/demo", "run-1"}); err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+			if err := cmd.RunE(cmd, []string{"team/demo", "run-1"}); err == nil || !strings.HasSuffix(err.Error(), tt.wantErr) {
 				t.Fatalf("error = %v, want %q", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestRunRetryRejectsInvalidExplicitJobID(t *testing.T) {
+	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		t.Fatalf("unexpected %s request", req.Method)
+		return nil, nil
+	})
+	cmd := newCmdRunRetry(runFactory(runTestConfig{token: "secret"}, transport))
+	if err := cmd.Flags().Set("job", "build/linux"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.RunE(cmd, []string{"team/demo", "run-1"}); err == nil || err.Error() != `invalid job ID: "build/linux"` {
+		t.Fatalf("error = %v", err)
 	}
 }

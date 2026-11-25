@@ -87,6 +87,9 @@ func failedJobRunIDs(client *actions.Client, owner, repo, runID string) ([]strin
 	for _, job := range jobs {
 		if strings.EqualFold(strings.TrimSpace(job.Status), "FAILED") {
 			if strings.TrimSpace(job.ID) == "" {
+				if name := fallback(singleLine(job.Name), singleLine(job.Identifier)); name != "" {
+					return nil, fmt.Errorf("failed job %q has no ID", name)
+				}
 				return nil, fmt.Errorf("failed job has no ID")
 			}
 			ids = append(ids, job.ID)
@@ -104,7 +107,7 @@ func validateJobRunIDs(ids []string) ([]string, error) {
 	for _, id := range ids {
 		id = strings.TrimSpace(id)
 		if id == "" || strings.Contains(id, "/") {
-			return nil, fmt.Errorf("invalid job run ID: %q", id)
+			return nil, fmt.Errorf("invalid job ID: %q", id)
 		}
 		if !seen[id] {
 			result = append(result, id)

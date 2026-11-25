@@ -1467,6 +1467,13 @@ ag-cli run artifact delete <artifact-id> --yes
 
 `run retry` 默认查询失败任务，并将其 `id` 作为 `job_run_ids` 发送。`--job` 可重复使用，直接接收 `ag-cli run view` 显示的任务 ID。没有失败任务或失败任务缺少 `id` 时，命令不会发送重试请求。
 
+```console
+$ ag-cli run retry owner/repo 42
+list failed jobs for run 42: failed job "Build" has no ID
+$ ag-cli run retry owner/repo 42 --job build/linux
+invalid job ID: "build/linux"
+```
+
 ## Actions 工作流管理 (workflow)
 
 `ag-cli workflow` 用于查看 AtomGit Actions 工作流列表、校验本地 workflow YAML，以及手动触发工作流运行（`workflow_dispatch`）。
