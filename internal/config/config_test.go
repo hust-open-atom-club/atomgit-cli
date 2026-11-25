@@ -387,9 +387,24 @@ func TestSaveTokenRejectsRenameToExistingAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := SaveToken("replacement-token", "bob")
-	if err == nil || !strings.Contains(err.Error(), "account already exists") {
+	path, err := PrimaryTokenPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = SaveToken("replacement-token", "bob")
+	if conflict, ok := errors.AsType[*AccountConflictError](err); !ok || conflict.Account != "alice" || conflict.ExistingAccount != "bob" {
 		t.Fatalf("error = %v", err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) {
+		t.Fatal("rejected rename changed the credential file")
 	}
 	store, loadErr := LoadCredentialStore()
 	if loadErr != nil {
@@ -432,13 +447,23 @@ func TestNewConfigWithoutCredentials(t *testing.T) {
 }
 
 func TestCredentialAccessStopsLegacyFallback(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("requires Unix permissions and an unprivileged process")
+	}
 	home := isolateConfig(t)
 	writeCredentialsFile(t, filepath.Join(home, legacyTokenFile), StoredCredentials{AccessToken: "legacy", User: "alice"})
 	path, err := PrimaryTokenPath()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(path, 0o700); err != nil {
+	writeCredentialsFile(t, path, StoredCredentials{AccessToken: "primary", User: "alice"})
+	dir := filepath.Dir(path)
+	t.Cleanup(func() {
+		if err := os.Chmod(dir, 0o700); err != nil {
+			t.Error(err)
+		}
+	})
+	if err := os.Chmod(dir, 0); err != nil {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct {

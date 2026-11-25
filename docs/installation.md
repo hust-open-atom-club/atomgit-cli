@@ -315,7 +315,7 @@ Home Manager 中同样可以将 `unstable.atomgit-cli` 加入 `home.packages`。
 - `stable`：从固定版本的 AtomGit Release 源码归档构建。
 - `latest`：从当前 flake revision 的源码构建。
 
-默认 package 和兼容名称 `ag`、`ag-cli` 均指向 `stable`。当前 stable 固定为 v0.7.3，仍提供旧 `ag` 命令；`latest` 从当前源码构建并提供 `ag-cli`。安装稳定版：
+默认 package 和兼容名称 `ag`、`ag-cli` 均指向 `stable`。`stable` 和 `latest` 都提供 `ag-cli` 命令。安装稳定版：
 
 由于 nixos-unstable 已停止支持 Intel macOS，flake 对 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。
 
@@ -543,6 +543,8 @@ sudo dnf copr remove cubelitblade/atomgit-cli
 
 安装脚本会识别当前操作系统（支持 Linux、Windows 和 macOS）与处理器架构（Linux 支持 amd64、arm64 和 loong64，macOS 与 Windows 支持 amd64 和 arm64），下载匹配的预编译文件并安装 `ag-cli`。
 
+两个脚本都会下载同一 Release 的 `checksums.txt`，并在解压前校验归档的 SHA-256。校验和不匹配、`checksums.txt` 缺少对应记录或本地无法计算 SHA-256 时，脚本会中止安装并以非零状态退出，不写入任何文件。两个脚本的安装提示信息均使用英文。
+
 #### macOS 和 Linux
 
 请在终端执行：
@@ -575,7 +577,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 脚本默认安装到 `%USERPROFILE%\.local\bin`，并将该目录加入当前用户的 `Path`。
 
-`install.ps1` 保持纯 ASCII，以兼容 Windows PowerShell 5.1 在不同系统代码页下的脚本下载、保存和执行；安装过程中的提示信息使用英文。
+`install.ps1` 保持纯 ASCII，以兼容 Windows PowerShell 5.1 在不同系统代码页下的脚本下载、保存和执行。
 
 ### 手动安装
 
@@ -592,6 +594,18 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 | Windows | 常见 64 位 PC（amd64） | `ag_windows_amd64.zip` |
 
 macOS 和 Linux 可执行 `uname -m` 查看架构：`arm64` 或 `aarch64` 对应 arm64，`x86_64` 对应 amd64，Linux 上的 `loongarch64` 或 `loong64` 对应 loong64。Windows 可在 PowerShell 中执行 `$env:PROCESSOR_ARCHITECTURE`；`ARM64` 对应 arm64，`AMD64` 对应 amd64。
+
+下载后把同一 Release 的 `checksums.txt` 放在归档所在目录，校验通过后再解压：
+
+```bash
+# Linux
+sha256sum -c checksums.txt --ignore-missing
+
+# macOS
+shasum -a 256 -c checksums.txt --ignore-missing
+```
+
+Windows 可执行 `Get-FileHash .\ag_windows_amd64.zip -Algorithm SHA256`，并与 `checksums.txt` 中对应行的值逐字比对。
 
 #### macOS 和 Linux
 

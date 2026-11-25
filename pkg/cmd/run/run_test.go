@@ -63,7 +63,7 @@ func runFactory(config runTestConfig, transport runRoundTripFunc) *cmdutil.Facto
 
 func TestNewCmdRunRegistersCommandsAndFlags(t *testing.T) {
 	cmd := NewCmdRun(&cmdutil.Factory{})
-	for _, value := range []string{"artifact", "dispatch", "rerun", "cancel", "delete"} {
+	for _, value := range []string{"artifact", "dispatch", "rerun", "stop", "retry", "delete"} {
 		if !strings.Contains(strings.ToLower(cmd.Long), value) {
 			t.Errorf("run help does not mention %q: %s", value, cmd.Long)
 		}
@@ -74,6 +74,9 @@ func TestNewCmdRunRegistersCommandsAndFlags(t *testing.T) {
 		"view":     {"artifact", "artifact-file", "job", "log", "log-file", "overwrite"},
 		"step-log": {"output", "overwrite"},
 		"artifact": {},
+		"stop":     {},
+		"rerun":    {},
+		"retry":    {"job"},
 	}
 	for name, flags := range want {
 		child, _, err := cmd.Find([]string{name})

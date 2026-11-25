@@ -15,6 +15,11 @@ func apiDiagnostic(err error) (commandDiagnostic, bool) {
 	role := commandErrorRole(err)
 	//nolint:errorlint // Only the selected API operation supplies response or execution facts.
 	switch failure := role.(type) {
+	case *api.RepositoryModuleUpdateUncertainError:
+		d, _ := apiDiagnostic(failure.Err)
+		d.summary = "Repository module update could not be confirmed."
+		d.hint = "The module settings may have changed. Check AtomGit before retrying."
+		return d, true
 	case *api.OrganizationCreationUncertainError:
 		// Preserve the operation's retry guidance without exposing the wrapped
 		// error text, which may contain private response or transport details.

@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"strings"
-	"unicode"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/commandschema"
@@ -30,7 +29,7 @@ func newCmdUserFollowers(f *cmdutil.Factory) *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			username := strings.TrimSpace(args[0])
-			if !validLogin(username) || username == "." || username == ".." || strings.ContainsRune(username, '\\') || strings.ContainsFunc(username, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) {
+			if !validFollowUsername(username) {
 				return fmt.Errorf("invalid username %q: expected a user name without whitespace, control characters, or path/query separators", args[0])
 			}
 			if limit <= 0 {

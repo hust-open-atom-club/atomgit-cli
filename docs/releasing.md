@@ -158,6 +158,10 @@ CI 在一个 Runner 中顺序处理七个目标，并复用每个已构建二进
 - `npm/` 下的七个平台二进制包、一个主启动包和独立的 `npm/checksums.txt`。
 - 仅覆盖 AtomGit Release 附件（七个归档和两个安装脚本）的根 `checksums.txt`。
 
+两个安装脚本在运行时下载同一 Release 的根 `checksums.txt`，并在解压前校验归档的 SHA-256。
+校验失败、缺少对应记录或无法计算校验和时，脚本会中止安装并以非零状态退出。
+因此根 `checksums.txt` 必须随每个正式 Release 一起发布；删除它会让自动安装不可用。
+
 仓库根目录的 `install.sh` 和 `install.ps1` 是不绑定具体版本的源码模板，使用 `__AG_RELEASE_TAG__` 占位符。发布构建只替换安装器中的绑定变量，生成的 Release 附件默认下载本次 tag；模板中的使用示例始终保持为 `latest` 和 `vX.Y.Z`，无需随版本手工修改。
 
 `install.ps1` 必须保持纯 ASCII，确保 Windows PowerShell 5.1 在无 `charset` 的 HTTP 响应以及使用系统 ANSI 代码页读取本地脚本时都能正确解析。发布制品校验会拒绝包含非 ASCII 字节的 PowerShell 安装器。
@@ -309,7 +313,7 @@ npm run publish:npm -- vX.Y.Z dist/vX.Y.Z/npm --publish
 - `stable` 从上游仓库的最新正式 AtomGit Release 源码归档构建，并固定版本、源码 hash 和 `vendorHash`。
 - `latest` 直接从当前 flake revision 的源码构建，因此始终对应检出仓库的最新 commit；工作流只维护其 `vendorHash`。
 
-两个 package 都由 Nix 管理；共享构建参数暂时保留 `Source=nix` 注入，以便仍基于旧版源码的 `stable` 正确报告由 Nix 管理。源码移除发行来源字段后，该兼容参数不会改变版本输出。`default` 和兼容名称 `ag`、`ag-cli` 都指向 `stable`。固定的 v0.7.3 stable 仍从 `cmd/ag` 构建并提供旧 `ag`，后续版本及 `latest` 使用 `cmd/ag-cli`。
+两个 package 都从 `cmd/ag-cli` 构建并提供 `ag-cli` 命令。`default` 和兼容名称 `ag`、`ag-cli` 都指向 `stable`。不要在 `nix/stable.nix` 中用与当前版本相同的字符串字面量作兼容判断：`nix-update` 可能把它和版本声明一起替换。
 
 Nix package 使用 `go` 行声明的最低版本约束，并由锁定的 nixpkgs input 提供实际编译器；它不要求与官方 Release 使用的建议工具链补丁版本完全一致。更新 flake inputs 时仍需确认所有支持平台提供的 Go 版本不低于 1.26.6。
 
@@ -323,12 +327,15 @@ Nix package 使用 `go` 行声明的最低版本约束，并由锁定的 nixpkgs
 
 `nix-update --build` 的 Go 模块下载仅使用 `goproxy.cn` Go module proxy。
 
+Release 和 commit 元数据查询与 Contents API 写回共用仓库 Secret `NIX_UPDATE_TOKEN`，该令牌需要能读取这些元数据并写入仓库内容。读取步骤经标准输入传递令牌，并在启动 `nix develop` 前从环境中移除它。两个查询均使用 `Authorization: Bearer` 请求头；缺少令牌时直接失败，不回退到匿名查询。
+
 写回凭据以 `Authorization: Bearer` 请求头发送（经临时文件传给 curl，不进入命令行参数），绝不进入 URL、仓库内文件或日志；错误输出仅保留 HTTP 状态、curl 退出码和至多 300 个字符、去除控制字符并脱敏令牌的响应摘要。各脚本的行为由 `test/nix-update-scripts.test.js` 覆盖：上下文拒绝、无变更、缺失令牌、分支名非法、传输错误、API 失败（有界脱敏）、安装器摘要校验以及双文件成功写回。
 
-可在本地复现相同更新；开发环境已包含全部所需工具：
+本地复现更新时，先从凭据管理器将具备元数据读取权限的令牌加载到 `NIX_UPDATE_TOKEN`，再执行：
 
 ```bash
-nix develop --no-update-lock-file . -c bash scripts/update-nix-packages.sh
+printf '%s' "$NIX_UPDATE_TOKEN" |
+  env -u NIX_UPDATE_TOKEN nix develop --no-update-lock-file . -c bash scripts/update-nix-packages.sh
 ```
 
 脚本会依次完成 stable 版本读取、`nix/stable.nix` 元数据改写与回读校验、两个 package 的 `nix-update --build` 更新、stable 二进制 `version --json` 三字段核对，并删除 `result` 链接。`nix-update --build` 会创建 Nix 的 `result` 结果链接；脚本在完成后删除它，仓库也忽略 `result` 和 `result-*`。`nix-update` 会同时维护源码 hash 和 Go `vendorHash`。当前 nixos-unstable 已停止支持 Intel macOS，因此 flake 仅为 `x86_64-darwin` 使用仍受维护的 `nixpkgs-26.05-darwin` input；其他平台继续使用 nixos-unstable。

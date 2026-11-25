@@ -17,6 +17,11 @@ const (
 	appName         = "ag-cli"
 	tokenFile       = "token.json"
 	legacyTokenFile = ".atomgit_personal_token.json"
+
+	// maxCredentialFileSize bounds credential file reads before JSON decoding.
+	// The loader and InspectCredentials share this limit so an oversized or
+	// replaced file cannot exhaust memory on every command.
+	maxCredentialFileSize = 1 << 20
 )
 
 type Config interface {
@@ -229,6 +234,11 @@ func readCredentialData() ([]byte, error) {
 		if li.Mode()&os.ModeSymlink != 0 {
 			return nil, &CredentialFileSafetyError{Path: path, Err: ErrTokenFileSymlink}
 		}
+		// Reject non-regular files from Lstat data because os.Open blocks on a
+		// FIFO and reads a device file without end.
+		if !li.Mode().IsRegular() {
+			return nil, &CredentialFileSafetyError{Path: path, Err: ErrTokenFileNotRegular}
+		}
 
 		f, err := os.Open(path)
 		if err != nil {
@@ -259,9 +269,12 @@ func readCredentialData() ([]byte, error) {
 			return nil, err
 		}
 
-		data, err := io.ReadAll(f)
+		data, err := io.ReadAll(io.LimitReader(f, maxCredentialFileSize+1))
 		if err != nil {
 			return nil, &CredentialAccessError{Operation: "read token file", Path: path, Err: err}
+		}
+		if len(data) > maxCredentialFileSize {
+			return nil, &CredentialFileSafetyError{Path: path, Err: ErrTokenFileTooLarge}
 		}
 
 		return data, nil

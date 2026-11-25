@@ -157,6 +157,30 @@ func (e *CredentialValidationError) Error() string        { return e.Err.Error()
 func (e *CredentialValidationError) Unwrap() error        { return e.Err }
 func (e *CredentialValidationError) Is(target error) bool { return target == ErrInvalidCredentials }
 
+// AccountNotFoundError means an explicitly selected account is not saved.
+type AccountNotFoundError struct{ Account string }
+
+func (e *AccountNotFoundError) Error() string {
+	return fmt.Sprintf("account %q was not found", e.Account)
+}
+
+// AccountConflictError means renaming the active account would replace another account.
+type AccountConflictError struct {
+	Account         string
+	ExistingAccount string
+}
+
+func (e *AccountConflictError) Error() string {
+	return fmt.Sprintf("cannot rename active account %s to %s: account already exists", e.Account, e.ExistingAccount)
+}
+
+// ActiveAccountRemovalError means the active account cannot be removed while others remain.
+type ActiveAccountRemovalError struct{ Account string }
+
+func (e *ActiveAccountRemovalError) Error() string {
+	return fmt.Sprintf("cannot remove active account %s while other accounts remain", e.Account)
+}
+
 // CredentialFormatError describes a credential decoder failure. Offset and
 // InvalidFieldType are format facts exposed by config, independently of the
 // concrete parser cause retained in Err.
