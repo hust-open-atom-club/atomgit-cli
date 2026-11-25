@@ -414,7 +414,9 @@ ag-cli repo settings edit owner/repo --forbidden-developer-create-branch-user-id
 | `--include-lfs-objects` | boolean | 下载归档时包含 LFS 对象 |
 | `--show-branch-creator` | boolean | 显示分支创建者 |
 
-`edit` 至少指定一个设置，支持显式 `--flag=false` 和字符串 `--flag=''`；只提交指定字段，不先读取再覆写整份设置。CLI 不用 Go 的正则引擎校验服务端规则，也不推断白名单 ID 的分隔格式，具体内容由 AtomGit 校验。`forbidden_gitlab_access` 只有读取契约，不提供未经文档定义的写入参数。参数、无修改请求在认证和 HTTP 前拒绝；取消或 EOF 不读取凭据、不发送请求。`--yes/-y` 跳过确认；PUT 不重试、不跟随重定向。
+`edit` 至少指定一个设置，支持显式 `--flag=false` 和字符串 `--flag=''`；只提交指定字段，不先读取再覆写整份设置。CLI 不用 Go 的正则引擎校验服务端规则，也不推断白名单 ID 的分隔格式，具体内容由 AtomGit 校验。`forbidden_gitlab_access` 只有读取契约，不提供未经文档定义的写入参数。无修改请求在本地拒绝；参数校验失败、取消或 EOF 均不发送 API 请求。`--yes/-y` 跳过确认；PUT 不重试、不跟随重定向。
+
+CLI 启动时仍会先加载本地配置和凭据；Unix 上可能收紧凭据文件的权限。因此，取消设置修改并不保证本地凭据文件未经读取或权限修复，损坏或不可读的凭据也可能在确认提示或无修改校验前报错。详见[必需认证与可选认证](configuration.md#必需认证与可选认证)。
 
 `view --json` 顶层固定为 `repository` 和 `settings`。设置中的 boolean、字符串及白名单对象按官方类型解析，缺失或 null 字段显示为 `null`，不会补成 false、空字符串或空数组；服务端明确返回的空白名单保留为 `[]`。`edit --json` 包含 `repository`、`submitted_fields`、`settings` 和固定 `verification: "response_only"`：提交字段与 PUT 返回的设置分开呈现，不声称已独立回读，也不把未返回的提交字段当作已验证。文本输出使用同一组信息并通过 JSON 转义保护远端字段。只接受 HTTP 200 对象及至少一个已知非 null 设置值；响应形状或类型非法时不输出部分结果。写入结果无法确认时，应先检查 AtomGit 再决定是否重试；测试只使用离线 mock。
 
