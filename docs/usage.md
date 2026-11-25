@@ -1483,6 +1483,8 @@ ag-cli run view owner/repo <run-id> --artifact <artifact-id>
 ag-cli run view owner/repo <run-id> --artifact <artifact-id> --artifact-file build.zip --overwrite
 
 # 停止运行中的工作流，或重跑整个工作流
+ag-cli run cancel owner/repo <run-id>
+# 兼容原有停止入口
 ag-cli run stop owner/repo <run-id>
 ag-cli run rerun owner/repo <run-id>
 
@@ -1508,6 +1510,10 @@ ag-cli run artifact delete <artifact-id> --yes
 `--log` 会先把 AtomGit 返回的日志 ZIP 流式写入临时文件，再逐项输出其中的日志文本；纯文本响应也受相同限制并保持兼容。日志展示的响应上限为 64 MiB，用于限制临时文件；单条解压日志上限为 128 MiB，允许其达到最大归档响应的两倍；全部解压日志累计上限为 256 MiB，允许两条最大日志并限制多条日志的总展开量。累计量不含条目间补入的换行。ZIP 元数据会用于提前拒绝超限内容，实际读取仍会执行限制；恰好达到上限可正常输出，超限则返回错误。错误可能发生在已有部分日志输出之后，请勿将非零退出的部分输出当作完整日志。无法识别为 ZIP 的文本响应按纯文本处理；带 ZIP 签名但格式损坏的响应会报错。
 
 `--log-file` 保留服务端原始 ZIP 下载行为，不应用上述展示限制。`ag-cli run view --artifact` 下载的是 artifact 归档，而 `ag-cli run artifact view` 只读取元数据。`ag-cli run artifact delete` 会先读取 artifact 元数据并显示仓库、ID、名称、workflow run ID 和过期时间，只有输入 `y` 或 `yes` 才会继续；`--yes` 可跳过确认，但不会跳过元数据读取。artifact 删除后无法恢复。日志、step-log `--output` 和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
+
+`run cancel` 与 `run stop` 均调用停止接口；`run rerun` 重跑整条流水线，`run retry` 仅重试选中的任务。四个命令默认展示仓库、运行 ID 和操作后确认，支持 `--yes/-y` 跳过。取消、空输入或 EOF 不发送任何 Actions 请求，自动选择失败任务的 GET 也在确认后才执行。CLI 启动仍可能读取本地配置和凭据。显式 `--job` 的空值和非法 ID 在 Cobra 参数校验阶段拒绝，先于凭据加载。
+
+停止、重跑和任务重试的 POST 不自动重试或跟随重定向；只有 HTTP 200 且响应 `success=true` 才报告成功。其他状态（包括 201/202/204）、缺失或非法 success 字段、异常响应均返回错误，不输出成功信息。远端状态不确定时应先检查运行，再决定是否重试。测试使用离线 mock，不停止或重跑真实流水线。
 
 `run retry` 默认查询失败任务，并将其 `id` 作为 `job_run_ids` 发送。`--job` 可重复使用，直接接收 `ag-cli run view` 显示的任务 ID。没有失败任务或失败任务缺少 `id` 时，命令不会发送重试请求。
 

@@ -229,6 +229,7 @@
 - [ag-cli run artifact](#ag-cli-run-artifact) — Inspect and manage workflow artifacts
 - [ag-cli run artifact delete](#ag-cli-run-artifact-delete) — Delete a workflow artifact
 - [ag-cli run artifact view](#ag-cli-run-artifact-view) — View artifact metadata without downloading the archive
+- [ag-cli run cancel](#ag-cli-run-cancel) — Cancel a running workflow run
 - [ag-cli run list](#ag-cli-run-list) — List workflow runs
 - [ag-cli run rerun](#ag-cli-run-rerun) — Rerun a workflow run
 - [ag-cli run retry](#ag-cli-run-retry) — Retry failed jobs in a workflow run
@@ -6219,7 +6220,8 @@ Inspect and manage AtomGit Actions workflow runs and artifacts
 
 List and inspect AtomGit Actions workflow runs, jobs, logs, and artifacts.
 
-Stop, rerun, and retry workflow runs. Artifacts can be deleted after confirmation.
+Cancel (or stop), rerun, and retry workflow runs after confirmation.
+Artifacts can be deleted after confirmation.
 Workflow run dispatch and deletion operations are not supported.
 
 ### Flags
@@ -6306,6 +6308,29 @@ ag-cli run artifact view <artifact-id> --json
 ```
 
 
+## ag-cli run cancel
+
+Usage: `ag-cli run cancel [<owner>/<repo>] <run-id> [flags]`
+
+Cancel a running workflow run
+
+Cancel a running workflow run. Requires confirmation unless --yes is supplied.
+Writes are never automatically retried or redirected. Success requires HTTP 200
+and success=true. Check the run before retrying an uncertain request.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip run action confirmation | `false` | local |
+
+
 ## ag-cli run list
 
 Usage: `ag-cli run list [<owner>/<repo>] [flags]`
@@ -6348,11 +6373,13 @@ ag-cli run list owner/repo --event push --workflow-name CI --limit 50
 
 ## ag-cli run rerun
 
-Usage: `ag-cli run rerun [<owner>/<repo>] <run-id>`
+Usage: `ag-cli run rerun [<owner>/<repo>] <run-id> [flags]`
 
 Rerun a workflow run
 
-Rerun a workflow run
+Rerun a workflow run. Requires confirmation unless --yes is supplied.
+Writes are never automatically retried or redirected. Success requires HTTP 200
+and success=true. Check the run before retrying an uncertain request.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -6364,6 +6391,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip run action confirmation | `false` | local |
 
 
 ## ag-cli run retry
@@ -6372,7 +6400,9 @@ Usage: `ag-cli run retry [<owner>/<repo>] <run-id> [flags]`
 
 Retry failed jobs in a workflow run
 
-Retry failed jobs in a workflow run
+Retry failed jobs in a workflow run. Requires confirmation unless --yes is supplied.
+Writes are never automatically retried or redirected. Success requires HTTP 200
+and success=true. Check the run before retrying an uncertain request.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -6385,6 +6415,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
 | `-j, --job` | Retry a job by the ID shown in 'ag-cli run view' (repeatable, defaults to all failed jobs) | `[]` | local |
+| `-y, --yes` | Skip run action confirmation | `false` | local |
 
 
 ## ag-cli run step-log
@@ -6421,11 +6452,13 @@ ag-cli run step-log owner/repo <run-id> <job-id> <step-id> --output step.log --o
 
 ## ag-cli run stop
 
-Usage: `ag-cli run stop [<owner>/<repo>] <run-id>`
+Usage: `ag-cli run stop [<owner>/<repo>] <run-id> [flags]`
 
 Stop a running workflow run
 
-Stop a running workflow run
+Stop a running workflow run. Requires confirmation unless --yes is supplied.
+Writes are never automatically retried or redirected. Success requires HTTP 200
+and success=true. Check the run before retrying an uncertain request.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 
@@ -6437,6 +6470,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip run action confirmation | `false` | local |
 
 
 ## ag-cli run view

@@ -577,6 +577,14 @@ func (c *Client) DoRequestRawWithBody(method, path string, body []byte, contentT
 	return c.doRequestWithContentTypeAndAccept(method, path, bodyReader, contentType, accept)
 }
 
+// DoRequestRawOnceWithBody sends a state-sensitive request without retries or
+// redirects. The caller owns the response body and validates the exact status.
+func (c *Client) DoRequestRawOnceWithBody(method, path string, body []byte, contentType, accept string) (*http.Response, error) {
+	hc := *metadataHTTPClient(c.httpClient)
+	hc.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	return c.doRequestWithPolicy(&hc, method, path, bytes.NewReader(body), contentType, accept, false)
+}
+
 // DoRequestRawStreamingWithAccept performs a cancellable raw request without
 // the metadata client's whole-request timeout. It retains connection and
 // response-header safeguards and is intended for large response bodies whose

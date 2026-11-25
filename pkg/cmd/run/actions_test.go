@@ -8,7 +8,70 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
+
+type forbiddenRunConfig struct{ t *testing.T }
+
+func (c forbiddenRunConfig) GetToken() (string, error) { c.t.Fatal("read credentials"); return "", nil }
+func (c forbiddenRunConfig) GetUser() (string, error)  { c.t.Fatal("read identity"); return "", nil }
+func (c forbiddenRunConfig) GetHost() string           { return "atomgit.com" }
+
+func TestRunActionCancellation(t *testing.T) {
+	for _, action := range []string{"cancel", "stop", "rerun", "retry"} {
+		for _, input := range []string{"n\n", "\n", ""} {
+			t.Run(action+"/"+input, func(t *testing.T) {
+				f := &cmdutil.Factory{Config: forbiddenRunConfig{t}, HttpClient: func() (*http.Client, error) { t.Fatal("created client"); return nil, nil }}
+				cmd := NewCmdRun(f)
+				var out, stderr bytes.Buffer
+				cmd.SetOut(&out)
+				cmd.SetErr(&stderr)
+				cmd.SetIn(strings.NewReader(input))
+				cmd.SetArgs([]string{action, "team/demo", "run-1"})
+				if err := cmd.Execute(); err != nil || out.Len() != 0 || !strings.Contains(stderr.String(), "Run action canceled.") {
+					t.Fatalf("err=%v out=%q stderr=%q", err, out.String(), stderr.String())
+				}
+			})
+		}
+	}
+}
+
+func TestRunActionConfirmation(t *testing.T) {
+	for _, action := range []string{"cancel", "stop", "rerun", "retry"} {
+		calls := 0
+		f := runFactory(runTestConfig{token: "fixture"}, runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			calls++
+			return runResponse(req, 200, `{"success":true}`), nil
+		}))
+		cmd := NewCmdRun(f)
+		var out, stderr bytes.Buffer
+		cmd.SetIn(strings.NewReader("yes\n"))
+		cmd.SetOut(&out)
+		cmd.SetErr(&stderr)
+		args := []string{action, "team/demo", "run-1"}
+		if action == "retry" {
+			args = append(args, "--job", "job-1")
+		}
+		cmd.SetArgs(args)
+		if err := cmd.Execute(); err != nil || calls != 1 || !strings.Contains(stderr.String(), "Repository: team/demo\nRun: run-1") {
+			t.Fatalf("action=%s err=%v calls=%d stderr=%q", action, err, calls, stderr.String())
+		}
+	}
+}
+
+func TestRunRetryValidationBeforeCredentials(t *testing.T) {
+	for _, id := range []string{"", " ", "build/linux"} {
+		f := &cmdutil.Factory{Config: forbiddenRunConfig{t}}
+		cmd := NewCmdRun(f)
+		cmd.SetOut(io.Discard)
+		cmd.SetErr(io.Discard)
+		cmd.SetArgs([]string{"retry", "team/demo", "run-1", "--job=" + id, "--yes"})
+		if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "invalid job ID") {
+			t.Fatalf("id=%q error=%v", id, err)
+		}
+	}
+}
 
 func TestRunActions(t *testing.T) {
 	tests := []struct {
@@ -19,6 +82,7 @@ func TestRunActions(t *testing.T) {
 		wantIDs   []string
 		wantReads int
 	}{
+		{"cancel", []string{"team/demo", "run-1"}, http.MethodPost, "/api/v8/repos/team/demo/actions/runs/run-1/stop", nil, 0},
 		{"stop", []string{"team/demo", "run-1"}, http.MethodPost, "/api/v8/repos/team/demo/actions/runs/run-1/stop", nil, 0},
 		{"rerun", []string{"team/demo", "run-1"}, http.MethodPost, "/api/v8/repos/team/demo/actions/runs/run-1/rerun", nil, 0},
 		{"retry selected", []string{"team/demo", "run-1", "--job", "job-2", "--job", "job-2"}, http.MethodPost, "/api/v8/repos/team/demo/actions/runs/run-1/retry", []string{"job-2"}, 0},
@@ -74,7 +138,7 @@ func TestRunActions(t *testing.T) {
 			cmd := NewCmdRun(factory)
 			var out bytes.Buffer
 			cmd.SetOut(&out)
-			cmd.SetArgs(append([]string{strings.Fields(tt.name)[0]}, tt.args...))
+			cmd.SetArgs(append(append([]string{strings.Fields(tt.name)[0]}, tt.args...), "--yes"))
 			if err := cmd.Execute(); err != nil {
 				t.Fatal(err)
 			}
@@ -90,6 +154,9 @@ func TestRunActionRejectsFalseSuccess(t *testing.T) {
 		return runResponse(req, http.StatusOK, `{"success":false}`), nil
 	})
 	cmd := newCmdRunStop(runFactory(runTestConfig{token: "secret"}, transport))
+	if err := cmd.Flags().Set("yes", "true"); err != nil {
+		t.Fatal(err)
+	}
 	if err := cmd.RunE(cmd, []string{"team/demo", "run-1"}); err == nil || !strings.Contains(err.Error(), "did not report success") {
 		t.Fatalf("error = %v", err)
 	}
@@ -122,6 +189,9 @@ func TestRunRetryWithoutFailedJobIDsDoesNotPost(t *testing.T) {
 				return runResponse(req, http.StatusOK, tt.jobs), nil
 			})
 			cmd := newCmdRunRetry(runFactory(runTestConfig{token: "secret"}, transport))
+			if err := cmd.Flags().Set("yes", "true"); err != nil {
+				t.Fatal(err)
+			}
 			if err := cmd.RunE(cmd, []string{"team/demo", "run-1"}); err == nil || !strings.HasSuffix(err.Error(), tt.wantErr) {
 				t.Fatalf("error = %v, want %q", err, tt.wantErr)
 			}
@@ -135,6 +205,9 @@ func TestRunRetryRejectsInvalidExplicitJobID(t *testing.T) {
 		return nil, nil
 	})
 	cmd := newCmdRunRetry(runFactory(runTestConfig{token: "secret"}, transport))
+	if err := cmd.Flags().Set("yes", "true"); err != nil {
+		t.Fatal(err)
+	}
 	if err := cmd.Flags().Set("job", "build/linux"); err != nil {
 		t.Fatal(err)
 	}
