@@ -110,7 +110,7 @@ func TestListAllCommentsCancellationAndPageBound(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			calls := 0
-			client := NewClientWithHTTPClient("fixture", &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			client := NewClientWithHTTPClient("fixture", &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 				calls++
 				cancel()
 				return discussionStateResponse(200, `[{"id":1}]`), nil

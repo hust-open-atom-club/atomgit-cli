@@ -90,7 +90,7 @@ func TestPRCommentViewFailurePrintsNoPartialList(t *testing.T) {
 			defer cancel()
 			calls := 0
 			f := &cmdutil.Factory{Config: prCommentTestConfig{}, HttpClient: func() (*http.Client, error) {
-				return &http.Client{Transport: prCommentRoundTripFunc(func(r *http.Request) (*http.Response, error) {
+				return &http.Client{Transport: prCommentRoundTripFunc(func(*http.Request) (*http.Response, error) {
 					calls++
 					if calls == 1 {
 						if canceled {

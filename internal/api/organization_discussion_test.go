@@ -173,7 +173,7 @@ func TestOrganizationDiscussionWritesRejectInvalidResponses(t *testing.T) {
 		}
 		for _, body := range []string{"", "{", "[]", "42"} {
 			t.Run(tt.name+"/"+body, func(t *testing.T) {
-				client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 					_, _ = io.WriteString(w, body)
 				})
 				if _, err := tt.call(client); err == nil {

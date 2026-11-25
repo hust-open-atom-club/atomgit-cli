@@ -78,7 +78,7 @@ func TestIssueCommentViewFailurePrintsNoPartialList(t *testing.T) {
 			defer cancel()
 			calls := 0
 			f := &cmdutil.Factory{Config: issueCommentTestConfig{}, HttpClient: func() (*http.Client, error) {
-				return &http.Client{Transport: issueCommentRoundTripFunc(func(r *http.Request) (*http.Response, error) {
+				return &http.Client{Transport: issueCommentRoundTripFunc(func(*http.Request) (*http.Response, error) {
 					calls++
 					if calls == 1 {
 						if canceled {
