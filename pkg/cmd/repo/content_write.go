@@ -250,6 +250,7 @@ func readContentBytes(path string, stdin io.Reader) ([]byte, error) {
 			return nil, fmt.Errorf("read content from stdin: %w", err)
 		}
 	} else {
+		//nolint:gosec // G304: --file intentionally reads a user-selected local path.
 		file, openErr := os.Open(path)
 		if openErr != nil {
 			return nil, fmt.Errorf("read content file: %w", openErr)
