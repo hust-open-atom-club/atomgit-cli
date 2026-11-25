@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -351,6 +352,58 @@ func TestAuthLogoutAllAccounts(t *testing.T) {
 	}
 	if _, _, err := config.ListAccounts(); !errors.Is(err, config.ErrTokenNotFound) {
 		t.Fatalf("ListAccounts() error = %v, want ErrTokenNotFound", err)
+	}
+}
+
+func TestAuthLogoutPreservesPartialRemoval(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		all  bool
+	}{
+		{name: "last account"},
+		{name: "all accounts", all: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			isolateAuthConfig(t)
+			if err := config.SaveAccount(&config.StoredCredentials{User: "alice", AccessToken: "fixture"}, true); err != nil {
+				t.Fatal(err)
+			}
+			primary, err := config.PrimaryTokenPath()
+			if err != nil {
+				t.Fatal(err)
+			}
+			home, err := os.UserHomeDir()
+			if err != nil {
+				t.Fatal(err)
+			}
+			legacy := filepath.Join(home, ".atomgit_personal_token.json")
+			if err := os.Mkdir(legacy, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(legacy, "keep"), []byte("fixture"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			cmd := NewCmdAuth(&cmdutil.Factory{})
+			cmd.SilenceErrors, cmd.SilenceUsage = true, true
+			args := []string{"logout"}
+			if tc.all {
+				args = append(args, "--all")
+			}
+			cmd.SetArgs(args)
+			var output bytes.Buffer
+			cmd.SetOut(&output)
+			err = cmd.Execute()
+			failure, ok := errors.AsType[*config.CredentialClearError](err)
+			if !ok || failure.Path != legacy || len(failure.Removed) != 1 || failure.Removed[0] != primary {
+				t.Fatalf("logout lost the removal result: %v", err)
+			}
+			if cause, ok := errors.AsType[*os.PathError](err); !ok || cause.Path != legacy || !errors.Is(err, cause.Err) {
+				t.Fatalf("logout lost the original removal error: %v", err)
+			}
+			if output.Len() != 0 {
+				t.Fatalf("incomplete logout reported success: %q", output.String())
+			}
+		})
 	}
 }
 

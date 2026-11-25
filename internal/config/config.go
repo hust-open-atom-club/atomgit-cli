@@ -373,22 +373,25 @@ func SaveCredentials(c *StoredCredentials) error {
 }
 
 // ClearCredentials removes all known credential files (XDG token.json and legacy path).
-// Returns the list of paths that were deleted.
+// Returns the paths already deleted, including when a later removal fails.
 func ClearCredentials() ([]string, error) {
+	paths, err := tokenFilePaths()
+	if err != nil {
+		return nil, &CredentialClearError{Operation: "locate credential files", Err: err}
+	}
 	var removed []string
-	for _, p := range getTokenFilePaths() {
+	for _, p := range paths {
 		err := os.Remove(p)
 		if err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, os.ErrNotExist) {
 				continue
 			}
-			if isPermissionErr(err) {
-				return removed, permissionError(
-					"cannot remove token file", p, err,
-					"check the file and parent directory ownership and permissions",
-				)
+			return removed, &CredentialClearError{
+				Operation: "remove credential file",
+				Path:      p,
+				Removed:   append([]string(nil), removed...),
+				Err:       err,
 			}
-			return removed, fmt.Errorf("remove %s: %w", p, err)
 		}
 		removed = append(removed, p)
 	}

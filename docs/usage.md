@@ -215,6 +215,8 @@ ag-cli auth logout --all
 
 `auth logout` 默认删除活动账号。为避免删除动作隐式选择另一个账号并造成 Git identity 错配，当仍有其他账号时不能删除活动账号；应先执行 `auth switch <account>`，再用 `auth logout --account <old-account>` 删除原账号。`--account` 可直接删除非活动账号，`--all` 明确删除全部账号。access token、refresh token 不会写入 Git 配置、remote URL、账号列表或错误信息。
 
+删除全部账号或最后一个账号时，如果只删除了部分凭据文件，`auth logout` 会返回非零退出码，列出已经删除的路径和删除失败的路径，并提示注销未完成。请检查剩余路径，避免将部分删除当作已完全注销。所有已知路径都没有凭据文件时，仍会按已注销处理；路径定位或删除失败则会报告错误。
+
 可选环境变量（覆盖默认 OAuth 应用）：`AG_OAUTH_CLIENT_ID`、`AG_OAUTH_CLIENT_SECRET`；若本机 **8765** 端口被占用，可设置 **`AG_OAUTH_REDIRECT_PORT`**（需与 AtomGit 应用配置的回调地址一致）。
 
 在支持 OSC 8 超链接的终端中，`auth login` 打印的授权 URL 是整段链接，换行后点击任意一行都会打开完整地址。不支持超链接的终端、`TERM=dumb` 或输出被重定向时，仍输出纯文本 URL。
