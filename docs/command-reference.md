@@ -6285,7 +6285,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
-| `-j, --job` | Retry this job run ID (repeatable); defaults to all failed jobs | `[]` | local |
+| `-j, --job` | Retry a job by the ID shown in 'ag-cli run view' (repeatable, defaults to all failed jobs) | `[]` | local |
 
 
 ## ag-cli run step-log

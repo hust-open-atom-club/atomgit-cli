@@ -20,7 +20,7 @@ func newCmdRunRerun(f *cmdutil.Factory) *cobra.Command {
 func newCmdRunRetry(f *cmdutil.Factory) *cobra.Command {
 	var jobIDs []string
 	cmd := newRunActionCommand(f, "retry", "Retry failed jobs in a workflow run", &jobIDs)
-	cmd.Flags().StringArrayVarP(&jobIDs, "job", "j", nil, "Retry this job run ID (repeatable); defaults to all failed jobs")
+	cmd.Flags().StringArrayVarP(&jobIDs, "job", "j", nil, "Retry a job by the ID shown in 'ag-cli run view' (repeatable, defaults to all failed jobs)")
 	return cmd
 }
 
@@ -86,10 +86,10 @@ func failedJobRunIDs(client *actions.Client, owner, repo, runID string) ([]strin
 	ids := make([]string, 0)
 	for _, job := range jobs {
 		if strings.EqualFold(strings.TrimSpace(job.Status), "FAILED") {
-			if strings.TrimSpace(job.ExecID) == "" {
-				return nil, fmt.Errorf("failed job %s has no execution ID", singleLine(job.ID))
+			if strings.TrimSpace(job.ID) == "" {
+				return nil, fmt.Errorf("failed job has no ID")
 			}
-			ids = append(ids, job.ExecID)
+			ids = append(ids, job.ID)
 		}
 	}
 	if len(ids) == 0 {
