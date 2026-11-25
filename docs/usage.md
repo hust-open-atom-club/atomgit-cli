@@ -1442,9 +1442,9 @@ ag-cli run view owner/repo <run-id> --artifact <artifact-id> --artifact-file bui
 ag-cli run stop owner/repo <run-id>
 ag-cli run rerun owner/repo <run-id>
 
-# 重试全部失败任务，或指定一个任务执行 ID
+# 重试全部失败任务，或指定一个任务 ID
 ag-cli run retry owner/repo <run-id>
-ag-cli run retry owner/repo <run-id> --job <job-run-id>
+ag-cli run retry owner/repo <run-id> --job <job-id>
 
 # 按 step ID 分页拉取步骤日志；默认输出到 stdout
 ag-cli run step-log owner/repo <run-id> <job-id> <step-id>
@@ -1465,7 +1465,14 @@ ag-cli run artifact delete <artifact-id> --yes
 
 `--log-file` 保留服务端原始 ZIP 下载行为，不应用上述展示限制。`ag-cli run view --artifact` 下载的是 artifact 归档，而 `ag-cli run artifact view` 只读取元数据。`ag-cli run artifact delete` 会先读取 artifact 元数据并显示仓库、ID、名称、workflow run ID 和过期时间，只有输入 `y` 或 `yes` 才会继续；`--yes` 可跳过确认，但不会跳过元数据读取。artifact 删除后无法恢复。日志、step-log `--output` 和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
 
-`run retry` 默认查询失败任务，并将其 `exec_id` 作为 `job_run_ids` 发送。`--job` 可重复使用；它直接接收任务执行 ID。没有失败任务或任务缺少执行 ID 时，命令不会发送重试请求。
+`run retry` 默认查询失败任务，并将其 `id` 作为 `job_run_ids` 发送。`--job` 可重复使用，直接接收 `ag-cli run view` 显示的任务 ID。没有失败任务或失败任务缺少 `id` 时，命令不会发送重试请求。
+
+```console
+$ ag-cli run retry owner/repo 42
+list failed jobs for run 42: failed job "Build" has no ID
+$ ag-cli run retry owner/repo 42 --job build/linux
+invalid job ID: "build/linux"
+```
 
 ## Actions 工作流管理 (workflow)
 
