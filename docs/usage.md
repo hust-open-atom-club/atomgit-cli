@@ -394,7 +394,7 @@ ag-cli repo settings edit owner/repo --branch-name-regex '' --tag-name-regex '' 
 ag-cli repo settings edit owner/repo --forbidden-developer-create-branch-user-ids '' --yes
 ```
 
-`repo settings view/edit` 使用 API v5 `GET/PUT /repos/{owner}/{repo}/repo_settings`，需要认证，显式仓库优先于 Git 推断。它不改变仓库名称、可见性、PR 合并策略、push-rule 或受保护分支/标签规则。
+`repo settings view/edit` 使用 API v5 `GET/PUT /repos/{owner}/{repo}/repo_settings`，需要认证，显式仓库优先于 Git 推断。GET 和 PUT 均不跟随重定向，3xx 响应作为 HTTP 错误返回。它不改变仓库名称、可见性、PR 合并策略、push-rule 或受保护分支/标签规则。
 
 可写参数与官方请求字段一一对应（将字段名中的下划线换成连字符）：
 

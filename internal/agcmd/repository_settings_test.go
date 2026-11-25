@@ -2,15 +2,81 @@ package agcmd
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
+
+func TestRepositorySettingsProcessPresentation(t *testing.T) {
+	home, xdg := t.TempDir(), t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+	dir := filepath.Join(xdg, "ag-cli")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "token.json"), []byte(`{"access_token":"xyz789","user":"alice"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name, scenario, detail string
+		definite               bool
+	}{
+		{name: "unexpected success", scenario: "created", detail: "The server returned HTTP 201."},
+		{name: "redirect", scenario: "redirect", detail: "The server returned HTTP 303."},
+		{name: "server error", scenario: "server error", detail: "The server returned HTTP 502."},
+		{name: "invalid response", scenario: "invalid", detail: "The server returned an invalid response."},
+		{name: "execution failure", scenario: "execution", detail: "The HTTP request could not be completed."},
+		{name: "read failure", scenario: "read plain", detail: "The server response could not be read."},
+		{name: "permission denied", scenario: "HTTP", detail: "The server returned HTTP 403.", definite: true},
+		{name: "validation rejected", scenario: "unprocessable", detail: "The server returned HTTP 422.", definite: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, raw := range []bool{false, true} {
+				args := []string{"repo", "settings", "edit", "team/demo", "--action-pipeline-enabled=false", "--yes"}
+				if raw {
+					args = append([]string{"--raw-output"}, args...)
+				}
+				encoded, err := json.Marshal(args)
+				if err != nil {
+					t.Fatal(err)
+				}
+				ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+				cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestAPIErrorProcess$")
+				cmd.Env = append(os.Environ(), "AG_API_ERROR_TEST_PROCESS=1", "AG_API_ERROR_TEST_ARGS="+string(encoded), "AG_API_ERROR_TEST_SCENARIO="+tc.scenario)
+				var stdout, stderr bytes.Buffer
+				cmd.Stdout, cmd.Stderr = &stdout, &stderr
+				err = cmd.Run()
+				cancel()
+				exit, ok := errors.AsType[*exec.ExitError](err)
+				if !ok || exit.ExitCode() != 1 {
+					t.Fatalf("raw=%t exit=%v stderr=%q", raw, err, stderr.String())
+				}
+				summary := "Repository settings update could not be confirmed."
+				hint := "\nRepository settings may have changed. Check AtomGit before retrying.\n"
+				if tc.definite {
+					summary, hint = "API request failed.", ""
+				}
+				want := "Error: " + summary + "\n\n" + tc.detail + "\n" + hint
+				if stdout.Len() != 0 || stderr.String() != want {
+					t.Fatalf("raw=%t stdout=%q stderr=%q want=%q", raw, stdout.String(), stderr.String(), want)
+				}
+			}
+		})
+	}
+}
 
 func TestRepositorySettingsFailureDiagnostics(t *testing.T) {
 	for _, tc := range []struct {

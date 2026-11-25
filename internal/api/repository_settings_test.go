@@ -144,6 +144,34 @@ func TestRepositorySettingsReadHTTPErrors(t *testing.T) {
 	}
 }
 
+func TestRepositorySettingsReadDoesNotRedirect(t *testing.T) {
+	for _, status := range []int{301, 302, 303, 307, 308} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			calls, redirects := 0, 0
+			original := &http.Client{
+				CheckRedirect: func(*http.Request, []*http.Request) error { redirects++; return nil },
+				Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+					calls++
+					code := status
+					if calls > 1 {
+						code = http.StatusOK
+					}
+					return &http.Response{StatusCode: code,
+						Header: http.Header{"Location": {"https://redirect.test/settings"}},
+						Body:   io.NopCloser(strings.NewReader(`{"action_pipeline_enabled":true}`)), Request: r}, nil
+				}),
+			}
+			_, err := GetRepositorySettings(NewClientWithHTTPClient("fixture", original), "team", "demo")
+			if !IsHTTPStatus(err, status) || calls != 1 || redirects != 0 {
+				t.Fatalf("error=%v calls=%d redirects=%d", err, calls, redirects)
+			}
+			if err := original.CheckRedirect(nil, nil); err != nil || redirects != 1 {
+				t.Fatal("changed caller redirect policy")
+			}
+		})
+	}
+}
+
 func TestRepositorySettingsWritePreservesFailures(t *testing.T) {
 	value := false
 	cause := errors.New("synthetic failure")

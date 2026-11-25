@@ -126,9 +126,9 @@ func repositorySettingsRequest(client *Client, owner, repo, method string, reque
 		contentType = "application/json"
 	}
 	httpClient := *metadataHTTPClient(client.httpClient)
-	if method == http.MethodPut {
-		httpClient.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
-	}
+	// Keep authenticated reads on the requested settings endpoint as well as
+	// preventing write replays. Do not change the caller's redirect policy.
+	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	var settings *RepositorySettings
 	policy := RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: method == http.MethodGet}
 	if err := client.doJSONRequestContext(client.requestContext(), &httpClient, method,
