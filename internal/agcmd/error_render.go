@@ -36,7 +36,7 @@ func commandErrorRole(err error) error {
 		}
 		//nolint:errorlint // Inspect this layer before its causes so an inner role cannot replace an outer one.
 		switch err.(type) {
-		case *config.CredentialSaveError, *config.CredentialClearError:
+		case *api.PullRequestReplyUncertainError, *config.CredentialSaveError, *config.CredentialClearError:
 			return err
 		case *api.HTTPError, *actions.HTTPError, *actions.JobNotFoundError, *api.RequestExecutionError, *api.ResponseReadError,
 			*api.RepositoryModuleUpdateUncertainError, *api.OrganizationCreationUncertainError, *api.OrganizationEditUncertainError, *api.RepositorySettingsUpdateUncertainError, *config.CredentialFormatError, *config.CredentialAccessError, *config.CredentialFileSafetyError,

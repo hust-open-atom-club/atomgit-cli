@@ -1209,6 +1209,8 @@ ag-cli pr comment refresh-position owner/repo 123 --all --json
 
 `pr comment view [<owner>/<repo>] <number>` 在全部分页读取完成后，按创建时间从早到晚显示普通评论和检视意见。标题中的“共 N 条”仅统计顶层评论，不把嵌套回复重复计入；回复继续显示在对应评论下。即使服务端将每页数量限制得小于请求值，也会继续读取到空页。最多遍历 100 页（含确认结束的空页），整个读取过程限时 30 秒，并遵循调用方更短的截止时间及取消信号；中途请求失败、未在页数上限内读到空页或超时均返回错误，不输出部分评论列表。
 
+`pr comment reply [<owner>/<repo>] <number> <discussion-id>` 成功时输出新回复的正整数评论 ID（`Created reply #42 in discussion ...`）。官方响应字段 `noteId` 优先；仅当它缺失或为 `null` 时，兼容旧字段 `note_id`。显式非正数或错误类型不会用旧字段掩盖。响应的 `id` 是讨论线程 ID，必须与请求一致，不能替代新回复 ID。请求正文仍按原样发送，写请求不自动重试或跟随重定向，只接受 HTTP 200。缺失或无效 ID、异常响应，以及写入结果不确定时返回非零退出码，不输出虚假的成功编号，并提示回复可能已创建；请先在 AtomGit 核对再决定是否重试，避免重复评论。
+
 `pr comment resolve/unresolve [<owner>/<repo>] <number> <discussion-id>` 要求认证，默认显示仓库、PR、讨论 ID 和目标状态并确认，`--yes/-y` 跳过确认；空输入、EOF 或否定回答取消操作，不发送 API 请求。PR 编号必须为正整数；讨论 ID 是 `pr comment view` 中单独显示的 `discussion_id`，不是下方的 note/comment 数字 ID。
 
 命令先核对 PR 身份，再遍历该 PR 的评论分页确认目标是检视讨论（`diff_comment`）；普通评论、其他 PR 的讨论、缺失状态或无法确认身份的响应均不会触发写入。使用 API v5 `PUT /repos/{owner}/{repo}/pulls/{number}/comments/{discussion_id}`，发送显式 `resolved: true/false`，其中 `unresolve` 不会省略 `false`。写请求不自动重试或跟随重定向，只接受 HTTP 200，响应体按官方契约忽略（可为空）。之后回读同一讨论，只有明确状态与请求一致才报告成功；回读失败或状态不一致时返回非零退出码，并提示先在 AtomGit 核对再决定是否重试。该命令不批准、合并或关闭 PR。
