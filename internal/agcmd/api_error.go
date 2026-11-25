@@ -32,6 +32,11 @@ func apiDiagnostic(err error) (commandDiagnostic, bool) {
 		d.summary = "Organization profile update could not be confirmed."
 		d.hint = "The organization profile may have changed. Check AtomGit before retrying."
 		return d, true
+	case *api.RepositorySettingsUpdateUncertainError:
+		d, _ := apiDiagnostic(failure.Err)
+		d.summary = "Repository settings update could not be confirmed."
+		d.hint = "Repository settings may have changed. Check AtomGit before retrying."
+		return d, true
 	case *api.HTTPError:
 		return apiStatusDiagnostic(failure.StatusCode, failure.ReadError != nil), true
 	case *actions.HTTPError:

@@ -168,6 +168,8 @@ func TestAPIErrorProcess(t *testing.T) {
 		switch scenario {
 		case "HTTP":
 			code, body = http.StatusForbidden, `{"message":"private-body xyz789"}`
+		case "unprocessable":
+			code, body = http.StatusUnprocessableEntity, `{"message":"private-body xyz789"}`
 		case "HTTP read":
 			code = http.StatusForbidden
 		case "server error", "server error read":
