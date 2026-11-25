@@ -74,7 +74,7 @@ and success=true. Check the run before retrying an uncertain request.`,
 						return err
 					}
 				}
-				confirmed, err := cmdutil.Confirm(cmd.InOrStdin(), cmd.ErrOrStderr(), "Apply this run action? [y/N] ")
+				confirmed, err := cmdutil.ConfirmContext(cmd.Context(), cmd.InOrStdin(), cmd.ErrOrStderr(), "Apply this run action? [y/N] ")
 				if err != nil {
 					return err
 				}

@@ -1511,7 +1511,7 @@ ag-cli run artifact delete <artifact-id> --yes
 
 `--log-file` 保留服务端原始 ZIP 下载行为，不应用上述展示限制。`ag-cli run view --artifact` 下载的是 artifact 归档，而 `ag-cli run artifact view` 只读取元数据。`ag-cli run artifact delete` 会先读取 artifact 元数据并显示仓库、ID、名称、workflow run ID 和过期时间，只有输入 `y` 或 `yes` 才会继续；`--yes` 可跳过确认，但不会跳过元数据读取。artifact 删除后无法恢复。日志、step-log `--output` 和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
 
-`run cancel` 与 `run stop` 均调用停止接口；`run rerun` 重跑整条流水线，`run retry` 仅重试选中的任务。四个命令默认展示仓库、运行 ID 和操作后确认，支持 `--yes/-y` 跳过。取消、空输入或 EOF 不发送任何 Actions 请求，自动选择失败任务的 GET 也在确认后才执行。CLI 启动仍可能读取本地配置和凭据。显式 `--job` 的空值和非法 ID 在 Cobra 参数校验阶段拒绝，先于凭据加载。
+`run cancel` 与 `run stop` 均调用停止接口；`run rerun` 重跑整条流水线，`run retry` 仅重试选中的任务。四个命令默认展示仓库、运行 ID 和操作后确认，支持 `--yes/-y` 跳过。取消、空输入或 EOF 不发送任何 Actions 请求，自动选择失败任务的 GET 也在确认后才执行。等待确认时，命令取消（例如 Ctrl-C）会立即结束等待并返回错误，不发送 Actions 请求。CLI 启动仍可能读取本地配置和凭据。显式 `--job` 的空值和非法 ID 在 Cobra 参数校验阶段拒绝，先于凭据加载。
 
 停止、重跑和任务重试的 POST 不自动重试或跟随重定向；只有 HTTP 200 且响应 `success=true` 才报告成功。其他状态（包括 201/202/204）、缺失或非法 success 字段、异常响应均返回错误，不输出成功信息。远端状态不确定时应先检查运行，再决定是否重试。测试使用离线 mock，不停止或重跑真实流水线。
 
