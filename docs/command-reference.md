@@ -212,6 +212,7 @@
 - [ag-cli repo push-rule view](#ag-cli-repo-push-rule-view) — View repository push rules
 - [ag-cli repo read-dir](#ag-cli-repo-read-dir) — List contents of a repository directory
 - [ag-cli repo read-file](#ag-cli-repo-read-file) — Read a file from a repository
+- [ag-cli repo roles](#ag-cli-repo-roles) — List customized roles of a repository
 - [ag-cli repo settings](#ag-cli-repo-settings) — View and edit general repository settings
 - [ag-cli repo settings edit](#ag-cli-repo-settings-edit) — Edit general repository settings
 - [ag-cli repo settings view](#ag-cli-repo-settings-view) — View general repository settings
@@ -5808,6 +5809,43 @@ Read a file from a repository
 | `--ref` | Branch, tag, or commit identifier | `` | local |
 | `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli repo roles
+
+Usage: `ag-cli repo roles [<owner>/<repo>] [flags]`
+
+List customized roles of a repository
+
+List the customized roles defined on a repository.
+
+Requires authentication and permission to view the repository's customized
+roles; anonymous access is never used. Role IDs are printed as strings, so they
+are never replaced by a username or a role display name. The endpoint is
+documented without pagination parameters, so every returned role is printed
+once, unchanged. A field the server omits is shown as "-" instead of a
+substituted value, and unknown fields are preserved in --json output.
+This command only reads roles: it does not create roles, and it does not change
+an existing collaborator's permission or role.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--json` | Output customized roles as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli repo roles owner/repo
+ag-cli repo roles --json
+```
 
 
 ## ag-cli repo settings
