@@ -5823,8 +5823,11 @@ Requires authentication and permission to view the repository's customized
 roles; anonymous access is never used. Role IDs are printed as strings, so they
 are never replaced by a username or a role display name. The endpoint is
 documented without pagination parameters, so every returned role is printed
-once, unchanged. A field the server omits is shown as "-" instead of a
-substituted value, and unknown fields are preserved in --json output.
+once. The NAME column shows the role name together with its Chinese name when
+the server returns both and they differ after trimming surrounding whitespace;
+a "field the server omitted" replacement is not applied inside NAME. Every
+other field the server omits is shown as "-" instead of a substituted value,
+and unknown fields are preserved in --json output.
 This command only reads roles: it does not create roles, and it does not change
 an existing collaborator's permission or role.
 

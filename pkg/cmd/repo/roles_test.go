@@ -159,6 +159,13 @@ func TestRepoRolesTableKeepsASCIIColumnsAligned(t *testing.T) {
 	if got := strings.Join(strings.Fields(lines[0]), " "); got != "ROLE ID ACCESS LEVEL MEMBERS NAME" {
 		t.Fatalf("header = %q", lines[0])
 	}
+	headerIndex := func(label string) int {
+		index := strings.Index(lines[0], label)
+		if index < 0 {
+			t.Fatalf("header missing %q: %q", label, lines[0])
+		}
+		return index
+	}
 	columnIndex := func(line, value string) int {
 		index := strings.Index(line, value)
 		if index < 0 {
@@ -166,44 +173,65 @@ func TestRepoRolesTableKeepsASCIIColumnsAligned(t *testing.T) {
 		}
 		return index
 	}
-	for _, column := range []struct {
-		name   string
-		values []string
+	// Every data cell must start in the column its header names. Binding each
+	// value to the header column catches both a swapped data column and an
+	// unaligned header.
+	for row, cells := range []struct {
+		id, access, members, name string
 	}{
-		{"ACCESS LEVEL", []string{"5", "400", "55"}},
-		{"MEMBERS", []string{"7", "22", "9"}},
+		{"a", "5", "7", "one"},
+		{"role-identifier-longer", "400", "22", "代码审计角色"},
+		{"cc", "55", "9", "cafe\u0301 \U0001F680"},
 	} {
-		want := columnIndex(lines[1], column.values[0])
-		for i, value := range column.values[1:] {
-			if got := columnIndex(lines[i+2], value); got != want {
-				t.Fatalf("%s starts at byte %d and %d\n%q\n%q", column.name, want, got, lines[1], lines[i+2])
+		line := lines[row+1]
+		for _, column := range []struct {
+			label, value string
+		}{
+			{"ROLE ID", cells.id},
+			{"ACCESS LEVEL", cells.access},
+			{"MEMBERS", cells.members},
+		} {
+			if got, want := columnIndex(line, column.value), headerIndex(column.label); got != want {
+				t.Fatalf("row %d %s starts at byte %d, header column at %d\n%q\n%q", row+1, column.label, got, want, lines[0], line)
 			}
 		}
-	}
-	for i, want := range []string{"one", "代码审计角色", "cafe\u0301 \U0001F680"} {
-		if !strings.HasSuffix(lines[i+1], want) {
-			t.Fatalf("NAME of row %d = %q, want suffix %q", i+1, lines[i+1], want)
+		if !strings.HasSuffix(line, cells.name) {
+			t.Fatalf("row %d NAME = %q, want suffix %q", row+1, line, cells.name)
+		}
+		if got, want := len(line)-len(cells.name), headerIndex("NAME"); got != want {
+			t.Fatalf("row %d NAME starts at byte %d, header column at %d", row+1, got, want)
 		}
 	}
 }
 
 func TestRepoRolesTableEscapesTableControlCharacters(t *testing.T) {
-	// EscapeTSVField handles tab, newline and carriage return, but
-	// text/tabwriter also treats a vertical tab as a cell terminator and a form
-	// feed as a line-block terminator. Both must be escaped before writing.
-	body := `[{"role_id":"id\u000bwith-vt","role_name":"name\u000cwith-ff","access_level":5,"member_count":7}]`
+	// EscapeTSVField handles tab, newline and carriage return, but tabwriter
+	// also treats a vertical tab as a cell terminator and a form feed as a
+	// line-block terminator, and the command writer expands other control
+	// characters after the table has been laid out. All of them must be escaped
+	// before column widths are computed.
+	body := `[{"role_id":"id\u000bwith-vt","role_name":"name\u000cwith-ff","access_level":5,"member_count":7},` +
+		`{"role_id":"id\u001bwith-esc","role_name":"esc-name","access_level":6,"member_count":8}]`
 	f := policyFactory(t, func(*http.Request) (int, string) { return 200, body })
 	out, err := executeRoles(t, f, "team/demo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
-	if len(lines) != 2 {
+	if len(lines) != 3 {
 		t.Fatalf("control characters changed the layout: %q", out)
 	}
-	for _, want := range []string{`id\vwith-vt`, `name\fwith-ff`} {
+	for _, want := range []string{`id\x0bwith-vt`, `name\x0cwith-ff`, `id\x1bwith-esc`} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("output missing %q: %q", want, out)
+		}
+	}
+	// The escaped ID is longer than the raw one; both rows must still start
+	// their numeric columns at the header position.
+	headerAccess := strings.Index(lines[0], "ACCESS LEVEL")
+	for i, value := range []string{"5", "6"} {
+		if got := strings.Index(lines[i+1], value); got != headerAccess {
+			t.Fatalf("ACCESS LEVEL starts at %d, header column at %d: %q", got, headerAccess, lines[i+1])
 		}
 	}
 }
@@ -213,13 +241,14 @@ func TestRepoRolesNameRendering(t *testing.T) {
 		`{"role_id":"b2","role_name":"same","role_chinese_name":"same"},` +
 		`{"role_id":"c3"},` +
 		`{"role_id":"d4","role_chinese_name":"仅中文名"},` +
-		`{"role_id":"e5","role_name":"only-english"}]`
+		`{"role_id":"e5","role_name":"only-english"},` +
+		`{"role_id":"f6","role_name":"  spaced  ","role_chinese_name":"spaced"}]`
 	f := policyFactory(t, func(*http.Request) (int, string) { return 200, body })
 	out, err := executeRoles(t, f, "team/demo")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"auditor（审计员）", "same\n", "仅中文名", "only-english"} {
+	for _, want := range []string{"auditor（审计员）", "same\n", "only-english"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("output missing %q: %q", want, out)
 		}
@@ -228,11 +257,22 @@ func TestRepoRolesNameRendering(t *testing.T) {
 		t.Fatalf("identical names were duplicated: %q", out)
 	}
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	if len(lines) != 7 {
+		t.Fatalf("lines = %d: %q", len(lines), out)
+	}
 	if !strings.HasSuffix(lines[3], "-") {
 		t.Fatalf("absent name not rendered as -: %q", lines[3])
 	}
+	if !strings.HasSuffix(lines[4], "仅中文名") {
+		t.Fatalf("Chinese-only name not rendered alone: %q", lines[4])
+	}
 	if !strings.HasSuffix(lines[5], "only-english") {
 		t.Fatalf("English-only name not rendered: %q", lines[5])
+	}
+	// Surrounding whitespace is trimmed for both comparison and display, so the
+	// two names count as equal and appear once without parentheses.
+	if !strings.HasSuffix(lines[6], "spaced") || strings.Contains(out, "（spaced）") || strings.Count(out, "spaced") != 1 {
+		t.Fatalf("whitespace-trimmed names were duplicated: %q", lines[6])
 	}
 }
 
