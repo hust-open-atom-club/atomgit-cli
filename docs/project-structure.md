@@ -45,6 +45,7 @@ atomgit-cli/
 │   │   └── testdata/           # API 测试响应样本
 │   ├── apicontract/            # 离线契约回放、响应结构检查与可选只读 smoke
 │   ├── browser/                # 打开系统浏览器
+│   ├── commandmeta/            # 执行、schema 与文档共用的命令弃用元数据
 │   ├── commandschema/          # Cobra 静态命令描述与补充注解
 │   ├── config/                 # XDG 配置与凭据读写
 │   ├── oauth/                  # OAuth 登录流程

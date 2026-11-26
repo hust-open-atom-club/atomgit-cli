@@ -82,6 +82,16 @@ func NewSanitizingWriter(out io.Writer) *SanitizingWriter {
 	return &SanitizingWriter{out: out}
 }
 
+// WriteBestEffort writes an optional diagnostic with the same raw/sanitized
+// setting but independent buffers. Failed diagnostic bytes cannot make a
+// later Flush fail or disturb buffered output owned by the caller.
+func (w *SanitizingWriter) WriteBestEffort(p []byte) {
+	diagnostic := NewSanitizingWriter(w.out)
+	diagnostic.raw = w.raw
+	_, _ = diagnostic.Write(p)
+	_ = diagnostic.Flush()
+}
+
 func (w *SanitizingWriter) Write(p []byte) (int, error) {
 	n := len(p)
 	if n == 0 {

@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/commandmeta"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -84,7 +85,7 @@ func Describe(root *cobra.Command, path []string) (Document, error) {
 	if len(path) == 0 {
 		var visit func(*cobra.Command)
 		visit = func(cmd *cobra.Command) {
-			if cmd.Hidden {
+			if commandmeta.Hidden(cmd) {
 				return
 			}
 			doc.Commands = append(doc.Commands, summarize(cmd))
@@ -103,14 +104,14 @@ func Describe(root *cobra.Command, path []string) (Document, error) {
 	for _, part := range path {
 		var next *cobra.Command
 		for _, child := range cmd.Commands() {
-			if !child.Hidden && child.Name() == part {
+			if !commandmeta.Hidden(child) && child.Name() == part {
 				next = child
 				break
 			}
 		}
 		if next == nil {
 			for _, child := range cmd.Commands() {
-				if !child.Hidden && slices.Contains(child.Aliases, part) {
+				if !commandmeta.Hidden(child) && slices.Contains(child.Aliases, part) {
 					next = child
 					break
 				}
@@ -133,7 +134,7 @@ func summarize(cmd *cobra.Command) Summary {
 	aliases := append([]string{}, cmd.Aliases...)
 	sort.Strings(aliases)
 	return Summary{Path: cmd.CommandPath(), Description: strings.TrimSpace(cmd.Short),
-		Aliases: aliases, Deprecated: cmd.Deprecated, Runnable: cmd.Runnable()}
+		Aliases: aliases, Deprecated: commandmeta.Deprecation(cmd), Runnable: cmd.Runnable()}
 }
 
 func describeCommand(cmd *cobra.Command) (Command, error) {
@@ -171,7 +172,7 @@ func describeCommand(cmd *cobra.Command) (Command, error) {
 	}
 	sort.Strings(result.Undescribed)
 	for _, child := range cmd.Commands() {
-		if !child.Hidden {
+		if !commandmeta.Hidden(child) {
 			result.Subcommands = append(result.Subcommands, summarize(child))
 		}
 	}
