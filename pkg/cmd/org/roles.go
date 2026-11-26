@@ -36,7 +36,16 @@ the repository customized-role field names are not applied to it.
 This command only reads roles: it does not create or edit roles.`,
 		Example: `  ag-cli org roles hust-open-atom-club
   ag-cli org roles hust-open-atom-club --json`,
-		Args: cobra.ExactArgs(1),
+		// Validate the organization in Args rather than RunE: the real entry
+		// loads credential configuration in PersistentPreRunE, which runs after
+		// argument validation, so a malformed path must fail before it.
+		Args: func(cmd *cobra.Command, args []string) error {
+			if err := cobra.ExactArgs(1)(cmd, args); err != nil {
+				return err
+			}
+			_, err := parseOrganization(args[0])
+			return err
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			organization, err := parseOrganization(args[0])
 			if err != nil {
