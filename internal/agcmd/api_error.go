@@ -37,6 +37,13 @@ func apiDiagnostic(err error) (commandDiagnostic, bool) {
 		d.summary = "Organization profile update could not be confirmed."
 		d.hint = "The organization profile may have changed. Check AtomGit before retrying."
 		return d, true
+	case *api.PullRequestDraftUpdateUncertainError:
+		// The write may have been acknowledged even when verification failed.
+		// Keep the safe hint and expose only the classified cause.
+		d, _ := apiDiagnostic(failure.Err)
+		d.summary = "Pull request draft status could not be confirmed."
+		d.hint = "The pull request may have changed. Check AtomGit before retrying."
+		return d, true
 	case *api.RepositorySettingsUpdateUncertainError:
 		d, _ := apiDiagnostic(failure.Err)
 		d.summary = "Repository settings update could not be confirmed."
