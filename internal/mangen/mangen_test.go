@@ -103,6 +103,13 @@ func TestActualTreeIsOfflineCompleteAndDeterministic(t *testing.T) {
 		t.Fatal(err)
 	}
 	first := pageMap(t, root)
+	for _, action := range []string{"cancel", "stop", "rerun", "retry"} {
+		for _, want := range []string{`\-\-yes`, "HTTP 200", "success=true", "confirmation", "never automatically retried or redirected"} {
+			if !strings.Contains(first["ag-cli-run-"+action+".1"], want) {
+				t.Errorf("run %s manual missing %q", action, want)
+			}
+		}
+	}
 	for _, want := range []string{`\-\-action\-pipeline\-enabled`, `\-\-branch\-name\-regex`, `\-\-yes`, "never automatically retried or redirected", "no independent readback"} {
 		if !strings.Contains(first["ag-cli-repo-settings-edit.1"], want) {
 			t.Errorf("repository settings edit manual missing %q", want)
