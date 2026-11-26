@@ -320,47 +320,7 @@ func requestHTTPClient(f *cmdutil.Factory) (*http.Client, error) {
 }
 
 func cloneRedirectSafeClient(source *http.Client) *http.Client {
-	clone := *source
-	previous := source.CheckRedirect
-	clone.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-		stripRedirectAuthorization(req, via)
-		if previous != nil {
-			if err := previous(req, via); err != nil {
-				return err
-			}
-		} else if len(via) >= 10 {
-			return fmt.Errorf("stopped after 10 redirects")
-		}
-		stripRedirectAuthorization(req, via)
-		return nil
-	}
-	return &clone
-}
-
-func stripRedirectAuthorization(req *http.Request, via []*http.Request) {
-	for _, prior := range via {
-		if !sameOrigin(prior.URL, req.URL) || prior.Header.Get("Authorization") == "" {
-			req.Header.Del("Authorization")
-			return
-		}
-	}
-}
-
-func sameOrigin(a, b *url.URL) bool {
-	return strings.EqualFold(a.Scheme, b.Scheme) && strings.EqualFold(a.Hostname(), b.Hostname()) && effectivePort(a) == effectivePort(b)
-}
-
-func effectivePort(value *url.URL) string {
-	if value.Port() != "" {
-		return value.Port()
-	}
-	if strings.EqualFold(value.Scheme, "https") {
-		return "443"
-	}
-	if strings.EqualFold(value.Scheme, "http") {
-		return "80"
-	}
-	return ""
+	return internalapi.RedirectSafeHTTPClient(source)
 }
 
 func responseError(operation string, resp *http.Response, token string) error {

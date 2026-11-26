@@ -1599,7 +1599,7 @@ ag-cli api /repos/owner/repo/issues/42 --method PATCH --input update.json --dry-
 ag-cli api /repos/owner/repo/issues --paginate --dry-run
 ```
 
-端点必须是 API v5 下的相对路径；绝对 URL、`//host/path`、片段和越过 API 基址的路径会在读取凭据前被拒绝。认证信息仅通过 `Authorization` 请求头发送。同源重定向可保留认证；scheme、主机或有效端口变化后，当前及后续跳转均不会再携带认证信息。
+端点必须是 API v5 下的相对路径；绝对 URL、`//host/path`、片段和越过 API 基址的路径会在读取凭据前被拒绝。认证信息仅通过 `Authorization` 请求头发送。同源重定向可保留认证；scheme、主机或有效端口变化后，当前及后续跳转均不会再携带认证信息。HTTPS 降级到 HTTP 会直接报错；CookieJar 不能在跨源跳转时恢复凭据。完整策略见[API 重定向凭据边界](configuration.md#api-重定向凭据边界)。
 
 `--field key=value` 在第一个 `=` 处分隔。GET 会保留已有查询值并按命令行顺序追加字段；其他支持的方法生成 JSON 对象，重复键以最后一个值为准。`--input` 与 `--field` 互斥，原始输入不会推断 `Content-Type`。`--accept` 默认是 `application/json`。
 
