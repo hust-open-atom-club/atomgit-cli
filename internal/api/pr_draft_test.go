@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -39,6 +40,37 @@ func TestSetPullRequestDraftDoesNotReplay(t *testing.T) {
 			})})
 			if err := SetPullRequestDraft(client, "team", "repo", "42", true); !IsHTTPStatus(err, status) || requests != 1 {
 				t.Fatalf("err=%v requests=%d", err, requests)
+			}
+		})
+	}
+}
+
+func TestSetPullRequestDraftClassifiesUncertainFailures(t *testing.T) {
+	for _, tt := range []struct {
+		name          string
+		status        int
+		wantUncertain bool
+	}{
+		{name: "server error", status: http.StatusInternalServerError, wantUncertain: true},
+		{name: "redirect", status: http.StatusFound, wantUncertain: true},
+		{name: "transport", status: 0, wantUncertain: true},
+		{name: "rejected", status: http.StatusUnprocessableEntity, wantUncertain: false},
+		{name: "rate limited", status: http.StatusTooManyRequests, wantUncertain: false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			client := NewClientWithHTTPClient("fixture", &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if tt.status == 0 {
+					return nil, errors.New("transport failure")
+				}
+				return &http.Response{StatusCode: tt.status, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{}`)), Request: req}, nil
+			})})
+			err := SetPullRequestDraft(client, "team", "repo", "42", true)
+			var uncertain *PullRequestDraftUpdateUncertainError
+			if got := errors.As(err, &uncertain); got != tt.wantUncertain {
+				t.Fatalf("uncertain=%v err=%v", got, err)
+			}
+			if tt.status != 0 && !IsHTTPStatus(err, tt.status) {
+				t.Fatalf("status lost: %v", err)
 			}
 		})
 	}

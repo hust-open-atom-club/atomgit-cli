@@ -58,7 +58,9 @@ func newCmdPRReady(f *cmdutil.Factory) *cobra.Command {
 				}
 				var updated prDraftState
 				if err := client.Get(path, &updated); err != nil {
-					return fmt.Errorf("verify PR #%s draft status: %w; status may have changed", number, err)
+					return &api.PullRequestDraftUpdateUncertainError{
+						Err: fmt.Errorf("verify PR #%s draft status: %w", number, err),
+					}
 				}
 				if err := validatePRDraftState(number, updated); err != nil {
 					return fmt.Errorf("verify PR #%s draft status: %w; status may have changed", number, err)
