@@ -62,6 +62,7 @@ func defaultRateLimitPolicy() rateLimitRetryPolicy {
 			if limit <= 0 {
 				return 0
 			}
+			//nolint:gosec // G404: retry timing jitter does not require cryptographic randomness.
 			return time.Duration(rand.Int64N(int64(limit) + 1))
 		},
 	}

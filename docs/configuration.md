@@ -138,7 +138,7 @@ Unix 上读取凭据时会尝试收紧过宽的文件权限。修复失败时会
 
 帮助和版本入口不需要读取凭据：`ag-cli --help`、`ag-cli help <command>`、子命令的 `-h`/`--help`、`ag-cli --version`、`ag-cli version` 和 `ag-cli version --json` 在凭据缺失、损坏或无法读取时仍可使用。
 
-部分公开只读命令（例如 `ag-cli discussion list` 和 `ag-cli discussion view`）在尚未登录时会以匿名方式请求。凭据文件损坏、权限错误或其他存储故障**不会**降级为匿名访问。
+部分公开只读命令在尚未登录时会以匿名方式请求，包括 `ag-cli discussion list`、`ag-cli discussion view` 和[统一搜索](usage.md#搜索)。凭据文件损坏、权限错误或其他存储故障**不会**降级为匿名访问。
 
 ## 输出安全
 

@@ -19,13 +19,14 @@ type fileLock struct {
 // exclusive byte-range lock on it, blocking until the lock is available. The
 // returned lock must be released when the guarded transaction finishes.
 func lockFile(path string) (*fileLock, error) {
+	//nolint:gosec // G304: alias locks intentionally follow the user's selected config directory.
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("open alias lock file %s: %w", path, err)
 	}
 	l := &fileLock{f: f}
 	if err := windows.LockFileEx(windows.Handle(f.Fd()), windows.LOCKFILE_EXCLUSIVE_LOCK, 0, 1, 0, &l.ol); err != nil {
-		f.Close()
+		_ = f.Close()
 		return nil, fmt.Errorf("lock alias config: %w", err)
 	}
 	return l, nil
