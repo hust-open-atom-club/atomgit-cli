@@ -73,8 +73,8 @@ func TestRunActionSignalInterruptsConfirmation(t *testing.T) {
 				case err := <-done:
 					t.Fatalf("process exited before confirmation: %v", err)
 				case <-ctx.Done():
-					<-done
-					t.Fatal("process did not prompt")
+					waitErr := <-done
+					t.Fatalf("process did not prompt: %v", waitErr)
 				}
 				err = <-done
 				exit, ok := errors.AsType[*exec.ExitError](err)
