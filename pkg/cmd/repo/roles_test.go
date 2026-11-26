@@ -135,6 +135,41 @@ func TestRepoRolesEmptyList(t *testing.T) {
 	}
 }
 
+func TestRepoRolesTableAlignsWideNames(t *testing.T) {
+	// role_name and role_chinese_name may both be CJK; padding must follow
+	// terminal display width so the numeric columns stay aligned.
+	body := `[{"role_id":"a1","role_name":"abcd","role_chinese_name":"甲","access_level":15,"member_count":7},` +
+		`{"role_id":"b2","role_name":"代码审计角色","role_chinese_name":"乙","access_level":40,"member_count":22}]`
+	f := policyFactory(t, func(*http.Request) (int, string) { return 200, body })
+	out, err := executeRoles(t, f, "team/demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("lines = %d: %q", len(lines), out)
+	}
+	columnStart := func(line, value string) int {
+		index := strings.Index(line, value)
+		if index < 0 {
+			t.Fatalf("%q missing from %q", value, line)
+		}
+		return displayWidth(line[:index])
+	}
+	for _, column := range []struct {
+		name, first, second string
+	}{
+		{"ACCESS LEVEL", "15", "40"},
+		{"MEMBERS", "7", "22"},
+		{"CHINESE NAME", "甲", "乙"},
+	} {
+		first, second := columnStart(lines[1], column.first), columnStart(lines[2], column.second)
+		if first != second {
+			t.Fatalf("%s starts at %d and %d\n%q\n%q", column.name, first, second, lines[1], lines[2])
+		}
+	}
+}
+
 func TestRepoRolesErrorsProduceNoOutput(t *testing.T) {
 	for _, tt := range []struct {
 		name   string
