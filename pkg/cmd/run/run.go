@@ -14,7 +14,8 @@ func NewCmdRun(f *cmdutil.Factory) *cobra.Command {
 		Short: "Inspect and manage AtomGit Actions workflow runs and artifacts",
 		Long: `List and inspect AtomGit Actions workflow runs, jobs, logs, and artifacts.
 
-Stop, rerun, and retry workflow runs. Artifacts can be deleted after confirmation.
+Cancel (or stop), rerun, and retry workflow runs after confirmation.
+Artifacts can be deleted after confirmation.
 Workflow run dispatch and deletion operations are not supported.`,
 	}
 
@@ -23,6 +24,7 @@ Workflow run dispatch and deletion operations are not supported.`,
 	cmd.AddCommand(newCmdRunStepLog(f))
 	cmd.AddCommand(newCmdRunArtifact(f))
 	cmd.AddCommand(newCmdRunStop(f))
+	cmd.AddCommand(newCmdRunCancel(f))
 	cmd.AddCommand(newCmdRunRerun(f))
 	cmd.AddCommand(newCmdRunRetry(f))
 	return cmd

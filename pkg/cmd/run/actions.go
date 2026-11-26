@@ -5,9 +5,14 @@ import (
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api/actions"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/commandschema"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
+
+func newCmdRunCancel(f *cmdutil.Factory) *cobra.Command {
+	return newRunActionCommand(f, "cancel", "Cancel a running workflow run", nil)
+}
 
 func newCmdRunStop(f *cmdutil.Factory) *cobra.Command {
 	return newRunActionCommand(f, "stop", "Stop a running workflow run", nil)
@@ -25,18 +30,58 @@ func newCmdRunRetry(f *cmdutil.Factory) *cobra.Command {
 }
 
 func newRunActionCommand(f *cmdutil.Factory, action, description string, jobIDs *[]string) *cobra.Command {
+	var yes bool
+	validate := func(args []string) error {
+		if len(args) < 1 || len(args) > 2 {
+			return fmt.Errorf("expected a run ID and optional owner/repo")
+		}
+		runID := strings.TrimSpace(args[len(args)-1])
+		if runID == "" || strings.Contains(runID, "/") {
+			return fmt.Errorf("invalid run ID: %q", args[len(args)-1])
+		}
+		if jobIDs != nil && len(*jobIDs) > 0 {
+			_, err := validateJobRunIDs(*jobIDs)
+			return err
+		}
+		return nil
+	}
 	cmd := &cobra.Command{
 		Use:   action + " [<owner>/<repo>] <run-id>",
 		Short: description,
-		Args:  cobra.RangeArgs(1, 2),
+		Long: description + `. Requires confirmation unless --yes is supplied.
+Writes are never automatically retried or redirected. Success requires HTTP 200
+and success=true. Check the run before retrying an uncertain request.`,
+		Args: func(_ *cobra.Command, args []string) error { return validate(args) },
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := validate(args); err != nil {
+				return err
+			}
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 1)
 			if err != nil {
 				return err
 			}
 			runID := strings.TrimSpace(remaining[0])
-			if runID == "" || strings.Contains(runID, "/") {
-				return fmt.Errorf("invalid run ID: %q", remaining[0])
+			if !yes {
+				if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "Repository: %s\nRun: %s\nAction: %s\n", repository, singleLine(runID), action); err != nil {
+					return err
+				}
+				if jobIDs != nil {
+					selection := "all failed jobs (queried after confirmation)"
+					if len(*jobIDs) > 0 {
+						selection = strings.Join(*jobIDs, ", ")
+					}
+					if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "Jobs: %s\n", singleLine(selection)); err != nil {
+						return err
+					}
+				}
+				confirmed, err := cmdutil.ConfirmContext(cmd.Context(), cmd.InOrStdin(), cmd.ErrOrStderr(), "Apply this run action? [y/N] ")
+				if err != nil {
+					return err
+				}
+				if !confirmed {
+					_, err := fmt.Fprintln(cmd.ErrOrStderr(), "Run action canceled.")
+					return err
+				}
 			}
 			token, err := requireToken(f)
 			if err != nil {
@@ -48,7 +93,7 @@ func newRunActionCommand(f *cmdutil.Factory, action, description string, jobIDs 
 			}
 			client = client.WithContext(cmd.Context())
 			switch action {
-			case "stop":
+			case "stop", "cancel":
 				err = client.StopRun(repository.Owner, repository.Name, runID)
 			case "rerun":
 				err = client.RerunRun(repository.Owner, repository.Name, runID)
@@ -69,11 +114,16 @@ func newRunActionCommand(f *cmdutil.Factory, action, description string, jobIDs 
 			if err != nil {
 				return fmt.Errorf("%s run %s in %s: %w", action, singleLine(runID), repository.String(), err)
 			}
-			message := map[string]string{"stop": "Stopped", "rerun": "Reran", "retry": "Retried"}[action]
-			fmt.Fprintf(cmd.OutOrStdout(), "%s run %s in %s\n", message, singleLine(runID), repository.String())
-			return nil
+			message := map[string]string{"cancel": "Canceled", "stop": "Stopped", "rerun": "Reran", "retry": "Retried"}[action]
+			_, err = fmt.Fprintf(cmd.OutOrStdout(), "%s run %s in %s\n", message, singleLine(runID), repository.String())
+			return err
 		},
 	}
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip run action confirmation")
+	commandschema.Annotate(cmd, commandschema.Metadata{
+		Positionals: &commandschema.Positionals{MinCount: 1, MaxCount: 2, Description: "Run ID, optionally preceded by owner/repo."},
+		Output:      "text", Effects: "write", Notes: []string{"Requires confirmation unless --yes is supplied. Writes are never retried or redirected; success requires HTTP 200 and success=true.", "Explicit job IDs are validated before credential loading. Retry without --job selects failed job IDs after confirmation."},
+	})
 	cmdutil.AddRepositoryContextHelp(cmd)
 	return cmd
 }

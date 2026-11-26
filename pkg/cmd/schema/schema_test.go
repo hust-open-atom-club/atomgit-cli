@@ -27,6 +27,10 @@ func TestRegisteredCommands(t *testing.T) {
 		min, max        int
 		output, effects string
 	}{
+		{[]string{"run", "cancel"}, 1, 2, "text", "write"},
+		{[]string{"run", "stop"}, 1, 2, "text", "write"},
+		{[]string{"run", "rerun"}, 1, 2, "text", "write"},
+		{[]string{"run", "retry"}, 1, 2, "text", "write"},
 		{[]string{"pr", "create"}, 0, 1, "text", "write"},
 		{[]string{"api"}, 1, 1, "raw", "conditional"},
 		{[]string{"pr", "comment", "create"}, 1, 2, "text", "write"},
@@ -111,6 +115,9 @@ func TestRegisteredCommands(t *testing.T) {
 			}
 			for n := 0; n <= tc.max+1; n++ {
 				args := make([]string, n)
+				if len(tc.path) == 2 && tc.path[0] == "run" && n > 0 {
+					args[n-1] = "run-1"
+				}
 				if valid := target.Args(target, args) == nil; valid != (n >= tc.min && n <= tc.max) {
 					t.Fatalf("argument count metadata drift at %d", n)
 				}

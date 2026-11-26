@@ -160,6 +160,8 @@ AtomGit API v5、Actions API v8、OAuth 与 Release 等领域客户端的非成�
 
 `repo module edit` 对结果不确定的写入保留安全的 HTTP 状态或失败类型，提示模块设置可能已改变，应先在 AtomGit 核对再决定是否重试。默认和 `--raw-output` 模式均不展开服务端消息或传输错误正文；成功仅表示收到 `code=1/msg=success` 确认，不代表独立回读当前配置。
 
+`run cancel/stop`、`run rerun` 和 `run retry` 默认确认后才发送 Actions 请求；`--yes` 跳过确认。写请求不重试、不跟随重定向，只接受 HTTP 200 且 `success=true`。显式任务 ID 的本地校验先于凭据加载；确认取消不发送网络请求，但 CLI 启动仍可能读取本地凭据。
+
 ## API 限流重试
 
 普通 AtomGit API v5 和 Actions API v8 元数据 GET/HEAD 请求遇到 HTTP 429 时会进行有界重试，包括使用共享客户端的分页查询。每个逻辑请求默认最多发送 3 次 HTTP 请求，并具有包含请求执行和等待时间在内的 30 秒总预算；调用方设置的更短 context 截止时间会优先生效。服务端 `Retry-After` 支持非负秒数和 HTTP-date。该响应头缺失、非法或已经过期时，CLI 使用带抖动且不超过 2 秒的退避。

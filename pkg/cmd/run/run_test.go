@@ -74,9 +74,10 @@ func TestNewCmdRunRegistersCommandsAndFlags(t *testing.T) {
 		"view":     {"artifact", "artifact-file", "job", "log", "log-file", "overwrite"},
 		"step-log": {"output", "overwrite"},
 		"artifact": {},
-		"stop":     {},
-		"rerun":    {},
-		"retry":    {"job"},
+		"cancel":   {"yes"},
+		"stop":     {"yes"},
+		"rerun":    {"yes"},
+		"retry":    {"job", "yes"},
 	}
 	for name, flags := range want {
 		child, _, err := cmd.Find([]string{name})

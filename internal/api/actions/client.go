@@ -234,14 +234,35 @@ func (c *Client) RetryRunJobs(owner, repo, runID string, jobRunIDs []string) err
 	if len(jobRunIDs) == 0 {
 		return fmt.Errorf("retry workflow run jobs: at least one job run ID is required")
 	}
+	for _, id := range jobRunIDs {
+		if strings.TrimSpace(id) == "" {
+			return fmt.Errorf("retry workflow run jobs: job run IDs must not be empty")
+		}
+	}
 	return c.runAction("retry workflow run jobs", owner, repo, runID, "retry", RetryJobsRequest{JobRunIDs: jobRunIDs})
 }
 
 func (c *Client) runAction(operation, owner, repo, runID, action string, payload any) error {
 	path := repositoryPath(owner, repo) + "/actions/runs/" + url.PathEscape(runID) + "/" + action
 	var result runActionResponse
-	if err := c.postJSON(operation, path, payload, &result); err != nil {
-		return err
+	var body []byte
+	if payload != nil {
+		var err error
+		body, err = json.Marshal(payload)
+		if err != nil {
+			return fmt.Errorf("%s: encode request: %w: %w", operation, baseapi.ErrRequestPreparation, err)
+		}
+	}
+	resp, err := c.client.DoRequestRawOnceWithBody(http.MethodPost, path, body, "application/json", "application/json")
+	if err != nil {
+		return fmt.Errorf("%s: %w", operation, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return responseError(operation, resp)
+	}
+	if err := baseapi.DecodeJSONResponse(http.MethodPost, path, resp.Body, &result); err != nil {
+		return fmt.Errorf("%s: %w", operation, err)
 	}
 	if !result.Success {
 		return fmt.Errorf("%s: API response did not report success", operation)
