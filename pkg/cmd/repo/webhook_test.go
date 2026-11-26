@@ -213,13 +213,13 @@ func TestRepoWebhookEditPreservesRequiredURLAndReplacesEvents(t *testing.T) {
 		}
 		var body map[string]any
 		decodeWebhookBody(t, req, &body)
-		if body["url"] != "https://example.com/current" || body["push_events"] != false || body["issues_events"] != false || body["merge_requests_events"] != false {
+		if body["url"] != "https://example.com/current" || body["push_events"] != false || body["issues_events"] != false || body["merge_requests_events"] != false || body["note_events"] != true || body["tag_push_events"] != false {
 			t.Fatalf("body = %#v", body)
 		}
 		return webhookResponse(http.StatusOK, `{"id":42,"url":"https://example.com/current"}`), nil
 	})
 	cmd := newCmdRepoWebhookEdit(factory)
-	_ = cmd.Flags().Set("events", "none")
+	_ = cmd.Flags().Set("events", "note")
 	var output bytes.Buffer
 	cmd.SetOut(&output)
 	if err := cmd.RunE(cmd, []string{"alice/demo", "42"}); err != nil {
@@ -417,6 +417,35 @@ func setWebhookFlags(t *testing.T, cmd *cobra.Command, values map[string]string)
 	for name, value := range values {
 		if err := cmd.Flags().Set(name, value); err != nil {
 			t.Fatal(err)
+		}
+	}
+}
+
+func TestRepoWebhookRejectsEmptyEventSetsBeforeHTTP(t *testing.T) {
+	for _, operation := range []string{"create", "edit"} {
+		for _, events := range []string{"none", " NONE ", "push,none", "", " ", ",", "push,"} {
+			t.Run(operation+"/"+events, func(t *testing.T) {
+				factory := webhookFactory(func(req *http.Request) (*http.Response, error) {
+					t.Fatalf("unexpected HTTP request: %s %s", req.Method, req.URL.Path)
+					return nil, nil
+				})
+				cmd := newCmdRepoWebhookEdit(factory)
+				args := []string{"alice/demo", "42"}
+				if operation == "create" {
+					cmd = newCmdRepoWebhookCreate(factory)
+					args = []string{"alice/demo"}
+					if err := cmd.Flags().Set("url", "https://example.com/hook"); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if err := cmd.Flags().Set("events", events); err != nil {
+					t.Fatal(err)
+				}
+				err := cmd.RunE(cmd, args)
+				if err == nil || (!strings.Contains(err.Error(), "unsupported webhook event") && !strings.Contains(err.Error(), "at least one webhook event")) {
+					t.Fatalf("error = %v", err)
+				}
+			})
 		}
 	}
 }

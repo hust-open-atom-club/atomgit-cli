@@ -150,7 +150,7 @@ func newCmdRepoWebhookCreate(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			eventValues, err := parseWebhookEvents(events, false)
+			eventValues, err := parseWebhookEvents(events)
 			if err != nil {
 				return err
 			}
@@ -249,7 +249,7 @@ func newCmdRepoWebhookEdit(f *cmdutil.Factory) *cobra.Command {
 				body["url"] = targetURL
 			}
 			if cmd.Flags().Changed("events") {
-				eventValues, err := parseWebhookEvents(events, true)
+				eventValues, err := parseWebhookEvents(events)
 				if err != nil {
 					return err
 				}
@@ -316,7 +316,7 @@ func newCmdRepoWebhookEdit(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&targetURL, "url", "", "New webhook target HTTP(S) URL")
-	cmd.Flags().StringVar(&events, "events", "", "Replace events; use none to disable all events")
+	cmd.Flags().StringVar(&events, "events", "", "Replace events with a non-empty comma-separated list: push, tag-push, issues, note, merge-requests")
 	cmd.Flags().StringVar(&encryption, "encryption", "", "Secret mode: password or signature")
 	addWebhookSecretFlags(cmd, &secret)
 	return cmd
@@ -517,15 +517,9 @@ func validateWebhookURL(value string) (string, error) {
 	return parsed.String(), nil
 }
 
-func parseWebhookEvents(value string, allowNone bool) (map[string]bool, error) {
+func parseWebhookEvents(value string) (map[string]bool, error) {
 	value = strings.TrimSpace(value)
-	if allowNone && strings.EqualFold(value, "none") {
-		result := make(map[string]bool, len(webhookEventFields))
-		for name := range webhookEventFields {
-			result[name] = false
-		}
-		return result, nil
-	}
+
 	if value == "" {
 		return nil, fmt.Errorf("at least one webhook event is required")
 	}
