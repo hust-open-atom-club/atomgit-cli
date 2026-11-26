@@ -5776,6 +5776,10 @@ Usage: `ag-cli repo read-dir [<owner>/<repo>] <path> [flags]`
 
 List contents of a repository directory
 
+List contents of a repository directory
+
+Deprecated: use 'ag-cli repo content list' instead
+
 > Deprecated: use 'ag-cli repo content list' instead
 
 ### Flags
@@ -5795,6 +5799,10 @@ List contents of a repository directory
 Usage: `ag-cli repo read-file [<owner>/<repo>] <path> [flags]`
 
 Read a file from a repository
+
+Read a file from a repository
+
+Deprecated: use 'ag-cli repo content view' instead
 
 > Deprecated: use 'ag-cli repo content view' instead
 

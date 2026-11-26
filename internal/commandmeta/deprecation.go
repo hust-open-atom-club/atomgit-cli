@@ -18,11 +18,21 @@ func Deprecate(cmd *cobra.Command, message string) {
 	}
 	cmd.Annotations[deprecationKey] = message
 	cmd.Hidden = true
+	description := cmd.Long
+	if description == "" {
+		description = cmd.Short
+	}
+	cmd.Long = description + "\n\nDeprecated: " + message
 	previous := cmd.PreRunE
 	previousRun := cmd.PreRun
 	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "Command %q is deprecated, %s\n", cmd.Name(), message); err != nil {
-			return fmt.Errorf("write deprecation warning: %w", err)
+		warning := fmt.Appendf(nil, "Command %q is deprecated, %s\n", cmd.Name(), message)
+		// A failed optional warning must not block the read or leave bytes
+		// buffered for a later fatal stderr flush.
+		if writer, ok := cmd.ErrOrStderr().(interface{ WriteBestEffort([]byte) }); ok {
+			writer.WriteBestEffort(warning)
+		} else {
+			_, _ = cmd.ErrOrStderr().Write(warning)
 		}
 		if previous != nil {
 			return previous(cmd, args)

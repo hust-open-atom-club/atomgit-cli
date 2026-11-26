@@ -136,3 +136,80 @@ func TestContentCompatibilityMetadata(t *testing.T) {
 		t.Fatalf("compatibility entries = %d, want 2", found)
 	}
 }
+
+type unavailableDeprecationWriter struct{}
+
+func (unavailableDeprecationWriter) Write([]byte) (int, error) { return 0, io.ErrClosedPipe }
+
+func TestContentCompatibilityWarningFailureDoesNotBlockOutput(t *testing.T) {
+	for _, old := range []string{"read-file", "read-dir"} {
+		for _, raw := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/raw=%t", old, raw), func(t *testing.T) {
+				calls := 0
+				f := &cmdutil.Factory{Config: rootTestConfig{}, HttpClient: func() (*http.Client, error) {
+					return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+						calls++
+						body := `{"type":"file","name":"file","path":"file","encoding":"base64","content":"b2sK"}`
+						if old == "read-dir" {
+							body = `[{"type":"file","name":"file","path":"file","size":3}]`
+						}
+						return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: req}, nil
+					})}, nil
+				}}
+				var out bytes.Buffer
+				root, err := newCmdRootWithWriters(f, &out, unavailableDeprecationWriter{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				path := "file"
+				if old == "read-dir" {
+					path = "."
+				}
+				args := []string{"repo", old, "owner/repo", path, "--json"}
+				if raw {
+					args = append(args, "--raw-output")
+				}
+				root.SetArgs(args)
+				if err := root.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				for _, w := range []io.Writer{root.OutOrStdout(), root.ErrOrStderr()} {
+					if err := cmdutil.FlushWriter(w); err != nil {
+						t.Fatalf("flush after optional warning: %v", err)
+					}
+				}
+				if calls != 1 || !json.Valid(out.Bytes()) {
+					t.Fatalf("calls=%d stdout=%q", calls, out.String())
+				}
+			})
+		}
+	}
+}
+
+func TestContentCompatibilityHelpIncludesMigration(t *testing.T) {
+	for _, entry := range []struct{ old, replacement string }{{"read-file", "view"}, {"read-dir", "list"}} {
+		for _, viaHelp := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/help=%t", entry.old, viaHelp), func(t *testing.T) {
+				var out, stderr bytes.Buffer
+				root, err := newCmdRootWithWriters(&cmdutil.Factory{}, &out, &stderr)
+				if err != nil {
+					t.Fatal(err)
+				}
+				args := []string{"repo", entry.old, "--help"}
+				if viaHelp {
+					args = []string{"help", "repo", entry.old}
+				}
+				root.SetArgs(args)
+				if err := root.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				if err := cmdutil.FlushWriter(root.OutOrStdout()); err != nil {
+					t.Fatal(err)
+				}
+				if !strings.Contains(out.String(), "Deprecated:") || !strings.Contains(out.String(), "ag-cli repo content "+entry.replacement) || stderr.Len() != 0 {
+					t.Fatalf("stdout=%q stderr=%q", out.String(), stderr.String())
+				}
+			})
+		}
+	}
+}
