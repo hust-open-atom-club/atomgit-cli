@@ -136,12 +136,14 @@ func TestRepoRolesEmptyList(t *testing.T) {
 }
 
 func TestRepoRolesTableKeepsASCIIColumnsAligned(t *testing.T) {
-	// NAME is the trailing column, so names containing CJK, combining marks or
-	// emoji cannot shift the ASCII columns. Positions are compared between rows
-	// and never computed from the implementation under test.
-	body := `[{"role_id":"a1","role_name":"abcd","access_level":15,"member_count":7},` +
-		`{"role_id":"b2","role_name":"代码审计角色","access_level":40,"member_count":22},` +
-		`{"role_id":"c3","role_name":"cafe\u0301 \ud83d\ude80","access_level":55,"member_count":9}]`
+	// ROLE ID, ACCESS LEVEL and MEMBERS are ASCII under the API contract, so
+	// their byte positions must not move when NAME holds wide characters. The
+	// fixture deliberately uses IDs and numbers of different lengths: an
+	// implementation that joins cells with a single space, or that lets a wide
+	// cell precede an aligned column, fails here.
+	body := `[{"role_id":"a","role_name":"one","access_level":5,"member_count":7},` +
+		`{"role_id":"role-identifier-longer","role_name":"代码审计角色","access_level":400,"member_count":22},` +
+		`{"role_id":"cc","role_name":"cafe\u0301 \ud83d\ude80","access_level":55,"member_count":9}]`
 	f := policyFactory(t, func(*http.Request) (int, string) { return 200, body })
 	out, err := executeRoles(t, f, "team/demo")
 	if err != nil {
@@ -150,6 +152,12 @@ func TestRepoRolesTableKeepsASCIIColumnsAligned(t *testing.T) {
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
 	if len(lines) != 4 {
 		t.Fatalf("lines = %d: %q", len(lines), out)
+	}
+	// Column order is the invariant the layout relies on: NAME must be last, so
+	// no aligned column follows a cell whose rune count can differ from its
+	// terminal width.
+	if got := strings.Join(strings.Fields(lines[0]), " "); got != "ROLE ID ACCESS LEVEL MEMBERS NAME" {
+		t.Fatalf("header = %q", lines[0])
 	}
 	columnIndex := func(line, value string) int {
 		index := strings.Index(line, value)
@@ -162,7 +170,7 @@ func TestRepoRolesTableKeepsASCIIColumnsAligned(t *testing.T) {
 		name   string
 		values []string
 	}{
-		{"ACCESS LEVEL", []string{"15", "40", "55"}},
+		{"ACCESS LEVEL", []string{"5", "400", "55"}},
 		{"MEMBERS", []string{"7", "22", "9"}},
 	} {
 		want := columnIndex(lines[1], column.values[0])
@@ -172,19 +180,46 @@ func TestRepoRolesTableKeepsASCIIColumnsAligned(t *testing.T) {
 			}
 		}
 	}
+	for i, want := range []string{"one", "代码审计角色", "cafe\u0301 \U0001F680"} {
+		if !strings.HasSuffix(lines[i+1], want) {
+			t.Fatalf("NAME of row %d = %q, want suffix %q", i+1, lines[i+1], want)
+		}
+	}
+}
+
+func TestRepoRolesTableEscapesTableControlCharacters(t *testing.T) {
+	// EscapeTSVField handles tab, newline and carriage return, but
+	// text/tabwriter also treats a vertical tab as a cell terminator and a form
+	// feed as a line-block terminator. Both must be escaped before writing.
+	body := `[{"role_id":"id\u000bwith-vt","role_name":"name\u000cwith-ff","access_level":5,"member_count":7}]`
+	f := policyFactory(t, func(*http.Request) (int, string) { return 200, body })
+	out, err := executeRoles(t, f, "team/demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("control characters changed the layout: %q", out)
+	}
+	for _, want := range []string{`id\vwith-vt`, `name\fwith-ff`} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("output missing %q: %q", want, out)
+		}
+	}
 }
 
 func TestRepoRolesNameRendering(t *testing.T) {
 	body := `[{"role_id":"a1","role_name":"auditor","role_chinese_name":"审计员"},` +
 		`{"role_id":"b2","role_name":"same","role_chinese_name":"same"},` +
 		`{"role_id":"c3"},` +
-		`{"role_id":"d4","role_chinese_name":"仅中文名"}]`
+		`{"role_id":"d4","role_chinese_name":"仅中文名"},` +
+		`{"role_id":"e5","role_name":"only-english"}]`
 	f := policyFactory(t, func(*http.Request) (int, string) { return 200, body })
 	out, err := executeRoles(t, f, "team/demo")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"auditor（审计员）", "same\n", "仅中文名"} {
+	for _, want := range []string{"auditor（审计员）", "same\n", "仅中文名", "only-english"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("output missing %q: %q", want, out)
 		}
@@ -195,6 +230,9 @@ func TestRepoRolesNameRendering(t *testing.T) {
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
 	if !strings.HasSuffix(lines[3], "-") {
 		t.Fatalf("absent name not rendered as -: %q", lines[3])
+	}
+	if !strings.HasSuffix(lines[5], "only-english") {
+		t.Fatalf("English-only name not rendered: %q", lines[5])
 	}
 }
 

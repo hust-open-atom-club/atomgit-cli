@@ -73,10 +73,12 @@ func writeRepositoryCustomRoles(out io.Writer, roles []api.RepositoryCustomRole)
 		return err
 	}
 	w := tabwriter.NewWriter(out, 0, 4, 2, ' ', 0)
-	// NAME is last because it is the only column that can contain wide
-	// characters, combining marks or emoji. text/tabwriter pads by rune count,
-	// so a wide trailing column keeps the ASCII columns (ROLE ID, ACCESS
-	// LEVEL, MEMBERS) aligned without any display-width calculation.
+	// NAME is last because it is the only display column that can contain wide
+	// characters, combining marks or emoji; ROLE ID, ACCESS LEVEL and MEMBERS
+	// are ASCII under the API contract (role IDs are server-generated
+	// identifiers and the other two are validated integers). text/tabwriter
+	// pads by rune count, so no aligned column follows a cell whose rune count
+	// can differ from its terminal width, and no width table is needed.
 	if _, err := fmt.Fprintln(w, "ROLE ID\tACCESS LEVEL\tMEMBERS\tNAME"); err != nil {
 		return err
 	}
@@ -94,19 +96,18 @@ func writeRepositoryCustomRoles(out io.Writer, roles []api.RepositoryCustomRole)
 }
 
 // roleName renders the role name together with its Chinese name when the
-// server returns both and they differ. The value is escaped so a tab or
-// newline in a remote name cannot break the table; an absent name is shown as
-// "-" instead of a substituted value.
+// server returns both and they differ after trimming surrounding whitespace.
+// An absent name is shown as "-" instead of a substituted value.
 func roleName(role api.RepositoryCustomRole) string {
 	name := strings.TrimSpace(roleField(role, "role_name"))
 	chinese := strings.TrimSpace(roleField(role, "role_chinese_name"))
 	switch {
 	case name != "" && chinese != "" && name != chinese:
-		return cmdutil.EscapeTSVField(name + "（" + chinese + "）")
+		return escapeTableCell(name + "（" + chinese + "）")
 	case name != "":
-		return cmdutil.EscapeTSVField(name)
+		return escapeTableCell(name)
 	case chinese != "":
-		return cmdutil.EscapeTSVField(chinese)
+		return escapeTableCell(chinese)
 	default:
 		return "-"
 	}
@@ -119,8 +120,19 @@ func roleField(role api.RepositoryCustomRole, field string) string {
 	return value
 }
 
+// tableCellEscaper escapes the characters text/tabwriter treats as structure:
+// a vertical tab ends a cell and a form feed ends a line block. EscapeTSVField
+// covers the backslash, tab, newline and carriage return.
+var tableCellEscaper = strings.NewReplacer("\v", `\v`, "\f", `\f`)
+
+// escapeTableCell escapes a value before it is written to a tabwriter, so a
+// remote name or ID cannot add a cell or a line.
+func escapeTableCell(value string) string {
+	return tableCellEscaper.Replace(cmdutil.EscapeTSVField(value))
+}
+
 // roleTextField escapes a string field so a tab, newline, carriage return or
-// control character reported by the server cannot break the table or the
+// other control character reported by the server cannot break the table or the
 // terminal. An absent or blank field is shown as "-" rather than a substitute.
 func roleTextField(role api.RepositoryCustomRole, field string) string {
 	value, ok := role.StringField(field)
@@ -130,7 +142,7 @@ func roleTextField(role api.RepositoryCustomRole, field string) string {
 	if strings.TrimSpace(value) == "" {
 		return "-"
 	}
-	return cmdutil.EscapeTSVField(value)
+	return escapeTableCell(value)
 }
 
 func roleIntegerField(role api.RepositoryCustomRole, field string) string {
