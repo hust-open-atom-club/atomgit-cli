@@ -30,7 +30,7 @@ func CreatePullRequestReply(client *Client, owner, repo, number, discussionID, b
 	err = client.doJSONRequestContext(client.requestContext(), &hc, http.MethodPost,
 		RepositoryPath(owner, repo, "pulls", number, "discussions", discussionID, "comments"),
 		bytes.NewReader(payload), "application/json", "application/json",
-		RequestPolicy{AllowedStatuses: []int{http.StatusOK}, CanRetry: false}, &response)
+		RequestPolicy{AllowedStatuses: []int{http.StatusOK, http.StatusCreated}, CanRetry: false}, &response)
 	if err != nil {
 		status, isHTTP := errors.AsType[*HTTPError](err)
 		if errors.Is(err, ErrRequestPreparation) || (isHTTP && status.StatusCode >= 400 && status.StatusCode < 500) {

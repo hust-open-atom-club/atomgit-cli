@@ -24,7 +24,7 @@ func TestCreatePullRequestReplySingleAttempt(t *testing.T) {
 			if calls != 1 || hc.CheckRedirect != nil {
 				t.Fatalf("calls=%d; changed caller redirect policy=%t", calls, hc.CheckRedirect != nil)
 			}
-			if status == 200 {
+			if status == http.StatusOK || status == http.StatusCreated {
 				if err != nil {
 					t.Fatal(err)
 				}
