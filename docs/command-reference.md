@@ -6149,7 +6149,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | --- | --- | --- | --- |
 | `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
 | `--encryption` | Secret mode: password or signature | `` | local |
-| `--events` | Replace events; use none to disable all events | `` | local |
+| `--events` | Replace events with a non-empty comma-separated list: push, tag-push, issues, note, merge-requests | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--secret-env` | Read the webhook secret from this environment variable | `` | local |
 | `--secret-file` | Read the webhook secret from a file | `` | local |

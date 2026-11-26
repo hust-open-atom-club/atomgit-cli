@@ -582,12 +582,12 @@ Get-Content ./webhook-secret | ag-cli repo webhook edit owner/repo 42 --secret-s
 
 # 替换事件、删除或发送真实测试请求
 ag-cli repo webhook edit owner/repo 42 --events push,tag-push,merge-requests
-ag-cli repo webhook edit owner/repo 42 --events none
+ag-cli repo webhook edit owner/repo 42 --events issues,note
 ag-cli repo webhook test owner/repo 42
 ag-cli repo webhook delete owner/repo 42 --yes
 ```
 
-支持的事件为 `push`、`tag-push`、`issues`、`note` 和 `merge-requests`。Webhook secret 不支持命令行明文参数，只能通过 `--secret-env`、`--secret-file` 或 `--secret-stdin` 三选一提供，也不会出现在列表、详情、JSON 或错误响应中。`test` 会向真实目标发送请求，和删除操作一样默认要求确认。AtomGit 当前公开 API 仅在响应中提供 `active`，因此 CLI 将启用状态作为只读信息展示，不发送未公开的修改字段。
+支持的事件为 `push`、`tag-push`、`issues`、`note` 和 `merge-requests`。Webhook 的 `--events` 必须包含至少一个受支持的事件；编辑时会替换原有事件集合。AtomGit 不接受空事件集合，因此 `none` 和空值会在本地报错，不会发送请求。Webhook secret 不支持命令行明文参数，只能通过 `--secret-env`、`--secret-file` 或 `--secret-stdin` 三选一提供，也不会出现在列表、详情、JSON 或错误响应中。`test` 会向真实目标发送请求，和删除操作一样默认要求确认。AtomGit 当前公开 API 仅在响应中提供 `active`，因此 CLI 将启用状态作为只读信息展示，不发送未公开的修改字段。
 
 ## 组织 (org)
 
