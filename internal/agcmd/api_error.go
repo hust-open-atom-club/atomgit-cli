@@ -15,6 +15,11 @@ func apiDiagnostic(err error) (commandDiagnostic, bool) {
 	role := commandErrorRole(err)
 	//nolint:errorlint // Only the selected API operation supplies response or execution facts.
 	switch failure := role.(type) {
+	case *api.PullRequestReplyUncertainError:
+		d, _ := apiDiagnostic(failure.Err)
+		d.summary = "Pull request reply could not be confirmed."
+		d.hint = "The reply may have been created. Check AtomGit before retrying to avoid duplicate comments."
+		return d, true
 	case *api.RepositoryModuleUpdateUncertainError:
 		d, _ := apiDiagnostic(failure.Err)
 		d.summary = "Repository module update could not be confirmed."

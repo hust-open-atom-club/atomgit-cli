@@ -20,6 +20,7 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reply [<owner>/<repo>] <number> <discussion-id>",
 		Short: "Reply to a comment thread on a pull request",
+		Long:  "Reply to a pull request discussion and report the new comment ID from noteId (legacy note_id is also accepted).\nThe discussion ID identifies the thread, not the reply. Requests are never automatically retried or redirected.\nIf creation cannot be confirmed, check AtomGit before retrying to avoid duplicate comments.",
 		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, remaining, err := cmdutil.ResolveRepositoryFromArgs(f, args, 2)
@@ -70,17 +71,13 @@ func newCmdReply(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			// Reply using discussions API. The response carries the discussion id
-			// as `id` and the new reply's comment id as `note_id`.
-			var resp api.ReplyResponse
-			req := api.CommentRequest{Body: body}
-			path := fmt.Sprintf("/repos/%s/%s/pulls/%d/discussions/%s/comments", owner, repo, number, discussionID)
-			if err := client.Post(path, req, &resp); err != nil {
+			resp, err := api.CreatePullRequestReply(client.WithContext(cmd.Context()), owner, repo, strconv.Itoa(number), discussionID, body)
+			if err != nil {
 				return fmt.Errorf("failed to create reply: %w", err)
 			}
-
-			fmt.Fprintf(cmd.OutOrStdout(), "Created reply #%d in discussion %s\n", resp.NoteID, resp.DiscussionID)
-			return nil
+			id, _ := resp.ReplyID() // Validated by CreatePullRequestReply.
+			_, err = fmt.Fprintf(cmd.OutOrStdout(), "Created reply #%d in discussion %s\n", id, resp.DiscussionID)
+			return err
 		},
 	}
 

@@ -3680,7 +3680,9 @@ Usage: `ag-cli pr comment reply [<owner>/<repo>] <number> <discussion-id> [flags
 
 Reply to a comment thread on a pull request
 
-Reply to a comment thread on a pull request
+Reply to a pull request discussion and report the new comment ID from noteId (legacy note_id is also accepted).
+The discussion ID identifies the thread, not the reply. Requests are never automatically retried or redirected.
+If creation cannot be confirmed, check AtomGit before retrying to avoid duplicate comments.
 
 When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
 

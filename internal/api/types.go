@@ -602,11 +602,25 @@ type CommentRequest struct {
 
 // ReplyResponse is the response from replying to a discussion thread.
 // Here `id` is the discussion_id (the thread); the newly created reply's
-// comment id is returned as `note_id`.
+// comment id is returned as `noteId`; older deployments used `note_id`.
 type ReplyResponse struct {
 	DiscussionID string `json:"id"`
 	Body         string `json:"body"`
-	NoteID       int64  `json:"note_id"`
+	NoteID       *int64 `json:"noteId"`
+	LegacyNoteID *int64 `json:"note_id"`
+}
+
+// ReplyID prefers the official field. A non-null, non-positive noteId is
+// invalid and must not be masked by a legacy value.
+func (r ReplyResponse) ReplyID() (int64, bool) {
+	id := r.NoteID
+	if id == nil {
+		id = r.LegacyNoteID
+	}
+	if id == nil || *id <= 0 {
+		return 0, false
+	}
+	return *id, true
 }
 
 // Tag represents a git tag
