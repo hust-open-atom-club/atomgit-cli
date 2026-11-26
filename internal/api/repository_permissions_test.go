@@ -91,6 +91,59 @@ func TestRepositoryPermissionsResponseValidation(t *testing.T) {
 	}
 }
 
+func TestRepositoryPermissionsValidationCause(t *testing.T) {
+	for _, tt := range []struct {
+		name, body, wantCause string
+	}{
+		{
+			name:      "invalid role",
+			body:      `{"role_info":[],"resource_trees":[]}`,
+			wantCause: "role_info must be an object",
+		},
+		{
+			name:      "invalid action",
+			body:      `{"role_info":{},"resource_trees":[{"actions":[{"selected":"false"}]}]}`,
+			wantCause: "resource_trees[0].actions[0].selected must be a boolean",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+				_, _ = w.Write([]byte(tt.body))
+			})
+			_, err := GetRepositoryPermissions(client, "team", "demo")
+			if !errors.Is(err, ErrInvalidResponse) {
+				t.Fatalf("missing invalid-response classification: %v", err)
+			}
+
+			// Locate the diagnostic cause independently of the wrapper shape.
+			var validationCause error
+			for pending := []error{err}; len(pending) > 0; {
+				current := pending[len(pending)-1]
+				pending = pending[:len(pending)-1]
+				if current == nil {
+					continue
+				}
+				if current.Error() == tt.wantCause {
+					validationCause = current
+					break
+				}
+				if joined, ok := current.(interface{ Unwrap() []error }); ok {
+					pending = append(pending, joined.Unwrap()...)
+				} else if cause := errors.Unwrap(current); cause != nil {
+					pending = append(pending, cause)
+				}
+			}
+			if validationCause == nil || !errors.Is(err, validationCause) {
+				t.Fatalf("validation cause missing from error chain: %v", err)
+			}
+			want := ErrInvalidResponse.Error() + ": repository permissions: " + tt.wantCause
+			if err.Error() != want {
+				t.Fatalf("error = %q, want %q", err.Error(), want)
+			}
+		})
+	}
+}
+
 func TestRepositoryPermissionsCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	client := NewClient("test-token")

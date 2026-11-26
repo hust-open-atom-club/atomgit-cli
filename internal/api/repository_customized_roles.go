@@ -75,7 +75,7 @@ func GetRepositoryCustomRoles(client *Client, owner, repo string) ([]RepositoryC
 		return nil, fmt.Errorf("%w: repository customized roles: response must be an array", ErrInvalidResponse)
 	}
 	if err := validateRepositoryCustomRoles(result); err != nil {
-		return nil, fmt.Errorf("%w: repository customized roles: %s", ErrInvalidResponse, err)
+		return nil, fmt.Errorf("%w: repository customized roles: %w", ErrInvalidResponse, err)
 	}
 	return result, nil
 }

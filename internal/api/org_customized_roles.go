@@ -76,7 +76,7 @@ func GetOrganizationCustomRoles(client *Client, organization string) ([]Organiza
 		return nil, fmt.Errorf("%w: organization customized roles: response must be an array", ErrInvalidResponse)
 	}
 	if err := validateOrganizationCustomRoles(result); err != nil {
-		return nil, fmt.Errorf("%w: organization customized roles: %s", ErrInvalidResponse, err)
+		return nil, fmt.Errorf("%w: organization customized roles: %w", ErrInvalidResponse, err)
 	}
 	return result, nil
 }
