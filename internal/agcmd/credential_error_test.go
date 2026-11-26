@@ -18,6 +18,127 @@ import (
 
 const missingCredentialOutput = "Error: No credentials are configured.\n\nRun `ag-cli auth login` to log in.\n"
 
+func TestCredentialClearErrorSelection(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		cause error
+	}{
+		{name: "access cause", cause: &config.CredentialAccessError{Err: os.ErrPermission}},
+		{name: "format cause", cause: &config.CredentialFormatError{Err: errors.New("invalid fixture")}},
+		{name: "missing credentials cause", cause: config.ErrNotAuthenticated},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			clearErr := &config.CredentialClearError{
+				Operation: "remove credential file", Path: "/fixture/token.json", Err: tc.cause,
+			}
+			err := fmt.Errorf("logout: %w", clearErr)
+			selected, ok := errors.AsType[*config.CredentialClearError](commandErrorRole(err))
+			if !ok || selected != clearErr {
+				t.Fatalf("selected error = %v, want the outer clear failure", selected)
+			}
+			if !errors.Is(selected, tc.cause) {
+				t.Fatal("the selected failure lost its original cause")
+			}
+		})
+	}
+}
+
+func TestCredentialClearDiagnosticDetails(t *testing.T) {
+	const private = "private-clear-cause fixture-token"
+	for _, tc := range []struct {
+		name        string
+		failure     *config.CredentialClearError
+		permissions bool
+	}{
+		{
+			name: "path lookup",
+			failure: &config.CredentialClearError{
+				Operation: "locate credential files",
+				Err:       &config.CredentialAccessError{Operation: "locate credential paths", Err: errors.New(private)},
+			},
+		},
+		{
+			name: "removal failure",
+			failure: &config.CredentialClearError{
+				Operation: "remove credential file", Path: "/fixture/token.json", Err: errors.New(private),
+			},
+		},
+		{
+			name: "partial removal with permission failure",
+			failure: &config.CredentialClearError{
+				Operation: "remove credential file", Path: "/fixture/legacy.json", Removed: []string{"/fixture/token.json"},
+				Err: &os.PathError{Op: "remove", Path: "/fixture/legacy.json", Err: fmt.Errorf("%s: %w", private, os.ErrPermission)},
+			},
+			permissions: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			diagnostic, ok := credentialDiagnostic(tc.failure)
+			if !ok || diagnostic.summary != "Unable to clear credentials." {
+				t.Fatalf("clear failure was not recognized: %+v", diagnostic)
+			}
+			if tc.failure.Path == "" {
+				if !strings.Contains(diagnostic.hint, "XDG_CONFIG_HOME") {
+					t.Fatalf("path lookup advice is missing: %q", diagnostic.hint)
+				}
+			} else {
+				if !strings.Contains(diagnostic.detail, fmt.Sprintf("%q", tc.failure.Path)) {
+					t.Fatalf("failed path is missing: %q", diagnostic.detail)
+				}
+				if !strings.Contains(diagnostic.hint, "logout is incomplete") {
+					t.Fatalf("partial-state warning is missing: %q", diagnostic.hint)
+				}
+			}
+			for _, path := range tc.failure.Removed {
+				if !strings.Contains(diagnostic.detail, fmt.Sprintf("%q", path)) {
+					t.Fatalf("removed path %q is missing: %q", path, diagnostic.detail)
+				}
+			}
+			if strings.Contains(diagnostic.hint, "permissions") != tc.permissions {
+				t.Fatalf("permission advice does not match the failure: %q", diagnostic.hint)
+			}
+			var out bytes.Buffer
+			err := fmt.Errorf("private wrapper: %w", tc.failure)
+			renderCommandError(&out, err)
+			for _, secret := range []string{"private-clear-cause", "fixture-token", "private wrapper"} {
+				if strings.Contains(out.String(), secret) {
+					t.Fatalf("diagnostic exposed private error data: %q", out.String())
+				}
+			}
+		})
+	}
+}
+
+func TestCredentialClearDiagnosticRendering(t *testing.T) {
+	clearErr := &config.CredentialClearError{
+		Operation: "remove credential file", Path: "/fixture/legacy.json",
+		Removed: []string{"/fixture/token.json"}, Err: os.ErrPermission,
+	}
+	var out bytes.Buffer
+	renderCommandError(&out, clearErr)
+	want := "Error: Unable to clear credentials.\n\n" +
+		"Failed to remove credential file: \"/fixture/legacy.json\".\n" +
+		"Removed credential files:\n  \"/fixture/token.json\"\n\n" +
+		"Credential files may remain; logout is incomplete.\n" +
+		"Check the file and parent directory ownership and permissions.\n"
+	if out.String() != want {
+		t.Fatalf("rendered diagnostic = %q, want %q", out.String(), want)
+	}
+}
+
+func TestCredentialClearJoinedFailureSelection(t *testing.T) {
+	removal := errors.New("removal failed")
+	other := errors.New("another operation failed")
+	clearErr := &config.CredentialClearError{
+		Operation: "remove credential file", Path: "/fixture/legacy.json",
+		Removed: []string{"/fixture/token.json"}, Err: removal,
+	}
+	err := fmt.Errorf("logout: %w", errors.Join(clearErr, other))
+	if role := commandErrorRole(err); role != nil {
+		t.Fatalf("joined failure selected one operation for rendering: %v", role)
+	}
+}
+
 func TestMissingCredentialDiagnostics(t *testing.T) {
 	privateCause := errors.New("token=private-token; searched /private/credential/path")
 	for name, err := range map[string]error{

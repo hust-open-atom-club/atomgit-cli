@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -20,8 +21,8 @@ func TestRunActions(t *testing.T) {
 	}{
 		{"stop", []string{"team/demo", "run-1"}, http.MethodPost, "/api/v8/repos/team/demo/actions/runs/run-1/stop", nil, 0},
 		{"rerun", []string{"team/demo", "run-1"}, http.MethodPost, "/api/v8/repos/team/demo/actions/runs/run-1/rerun", nil, 0},
-		{"retry selected", []string{"team/demo", "run-1", "--job", "exec-2", "--job", "exec-2"}, http.MethodPost, "/api/v8/repos/team/demo/actions/runs/run-1/retry", []string{"exec-2"}, 0},
-		{"retry failed", []string{"team/demo", "run-1"}, http.MethodPost, "/api/v8/repos/team/demo/actions/runs/run-1/retry", []string{"exec-1"}, 1},
+		{"retry selected", []string{"team/demo", "run-1", "--job", "job-2", "--job", "job-2"}, http.MethodPost, "/api/v8/repos/team/demo/actions/runs/run-1/retry", []string{"job-2"}, 0},
+		{"retry failed", []string{"team/demo", "run-1"}, http.MethodPost, "/api/v8/repos/team/demo/actions/runs/run-1/retry", []string{"job-1", "job-3"}, 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -36,7 +37,11 @@ func TestRunActions(t *testing.T) {
 					if !strings.HasSuffix(req.URL.Path, "/jobs") {
 						t.Fatalf("GET path: %s", req.URL.Path)
 					}
-					return runResponse(req, http.StatusOK, `{"total_count":2,"jobs":[{"id":"job-1","exec_id":"exec-1","status":"FAILED"},{"id":"job-2","exec_id":"exec-2","status":"COMPLETED"}]}`), nil
+					return runResponse(req, http.StatusOK, `{"total_count":3,"jobs":[
+						{"id":"job-1","exec_id":"exec-1","status":"FAILED"},
+						{"id":"job-2","exec_id":"exec-2","status":"COMPLETED"},
+						{"id":"job-3","status":"FAILED"}
+					]}`), nil
 				}
 				posts++
 				if req.Method != tt.method || req.URL.Path != tt.path {
@@ -57,7 +62,7 @@ func TestRunActions(t *testing.T) {
 					if err := json.Unmarshal(body, &payload); err != nil {
 						t.Fatal(err)
 					}
-					if len(payload.JobRunIDs) != len(tt.wantIDs) || payload.JobRunIDs[0] != tt.wantIDs[0] {
+					if !slices.Equal(payload.JobRunIDs, tt.wantIDs) {
 						t.Fatalf("payload = %s", body)
 					}
 				} else if len(body) != 0 {
@@ -90,15 +95,50 @@ func TestRunActionRejectsFalseSuccess(t *testing.T) {
 	}
 }
 
-func TestRunRetryWithoutFailedJobsDoesNotPost(t *testing.T) {
+func TestRunRetryWithoutFailedJobIDsDoesNotPost(t *testing.T) {
+	tests := []struct {
+		name    string
+		jobs    string
+		wantErr string
+	}{
+		{"no failed jobs", `{"total_count":0,"jobs":[]}`, "no failed jobs"},
+		{"failed job missing ID", `{"total_count":2,"jobs":[
+			{"id":"job-1","exec_id":"exec-1","status":"FAILED"},
+			{"exec_id":"exec-2","status":"FAILED"}
+		]}`, "failed job has no ID"},
+		{"missing ID with name", `{"total_count":1,"jobs":[
+			{"name":"Build\nLinux","identifier":"build-linux","status":"FAILED"}
+		]}`, `failed job "Build Linux" has no ID`},
+		{"missing ID with identifier", `{"total_count":1,"jobs":[
+			{"name":"\u0000","identifier":"deploy","status":"FAILED"}
+		]}`, `failed job "deploy" has no ID`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.Method != http.MethodGet {
+					t.Fatalf("unexpected %s request", req.Method)
+				}
+				return runResponse(req, http.StatusOK, tt.jobs), nil
+			})
+			cmd := newCmdRunRetry(runFactory(runTestConfig{token: "secret"}, transport))
+			if err := cmd.RunE(cmd, []string{"team/demo", "run-1"}); err == nil || !strings.HasSuffix(err.Error(), tt.wantErr) {
+				t.Fatalf("error = %v, want %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestRunRetryRejectsInvalidExplicitJobID(t *testing.T) {
 	transport := runRoundTripFunc(func(req *http.Request) (*http.Response, error) {
-		if req.Method != http.MethodGet {
-			t.Fatalf("unexpected %s request", req.Method)
-		}
-		return runResponse(req, http.StatusOK, `{"total_count":0,"jobs":[]}`), nil
+		t.Fatalf("unexpected %s request", req.Method)
+		return nil, nil
 	})
 	cmd := newCmdRunRetry(runFactory(runTestConfig{token: "secret"}, transport))
-	if err := cmd.RunE(cmd, []string{"team/demo", "run-1"}); err == nil || !strings.Contains(err.Error(), "no failed jobs") {
+	if err := cmd.Flags().Set("job", "build/linux"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.RunE(cmd, []string{"team/demo", "run-1"}); err == nil || err.Error() != `invalid job ID: "build/linux"` {
 		t.Fatalf("error = %v", err)
 	}
 }

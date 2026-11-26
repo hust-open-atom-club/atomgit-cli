@@ -212,6 +212,9 @@
 - [ag-cli repo push-rule view](#ag-cli-repo-push-rule-view) — View repository push rules
 - [ag-cli repo read-dir](#ag-cli-repo-read-dir) — List contents of a repository directory
 - [ag-cli repo read-file](#ag-cli-repo-read-file) — Read a file from a repository
+- [ag-cli repo settings](#ag-cli-repo-settings) — View and edit general repository settings
+- [ag-cli repo settings edit](#ag-cli-repo-settings-edit) — Edit general repository settings
+- [ag-cli repo settings view](#ag-cli-repo-settings-view) — View general repository settings
 - [ag-cli repo sync](#ag-cli-repo-sync) — Synchronize a fork with its upstream repository
 - [ag-cli repo transfer](#ag-cli-repo-transfer) — Transfer a repository to an organization
 - [ag-cli repo unarchive](#ag-cli-repo-unarchive) — Unarchive an organization repository
@@ -5801,6 +5804,102 @@ Read a file from a repository
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
+## ag-cli repo settings
+
+Usage: `ag-cli repo settings`
+
+View and edit general repository settings
+
+Manage Actions switches, cross-repository PR triggers, fork restrictions, and branch/tag naming and creation rules.
+Metadata, PR policy, push rules, and branch/tag protection are managed by their existing commands.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli repo settings edit
+
+Usage: `ag-cli repo settings edit [<owner>/<repo>] [flags]`
+
+Edit general repository settings
+
+Send only explicitly specified settings, preserving false and empty strings. At least one setting is required.
+Requires confirmation unless --yes is supplied. PUT requests are never automatically retried or redirected.
+Output distinguishes submitted fields from response settings. Null response fields are unavailable; no independent readback is performed.
+Regex dialect and whitelist ID string format are validated by AtomGit, not rewritten by the CLI.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--action-pipeline-enabled` | Enable Actions pipelines | `false` | local |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--block-cross-repo-pr-trigger` | Block cross-repository PRs from triggering Actions | `false` | local |
+| `--branch-name-regex` | Branch name pattern in the server's regex dialect (empty clears) | `` | local |
+| `--disable-fork` | Forbid repository forks | `false` | local |
+| `--forbidden-committer-create-branch` | Forbid committers from creating branches | `false` | local |
+| `--forbidden-developer-create-branch` | Forbid developers from creating branches | `false` | local |
+| `--forbidden-developer-create-branch-user-ids` | Branch-creation whitelist user IDs in the server's string format (empty clears) | `` | local |
+| `--forbidden-developer-create-tag` | Forbid developers from creating tags | `false` | local |
+| `--generate-pre-merge-ref` | Generate pre-merge references | `false` | local |
+| `--include-lfs-objects` | Include LFS objects in archive downloads | `false` | local |
+| `--json` | Output submitted fields and response settings as JSON | `false` | local |
+| `--open-gpg-verified` | Enable public GPG key verification | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--rebase-disable-trigger-webhook` | Suppress webhook events on rebase | `false` | local |
+| `--show-branch-creator` | Show branch creator information | `false` | local |
+| `--tag-name-regex` | Tag name pattern in the server's regex dialect (empty clears) | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+| `-y, --yes` | Skip update confirmation | `false` | local |
+
+### Example
+
+```bash
+ag-cli repo settings edit owner/repo --action-pipeline-enabled=false
+ag-cli repo settings edit --disable-fork --block-cross-repo-pr-trigger --yes
+ag-cli repo settings edit owner/repo --branch-name-regex '' --json --yes
+```
+
+
+## ag-cli repo settings view
+
+Usage: `ag-cli repo settings view [<owner>/<repo>] [flags]`
+
+View general repository settings
+
+Read repository settings. Missing or null response fields are shown as null, not inferred as false. Requires authentication.
+
+When OWNER/REPO is omitted, the repository is inferred from the current Git repository. An explicit OWNER/REPO argument always takes precedence. Remote selection prefers remote.pushDefault, the current branch upstream, origin, then a unique AtomGit/GitCode remote.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--json` | Output repository and settings as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli repo settings view owner/repo
+ag-cli repo settings view --json
+```
+
+
 ## ag-cli repo sync
 
 Usage: `ag-cli repo sync [<owner>/<repo>] [flags]`
@@ -6315,7 +6414,7 @@ When OWNER/REPO is omitted, the repository is inferred from the current Git repo
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--token` | Use an access token for this command only | `` | inherited |
 | `-h, --help` | Show help for command | `false` | inherited |
-| `-j, --job` | Retry this job run ID (repeatable); defaults to all failed jobs | `[]` | local |
+| `-j, --job` | Retry a job by the ID shown in 'ag-cli run view' (repeatable, defaults to all failed jobs) | `[]` | local |
 
 
 ## ag-cli run step-log

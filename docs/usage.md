@@ -215,6 +215,8 @@ ag-cli auth logout --all
 
 `auth logout` 默认删除活动账号。为避免删除动作隐式选择另一个账号并造成 Git identity 错配，当仍有其他账号时不能删除活动账号；应先执行 `auth switch <account>`，再用 `auth logout --account <old-account>` 删除原账号。`--account` 可直接删除非活动账号，`--all` 明确删除全部账号。access token、refresh token 不会写入 Git 配置、remote URL、账号列表或错误信息。
 
+删除全部账号或最后一个账号时，如果只删除了部分凭据文件，`auth logout` 会返回非零退出码，列出已经删除的路径和删除失败的路径，并提示注销未完成。请检查剩余路径，避免将部分删除当作已完全注销。所有已知路径都没有凭据文件时，仍会按已注销处理；路径定位或删除失败则会报告错误。
+
 可选环境变量（覆盖默认 OAuth 应用）：`AG_OAUTH_CLIENT_ID`、`AG_OAUTH_CLIENT_SECRET`；若本机 **8765** 端口被占用，可设置 **`AG_OAUTH_REDIRECT_PORT`**（需与 AtomGit 应用配置的回调地址一致）。
 
 在支持 OSC 8 超链接的终端中，`auth login` 打印的授权 URL 是整段链接，换行后点击任意一行都会打开完整地址。不支持超链接的终端、`TERM=dumb` 或输出被重定向时，仍输出纯文本 URL。
@@ -377,6 +379,48 @@ ag-cli repo cla disable owner/repo --yes
 写操作默认在 stderr 展示目标仓库、操作和指定字段并请求确认；`--yes` 跳过确认，取消时不发送请求。只接受约定的 HTTP 200，允许空响应，不自动重试或跟随重定向。失败后应先在 AtomGit 确认配置再重试。命令不提供协议模板创建、签署或未文档化的当前配置查询，测试只使用离线 mock。
 
 接口依据：[可用 CLA 列表](https://docs.atomgit.com/docs/apis/get-api-v-5-repos-owner-repo-clas/)、[CLA 配置](https://docs.atomgit.com/docs/apis/put-api-v-5-repos-owner-repo-clas/)。
+
+#### 仓库通用设置
+
+```bash
+# 查看设置；省略仓库时从当前 Git 仓库推断
+ag-cli repo settings view owner/repo
+ag-cli repo settings view --json
+
+# 显式 false 也会发送；默认显示目标和修改字段并要求确认
+ag-cli repo settings edit owner/repo --action-pipeline-enabled=false
+ag-cli repo settings edit owner/repo --disable-fork --block-cross-repo-pr-trigger --yes
+
+# 空字符串请求清除规则或白名单，未指定字段不发送
+ag-cli repo settings edit owner/repo --branch-name-regex '' --tag-name-regex '' --json --yes
+ag-cli repo settings edit owner/repo --forbidden-developer-create-branch-user-ids '' --yes
+```
+
+`repo settings view/edit` 使用 API v5 `GET/PUT /repos/{owner}/{repo}/repo_settings`，需要认证，显式仓库优先于 Git 推断。GET 和 PUT 均不跟随重定向，3xx 响应作为 HTTP 错误返回。它不改变仓库名称、可见性、PR 合并策略、push-rule 或受保护分支/标签规则。
+
+可写参数与官方请求字段一一对应（将字段名中的下划线换成连字符）：
+
+| 参数 | 类型 | 作用 |
+| --- | --- | --- |
+| `--action-pipeline-enabled` | boolean | 开启 Actions 流水线 |
+| `--block-cross-repo-pr-trigger` | boolean | 阻止跨仓 PR 触发 Actions |
+| `--disable-fork` | boolean | 禁止 Fork |
+| `--forbidden-developer-create-branch` | boolean | 禁止开发者创建分支 |
+| `--forbidden-developer-create-tag` | boolean | 禁止开发者创建标签 |
+| `--forbidden-committer-create-branch` | boolean | 禁止提交者创建分支 |
+| `--forbidden-developer-create-branch-user-ids` | string | 创建分支的白名单用户 ID，保留服务端字符串格式 |
+| `--branch-name-regex` / `--tag-name-regex` | string | 分支/标签名称规则 |
+| `--generate-pre-merge-ref` | boolean | 生成预合并引用 |
+| `--rebase-disable-trigger-webhook` | boolean | rebase 时不触发 Webhook |
+| `--open-gpg-verified` | boolean | 公开 GPG 公钥验证 |
+| `--include-lfs-objects` | boolean | 下载归档时包含 LFS 对象 |
+| `--show-branch-creator` | boolean | 显示分支创建者 |
+
+`edit` 至少指定一个设置，支持显式 `--flag=false` 和字符串 `--flag=''`；只提交指定字段，不先读取再覆写整份设置。CLI 不用 Go 的正则引擎校验服务端规则，也不推断白名单 ID 的分隔格式，具体内容由 AtomGit 校验。`forbidden_gitlab_access` 只有读取契约，不提供未经文档定义的写入参数。无修改请求在本地拒绝；参数校验失败、取消或 EOF 均不发送 API 请求。`--yes/-y` 跳过确认；PUT 不重试、不跟随重定向。
+
+CLI 启动时仍会先加载本地配置和凭据；Unix 上可能收紧凭据文件的权限。因此，取消设置修改并不保证本地凭据文件未经读取或权限修复，损坏或不可读的凭据也可能在确认提示或无修改校验前报错。详见[必需认证与可选认证](configuration.md#必需认证与可选认证)。
+
+`view --json` 顶层固定为 `repository` 和 `settings`。设置中的 boolean、字符串及白名单对象按官方类型解析，缺失或 null 字段显示为 `null`，不会补成 false、空字符串或空数组；服务端明确返回的空白名单保留为 `[]`。`edit --json` 包含 `repository`、`submitted_fields`、`settings` 和固定 `verification: "response_only"`：提交字段与 PUT 返回的设置分开呈现，不声称已独立回读，也不把未返回的提交字段当作已验证。文本输出使用同一组信息并通过 JSON 转义保护远端字段。只接受 HTTP 200 对象及至少一个已知非 null 设置值；响应形状或类型非法时不输出部分结果。写入结果无法确认时，应先检查 AtomGit 再决定是否重试；测试只使用离线 mock。
 
 #### 仓库策略设置
 
@@ -1448,9 +1492,9 @@ ag-cli run view owner/repo <run-id> --artifact <artifact-id> --artifact-file bui
 ag-cli run stop owner/repo <run-id>
 ag-cli run rerun owner/repo <run-id>
 
-# 重试全部失败任务，或指定一个任务执行 ID
+# 重试全部失败任务，或指定一个任务 ID
 ag-cli run retry owner/repo <run-id>
-ag-cli run retry owner/repo <run-id> --job <job-run-id>
+ag-cli run retry owner/repo <run-id> --job <job-id>
 
 # 按 step ID 分页拉取步骤日志；默认输出到 stdout
 ag-cli run step-log owner/repo <run-id> <job-id> <step-id>
@@ -1471,7 +1515,14 @@ ag-cli run artifact delete <artifact-id> --yes
 
 `--log-file` 保留服务端原始 ZIP 下载行为，不应用上述展示限制。`ag-cli run view --artifact` 下载的是 artifact 归档，而 `ag-cli run artifact view` 只读取元数据。`ag-cli run artifact delete` 会先读取 artifact 元数据并显示仓库、ID、名称、workflow run ID 和过期时间，只有输入 `y` 或 `yes` 才会继续；`--yes` 可跳过确认，但不会跳过元数据读取。artifact 删除后无法恢复。日志、step-log `--output` 和 artifact 文件下载都会先写入目标目录中的临时文件，完整写入后再移动到目标路径。若目标已存在，必须显式使用 `--overwrite`。
 
-`run retry` 默认查询失败任务，并将其 `exec_id` 作为 `job_run_ids` 发送。`--job` 可重复使用；它直接接收任务执行 ID。没有失败任务或任务缺少执行 ID 时，命令不会发送重试请求。
+`run retry` 默认查询失败任务，并将其 `id` 作为 `job_run_ids` 发送。`--job` 可重复使用，直接接收 `ag-cli run view` 显示的任务 ID。没有失败任务或失败任务缺少 `id` 时，命令不会发送重试请求。
+
+```console
+$ ag-cli run retry owner/repo 42
+list failed jobs for run 42: failed job "Build" has no ID
+$ ag-cli run retry owner/repo 42 --job build/linux
+invalid job ID: "build/linux"
+```
 
 ## Actions 工作流管理 (workflow)
 

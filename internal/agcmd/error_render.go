@@ -36,10 +36,10 @@ func commandErrorRole(err error) error {
 		}
 		//nolint:errorlint // Inspect this layer before its causes so an inner role cannot replace an outer one.
 		switch err.(type) {
-		case *config.CredentialSaveError:
+		case *config.CredentialSaveError, *config.CredentialClearError:
 			return err
 		case *api.HTTPError, *actions.HTTPError, *actions.JobNotFoundError, *api.RequestExecutionError, *api.ResponseReadError,
-			*api.RepositoryModuleUpdateUncertainError, *api.OrganizationCreationUncertainError, *api.OrganizationEditUncertainError, *api.PullRequestDraftUpdateUncertainError, *config.CredentialFormatError, *config.CredentialAccessError, *config.CredentialFileSafetyError,
+			*api.RepositoryModuleUpdateUncertainError, *api.OrganizationCreationUncertainError, *api.OrganizationEditUncertainError, *api.RepositorySettingsUpdateUncertainError, *api.PullRequestDraftUpdateUncertainError, *config.CredentialFormatError, *config.CredentialAccessError, *config.CredentialFileSafetyError,
 			*config.CredentialValidationError, *config.CredentialPermissionRepairError,
 			*config.AccountNotFoundError, *config.AccountConflictError, *config.ActiveAccountRemovalError:
 			return err
@@ -58,7 +58,7 @@ func commandErrorRole(err error) error {
 					if len(causes) > 1 {
 						//nolint:errorlint // Match the selected role so Git rollback failures stay visible.
 						switch role.(type) {
-						case *config.CredentialSaveError, *config.AccountNotFoundError, *config.AccountConflictError, *config.ActiveAccountRemovalError:
+						case *config.CredentialSaveError, *config.CredentialClearError, *config.AccountNotFoundError, *config.AccountConflictError, *config.ActiveAccountRemovalError:
 							return nil
 						}
 					}

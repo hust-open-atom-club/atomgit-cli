@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"syscall"
 )
 
@@ -103,6 +104,30 @@ func (e *CredentialSaveError) Unwrap() []error {
 	}
 	return causes
 }
+
+// CredentialClearError records a failed removal and the paths already deleted.
+// A missing Path means the credential file paths could not be located.
+type CredentialClearError struct {
+	Operation string
+	Path      string
+	Removed   []string
+	Err       error
+}
+
+func (e *CredentialClearError) Error() string {
+	operation := e.Operation
+	if e.Path != "" {
+		operation = fmt.Sprintf("%s %q", operation, e.Path)
+	}
+	var message strings.Builder
+	fmt.Fprintf(&message, "clear credentials: %s: %v", operation, e.Err)
+	for _, path := range e.Removed {
+		fmt.Fprintf(&message, "\nremoved credential file %q", path)
+	}
+	return message.String()
+}
+
+func (e *CredentialClearError) Unwrap() error { return e.Err }
 
 // CredentialAccessError records a failed credential source lookup or read.
 // Operation and Path describe the attempted access; Err retains its cause.

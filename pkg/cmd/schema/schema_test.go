@@ -47,6 +47,9 @@ func TestRegisteredCommands(t *testing.T) {
 		{[]string{"repo", "archive"}, 0, 1, "text", "write"},
 		{[]string{"repo", "unarchive"}, 0, 1, "text", "write"},
 		{[]string{"repo", "permissions"}, 0, 1, "text,json", "read"},
+		{[]string{"repo", "settings"}, 0, 0, "text", "none"},
+		{[]string{"repo", "settings", "view"}, 0, 1, "text,json", "read"},
+		{[]string{"repo", "settings", "edit"}, 0, 1, "text,json", "write"},
 		{[]string{"repo", "module", "edit"}, 0, 1, "text,json", "write"},
 		{[]string{"repo", "cla", "list"}, 0, 1, "text,json", "read"},
 		{[]string{"repo", "cla", "set"}, 0, 1, "text", "write"},
@@ -127,6 +130,17 @@ func TestRegisteredCommands(t *testing.T) {
 					if i < 0 || detail.Flags[i].Required || detail.Flags[i].Default != defaultValue || detail.Flags[i].Type != "string" {
 						t.Fatalf("incorrect optional flag metadata for %s", name)
 					}
+				}
+			}
+			if detail.Path == "ag-cli repo settings edit" {
+				want := []commandschema.FlagGroup{{Kind: "atLeastOneRequired", Flags: []string{
+					"action-pipeline-enabled", "block-cross-repo-pr-trigger", "branch-name-regex", "disable-fork",
+					"forbidden-committer-create-branch", "forbidden-developer-create-branch", "forbidden-developer-create-branch-user-ids",
+					"forbidden-developer-create-tag", "generate-pre-merge-ref", "include-lfs-objects", "open-gpg-verified",
+					"rebase-disable-trigger-webhook", "show-branch-creator", "tag-name-regex",
+				}}}
+				if !reflect.DeepEqual(detail.FlagGroups, want) {
+					t.Fatalf("repository settings constraints = %+v", detail.FlagGroups)
 				}
 			}
 			if detail.Path == "ag-cli org edit" {
