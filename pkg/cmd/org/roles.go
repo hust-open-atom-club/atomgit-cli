@@ -83,24 +83,50 @@ func writeOrganizationCustomRoles(out io.Writer, organization string, roles []ap
 		return err
 	}
 	w := tabwriter.NewWriter(out, 0, 4, 2, ' ', 0)
-	// The Chinese name is last because tabwriter pads by rune count while CJK
-	// characters occupy two terminal cells; keeping it last leaves the other
-	// columns aligned instead of shifting them per row.
-	if _, err := fmt.Fprintln(w, "ROLE ID\tNAME\tACCESS LEVEL\tMEMBERS\tCHINESE NAME"); err != nil {
+	// NAME is last because it is the only column that can contain wide
+	// characters, combining marks or emoji. text/tabwriter pads by rune count,
+	// so a wide trailing column keeps the ASCII columns (ROLE ID, ACCESS
+	// LEVEL, MEMBERS) aligned without any display-width calculation.
+	if _, err := fmt.Fprintln(w, "ROLE ID\tACCESS LEVEL\tMEMBERS\tNAME"); err != nil {
 		return err
 	}
 	for _, role := range roles {
-		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 			organizationRoleTextField(role, "id"),
-			organizationRoleTextField(role, "name"),
 			organizationRoleIntegerField(role, "access_level"),
 			organizationRoleIntegerField(role, "member_count"),
-			organizationRoleTextField(role, "name_cn"),
+			organizationRoleName(role),
 		); err != nil {
 			return err
 		}
 	}
 	return w.Flush()
+}
+
+// organizationRoleName renders the role name together with its Chinese name
+// when the server returns both and they differ. The value is escaped so a tab
+// or newline in a remote name cannot break the table; an absent name is shown
+// as "-" instead of a substituted value.
+func organizationRoleName(role api.OrganizationCustomRole) string {
+	name := strings.TrimSpace(organizationRoleField(role, "name"))
+	chinese := strings.TrimSpace(organizationRoleField(role, "name_cn"))
+	switch {
+	case name != "" && chinese != "" && name != chinese:
+		return cmdutil.EscapeTSVField(name + "（" + chinese + "）")
+	case name != "":
+		return cmdutil.EscapeTSVField(name)
+	case chinese != "":
+		return cmdutil.EscapeTSVField(chinese)
+	default:
+		return "-"
+	}
+}
+
+// organizationRoleField returns a documented string field, or "" when the
+// server omitted it.
+func organizationRoleField(role api.OrganizationCustomRole, field string) string {
+	value, _ := role.StringField(field)
+	return value
 }
 
 // organizationRoleTextField escapes a string field so a tab, newline, carriage

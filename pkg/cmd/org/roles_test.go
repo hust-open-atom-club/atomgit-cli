@@ -41,7 +41,7 @@ func TestOrgRolesOutput(t *testing.T) {
 		wantJSON   string
 		lines      int
 	}{
-		{name: "text", body: orgRolesFixture, contains: []string{"ROLE ID", "NAME", "CHINESE NAME", "ACCESS LEVEL", "MEMBERS", "123456", "admin-custom", `管理员\t自定义角色\n第二行`, "60", "3"}, lines: 2},
+		{name: "text", body: orgRolesFixture, contains: []string{"ROLE ID", "ACCESS LEVEL", "MEMBERS", "NAME", "123456", "admin-custom", `管理员\t自定义角色\n第二行`, "60", "3"}, lines: 2},
 		{name: "JSON", body: orgRolesFixture, asJSON: true, wantJSON: orgRolesFixture},
 		{name: "empty text", body: `[]`, contains: []string{`No customized roles found for organization "my organization".`}, lines: 1},
 		{name: "empty JSON", body: `[]`, asJSON: true, wantJSON: `[]`},
@@ -102,9 +102,76 @@ func TestOrgRolesAbsentFieldsAreNotFilledIn(t *testing.T) {
 	if len(lines) != 2 {
 		t.Fatalf("output=%q", out)
 	}
-	// NAME, CHINESE NAME, ACCESS LEVEL and MEMBERS: four absent fields.
-	if got := strings.Count(lines[1], "-"); got != 4 {
+	// ACCESS LEVEL, MEMBERS and NAME: three absent fields.
+	if got := strings.Count(lines[1], "-"); got != 3 {
 		t.Fatalf("absent fields were filled in: %q", lines[1])
+	}
+}
+
+func TestOrgRolesTableKeepsASCIIColumnsAligned(t *testing.T) {
+	// NAME is the trailing column, so names containing CJK, combining marks or
+	// emoji cannot shift the ASCII columns. Positions are compared between rows
+	// and never computed from the implementation under test.
+	body := `[{"id":"a1","name":"abcd","access_level":15,"member_count":7},` +
+		`{"id":"b2","name":"代码审计角色","access_level":40,"member_count":22},` +
+		`{"id":"c3","name":"cafe\u0301 \ud83d\ude80","access_level":55,"member_count":9}]`
+	f := orgFactory(orgTestConfig{}, func(*http.Request) (*http.Response, error) {
+		return orgResponse(http.StatusOK, body), nil
+	})
+	out, _, err := executeOrgRoles(t, f, "my-org")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	if len(lines) != 4 {
+		t.Fatalf("lines = %d: %q", len(lines), out)
+	}
+	columnIndex := func(line, value string) int {
+		index := strings.Index(line, value)
+		if index < 0 {
+			t.Fatalf("%q missing from %q", value, line)
+		}
+		return index
+	}
+	for _, column := range []struct {
+		name   string
+		values []string
+	}{
+		{"ACCESS LEVEL", []string{"15", "40", "55"}},
+		{"MEMBERS", []string{"7", "22", "9"}},
+	} {
+		want := columnIndex(lines[1], column.values[0])
+		for i, value := range column.values[1:] {
+			if got := columnIndex(lines[i+2], value); got != want {
+				t.Fatalf("%s starts at byte %d and %d\n%q\n%q", column.name, want, got, lines[1], lines[i+2])
+			}
+		}
+	}
+}
+
+func TestOrgRolesNameRendering(t *testing.T) {
+	body := `[{"id":"a1","name":"auditor","name_cn":"审计员"},` +
+		`{"id":"b2","name":"same","name_cn":"same"},` +
+		`{"id":"c3"},` +
+		`{"id":"d4","name_cn":"仅中文名"}]`
+	f := orgFactory(orgTestConfig{}, func(*http.Request) (*http.Response, error) {
+		return orgResponse(http.StatusOK, body), nil
+	})
+	out, _, err := executeOrgRoles(t, f, "my-org")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"auditor（审计员）", "same\n", "仅中文名"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("output missing %q: %q", want, out)
+		}
+	}
+	if strings.Contains(out, "same（same）") {
+		t.Fatalf("identical names were duplicated: %q", out)
+	}
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	if !strings.HasSuffix(lines[3], "-") {
+		t.Fatalf("absent name not rendered as -: %q", lines[3])
 	}
 }
 
