@@ -548,6 +548,22 @@ JSON 顶层固定为 `repository` 和 `permissions`，其中 `permissions` 保�
 
 角色名称、粗粒度 `pull/push/admin` 和请求成功都不代表拥有全部权限。权限以服务器返回的具体操作及其 `selected` 为准，命令不会修改角色。权限查询与 `repo policy view --section permission` 的仓库权限管理模式设置是不同信息。
 
+### 仓库自定义角色
+
+```bash
+# 列出仓库自定义角色，角色 ID 按字符串原样输出
+ag-cli repo roles owner/repo
+
+# 以 JSON 输出角色数组
+ag-cli repo roles --json
+```
+
+`repo roles` 读取 `GET /repos/{owner}/{repo}/customized_roles`，需要登录并具备查看该仓库自定义角色的权限，不把匿名访问当作有效权限。显式 `owner/repo` 优先于 Git 推断。
+
+文本输出 `ROLE ID`、`ACCESS LEVEL`、`MEMBERS`、`NAME` 表格；`NAME` 是最后一列，服务端同时返回名称与中文名时，二者去除首尾空白后相同则只显示一次，不同则显示为 `name（中文名）`（两者都按去除首尾空白后的值显示）；只有一个名称时显示该名称，两个都缺失时显示 `-`。宽字符、组合字符或 emoji 只会出现在末列，因此不会让前面的数字列错位。角色 ID 按官方契约为服务端生成的可打印 ASCII 标识，以字符串原样显示，不用用户名或角色显示名替代。接口未文档化分页参数，因此不发送 `page`/`per_page`，返回多少条就输出多少条。服务器未返回的其他字段显示 `-`，不补造默认值；`role_type`、`role_from` 等取值按原样保留，未知附加字段不影响文本格式。
+
+`--json` 输出角色数组，元素保留接口返回的已文档化字段、未知字段、字符串 ID 和整数取值，空数组输出 `[]`。响应不是数组、角色缺少非空字符串 `role_id` 或已文档化字段类型不符时报告错误，不输出部分结果。命令只做查询，不创建角色，也不修改协作者现有权限或角色。
+
 ### 仓库协作者
 
 ```bash

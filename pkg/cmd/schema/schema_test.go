@@ -51,6 +51,7 @@ func TestRegisteredCommands(t *testing.T) {
 		{[]string{"repo", "archive"}, 0, 1, "text", "write"},
 		{[]string{"repo", "unarchive"}, 0, 1, "text", "write"},
 		{[]string{"repo", "permissions"}, 0, 1, "text,json", "read"},
+		{[]string{"repo", "roles"}, 0, 1, "text,json", "read"},
 		{[]string{"repo", "settings"}, 0, 0, "text", "none"},
 		{[]string{"repo", "settings", "view"}, 0, 1, "text,json", "read"},
 		{[]string{"repo", "settings", "edit"}, 0, 1, "text,json", "write"},
