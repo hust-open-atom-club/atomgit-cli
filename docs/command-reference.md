@@ -3234,7 +3234,10 @@ roles; anonymous access is never used. Role IDs are printed as strings and can
 be passed unchanged to "org member invite" with the customized permission and
 --role-id, so the ID is never replaced by a name or a display name. The
 endpoint is documented without pagination parameters, so every returned role is
-printed once, unchanged. A field the server omits is shown as "-" instead of a
+printed once. The NAME column shows the role name together with its Chinese name
+when the server returns both and they differ after trimming surrounding
+whitespace; a "field the server omitted" replacement is not applied inside
+NAME. Every other field the server omits is shown as "-" instead of a
 substituted value, and unknown fields are preserved in --json output.
 The organization response uses its own field names (id, name, name_cn, ...);
 the repository customized-role field names are not applied to it.

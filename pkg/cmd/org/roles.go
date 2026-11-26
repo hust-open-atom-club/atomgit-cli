@@ -29,7 +29,10 @@ roles; anonymous access is never used. Role IDs are printed as strings and can
 be passed unchanged to "org member invite" with the customized permission and
 --role-id, so the ID is never replaced by a name or a display name. The
 endpoint is documented without pagination parameters, so every returned role is
-printed once, unchanged. A field the server omits is shown as "-" instead of a
+printed once. The NAME column shows the role name together with its Chinese name
+when the server returns both and they differ after trimming surrounding
+whitespace; a "field the server omitted" replacement is not applied inside
+NAME. Every other field the server omits is shown as "-" instead of a
 substituted value, and unknown fields are preserved in --json output.
 The organization response uses its own field names (id, name, name_cn, ...);
 the repository customized-role field names are not applied to it.
@@ -85,7 +88,7 @@ func writeOrganizationCustomRoles(out io.Writer, organization string, roles []ap
 	w := tabwriter.NewWriter(out, 0, 4, 2, ' ', 0)
 	// NAME is last because it is the only display column that can contain wide
 	// characters, combining marks or emoji; ROLE ID, ACCESS LEVEL and MEMBERS
-	// are ASCII under the API contract (role IDs are server-generated
+	// hold printable ASCII under the API contract (role IDs are server-generated
 	// identifiers and the other two are validated integers). text/tabwriter
 	// pads by rune count, so no aligned column follows a cell whose rune count
 	// can differ from its terminal width, and no width table is needed.
@@ -130,15 +133,14 @@ func organizationRoleField(role api.OrganizationCustomRole, field string) string
 	return value
 }
 
-// organizationTableCellEscaper escapes the characters text/tabwriter treats as
-// structure: a vertical tab ends a cell and a form feed ends a line block.
-// EscapeTSVField covers the backslash, tab, newline and carriage return.
-var organizationTableCellEscaper = strings.NewReplacer("\v", `\v`, "\f", `\f`)
-
 // organizationEscapeTableCell escapes a value before it is written to a
-// tabwriter, so a remote name or ID cannot add a cell or a line.
+// tabwriter. The terminal sanitizer runs here as well as in the command writer,
+// so control characters - including a vertical tab, which tabwriter treats as
+// a cell terminator, and a form feed, which ends a line block - are expanded
+// before column widths are computed. A field containing them therefore cannot
+// add a cell, add a line, or shift a later column.
 func organizationEscapeTableCell(value string) string {
-	return organizationTableCellEscaper.Replace(cmdutil.EscapeTSVField(value))
+	return cmdutil.SanitizeTerminal(cmdutil.EscapeTSVField(value))
 }
 
 // organizationRoleTextField escapes a string field so a tab, newline, carriage
