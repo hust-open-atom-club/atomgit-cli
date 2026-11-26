@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/commandschema"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
 )
@@ -45,7 +46,7 @@ func NewCmdSearch(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "search",
 		Short:        "search atomgit",
-		Long:         "Search AtomGit repositories, issues, and users. Pull request search is not supported.",
+		Long:         "Search AtomGit repositories, users, issues, pull requests, and organizations.",
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -56,6 +57,9 @@ func NewCmdSearch(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdSearchUsers(f))
 	cmd.AddCommand(newCmdSearchRepositories(f))
 	cmd.AddCommand(newCmdSearchIssues(f))
+	cmd.AddCommand(newCmdUnifiedSearch(f, "prs", "pull requests", "pullrequest"))
+	cmd.AddCommand(newCmdUnifiedSearch(f, "orgs", "organizations", "group"))
+	cmd.AddCommand(newCmdSearchByType(f))
 
 	return cmd
 }
@@ -143,21 +147,42 @@ func newCmdSearchUsers(f *cmdutil.Factory) *cobra.Command {
 
 func newCmdSearchRepositories(f *cmdutil.Factory) *cobra.Command {
 	var opts struct {
-		Limit    int
-		JSON     bool
-		Sort     string
-		Order    string
-		Owner    string
-		Fork     bool
-		Language string
+		Limit      int
+		JSON       bool
+		Sort       string
+		Order      string
+		Owner      string
+		Fork       bool
+		Language   string
+		Repository repositorySearchFlags
 	}
 
 	cmd := &cobra.Command{
 		Use:     "repositories <query>",
 		Aliases: []string{"repos"},
 		Short:   "search repositories",
-		Args:    cobra.ExactArgs(1),
+		Long: `Search repositories. With --repo-type, use unified search and return its result fields.
+
+` + modelSearchFilterNote + `
+
+Unified search accepts created_at, updated_at, star, or fork for --sort.
+Without --repo-type, use last_push_at, stars_count, or forks_count.
+
+` + unifiedSearchSortNote,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if repositorySearchRequested(cmd) {
+				flags := cmd.Flags()
+				if len(opts.Repository.RepoType) > 0 &&
+					(flags.Changed("owner") || flags.Changed("fork") || flags.Changed("language")) {
+					return fmt.Errorf("--repo-type cannot be combined with --owner, --fork, or --language")
+				}
+				return runUnifiedSearch(cmd, f, "repo", unifiedSearchOptions{
+					SearchOptions: api.SearchOptions{Query: args[0], Limit: opts.Limit, Sort: opts.Sort, Order: opts.Order},
+					JSON:          opts.JSON,
+					Repository:    opts.Repository,
+				})
+			}
 			if err := validateChoice("sort", opts.Sort, repositorySearchSorts); err != nil {
 				return err
 			}
@@ -218,11 +243,23 @@ func newCmdSearchRepositories(f *cmdutil.Factory) *cobra.Command {
 	}
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of results")
 	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output results as JSON")
-	cmd.Flags().StringVar(&opts.Sort, "sort", "", "Sort by last_push_at, stars_count, or forks_count")
+	cmd.Flags().StringVar(&opts.Sort, "sort", "", "Server sort field (see command description for values)")
 	cmd.Flags().StringVar(&opts.Order, "order", "", "Sort order: asc or desc")
 	cmd.Flags().StringVar(&opts.Owner, "owner", "", "Filter by repository owner path")
 	cmd.Flags().BoolVar(&opts.Fork, "fork", false, "Include forked repositories")
 	cmd.Flags().StringVar(&opts.Language, "language", "", "Filter by repository language")
+	addUnifiedRepositoryFlags(cmd, &opts.Repository)
+	commandschema.Annotate(cmd, commandschema.Metadata{
+		Positionals: &commandschema.Positionals{MinCount: 1, MaxCount: 1, Description: "Search keyword."},
+		Output:      "text,json",
+		Effects:     "read",
+		Notes: []string{
+			"--repo-type uses unified search, accepts one type, and cannot be combined with --owner, --fork, or --language.",
+			modelSearchFilterNote,
+			"Unified search can run anonymously and outputs its own result fields. The legacy repository search requires authentication.",
+			unifiedSearchSortNote,
+		},
+	})
 	return cmd
 }
 

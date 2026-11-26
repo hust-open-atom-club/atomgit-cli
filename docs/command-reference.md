@@ -241,7 +241,10 @@
 - [ag-cli runner shared](#ag-cli-runner-shared) — List host runners shared with a repository
 - [ag-cli schema](#ag-cli-schema) — Describe public commands as versioned JSON
 - [ag-cli search](#ag-cli-search) — search atomgit
+- [ag-cli search by-type](#ag-cli-search-by-type) — search by resource type
 - [ag-cli search issues](#ag-cli-search-issues) — search issues
+- [ag-cli search orgs](#ag-cli-search-orgs) — search organizations
+- [ag-cli search prs](#ag-cli-search-prs) — search pull requests
 - [ag-cli search repositories](#ag-cli-search-repositories) — search repositories
 - [ag-cli search users](#ag-cli-search-users) — search users
 - [ag-cli ssh-key](#ag-cli-ssh-key) — Manage SSH keys
@@ -6627,7 +6630,7 @@ Usage: `ag-cli search`
 
 search atomgit
 
-Search AtomGit repositories, issues, and users. Pull request search is not supported.
+Search AtomGit repositories, users, issues, pull requests, and organizations.
 
 ### Flags
 
@@ -6636,6 +6639,37 @@ Search AtomGit repositories, issues, and users. Pull request search is not suppo
 | `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
 | `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli search by-type
+
+Usage: `ag-cli search by-type <type> <query> [flags]`
+
+search by resource type
+
+Search using the unified API. Types are case-insensitive: repo, user, group, pullrequest, issue.
+
+--repo-type applies to repo searches. --task, --library, --param-min, and --param-max require --repo-type model.
+
+Sort options are sent to AtomGit. Effective sorting depends on the search type and server support.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--json` | Output results as JSON | `false` | local |
+| `--library` | Model framework labels, comma-separated (e.g. transformers) | `` | local |
+| `--order` | Server sort order: asc or desc | `` | local |
+| `--param-max` | Maximum model parameter size (e.g. 7B) | `` | local |
+| `--param-min` | Minimum model parameter size (e.g. 1B) | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--repo-type` | Filter by one repository type: code, model, or dataset | `[]` | local |
+| `--sort` | Server sort field: created_at, updated_at, star, or fork | `` | local |
+| `--task` | Model task labels, comma-separated (e.g. text-generation) | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-L, --limit` | Maximum number of results | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
@@ -6661,11 +6695,64 @@ search issues
 | `-h, --help` | Show help for command | `false` | inherited |
 
 
+## ag-cli search orgs
+
+Usage: `ag-cli search orgs <query> [flags]`
+
+search organizations
+
+Search AtomGit organizations using the unified search API. Sort options are sent to AtomGit. Effective sorting depends on the search type and server support.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--json` | Output results as JSON | `false` | local |
+| `--order` | Server sort order: asc or desc | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--sort` | Server sort field: created_at, updated_at, star, or fork | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-L, --limit` | Maximum number of results | `30` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+
+## ag-cli search prs
+
+Usage: `ag-cli search prs <query> [flags]`
+
+search pull requests
+
+Search AtomGit pull requests using the unified search API. Sort options are sent to AtomGit. Effective sorting depends on the search type and server support.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--json` | Output results as JSON | `false` | local |
+| `--order` | Server sort order: asc or desc | `` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--sort` | Server sort field: created_at, updated_at, star, or fork | `` | local |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-L, --limit` | Maximum number of results | `30` | local |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+
 ## ag-cli search repositories
 
 Usage: `ag-cli search repositories <query> [flags]`
 
 search repositories
+
+Search repositories. With --repo-type, use unified search and return its result fields.
+
+--task, --library, --param-min, and --param-max require --repo-type model.
+
+Unified search accepts created_at, updated_at, star, or fork for --sort.
+Without --repo-type, use last_push_at, stars_count, or forks_count.
+
+Sort options are sent to AtomGit. Effective sorting depends on the search type and server support.
 
 Aliases: `repos`
 
@@ -6677,10 +6764,15 @@ Aliases: `repos`
 | `--fork` | Include forked repositories | `false` | local |
 | `--json` | Output results as JSON | `false` | local |
 | `--language` | Filter by repository language | `` | local |
+| `--library` | Model framework labels, comma-separated (e.g. transformers) | `` | local |
 | `--order` | Sort order: asc or desc | `` | local |
 | `--owner` | Filter by repository owner path | `` | local |
+| `--param-max` | Maximum model parameter size (e.g. 7B) | `` | local |
+| `--param-min` | Minimum model parameter size (e.g. 1B) | `` | local |
 | `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
-| `--sort` | Sort by last_push_at, stars_count, or forks_count | `` | local |
+| `--repo-type` | Filter by one repository type: code, model, or dataset | `[]` | local |
+| `--sort` | Server sort field (see command description for values) | `` | local |
+| `--task` | Model task labels, comma-separated (e.g. text-generation) | `` | local |
 | `--token` | Use an access token for this command only | `` | inherited |
 | `-L, --limit` | Maximum number of results | `30` | local |
 | `-h, --help` | Show help for command | `false` | inherited |

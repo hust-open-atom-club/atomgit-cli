@@ -1776,7 +1776,7 @@ ag-cli notification mark-read owner/repo --all --yes
 ## 搜索
 
 ```bash
-# 搜索命令均需要先登录
+# 以下三个搜索入口默认使用独立搜索接口，需要先登录
 ag-cli auth login
 
 # 搜索用户；可按注册时间排序
@@ -1793,15 +1793,33 @@ ag-cli search repos cli --fork
 ag-cli search issues "memory leak" --limit 50
 ag-cli search issues bug --repo hust-open-atom-club/atomgit-cli --state open --sort created_at --order desc
 
+# 统一搜索支持匿名访问，已登录时使用当前凭据
+ag-cli search prs "memory leak" --sort updated_at --order desc
+ag-cli search orgs "open source"
+ag-cli search repos llama --repo-type model
+ag-cli search repos llama --repo-type model --task text-generation --library transformers \
+  --param-min 1B --param-max 7B
+ag-cli search by-type user torvalds
+ag-cli search by-type issue "memory leak" --limit 20 --json
+ag-cli search by-type repo llama --repo-type dataset
+
 # 结构化输出
 ag-cli search users torvalds --json
 ```
 
-支持的服务端过滤和排序选项：
+独立搜索接口的过滤和排序选项如下。
 
 - `search users`：`--sort joined_at`、`--order asc|desc`；
 - `search repositories|repos`：`--owner`、`--language`、`--fork`、`--sort last_push_at|stars_count|forks_count`、`--order asc|desc`；
 - `search issues`：`--repo`、`--state open|closed`、`--sort created_at|last_push_at`、`--order asc|desc`。
+
+`search prs`、`search orgs` 和 `search by-type <type> <query>` 使用[统一搜索 API](https://atomgit-api-doc.atomgit.com/4.search/461.search_by_type.html)。`by-type` 接受 `repo`、`user`、`group`、`pullrequest`、`issue`，类型名不区分大小写。统一搜索要求提供非空关键词。
+
+- `search repositories|repos` 指定 `--repo-type` 时也使用统一搜索。每次可选择一个仓库类型，`code`、`model`、`dataset` 分别对应 API 的 `0`、`1`、`2`。`by-type repo` 也支持该参数。`repos --repo-type` 与独立搜索接口的 `--owner`、`--language`、`--fork` 互斥。
+- 选择 `--repo-type model` 后，可以用 `--task` 和 `--library` 按任务和框架标签筛选。每个参数可接受逗号分隔的多个标签。`--param-min` 和 `--param-max` 分别对应 API 的 `param.min` 和 `param.max`，可单独使用或组合使用。指定筛选参数时必须提供非空值。CLI 将 `1B`、`7B` 等参数规模值交给服务端处理。
+- 统一搜索把 `--sort created_at|updated_at|star|fork` 和 `--order asc|desc` 交给服务端。排序字段是否生效取决于搜索类型及服务端支持，CLI 按服务端顺序输出。省略 `--sort` 时由 API 按最佳匹配返回。
+- `--limit` 默认 30，限制跨页返回的结果总数。统一搜索按 ID 去重，PR 和 Issue 缺少 ID 时使用仓库路径和编号，重复条目保留首次出现的位置和内容。缺少可用标识的条目仍会输出。统一搜索最多读取 100 页，读完第 100 页仍需继续时会报错，且不会输出部分结果。
+- 统一搜索的 `--json` 输出结果数组，字段使用统一接口的 `content` 条目结构，例如仓库的 `path_with_namespace`、PR 和 Issue 的 `iid`。空结果输出 `[]`。文本输出每个结果一行，字段中的换行、制表符和回车以转义形式显示。
 
 ## 讨论
 
