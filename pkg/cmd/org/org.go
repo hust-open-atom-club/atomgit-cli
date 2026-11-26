@@ -39,6 +39,7 @@ func NewCmdOrg(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdOrgView(f))
 	cmd.AddCommand(newCmdOrgMembers(f))
 	cmd.AddCommand(newCmdOrgMember(f))
+	cmd.AddCommand(newCmdOrgRoles(f))
 	cmd.AddCommand(newCmdOrgFollowers(f))
 	cmd.AddCommand(newCmdOrgRepos(f))
 	cmd.AddCommand(newCmdOrgRunnerGroup(f))

@@ -46,6 +46,7 @@ func TestRegisteredCommands(t *testing.T) {
 		{[]string{"org", "member"}, 0, 0, "text", "none"},
 		{[]string{"org", "member", "invite"}, 2, 2, "text", "write"},
 		{[]string{"org", "member", "remove"}, 2, 2, "text", "write"},
+		{[]string{"org", "roles"}, 1, 1, "text,json", "read"},
 		{[]string{"org", "followers"}, 1, 1, "text,json", "read"},
 		{[]string{"user", "following"}, 1, 1, "text,json", "read"},
 		{[]string{"repo", "archive"}, 0, 1, "text", "write"},
@@ -118,6 +119,12 @@ func TestRegisteredCommands(t *testing.T) {
 				args := make([]string, n)
 				if len(tc.path) == 2 && tc.path[0] == "run" && n > 0 {
 					args[n-1] = "run-1"
+				}
+				// org roles validates the organization format in Args so a
+				// malformed path fails before credential loading; probe it with
+				// a syntactically valid organization.
+				if len(tc.path) == 2 && tc.path[0] == "org" && tc.path[1] == "roles" && n > 0 {
+					args[n-1] = "team"
 				}
 				if valid := target.Args(target, args) == nil; valid != (n >= tc.min && n <= tc.max) {
 					t.Fatalf("argument count metadata drift at %d", n)

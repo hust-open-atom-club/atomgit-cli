@@ -638,6 +638,10 @@ ag-cli org member invite my-team alice --permission pull --yes
 # 使用自定义角色邀请成员
 ag-cli org member invite my-team alice --permission customized --role-id role-123
 
+# 列出组织自定义角色；输出中的角色 ID 可直接用于上面的 --role-id
+ag-cli org roles my-team
+ag-cli org roles my-team --json
+
 # 移除组织成员，默认要求确认
 ag-cli org member remove my-team alice
 ag-cli org member remove my-team alice --yes
@@ -696,6 +700,8 @@ ag-cli org edit my-team --website www.example.com --json --yes
 两个写命令默认显示组织和用户名并要求输入 `y` 或 `yes` 确认；邀请还显示请求的权限及自定义角色 ID。空输入、EOF 或其他回答取消操作且不发请求；`--yes`（`-y`）跳过确认。命令分别调用 API v5 `POST` / `DELETE /orgs/{org}/memberships/{username}`，只接受 HTTP 200（允许空响应），不会自动重试或跟随重定向。邀请成功仅表示服务端接收了邀请请求，不表示用户已经接受邀请或成为正式成员。失败时返回非零退出码；结果不确定时应先在 AtomGit 核实状态，再决定是否重试。
 
 `ag-cli org followers <org>` 使用 API v5 `GET /orgs/{owner}/followers`，要求认证并显式指定组织路径。`--limit/-L` 默认为 30，必须为正数，表示跨页输出总数上限，每页最多请求 100 条。文本输出账号、名称和关注时间，空值显示为 `-`；JSON 保留 `id`、`login`、`name`、`avatar_url` 和 `watch_at`，空列表为 `[]`。`watch_at` 是关注时间而非加入组织时间，保留服务端原始时间及其时区；关注者不等同于组织成员。认证、权限、组织不存在、限流或响应解析失败均返回非零退出码，不输出部分列表。
+
+`ag-cli org roles <org>` 使用 API v5 `GET /orgs/{org}/customized_roles`，要求认证并具备查看该组织自定义角色的权限，显式指定组织路径，参数在认证和网络请求前校验。接口未文档化分页参数，命令不发送 `page`/`per_page`。文本输出 `ROLE ID`、`ACCESS LEVEL`、`MEMBERS`、`NAME` 表格；`NAME` 是最后一列，服务端同时返回名称与中文名时，二者去除首尾空白后相同则只显示一次，不同则显示为 `name（中文名）`（两者都按去除首尾空白后的值显示）；只有一个名称时显示该名称，两个都缺失时显示 `-`。宽字符、组合字符或 emoji 只会出现在末列，因此不会让前面的数字列错位；角色 ID 按官方契约为服务端生成的可打印 ASCII 标识，以字符串原样显示，可直接用于 `org member invite --permission customized --role-id`；空结果提示该组织没有自定义角色，服务器未返回的其他字段显示 `-`。JSON 为角色数组，保留官方 `id`、`name`、`name_cn`、`description`、`product_id`、`role_type`、`role_from`、`access_level`、`member_count`、`mgnt_mode`、`created_at`、`updated_at` 及未知字段，空列表为 `[]`。组织角色接口的字段名与仓库自定义角色接口不同，命令不套用 `role_id`/`role_name`。响应不是数组、角色缺少非空字符串 `id` 或已文档化字段类型不符时报错，不输出部分结果。命令只读，不创建或修改角色。
 
 `ag-cli org runner-group` 使用 Actions API v8，只读检查组织级 Runner Group；它与 `ag-cli runner list/shared` 查看仓库直接配置或共享的主机 Runner 不同。`list`、`runners`、`runner-sets` 和 `namespaces` 默认最多返回 30 条并要求 `--limit` 为正数；文本输出包含组织和 Group ID，JSON 保留对应官方响应的固定 snake_case 字段。权限不足、Group 不存在或分页响应不完整时命令会明确失败，不会把部分数据当作完整结果。`namespaces` 会先查询 Group 详情，确认其存在且可访问，再读取共享仓库；不存在时返回非零退出码，存在但没有共享仓库时仍正常返回空列表。
 

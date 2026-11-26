@@ -120,6 +120,7 @@
 - [ag-cli org member remove](#ag-cli-org-member-remove) — Remove a member from an organization
 - [ag-cli org members](#ag-cli-org-members) — List organization members
 - [ag-cli org repos](#ag-cli-org-repos) — List organization repositories
+- [ag-cli org roles](#ag-cli-org-roles) — List customized roles of an organization
 - [ag-cli org runner-group](#ag-cli-org-runner-group) — Inspect organization Actions runner groups
 - [ag-cli org runner-group list](#ag-cli-org-runner-group-list) — List organization runner groups
 - [ag-cli org runner-group namespaces](#ag-cli-org-runner-group-namespaces) — List repositories that can use an organization runner group
@@ -3218,6 +3219,46 @@ List organization repositories
 ag-cli org repos my-organization
 ag-cli org repos my-organization --limit 100
 ag-cli org repos my-organization --json
+```
+
+
+## ag-cli org roles
+
+Usage: `ag-cli org roles <org> [flags]`
+
+List customized roles of an organization
+
+List the customized roles defined on an organization.
+
+Requires authentication and permission to view the organization's customized
+roles; anonymous access is never used. Role IDs are printed as strings and can
+be passed unchanged to "org member invite" with the customized permission and
+--role-id, so the ID is never replaced by a name or a display name. The
+endpoint is documented without pagination parameters, so every returned role is
+printed once. The NAME column shows the role name together with its Chinese name
+when the server returns both and they differ after trimming surrounding
+whitespace; a "field the server omitted" replacement is not applied inside
+NAME. Every other field the server omits is shown as "-" instead of a
+substituted value, and unknown fields are preserved in --json output.
+The organization response uses its own field names (id, name, name_cn, ...);
+the repository customized-role field names are not applied to it.
+This command only reads roles: it does not create or edit roles.
+
+### Flags
+
+| Flag | Description | Default | Scope |
+| --- | --- | --- | --- |
+| `--base-url` | Override the API server origin for this command only | `https://api.atomgit.com` | inherited |
+| `--json` | Output customized roles as JSON | `false` | local |
+| `--raw-output` | Disable terminal output sanitization for machine processing | `false` | inherited |
+| `--token` | Use an access token for this command only | `` | inherited |
+| `-h, --help` | Show help for command | `false` | inherited |
+
+### Example
+
+```bash
+ag-cli org roles my-team
+ag-cli org roles my-team --json
 ```
 
 
