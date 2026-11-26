@@ -151,7 +151,7 @@ func TestAPIHonorsInjectedClientTimeout(t *testing.T) {
 		<-req.Context().Done()
 		return nil, req.Context().Err()
 	})
-	fixture.factory.HttpClient = func() (*http.Client, error) {
+	fixture.factory.HTTPClient = func() (*http.Client, error) {
 		fixture.clientReads++
 		return &http.Client{
 			Timeout: time.Millisecond,

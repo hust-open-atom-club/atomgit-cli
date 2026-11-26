@@ -40,7 +40,7 @@ func runnerResponse(req *http.Request, status int, body string) *http.Response {
 func newRunnerFactory(transport http.RoundTripper, token string) *cmdutil.Factory {
 	f := &cmdutil.Factory{Config: runnerTestConfig{token: token}}
 	if transport != nil {
-		f.HttpClient = func() (*http.Client, error) {
+		f.HTTPClient = func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		}
 	}

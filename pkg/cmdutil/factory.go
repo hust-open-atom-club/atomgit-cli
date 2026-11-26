@@ -24,7 +24,7 @@ type Factory struct {
 	Config             config.Config
 	TokenOverride      string
 	TokenOverrideSet   bool
-	HttpClient         func() (*http.Client, error)
+	HTTPClient         func() (*http.Client, error)
 	Context            func() context.Context
 	BrowserOpener      browser.Opener
 	RepositoryResolver RepositoryResolver
@@ -113,14 +113,14 @@ func (f *Factory) NewAPIClient(token string) (*api.Client, error) {
 			return nil, err
 		}
 	}
-	if f == nil || f.HttpClient == nil {
+	if f == nil || f.HTTPClient == nil {
 		if baseURL != "" {
 			return api.NewClientWithBaseURL(token, baseURL, nil).WithContext(f.CommandContext()).WithRetryWriter(factoryErrorWriter(f)), nil
 		}
 		return api.NewClient(token).WithContext(f.CommandContext()).WithRetryWriter(factoryErrorWriter(f)), nil
 	}
 
-	httpClient, err := f.HttpClient()
+	httpClient, err := f.HTTPClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
 	}
@@ -144,14 +144,14 @@ func (f *Factory) NewActionsClient(token string) (*actions.Client, error) {
 			return nil, err
 		}
 	}
-	if f == nil || f.HttpClient == nil {
+	if f == nil || f.HTTPClient == nil {
 		if baseURL != "" {
 			return actions.NewClientWithBaseURL(token, baseURL, nil).WithContext(f.CommandContext()).WithRetryWriter(factoryErrorWriter(f)), nil
 		}
 		return actions.NewClient(token).WithContext(f.CommandContext()).WithRetryWriter(factoryErrorWriter(f)), nil
 	}
 
-	httpClient, err := f.HttpClient()
+	httpClient, err := f.HTTPClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
 	}

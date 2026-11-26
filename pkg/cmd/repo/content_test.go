@@ -26,7 +26,7 @@ func (contentTestConfig) GetHost() string           { return "atomgit.com" }
 func contentFactory(config contentTestConfig, transport forkRoundTripFunc) *cmdutil.Factory {
 	factory := &cmdutil.Factory{Config: config}
 	if transport != nil {
-		factory.HttpClient = func() (*http.Client, error) {
+		factory.HTTPClient = func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		}
 	}

@@ -43,7 +43,7 @@ func discussionCommentResponse(status int, body string) *http.Response {
 func discussionCommentFactory(config discussionCommentConfig, transport discussionCommentTrip) *cmdutil.Factory {
 	return &cmdutil.Factory{
 		Config: config,
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		},
 	}

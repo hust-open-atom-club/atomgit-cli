@@ -64,7 +64,7 @@ func TestOrgCreateRequest(t *testing.T) {
 func TestOrgCreateClientFailure(t *testing.T) {
 	cause := errors.New("HTTP client unavailable")
 	f := orgFactory(orgTestConfig{}, nil)
-	f.HttpClient = func() (*http.Client, error) { return nil, cause }
+	f.HTTPClient = func() (*http.Client, error) { return nil, cause }
 	cmd := newCmdOrgCreate(f)
 	cmd.SilenceErrors, cmd.SilenceUsage = true, true
 	cmd.SetArgs([]string{"team"})

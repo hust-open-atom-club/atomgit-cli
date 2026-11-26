@@ -31,7 +31,7 @@ func (c repoCommandConfig) GetHost() string           { return "atomgit.com" }
 func repoFactory(config repoCommandConfig, transport forkRoundTripFunc) *cmdutil.Factory {
 	factory := &cmdutil.Factory{Config: config}
 	if transport != nil {
-		factory.HttpClient = func() (*http.Client, error) {
+		factory.HTTPClient = func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		}
 	}
@@ -169,7 +169,7 @@ func TestNewAPIClient(t *testing.T) {
 	})
 
 	t.Run("factory error", func(t *testing.T) {
-		factory := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
+		factory := &cmdutil.Factory{HTTPClient: func() (*http.Client, error) {
 			return nil, errors.New("factory failed")
 		}}
 		client, err := factory.NewAPIClient("token")

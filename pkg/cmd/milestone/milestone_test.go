@@ -415,7 +415,7 @@ func TestMilestoneAPIErrorsIncludeOperation(t *testing.T) {
 func milestoneFactory(roundTrip milestoneRoundTripFunc) *cmdutil.Factory {
 	return &cmdutil.Factory{
 		Config: milestoneTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: roundTrip}, nil
 		},
 	}

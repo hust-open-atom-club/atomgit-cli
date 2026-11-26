@@ -246,7 +246,7 @@ func TestIssueEditReportsAPIErrors(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: issueTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						requests++
 						if req.Method == http.MethodGet {
@@ -284,7 +284,7 @@ func issueEditTestFactory(t *testing.T, wantFields map[string]string, patchStatu
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if got := req.Header.Get("Authorization"); got != "Bearer token" {
@@ -474,7 +474,7 @@ func TestIssueEditAssigneeOnlyFetchesTitle(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if req.Method == http.MethodGet {
@@ -522,7 +522,7 @@ func TestIssueEditClearAssignee(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if req.Method == http.MethodGet {
@@ -567,7 +567,7 @@ func TestIssueEditCombinedAssigneesTitle(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if req.Method == http.MethodGet {

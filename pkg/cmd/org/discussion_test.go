@@ -367,7 +367,7 @@ func TestOrgDiscussionAuthenticationAndClientErrors(t *testing.T) {
 		t.Run(tt.name+" client error", func(t *testing.T) {
 			want := errors.New("client unavailable")
 			factory := orgFactory(orgTestConfig{}, nil)
-			factory.HttpClient = func() (*http.Client, error) { return nil, want }
+			factory.HTTPClient = func() (*http.Client, error) { return nil, want }
 			if _, err := runOrgDiscussionCommand(t, tt.build(factory), tt.args, nil); !errors.Is(err, want) {
 				t.Fatalf("error = %v, want %v", err, want)
 			}

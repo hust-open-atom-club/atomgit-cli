@@ -389,7 +389,7 @@ func TestRepoWebhookValidationHappensBeforeRequests(t *testing.T) {
 func webhookFactory(roundTrip webhookRoundTripFunc) *cmdutil.Factory {
 	return &cmdutil.Factory{
 		Config: webhookTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: roundTrip}, nil
 		},
 	}

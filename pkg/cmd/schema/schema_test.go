@@ -71,7 +71,7 @@ func TestRegisteredCommands(t *testing.T) {
 		t.Run(strings.Join(tc.path, "/"), func(t *testing.T) {
 			f := &cmdutil.Factory{
 				Config:             forbiddenConfig{t},
-				HttpClient:         func() (*http.Client, error) { t.Fatal("created HTTP client"); return nil, nil },
+				HTTPClient:         func() (*http.Client, error) { t.Fatal("created HTTP client"); return nil, nil },
 				RepositoryResolver: func() (cmdutil.Repository, error) { t.Fatal("resolved repository"); return cmdutil.Repository{}, nil },
 			}
 			cmd, err := root.NewCmdRoot(f)

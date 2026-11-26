@@ -30,7 +30,7 @@ func TestPRCommentViewPaginates(t *testing.T) {
 				items[total-1].Reply = []api.Comment{{ID: 1001, Body: "nested-reply-body", User: api.User{Login: "bob"}, Reply: []api.Comment{{ID: 1002, Body: "further-reply-body"}}}}
 			}
 			calls := 0
-			f := &cmdutil.Factory{Config: prCommentTestConfig{}, HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{Config: prCommentTestConfig{}, HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: prCommentRoundTripFunc(func(r *http.Request) (*http.Response, error) {
 					calls++
 					if r.Method != http.MethodGet || r.URL.Path != "/api/v5/repos/alice/demo/pulls/8/comments" || r.URL.Query().Get("page") != strconv.Itoa(calls) || r.URL.Query().Get("per_page") != "100" || r.URL.Query().Get("view") != "all" {
@@ -89,7 +89,7 @@ func TestPRCommentViewFailurePrintsNoPartialList(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			calls := 0
-			f := &cmdutil.Factory{Config: prCommentTestConfig{}, HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{Config: prCommentTestConfig{}, HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: prCommentRoundTripFunc(func(*http.Request) (*http.Response, error) {
 					calls++
 					if calls == 1 {

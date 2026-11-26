@@ -93,7 +93,7 @@ func TestPRListUserScopedScopeRequests(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: prTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						requests++
 						if tt.wantErr != "" {
@@ -151,7 +151,7 @@ func TestPRListUserScopedScopeRequests(t *testing.T) {
 func TestPRListUserScopedOutputIncludesRepoIdentity(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				body := `[
 					{"number":"1","title":"Update dependencies","state":"open","html_url":"https://atomgit.com/alice/one/pull/1"},
@@ -187,7 +187,7 @@ func TestPRListWithoutUserScopeFlagsKeepsRepoEndpoint(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if req.URL.Path != "/api/v5/repos/alice/demo/pulls" {

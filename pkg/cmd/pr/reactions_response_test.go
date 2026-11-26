@@ -15,7 +15,7 @@ func TestPRReactionsDocumentedResponse(t *testing.T) {
 	for _, mode := range []string{"text", "json"} {
 		t.Run(mode, func(t *testing.T) {
 			calls := 0
-			factory := &cmdutil.Factory{Config: prTestConfig{}, HttpClient: func() (*http.Client, error) {
+			factory := &cmdutil.Factory{Config: prTestConfig{}, HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					calls++
 					if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/pulls/42/user_reactions" {
@@ -70,7 +70,7 @@ func TestPRReactionsInvalidRecordDoesNotEmitPartialOutput(t *testing.T) {
 	for _, body := range []string{`[null]`, `[{"id":"good","emoji_name":"like"},null]`, `[{"id":"good"},{"emoji":"👀"}]`} {
 		for _, mode := range []string{"text", "json"} {
 			t.Run(body+"/"+mode, func(t *testing.T) {
-				factory := &cmdutil.Factory{Config: prTestConfig{}, HttpClient: func() (*http.Client, error) {
+				factory := &cmdutil.Factory{Config: prTestConfig{}, HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) { return prResponse(http.StatusOK, body), nil })}, nil
 				}}
 				cmd := newCmdPRReactions(factory)

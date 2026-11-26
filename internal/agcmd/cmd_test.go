@@ -71,7 +71,7 @@ func TestLoadCommandConfigAppliesTokenOverride(t *testing.T) {
 	loadCalls := 0
 	factory := &cmdutil.Factory{
 		TokenOverride: "command-token",
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: statusTransport(func(req *http.Request) (*http.Response, error) {
 				if got, want := req.Header.Get("Authorization"), "Bearer command-token"; got != want {
 					t.Fatalf("Authorization = %q, want %q", got, want)

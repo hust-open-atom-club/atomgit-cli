@@ -22,7 +22,7 @@ func TestRunActionCancellation(t *testing.T) {
 	for _, action := range []string{"cancel", "stop", "rerun", "retry"} {
 		for _, input := range []string{"n\n", "\n", ""} {
 			t.Run(action+"/"+input, func(t *testing.T) {
-				f := &cmdutil.Factory{Config: forbiddenRunConfig{t}, HttpClient: func() (*http.Client, error) { t.Fatal("created client"); return nil, nil }}
+				f := &cmdutil.Factory{Config: forbiddenRunConfig{t}, HTTPClient: func() (*http.Client, error) { t.Fatal("created client"); return nil, nil }}
 				cmd := NewCmdRun(f)
 				var out, stderr bytes.Buffer
 				cmd.SetOut(&out)

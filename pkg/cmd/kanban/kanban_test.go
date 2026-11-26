@@ -31,7 +31,7 @@ func commandResponse(status int, body string) *http.Response {
 }
 
 func commandFactory(config kanbanCommandConfig, transport kanbanCommandRoundTripper) *cmdutil.Factory {
-	return &cmdutil.Factory{Config: config, HttpClient: func() (*http.Client, error) {
+	return &cmdutil.Factory{Config: config, HTTPClient: func() (*http.Client, error) {
 		return &http.Client{Transport: transport}, nil
 	}}
 }

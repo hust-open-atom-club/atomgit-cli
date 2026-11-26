@@ -65,7 +65,7 @@ func TestStatusLocalAndReadOnly(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := statusCredentials(t, tc.data)
-			f := &cmdutil.Factory{HttpClient: func() (*http.Client, error) { t.Fatal("offline check created client"); return nil, nil }}
+			f := &cmdutil.Factory{HTTPClient: func() (*http.Client, error) { t.Fatal("offline check created client"); return nil, nil }}
 			for _, asJSON := range []bool{false, true} {
 				args := []string{}
 				if asJSON {
@@ -134,7 +134,7 @@ func TestStatusVerificationUsesCommandTokenAtSelectedOrigin(t *testing.T) {
 			f := &cmdutil.Factory{
 				BaseURL:       "https://api.gitcode.com",
 				TokenOverride: "command-token",
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: authRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						calls++
 						if got, want := req.URL.String(), "https://api.gitcode.com/api/v5/user"; got != want {
@@ -192,7 +192,7 @@ func TestStatusExplicitEmptyTokenDoesNotUseStoredCredentials(t *testing.T) {
 	statusCredentials(t, `{"access_token":"stored-token","user":"alice"}`)
 	f := &cmdutil.Factory{
 		TokenOverrideSet: true,
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			t.Fatal("explicit empty token created an online client")
 			return nil, nil
 		},
@@ -242,7 +242,7 @@ func TestStatusOnlineResults(t *testing.T) {
 			data := `{"access_token":"xyz789","user":"alice","refresh_token":"private-refresh"}`
 			path := statusCredentials(t, data)
 			calls := 0
-			f := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: authRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					calls++
 					if req.Method != "GET" || req.URL.String() != "https://api.atomgit.com/api/v5/user" || req.Header.Get("Authorization") != "Bearer xyz789" {
@@ -316,7 +316,7 @@ func TestStatusContextAndClientFailure(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := tc.ctx()
 			defer cancel()
-			f := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: authRoundTripFunc(func(*http.Request) (*http.Response, error) {
 					t.Fatal("request after canceled context")
 					return nil, nil
@@ -328,7 +328,7 @@ func TestStatusContextAndClientFailure(t *testing.T) {
 			}
 		})
 	}
-	f := &cmdutil.Factory{HttpClient: func() (*http.Client, error) { return nil, errors.New("xyz789") }}
+	f := &cmdutil.Factory{HTTPClient: func() (*http.Client, error) { return nil, errors.New("xyz789") }}
 	r := inspectAuthStatus(context.Background(), f, true)
 	if r.OK || r.Verification.Status != "client_error" || r.Verification.Performed || strings.Contains(r.Message, "xyz789") {
 		t.Fatalf("%+v", r)
@@ -346,7 +346,7 @@ func TestStatusCancellationDuringRequest(t *testing.T) {
 				ctx, stop = context.WithTimeout(ctx, 20*time.Millisecond)
 				defer stop()
 			}
-			f := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: authRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					if !timeout {
 						cancel()
@@ -387,7 +387,7 @@ func TestStatusHTTPFailureDoesNotDependOnErrorBody(t *testing.T) {
 	}{{401, "unauthorized"}, {403, "forbidden"}, {503, "server_error"}} {
 		t.Run(tc.want, func(t *testing.T) {
 			body := &failedStatusBody{}
-			f := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: authRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					return &http.Response{StatusCode: tc.code, Header: make(http.Header), Body: body, Request: req}, nil
 				})}, nil

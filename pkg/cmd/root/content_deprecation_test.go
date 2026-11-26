@@ -31,7 +31,7 @@ func TestContentCompatibilityOutput(t *testing.T) {
 			for _, asJSON := range []bool{false, true} {
 				t.Run(fmt.Sprintf("%s/raw=%t/json=%t", entry.name, raw, asJSON), func(t *testing.T) {
 					var stdout, stderr bytes.Buffer
-					factory := &cmdutil.Factory{Config: rootTestConfig{}, HttpClient: func() (*http.Client, error) {
+					factory := &cmdutil.Factory{Config: rootTestConfig{}, HTTPClient: func() (*http.Client, error) {
 						return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 							body := fmt.Sprintf(`{"type":"file","name":"file","path":"file","sha":"abc","size":%d,"encoding":"base64","content":%q}`, len(content), base64.StdEncoding.EncodeToString([]byte(content)))
 							if entry.directory {
@@ -146,7 +146,7 @@ func TestContentCompatibilityWarningFailureDoesNotBlockOutput(t *testing.T) {
 		for _, raw := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/raw=%t", old, raw), func(t *testing.T) {
 				calls := 0
-				f := &cmdutil.Factory{Config: rootTestConfig{}, HttpClient: func() (*http.Client, error) {
+				f := &cmdutil.Factory{Config: rootTestConfig{}, HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						calls++
 						body := `{"type":"file","name":"file","path":"file","encoding":"base64","content":"b2sK"}`

@@ -25,7 +25,7 @@ func TestIssueCommentViewPaginates(t *testing.T) {
 			}
 
 			calls := 0
-			f := &cmdutil.Factory{Config: issueCommentTestConfig{}, HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{Config: issueCommentTestConfig{}, HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: issueCommentRoundTripFunc(func(r *http.Request) (*http.Response, error) {
 					calls++
 					if r.Method != http.MethodGet || r.URL.Path != "/api/v5/repos/alice/demo/issues/8/comments" || r.URL.Query().Get("page") != strconv.Itoa(calls) || r.URL.Query().Get("per_page") != "100" || r.URL.Query().Get("view") != "" {
@@ -77,7 +77,7 @@ func TestIssueCommentViewFailurePrintsNoPartialList(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			calls := 0
-			f := &cmdutil.Factory{Config: issueCommentTestConfig{}, HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{Config: issueCommentTestConfig{}, HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: issueCommentRoundTripFunc(func(*http.Request) (*http.Response, error) {
 					calls++
 					if calls == 1 {

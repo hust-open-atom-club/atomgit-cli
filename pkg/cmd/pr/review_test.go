@@ -81,7 +81,7 @@ func TestPRReviewRequiresCurrentUserBeforeRequest(t *testing.T) {
 		t.Run(fmt.Sprintf("user_%q", user), func(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: reviewIdentityConfig{user: user},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					t.Fatal("empty current user created an HTTP client")
 					return nil, nil
 				},
@@ -221,7 +221,7 @@ func reviewTestFactory(t *testing.T, transport prRoundTripFunc) *cmdutil.Factory
 	t.Helper()
 	return &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		},
 	}

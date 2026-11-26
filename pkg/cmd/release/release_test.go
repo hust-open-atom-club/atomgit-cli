@@ -39,7 +39,7 @@ func releaseTestFactoryForRepository(transport http.RoundTripper, owner, repo st
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: owner, Name: repo}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		},
 	}
@@ -131,7 +131,7 @@ func TestReleaseListUsesPaginationQueryAndOutputsRows(t *testing.T) {
 	var gotPath, gotPage, gotPerPage, gotDirection string
 	factory := &cmdutil.Factory{
 		Config: releaseTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: releaseRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				gotPath = req.URL.Path
 				gotPage = req.URL.Query().Get("page")
@@ -173,7 +173,7 @@ func TestReleaseListUsesPaginationQueryAndOutputsRows(t *testing.T) {
 func TestReleaseListEmptyResults(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: releaseTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: releaseRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return releaseResponse(http.StatusOK, `[]`), nil
 			})}, nil
@@ -255,7 +255,7 @@ func TestReleaseViewInferRepoAndEscapeTag(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "atomclub", Name: "ag-cli"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: releaseRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				gotPath = req.URL.EscapedPath()
 				return releaseResponse(http.StatusOK, `{
@@ -283,7 +283,7 @@ func TestReleaseViewInferRepoAndEscapeTag(t *testing.T) {
 func TestReleaseViewOutputsAllFields(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: releaseTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: releaseRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return releaseResponse(http.StatusOK, `{
 					"tag_name":"v2.0.0","target_commitish":"main","prerelease":true,
@@ -326,7 +326,7 @@ func TestReleaseViewOutputsAllFields(t *testing.T) {
 func TestReleaseViewShowsNoneForEmptyAssets(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: releaseTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: releaseRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return releaseResponse(http.StatusOK, `{
 					"tag_name":"v0.1.0","name":"Seed","target_commitish":"main",
@@ -356,7 +356,7 @@ func TestReleaseViewShowsNoneForEmptyAssets(t *testing.T) {
 func TestReleaseViewReturnsErrorOn404(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: releaseTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: releaseRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return releaseResponse(http.StatusNotFound, "not found"), nil
 			})}, nil

@@ -29,7 +29,7 @@ func TestIssueLabelAddsLabels(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/issues/7/labels" {
@@ -63,7 +63,7 @@ func TestIssueLabelRemovesLabels(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if req.Method != http.MethodDelete {
@@ -135,7 +135,7 @@ func TestIssueLabelReportsAPIErrors(t *testing.T) {
 	t.Run("add", func(t *testing.T) {
 		factory := &cmdutil.Factory{
 			Config: issueTestConfig{},
-			HttpClient: func() (*http.Client, error) {
+			HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					if req.Method != http.MethodPost {
 						t.Fatalf("method = %s, want POST", req.Method)
@@ -156,7 +156,7 @@ func TestIssueLabelReportsAPIErrors(t *testing.T) {
 		requests := 0
 		factory := &cmdutil.Factory{
 			Config: issueTestConfig{},
-			HttpClient: func() (*http.Client, error) {
+			HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					requests++
 					switch requests {
@@ -202,7 +202,7 @@ func TestIssueLabelReportsAPIErrors(t *testing.T) {
 		requests := 0
 		factory := &cmdutil.Factory{
 			Config: issueTestConfig{},
-			HttpClient: func() (*http.Client, error) {
+			HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					requests++
 					switch requests {

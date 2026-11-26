@@ -44,7 +44,7 @@ func TestRefreshPositionScopesAndOutput(t *testing.T) {
 				f := &cmdutil.Factory{Config: &prCommentRecordingConfig{}, RepositoryResolver: func() (cmdutil.Repository, error) {
 					t.Fatal("explicit repository lost priority")
 					return cmdutil.Repository{}, nil
-				}, HttpClient: func() (*http.Client, error) {
+				}, HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: prCommentRoundTripFunc(func(r *http.Request) (*http.Response, error) {
 						calls++
 						if r.Method != "POST" || r.URL.Path != "/api/v5/repos/team/repo/pulls/12/refresh_position" {
@@ -84,7 +84,7 @@ func TestRefreshPositionRejectsInvalidBeforeAuth(t *testing.T) {
 	for _, args := range [][]string{nil, {"team/repo", "12"}, {"team/repo", "12", "--all=false"}, {"team/repo", "12", "--path="}, {"team/repo", "12", "--path", " \t"}, {"team/repo", "12", "--comment-id="}, {"team/repo", "12", "--comment-id", " \t"}, {"team/repo", "12", "--all", "--path", "a"}, {"team/repo", "12", "--all", "--comment-id", "1"}, {"team/repo", "12", "--path", "a", "--comment-id", "1"}, {"team/repo", "0", "--all"}, {"team/repo", "bad", "--all"}, {"team/repo", "12", "extra", "--all"}} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			cfg := &prCommentRecordingConfig{}
-			f := &cmdutil.Factory{Config: cfg, HttpClient: func() (*http.Client, error) { t.Fatal("created HTTP client"); return nil, nil }}
+			f := &cmdutil.Factory{Config: cfg, HTTPClient: func() (*http.Client, error) { t.Fatal("created HTTP client"); return nil, nil }}
 			out, err := runRefreshPosition(t, f, args...)
 			if err == nil || out != "" || cfg.getTokenCalls != 0 {
 				t.Fatalf("out=%q err=%v authCalls=%d", out, err, cfg.getTokenCalls)
@@ -106,7 +106,7 @@ func TestRefreshPositionAuthenticationContextAndErrors(t *testing.T) {
 		t.Fatalf("out=%q err=%v", out, err)
 	}
 	for _, status := range []int{403, 404, 429, 500} {
-		f = &cmdutil.Factory{Config: &prCommentRecordingConfig{}, HttpClient: func() (*http.Client, error) {
+		f = &cmdutil.Factory{Config: &prCommentRecordingConfig{}, HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prCommentRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return &http.Response{StatusCode: status, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{}`))}, nil
 			})}, nil
@@ -116,7 +116,7 @@ func TestRefreshPositionAuthenticationContextAndErrors(t *testing.T) {
 			t.Fatalf("status=%d out=%q err=%v", status, out, err)
 		}
 	}
-	f = &cmdutil.Factory{Config: &prCommentRecordingConfig{}, RepositoryResolver: func() (cmdutil.Repository, error) { return cmdutil.Repository{Owner: "team", Name: "repo"}, nil }, HttpClient: func() (*http.Client, error) {
+	f = &cmdutil.Factory{Config: &prCommentRecordingConfig{}, RepositoryResolver: func() (cmdutil.Repository, error) { return cmdutil.Repository{Owner: "team", Name: "repo"}, nil }, HTTPClient: func() (*http.Client, error) {
 		return &http.Client{Transport: prCommentRoundTripFunc(func(r *http.Request) (*http.Response, error) {
 			if r.Context().Err() != context.Canceled {
 				t.Fatal("lost command context")

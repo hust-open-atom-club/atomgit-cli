@@ -36,7 +36,7 @@ func cannedJSON(status int, body string) *http.Response {
 func newFlowFactory(transport roundTripFunc) *cmdutil.Factory {
 	return &cmdutil.Factory{
 		Config: &recordingConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		},
 	}

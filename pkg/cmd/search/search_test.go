@@ -57,7 +57,7 @@ func TestSearchRepositoriesUsesEffectivePageSize(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: searchTestConfig{token: "token"},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if got := req.URL.Query().Get("per_page"); got != "20" {
@@ -114,7 +114,7 @@ func TestSearchRepositoriesNormalizesDescriptionWhitespace(t *testing.T) {
 	newFactory := func() *cmdutil.Factory {
 		return &cmdutil.Factory{
 			Config: searchTestConfig{token: "token"},
-			HttpClient: func() (*http.Client, error) {
+			HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 					body := `[{"full_name":"hust-open-atom-club/atomgit-cli","stargazers_count":1,"description":"AtomGit CLI\r\ncommand-line\ttool"}]`
 					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
@@ -162,7 +162,7 @@ func TestSearchUsersHonorsQueryAndLimit(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: searchTestConfig{token: "token"},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if got := req.Header.Get("Authorization"); got != "Bearer token" {
@@ -200,7 +200,7 @@ func TestSearchUsersHonorsQueryAndLimit(t *testing.T) {
 func TestSearchUsersEncodesSupportedSorting(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: searchTestConfig{token: "token"},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 				query := req.URL.Query()
 				if got := query.Get("q"); got != "c++ dev" {
@@ -228,7 +228,7 @@ func TestSearchUsersEncodesSupportedSorting(t *testing.T) {
 func TestSearchRepositoriesEncodesSupportedFilters(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: searchTestConfig{token: "token"},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 				query := req.URL.Query()
 				want := map[string]string{
@@ -274,7 +274,7 @@ func TestSearchCommandsRequireAuthentication(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: searchTestConfig{tokenErr: errors.New("token unavailable")},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					t.Fatal("HTTP client must not be created when authentication fails")
 					return nil, nil
 				},
@@ -317,7 +317,7 @@ func TestSearchCommandsValidateLimitBeforeAuthentication(t *testing.T) {
 func TestSearchIssuesFormatsRepositoryNumberAndTitle(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: searchTestConfig{token: "token"},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 				body := `[{"number":7,"title":"Fix memory leak","state":"open","repository":{"full_name":"alice/demo"}}]`
 				return &http.Response{
@@ -345,7 +345,7 @@ func TestSearchIssuesContinuesAfterShortPage(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: searchTestConfig{token: "token"},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if got := req.URL.Query().Get("per_page"); got != "50" {
@@ -418,7 +418,7 @@ func TestSearchIssuesDeduplicatesOverlappingPages(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: searchTestConfig{token: "token"},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 				requests++
 				var numbers []int
@@ -482,7 +482,7 @@ func TestSearchIssuesDeduplicatesOverlappingPages(t *testing.T) {
 func TestSearchIssuesEncodesSupportedFilters(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: searchTestConfig{token: "token"},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 				query := req.URL.Query()
 				want := map[string]string{
@@ -529,7 +529,7 @@ func TestSearchRejectsUnsupportedFilterValues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: searchTestConfig{token: "token"},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					t.Fatal("HTTP client must not be created for an invalid filter")
 					return nil, nil
 				},

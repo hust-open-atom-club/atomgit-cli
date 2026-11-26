@@ -34,7 +34,7 @@ func TestResolveAndUnresolveVerifyState(t *testing.T) {
 							t.Fatal("explicit repository must take precedence")
 						}
 						return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
-					}, HttpClient: func() (*http.Client, error) {
+					}, HTTPClient: func() (*http.Client, error) {
 						return &http.Client{Transport: prCommentRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 							if req.Method == http.MethodPut {
 								puts++
@@ -144,7 +144,7 @@ func TestResolveFailuresNeverReportSuccess(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			puts := 0
-			f := &cmdutil.Factory{Config: prCommentTestConfig{}, HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{Config: prCommentTestConfig{}, HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: prCommentRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					if req.Method == http.MethodPut {
 						puts++

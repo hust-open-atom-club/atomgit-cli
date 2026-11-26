@@ -28,7 +28,7 @@ func (f prCommentRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, er
 func TestPRCommentCreateFallsBackToPullRequestURL(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prCommentTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prCommentRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/pulls/8/comments" {
 					t.Fatalf("request = %s %s", req.Method, req.URL.Path)

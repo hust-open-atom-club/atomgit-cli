@@ -131,7 +131,7 @@ func TestPRReadyReportsUncertainWritesAtRendering(t *testing.T) {
 			reads, writes := 0, 0
 			factory := &cmdutil.Factory{
 				Config: prReadyConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: statusTransport(func(req *http.Request) (*http.Response, error) {
 						switch req.Method {
 						case http.MethodGet:

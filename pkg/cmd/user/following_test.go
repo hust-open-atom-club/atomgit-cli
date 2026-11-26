@@ -103,7 +103,7 @@ func TestUserFollowingValidatesBeforeCredentials(t *testing.T) {
 	for _, args := range [][]string{nil, {"alice", "bob"}, {""}, {"a/b"}, {"a?b"}, {"a#b"}, {"a\nb"}, {"a\\b"}, {"."}, {".."}, {"a\u00a0b"}, {"a\u0085b"}, {"a\u009fb"}, {"alice", "--limit=0"}, {"alice", "--limit=-1"}} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			cfg := &namespaceCountingConfig{}
-			f := &cmdutil.Factory{Config: cfg, HttpClient: func() (*http.Client, error) { t.Fatal("created HTTP client"); return nil, nil }}
+			f := &cmdutil.Factory{Config: cfg, HTTPClient: func() (*http.Client, error) { t.Fatal("created HTTP client"); return nil, nil }}
 			out, err := runFollowing(t, f, args...)
 			if err == nil || out != "" || cfg.tokenCalls != 0 {
 				t.Fatalf("out=%q err=%v tokenCalls=%d", out, err, cfg.tokenCalls)

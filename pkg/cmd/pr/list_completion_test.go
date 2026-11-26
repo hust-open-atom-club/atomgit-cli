@@ -57,7 +57,7 @@ func TestPRListStateCompletion(t *testing.T) {
 			requests := 0
 			root := &cobra.Command{Use: "ag-cli"}
 			root.AddCommand(NewCmdPR(&cmdutil.Factory{
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					requests++
 					return nil, nil
 				},

@@ -384,7 +384,7 @@ func executeUnifiedSearch(t *testing.T, cfg searchTestConfig, reply func(*http.R
 	t.Helper()
 	factory := &cmdutil.Factory{
 		Config: cfg,
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusOK,

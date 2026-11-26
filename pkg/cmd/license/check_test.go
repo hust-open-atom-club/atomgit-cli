@@ -73,7 +73,7 @@ func TestCheckPreservesStatusReadExecutionAndContext(t *testing.T) {
 				}
 				return &http.Response{StatusCode: tc.status, Status: http.StatusText(tc.status), Header: http.Header{"Retry-After": []string{"8"}}, Body: body, Request: r}, nil
 			})}
-			cmd := newCmdCheck(&cmdutil.Factory{HttpClient: func() (*http.Client, error) { return injected, nil }})
+			cmd := newCmdCheck(&cmdutil.Factory{HTTPClient: func() (*http.Client, error) { return injected, nil }})
 			cmd.SilenceUsage = true
 			var out bytes.Buffer
 			cmd.SetOut(&out)
@@ -121,7 +121,7 @@ func TestCheckPreparationAndInjectedTimeout(t *testing.T) {
 				}
 				return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader("compliant"))}, nil
 			})}
-			cmd := newCmdCheck(&cmdutil.Factory{HttpClient: func() (*http.Client, error) {
+			cmd := newCmdCheck(&cmdutil.Factory{HTTPClient: func() (*http.Client, error) {
 				switch mode {
 				case "client failure":
 					return nil, cause

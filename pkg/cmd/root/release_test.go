@@ -38,7 +38,7 @@ func TestReleaseViewOutputThroughRoot(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: rootTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						requests++
 						if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/releases/tags/v1" {
@@ -89,7 +89,7 @@ func TestReleaseViewJSONFailureThroughRoot(t *testing.T) {
 		t.Run(http.StatusText(status), func(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: rootTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: rootRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						return &http.Response{StatusCode: status, Body: io.NopCloser(strings.NewReader(`{"message":"request failed"}`)), Header: make(http.Header)}, nil
 					})}, nil

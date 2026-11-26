@@ -113,7 +113,7 @@ func TestModuleEditConfirmationAndInference(t *testing.T) {
 func TestModuleEditValidationAndAuth(t *testing.T) {
 	for _, args := range [][]string{nil, {"team/demo"}, {"--yes"}, {"team/demo", "--json"}, {"team/demo", "--wiki=bad"}, {"team/demo", "extra", "--wiki"}, {"bad", "--wiki"}} {
 		cfg := &repoRecordingConfig{}
-		f := &cmdutil.Factory{Config: cfg, HttpClient: func() (*http.Client, error) { t.Fatal("invalid arguments created HTTP client"); return nil, nil }}
+		f := &cmdutil.Factory{Config: cfg, HTTPClient: func() (*http.Client, error) { t.Fatal("invalid arguments created HTTP client"); return nil, nil }}
 		out, _, err := executeModuleEdit(t, f, "yes\n", args...)
 		if err == nil || cfg.getTokenCalls != 0 || out != "" {
 			t.Fatalf("args=%v err=%v tokenCalls=%d out=%q", args, err, cfg.getTokenCalls, out)

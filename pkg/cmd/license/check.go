@@ -29,8 +29,8 @@ func newCmdCheck(f *cmdutil.Factory) *cobra.Command {
 
 			// Make HTTP GET request with timeout
 			client := &http.Client{Timeout: 30 * time.Second}
-			if f.HttpClient != nil {
-				injected, err := f.HttpClient()
+			if f.HTTPClient != nil {
+				injected, err := f.HTTPClient()
 				if err != nil {
 					return fmt.Errorf("prepare license check: %w: %w", api.ErrRequestPreparation, err)
 				}

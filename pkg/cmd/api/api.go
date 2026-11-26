@@ -306,10 +306,10 @@ func (r responseReadClassifier) Read(p []byte) (int, error) {
 }
 
 func requestHTTPClient(f *cmdutil.Factory) (*http.Client, error) {
-	if f.HttpClient == nil {
+	if f.HTTPClient == nil {
 		return &http.Client{Timeout: 30 * time.Second}, nil
 	}
-	client, err := f.HttpClient()
+	client, err := f.HTTPClient()
 	if err != nil {
 		return nil, fmt.Errorf("create HTTP client: %w", err)
 	}

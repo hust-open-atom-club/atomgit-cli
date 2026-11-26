@@ -14,7 +14,7 @@ import (
 func TestDiscussionEditErrorsThroughRoot(t *testing.T) {
 	f := &cmdutil.Factory{
 		Config: rootTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method == http.MethodGet {
 					return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"id":"d1","number":7,"title":"Old","md_content":"Body","category":{"name":"Ideas"}}`))}, nil
@@ -68,7 +68,7 @@ func TestDiscussionEditHelpThroughRoot(t *testing.T) {
 func TestDiscussionCreateDeleteThroughRoot(t *testing.T) {
 	for _, operation := range []string{"create", "delete"} {
 		t.Run(operation, func(t *testing.T) {
-			f := &cmdutil.Factory{Config: rootTestConfig{}, HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{Config: rootTestConfig{}, HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: rootRoundTripFunc(func(_ *http.Request) (*http.Response, error) {
 					return &http.Response{StatusCode: 403, Status: "403 Forbidden", Body: io.NopCloser(strings.NewReader(`{"message":"denied\u001b[31m Bearer secret","access_token":"hidden-token"}`))}, nil
 				})}, nil

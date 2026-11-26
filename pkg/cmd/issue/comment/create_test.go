@@ -28,7 +28,7 @@ func (f issueCommentRoundTripFunc) RoundTrip(req *http.Request) (*http.Response,
 func TestIssueCommentCreateFallsBackToIssueURL(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: issueCommentTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueCommentRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/issues/8/comments" {
 					t.Fatalf("request = %s %s", req.Method, req.URL.Path)

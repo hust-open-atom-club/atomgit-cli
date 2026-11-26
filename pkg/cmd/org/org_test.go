@@ -44,7 +44,7 @@ func orgResponse(status int, body string) *http.Response {
 func orgFactory(config orgTestConfig, transport orgRoundTripFunc) *cmdutil.Factory {
 	factory := &cmdutil.Factory{Config: config}
 	if transport != nil {
-		factory.HttpClient = func() (*http.Client, error) {
+		factory.HTTPClient = func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		}
 	}

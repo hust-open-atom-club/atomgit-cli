@@ -46,7 +46,7 @@ func newAPITestFixture(token string, transport apiRoundTripFunc) *apiTestFixture
 		stderr: &bytes.Buffer{},
 	}
 	fixture.factory = &cmdutil.Factory{Config: fixture.config}
-	fixture.factory.HttpClient = func() (*http.Client, error) {
+	fixture.factory.HTTPClient = func() (*http.Client, error) {
 		fixture.clientReads++
 		return &http.Client{Transport: apiRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 			fixture.requests++

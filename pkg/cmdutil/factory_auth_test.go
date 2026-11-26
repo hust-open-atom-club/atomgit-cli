@@ -81,7 +81,7 @@ func TestOptionalAPIClientFallsBackOnlyForMissingLogin(t *testing.T) {
 	requests := 0
 	factory := &Factory{
 		Config: tokenConfig{err: fmt.Errorf("wrapped: %w", config.ErrNotAuthenticated)},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: factoryRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if got := req.Header.Get("Authorization"); got != "" {
@@ -123,7 +123,7 @@ func TestOptionalAPIClientRejectsMalformedCredentials(t *testing.T) {
 	format := &config.CredentialFormatError{InvalidFieldType: true, Err: cause}
 	factory := &Factory{
 		Config: tokenConfig{err: format},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			t.Fatal("malformed credentials must stop before creating an anonymous client")
 			return nil, nil
 		},
@@ -138,7 +138,7 @@ func TestAuthenticatedAPIClientUsesInjectedTransport(t *testing.T) {
 	requests := 0
 	factory := &Factory{
 		Config: tokenConfig{token: "secret"},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: factoryRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if got := req.Header.Get("Authorization"); got != "Bearer secret" {
@@ -191,7 +191,7 @@ func TestAuthenticatedAPIClientReportsHTTPClientErrors(t *testing.T) {
 	want := errors.New("dial failed")
 	factory := &Factory{
 		Config: tokenConfig{token: "token"},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return nil, want
 		},
 	}
@@ -206,7 +206,7 @@ func TestCredentialAccessFailureStopsClientCreation(t *testing.T) {
 	access := &config.CredentialAccessError{Operation: "open token file", Path: cause.Path, Err: cause}
 	factory := &Factory{
 		Config:     tokenConfig{err: access},
-		HttpClient: func() (*http.Client, error) { t.Fatal("access failure must stop client creation"); return nil, nil },
+		HTTPClient: func() (*http.Client, error) { t.Fatal("access failure must stop client creation"); return nil, nil },
 	}
 	for _, tc := range []struct {
 		name   string
@@ -229,7 +229,7 @@ func TestCredentialSafetyFailureStopsClientCreation(t *testing.T) {
 	safety := &config.CredentialFileSafetyError{Path: "/credential", Err: config.ErrTokenFileSymlink}
 	factory := &Factory{
 		Config: tokenConfig{err: safety},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			t.Fatal("safety rejection must stop client creation")
 			return nil, nil
 		},
