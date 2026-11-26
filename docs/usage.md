@@ -623,8 +623,8 @@ ag-cli org member invite my-team alice --permission pull --yes
 ag-cli org member invite my-team alice --permission customized --role-id role-123
 
 # 列出组织自定义角色；输出中的角色 ID 可直接用于上面的 --role-id
-ag-cli org roles hust-open-atom-club
-ag-cli org roles hust-open-atom-club --json
+ag-cli org roles my-team
+ag-cli org roles my-team --json
 
 # 移除组织成员，默认要求确认
 ag-cli org member remove my-team alice

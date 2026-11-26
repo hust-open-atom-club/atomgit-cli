@@ -3256,8 +3256,8 @@ This command only reads roles: it does not create or edit roles.
 ### Example
 
 ```bash
-ag-cli org roles hust-open-atom-club
-ag-cli org roles hust-open-atom-club --json
+ag-cli org roles my-team
+ag-cli org roles my-team --json
 ```
 
 

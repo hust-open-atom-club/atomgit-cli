@@ -37,8 +37,8 @@ substituted value, and unknown fields are preserved in --json output.
 The organization response uses its own field names (id, name, name_cn, ...);
 the repository customized-role field names are not applied to it.
 This command only reads roles: it does not create or edit roles.`,
-		Example: `  ag-cli org roles hust-open-atom-club
-  ag-cli org roles hust-open-atom-club --json`,
+		Example: `  ag-cli org roles my-team
+  ag-cli org roles my-team --json`,
 		// Validate the organization in Args rather than RunE: the real entry
 		// loads credential configuration in PersistentPreRunE, which runs after
 		// argument validation, so a malformed path must fail before it.
