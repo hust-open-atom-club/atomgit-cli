@@ -252,6 +252,7 @@ func (c *Client) doRequestWithPolicyContext(
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: 30 * time.Second}
 	}
+	httpClient = RedirectSafeHTTPClient(httpClient)
 
 	requestURL := c.baseURL + path
 	rateLimitEligible := allowRateLimitRetry && canRetry && (method == http.MethodGet || method == http.MethodHead)

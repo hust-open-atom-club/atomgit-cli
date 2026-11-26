@@ -15,22 +15,24 @@ func TestRedirectAuthorizationExactOrigin(t *testing.T) {
 		name       string
 		location   string
 		wantSecond bool
+		wantError  bool
 	}{
 		{name: "same origin", location: "https://api.atomgit.com/api/v5/final", wantSecond: true},
 		{name: "host change", location: "https://other.atomgit.com/api/v5/final"},
-		{name: "scheme change", location: "http://api.atomgit.com/api/v5/final"},
+		{name: "scheme change", location: "http://api.atomgit.com/api/v5/final", wantError: true},
 		{name: "port change", location: "https://api.atomgit.com:444/api/v5/final"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			calls := 0
+			calls, redirected := 0, 0
 			fixture := newAPITestFixture("secret", func(req *http.Request) (*http.Response, error) {
 				calls++
-				if calls == 1 {
+				if req.URL.Path == "/api/v5/start" {
 					resp := apiTestResponse(req, http.StatusFound, "")
 					resp.Header.Set("Location", tt.location)
 					return resp, nil
 				}
+				redirected++
 				got := req.Header.Get("Authorization") != ""
 				if got != tt.wantSecond {
 					t.Fatalf("redirect Authorization present = %v", got)
@@ -40,8 +42,12 @@ func TestRedirectAuthorizationExactOrigin(t *testing.T) {
 			cmd := NewCmdAPI(fixture.factory)
 			cmd.SetOut(fixture.stdout)
 			cmd.SetArgs([]string{"/start"})
-			if err := cmd.Execute(); err != nil {
-				t.Fatal(err)
+			err := cmd.Execute()
+			if (err != nil) != tt.wantError {
+				t.Fatalf("error=%v", err)
+			}
+			if tt.wantError && redirected != 0 {
+				t.Fatalf("downgrade followed: calls=%d", calls)
 			}
 		})
 	}
