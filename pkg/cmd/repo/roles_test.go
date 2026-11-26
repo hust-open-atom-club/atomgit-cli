@@ -78,7 +78,7 @@ func TestRepoRolesContextAndOutput(t *testing.T) {
 				if len(lines) != 2 {
 					t.Fatalf("embedded newline broke the table: %q", out)
 				}
-				for _, column := range []string{"ROLE ID", "NAME", "CHINESE NAME", "ACCESS LEVEL", "MEMBERS"} {
+				for _, column := range []string{"ROLE ID", "ACCESS LEVEL", "MEMBERS", "NAME"} {
 					if !strings.Contains(lines[0], column) {
 						t.Fatalf("missing column %q in %q", column, lines[0])
 					}
@@ -111,8 +111,8 @@ func TestRepoRolesAbsentFieldsAreNotFilledIn(t *testing.T) {
 	if len(lines) != 2 {
 		t.Fatalf("output=%q", out)
 	}
-	// ID, NAME, CHINESE NAME, ACCESS LEVEL and MEMBERS: four absent fields.
-	if got := strings.Count(lines[1], "-"); got != 4 {
+	// ACCESS LEVEL, MEMBERS and NAME: three absent fields.
+	if got := strings.Count(lines[1], "-"); got != 3 {
 		t.Fatalf("absent fields were filled in: %q", lines[1])
 	}
 }
@@ -135,38 +135,66 @@ func TestRepoRolesEmptyList(t *testing.T) {
 	}
 }
 
-func TestRepoRolesTableAlignsWideNames(t *testing.T) {
-	// role_name and role_chinese_name may both be CJK; padding must follow
-	// terminal display width so the numeric columns stay aligned.
-	body := `[{"role_id":"a1","role_name":"abcd","role_chinese_name":"甲","access_level":15,"member_count":7},` +
-		`{"role_id":"b2","role_name":"代码审计角色","role_chinese_name":"乙","access_level":40,"member_count":22}]`
+func TestRepoRolesTableKeepsASCIIColumnsAligned(t *testing.T) {
+	// NAME is the trailing column, so names containing CJK, combining marks or
+	// emoji cannot shift the ASCII columns. Positions are compared between rows
+	// and never computed from the implementation under test.
+	body := `[{"role_id":"a1","role_name":"abcd","access_level":15,"member_count":7},` +
+		`{"role_id":"b2","role_name":"代码审计角色","access_level":40,"member_count":22},` +
+		`{"role_id":"c3","role_name":"cafe\u0301 \ud83d\ude80","access_level":55,"member_count":9}]`
 	f := policyFactory(t, func(*http.Request) (int, string) { return 200, body })
 	out, err := executeRoles(t, f, "team/demo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
-	if len(lines) != 3 {
+	if len(lines) != 4 {
 		t.Fatalf("lines = %d: %q", len(lines), out)
 	}
-	columnStart := func(line, value string) int {
+	columnIndex := func(line, value string) int {
 		index := strings.Index(line, value)
 		if index < 0 {
 			t.Fatalf("%q missing from %q", value, line)
 		}
-		return displayWidth(line[:index])
+		return index
 	}
 	for _, column := range []struct {
-		name, first, second string
+		name   string
+		values []string
 	}{
-		{"ACCESS LEVEL", "15", "40"},
-		{"MEMBERS", "7", "22"},
-		{"CHINESE NAME", "甲", "乙"},
+		{"ACCESS LEVEL", []string{"15", "40", "55"}},
+		{"MEMBERS", []string{"7", "22", "9"}},
 	} {
-		first, second := columnStart(lines[1], column.first), columnStart(lines[2], column.second)
-		if first != second {
-			t.Fatalf("%s starts at %d and %d\n%q\n%q", column.name, first, second, lines[1], lines[2])
+		want := columnIndex(lines[1], column.values[0])
+		for i, value := range column.values[1:] {
+			if got := columnIndex(lines[i+2], value); got != want {
+				t.Fatalf("%s starts at byte %d and %d\n%q\n%q", column.name, want, got, lines[1], lines[i+2])
+			}
 		}
+	}
+}
+
+func TestRepoRolesNameRendering(t *testing.T) {
+	body := `[{"role_id":"a1","role_name":"auditor","role_chinese_name":"审计员"},` +
+		`{"role_id":"b2","role_name":"same","role_chinese_name":"same"},` +
+		`{"role_id":"c3"},` +
+		`{"role_id":"d4","role_chinese_name":"仅中文名"}]`
+	f := policyFactory(t, func(*http.Request) (int, string) { return 200, body })
+	out, err := executeRoles(t, f, "team/demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"auditor（审计员）", "same\n", "仅中文名"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("output missing %q: %q", want, out)
+		}
+	}
+	if strings.Contains(out, "same（same）") {
+		t.Fatalf("identical names were duplicated: %q", out)
+	}
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	if !strings.HasSuffix(lines[3], "-") {
+		t.Fatalf("absent name not rendered as -: %q", lines[3])
 	}
 }
 

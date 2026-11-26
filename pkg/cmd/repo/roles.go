@@ -5,6 +5,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/api"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/commandschema"
@@ -71,96 +72,51 @@ func writeRepositoryCustomRoles(out io.Writer, roles []api.RepositoryCustomRole)
 		_, err := fmt.Fprintln(out, "No customized roles found.")
 		return err
 	}
-	rows := make([][]string, 0, len(roles))
+	w := tabwriter.NewWriter(out, 0, 4, 2, ' ', 0)
+	// NAME is last because it is the only column that can contain wide
+	// characters, combining marks or emoji. text/tabwriter pads by rune count,
+	// so a wide trailing column keeps the ASCII columns (ROLE ID, ACCESS
+	// LEVEL, MEMBERS) aligned without any display-width calculation.
+	if _, err := fmt.Fprintln(w, "ROLE ID\tACCESS LEVEL\tMEMBERS\tNAME"); err != nil {
+		return err
+	}
 	for _, role := range roles {
-		rows = append(rows, []string{
+		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 			roleTextField(role, "role_id"),
-			roleTextField(role, "role_name"),
 			roleIntegerField(role, "access_level"),
 			roleIntegerField(role, "member_count"),
-			roleTextField(role, "role_chinese_name"),
-		})
-	}
-	return writeAlignedRows(out, []string{"ROLE ID", "NAME", "ACCESS LEVEL", "MEMBERS", "CHINESE NAME"}, rows)
-}
-
-// writeAlignedRows pads cells by terminal display width instead of rune count.
-// text/tabwriter counts runes, so a Chinese name would occupy two cells per
-// rune and shift every later column on that row; padding by display width
-// keeps the numeric columns aligned for names of any script.
-func writeAlignedRows(out io.Writer, header []string, rows [][]string) error {
-	widths := make([]int, len(header))
-	for _, row := range append([][]string{header}, rows...) {
-		for i, cell := range row {
-			if width := displayWidth(cell); width > widths[i] {
-				widths[i] = width
-			}
-		}
-	}
-	writeRow := func(row []string) error {
-		var line strings.Builder
-		for i, cell := range row {
-			line.WriteString(cell)
-			if i < len(row)-1 {
-				line.WriteString(strings.Repeat(" ", widths[i]-displayWidth(cell)+2))
-			}
-		}
-		line.WriteString("\n")
-		_, err := io.WriteString(out, line.String())
-		return err
-	}
-	if err := writeRow(header); err != nil {
-		return err
-	}
-	for _, row := range rows {
-		if err := writeRow(row); err != nil {
+			roleName(role),
+		); err != nil {
 			return err
 		}
 	}
-	return nil
+	return w.Flush()
 }
 
-// displayWidth returns the number of terminal cells s occupies.
-func displayWidth(s string) int {
-	width := 0
-	for _, r := range s {
-		if isWideRune(r) {
-			width += 2
-		} else {
-			width++
-		}
-	}
-	return width
-}
-
-// isWideRune reports whether r occupies two terminal cells, i.e. its East
-// Asian Width property is W or F. The ranges cover the wide blocks an API
-// response can contain: CJK ideographs, kana, Hangul, fullwidth forms and
-// common emoji.
-func isWideRune(r rune) bool {
+// roleName renders the role name together with its Chinese name when the
+// server returns both and they differ. The value is escaped so a tab or
+// newline in a remote name cannot break the table; an absent name is shown as
+// "-" instead of a substituted value.
+func roleName(role api.RepositoryCustomRole) string {
+	name := strings.TrimSpace(roleField(role, "role_name"))
+	chinese := strings.TrimSpace(roleField(role, "role_chinese_name"))
 	switch {
-	case r < 0x1100:
-		return false
-	case r <= 0x115F, r == 0x2329, r == 0x232A:
-		return true
-	case r >= 0x2E80 && r <= 0x303E,
-		r >= 0x3041 && r <= 0x33FF,
-		r >= 0x3400 && r <= 0x4DBF,
-		r >= 0x4E00 && r <= 0x9FFF,
-		r >= 0xA000 && r <= 0xA4CF,
-		r >= 0xA960 && r <= 0xA97F,
-		r >= 0xAC00 && r <= 0xD7A3,
-		r >= 0xF900 && r <= 0xFAFF,
-		r >= 0xFE10 && r <= 0xFE19,
-		r >= 0xFE30 && r <= 0xFE6F,
-		r >= 0xFF00 && r <= 0xFF60,
-		r >= 0xFFE0 && r <= 0xFFE6,
-		r >= 0x1F300 && r <= 0x1F64F,
-		r >= 0x1F900 && r <= 0x1F9FF,
-		r >= 0x20000 && r <= 0x3FFFD:
-		return true
+	case name != "" && chinese != "" && name != chinese:
+		return cmdutil.EscapeTSVField(name + "（" + chinese + "）")
+	case name != "":
+		return cmdutil.EscapeTSVField(name)
+	case chinese != "":
+		return cmdutil.EscapeTSVField(chinese)
+	default:
+		return "-"
 	}
-	return false
+}
+
+// roleField returns a documented string field, or "" when the server omitted
+// it.
+func roleField(role api.RepositoryCustomRole, field string) string {
+	value, _ := role.StringField(field)
+	return value
 }
 
 // roleTextField escapes a string field so a tab, newline, carriage return or
