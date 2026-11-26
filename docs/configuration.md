@@ -142,6 +142,8 @@ Unix 上读取凭据时会尝试收紧过宽的文件权限。修复失败时会
 
 ## 输出安全
 
+旧版 `repo read-file` 和 `repo read-dir` 的弃用提醒写入 stderr，不影响 stdout 中的 JSON 或文件内容；输出仍遵循默认终端字符清理与 `--raw-output` 设置。
+
 `pr comment reply` 的写入结果无法确认时，错误诊断会保留“回复可能已创建，请核实后再重试”的提示，不输出响应正文或底层传输中的私密信息。该保护也适用于 `--raw-output`；明确的 HTTP 4xx 拒绝按普通 API 错误报告。字段兼容规则见[PR 评论说明](usage.md#pr-评论)。
 
 `ag-cli` 默认会将终端控制字符转换为可见转义文本，包括输出经管道转发时，以防止仓库、Issue、PR 或 Git 服务端返回的内容注入终端控制序列。确实需要为机器处理保留原始字节时，可显式使用全局参数 `--raw-output`，例如 `ag-cli --raw-output pr diff owner/repo 123`；请勿将未经检查的原始输出直接转发到终端。

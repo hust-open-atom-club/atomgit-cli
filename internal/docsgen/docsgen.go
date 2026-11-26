@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/commandmeta"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -125,8 +126,8 @@ func collectCommands(root *cobra.Command) []commandInfo {
 			short:      strings.TrimSpace(command.Short),
 			long:       strings.TrimSpace(command.Long),
 			aliases:    append([]string(nil), command.Aliases...),
-			deprecated: strings.TrimSpace(command.Deprecated),
-			hidden:     command.Hidden,
+			deprecated: strings.TrimSpace(commandmeta.Deprecation(command)),
+			hidden:     commandmeta.Hidden(command),
 			example:    normalizeExample(command.Example),
 			flags:      collectFlags(command),
 		})

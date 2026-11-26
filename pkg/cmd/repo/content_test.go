@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"atomgit.com/hust-open-atom-club/atomgit-cli/internal/commandmeta"
 	"atomgit.com/hust-open-atom-club/atomgit-cli/pkg/cmdutil"
 )
 
@@ -527,8 +528,8 @@ func TestReadFileCommandRegistration(t *testing.T) {
 	if child.Short != "Read a file from a repository" {
 		t.Errorf("read-file Short = %q", child.Short)
 	}
-	if child.Deprecated != "use 'ag-cli repo content view' instead" {
-		t.Errorf("read-file Deprecated = %q", child.Deprecated)
+	if commandmeta.Deprecation(child) != "use 'ag-cli repo content view' instead" {
+		t.Errorf("read-file Deprecated = %q", commandmeta.Deprecation(child))
 	}
 
 	for _, flag := range []string{"ref", "json"} {
@@ -556,8 +557,8 @@ func TestReadDirCommandRegistration(t *testing.T) {
 	if child.Short != "List contents of a repository directory" {
 		t.Errorf("read-dir Short = %q", child.Short)
 	}
-	if child.Deprecated != "use 'ag-cli repo content list' instead" {
-		t.Errorf("read-dir Deprecated = %q", child.Deprecated)
+	if commandmeta.Deprecation(child) != "use 'ag-cli repo content list' instead" {
+		t.Errorf("read-dir Deprecated = %q", commandmeta.Deprecation(child))
 	}
 
 	for _, flag := range []string{"ref", "json"} {
