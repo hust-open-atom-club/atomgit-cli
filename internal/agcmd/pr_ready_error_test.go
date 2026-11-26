@@ -73,7 +73,7 @@ func TestPRReadyReportsUncertainWritesAtRendering(t *testing.T) {
 	}{
 		{
 			name: "verification server error",
-			handle: func(t *testing.T, method string, reads, _ int) (*http.Response, error) {
+			handle: func(_ *testing.T, method string, reads, _ int) (*http.Response, error) {
 				if method == http.MethodPatch {
 					return prReadyResponse(http.StatusOK, `{}`), nil
 				}
@@ -88,7 +88,7 @@ func TestPRReadyReportsUncertainWritesAtRendering(t *testing.T) {
 		},
 		{
 			name: "verification malformed readback",
-			handle: func(t *testing.T, method string, reads, _ int) (*http.Response, error) {
+			handle: func(_ *testing.T, method string, reads, _ int) (*http.Response, error) {
 				if method == http.MethodPatch {
 					return prReadyResponse(http.StatusOK, `{}`), nil
 				}
@@ -118,7 +118,7 @@ func TestPRReadyReportsUncertainWritesAtRendering(t *testing.T) {
 		},
 		{
 			name: "patch rejected",
-			handle: func(t *testing.T, method string, _ int, _ int) (*http.Response, error) {
+			handle: func(_ *testing.T, method string, _ int, _ int) (*http.Response, error) {
 				if method == http.MethodGet {
 					return prReadyResponse(http.StatusOK, `{"draft":true,"state":"open"}`), nil
 				}

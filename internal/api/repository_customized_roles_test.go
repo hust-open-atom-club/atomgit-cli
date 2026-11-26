@@ -96,7 +96,7 @@ func TestRepositoryCustomRolesResponseValidation(t *testing.T) {
 		{"rate limited", `{}`, 429, true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("Retry-After", "999999")
 				w.WriteHeader(tt.status)
 				_, _ = w.Write([]byte(tt.body))
@@ -125,7 +125,7 @@ func TestRepositoryCustomRolesDiagnostics(t *testing.T) {
 		{"second role", `[{"role_id":"a"},{"role_id":"b","member_count":"1"}]`, "roles[1].member_count must be an integer"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 				_, _ = w.Write([]byte(tt.body))
 			})
 			_, err := GetRepositoryCustomRoles(client, "team", "demo")
