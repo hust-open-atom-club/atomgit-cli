@@ -47,56 +47,58 @@ func TestReplyCommentIdentity(t *testing.T) {
 		{"malformed", `{`, 0},
 		{"empty response", ``, 0},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			for _, inferred := range []bool{false, true} {
-				calls := 0
-				ctx := context.WithValue(t.Context(), replyContextKey{}, "reply-context")
-				f := &cmdutil.Factory{Config: prCommentTestConfig{}, HttpClient: func() (*http.Client, error) {
-					return &http.Client{Transport: prCommentRoundTripFunc(func(r *http.Request) (*http.Response, error) {
-						calls++
-						if r.Method != http.MethodPost || r.URL.EscapedPath() != "/api/v5/repos/alice/demo/pulls/8/discussions/thread/comments" || r.Header.Get("Content-Type") != "application/json" || r.Header.Get("Authorization") != "Bearer token" || r.Context().Value(replyContextKey{}) != "reply-context" {
-							t.Fatalf("unexpected request: %s %s", r.Method, r.URL)
+		for _, status := range []int{http.StatusOK, http.StatusCreated} {
+			t.Run(tc.name+"/"+http.StatusText(status), func(t *testing.T) {
+				for _, inferred := range []bool{false, true} {
+					calls := 0
+					ctx := context.WithValue(t.Context(), replyContextKey{}, "reply-context")
+					f := &cmdutil.Factory{Config: prCommentTestConfig{}, HttpClient: func() (*http.Client, error) {
+						return &http.Client{Transport: prCommentRoundTripFunc(func(r *http.Request) (*http.Response, error) {
+							calls++
+							if r.Method != http.MethodPost || r.URL.EscapedPath() != "/api/v5/repos/alice/demo/pulls/8/discussions/thread/comments" || r.Header.Get("Content-Type") != "application/json" || r.Header.Get("Authorization") != "Bearer token" || r.Context().Value(replyContextKey{}) != "reply-context" {
+								t.Fatalf("unexpected request: %s %s", r.Method, r.URL)
+							}
+							var body map[string]string
+							if err := json.NewDecoder(r.Body).Decode(&body); err != nil || len(body) != 1 || body["body"] != " reply\ntext " {
+								t.Fatalf("body=%v error=%v", body, err)
+							}
+							return prJSONResponse(status, tc.body), nil
+						})}, nil
+					}}
+					f.RepositoryResolver = func() (cmdutil.Repository, error) {
+						if !inferred {
+							t.Fatal("explicit repository should win")
 						}
-						var body map[string]string
-						if err := json.NewDecoder(r.Body).Decode(&body); err != nil || len(body) != 1 || body["body"] != " reply\ntext " {
-							t.Fatalf("body=%v error=%v", body, err)
-						}
-						return prJSONResponse(200, tc.body), nil
-					})}, nil
-				}}
-				f.RepositoryResolver = func() (cmdutil.Repository, error) {
+						return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
+					}
+					cmd := newCmdReply(f)
+					cmd.SilenceUsage, cmd.SilenceErrors = true, true
+					args := []string{"8", "thread", "--body", " reply\ntext "}
 					if !inferred {
-						t.Fatal("explicit repository should win")
+						args = append([]string{"alice/demo"}, args...)
 					}
-					return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
-				}
-				cmd := newCmdReply(f)
-				cmd.SilenceUsage, cmd.SilenceErrors = true, true
-				args := []string{"8", "thread", "--body", " reply\ntext "}
-				if !inferred {
-					args = append([]string{"alice/demo"}, args...)
-				}
-				cmd.SetArgs(args)
-				var out bytes.Buffer
-				cmd.SetOut(&out)
-				cmd.SetErr(io.Discard)
-				err := cmd.ExecuteContext(ctx)
-				if calls != 1 {
-					t.Fatalf("calls=%d", calls)
-				}
-				if tc.id > 0 {
-					want := "Created reply #" + strconv.FormatInt(tc.id, 10) + " in discussion thread\n"
-					if err != nil || out.String() != want {
-						t.Fatalf("error=%v output=%q", err, out.String())
+					cmd.SetArgs(args)
+					var out bytes.Buffer
+					cmd.SetOut(&out)
+					cmd.SetErr(io.Discard)
+					err := cmd.ExecuteContext(ctx)
+					if calls != 1 {
+						t.Fatalf("calls=%d", calls)
 					}
-				} else {
-					var uncertain *api.PullRequestReplyUncertainError
-					if !errors.As(err, &uncertain) || !errors.Is(err, api.ErrInvalidResponse) || out.Len() != 0 || !strings.Contains(err.Error(), "may have been created") {
-						t.Fatalf("error=%v output=%q", err, out.String())
+					if tc.id > 0 {
+						want := "Created reply #" + strconv.FormatInt(tc.id, 10) + " in discussion thread\n"
+						if err != nil || out.String() != want {
+							t.Fatalf("error=%v output=%q", err, out.String())
+						}
+					} else {
+						var uncertain *api.PullRequestReplyUncertainError
+						if !errors.As(err, &uncertain) || !errors.Is(err, api.ErrInvalidResponse) || out.Len() != 0 || !strings.Contains(err.Error(), "may have been created") {
+							t.Fatalf("error=%v output=%q", err, out.String())
+						}
 					}
 				}
-			}
-		})
+			})
+		}
 	}
 }
 

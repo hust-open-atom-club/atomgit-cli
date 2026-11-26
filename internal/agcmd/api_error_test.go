@@ -186,6 +186,16 @@ func TestAPIErrorProcess(t *testing.T) {
 			body = `{"private-body":"xyz789"`
 		case "identity":
 			body = `{"id":1,"path":"other","web_url":"https://private.test"}`
+		case "reply ok official":
+			body = `{"id":"thread","noteId":42}`
+		case "reply ok legacy":
+			body = `{"id":"thread","note_id":42}`
+		case "reply created official":
+			code, body = http.StatusCreated, `{"id":"thread","noteId":42}`
+		case "reply created legacy":
+			code, body = http.StatusCreated, `{"id":"thread","note_id":42}`
+		case "reply created identity":
+			code, body = http.StatusCreated, `{"id":"other","noteId":42}`
 		case "org success":
 			body = `{"id":1,"path":"team","web_url":"https://example.test/team"}`
 		}
