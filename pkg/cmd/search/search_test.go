@@ -399,7 +399,7 @@ func TestSearchIssuesContinuesAfterShortPage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var issues []SearchIssue
+	var issues []Issue
 	if err := json.Unmarshal([]byte(out.String()), &issues); err != nil {
 		t.Fatal(err)
 	}
@@ -462,7 +462,7 @@ func TestSearchIssuesDeduplicatesOverlappingPages(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var issues []SearchIssue
+	var issues []Issue
 	if err := json.Unmarshal([]byte(out.String()), &issues); err != nil {
 		t.Fatal(err)
 	}
