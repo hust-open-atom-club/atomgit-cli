@@ -40,11 +40,11 @@ jobs:
           restore-keys: |
             go-mod-${{ runner.os }}-
 
-      # AtomGit setup-go provides Go 1.26.1; go.mod selects newer toolchains.
+      # AtomGit setup-go provides Go 1.26.10; go.mod selects the release toolchain.
       - name: Set up bootstrap Go
         uses: setup-go
         with:
-          version: "1.26.1"
+          version: "1.26.10"
 
       - name: Restore Go build cache
         uses: cache
@@ -97,11 +97,11 @@ jobs:
           restore-keys: |
             go-mod-${{ runner.os }}-
 
-      # AtomGit setup-go provides Go 1.26.1; go.mod selects newer toolchains.
+      # AtomGit setup-go provides Go 1.26.10; go.mod selects the release toolchain.
       - name: Set up bootstrap Go
         uses: setup-go
         with:
-          version: "1.26.1"
+          version: "1.26.10"
 
       - name: Restore Go build cache
         uses: cache
@@ -143,11 +143,11 @@ jobs:
           restore-keys: |
             go-mod-${{ runner.os }}-
 
-      # AtomGit setup-go provides Go 1.26.1; go.mod selects newer toolchains.
+      # AtomGit setup-go provides Go 1.26.10; go.mod selects the release toolchain.
       - name: Set up bootstrap Go
         uses: setup-go
         with:
-          version: "1.26.1"
+          version: "1.26.10"
 
       - name: Restore Go build cache
         uses: cache
@@ -189,11 +189,11 @@ jobs:
           restore-keys: |
             go-mod-${{ runner.os }}-
 
-      # AtomGit setup-go provides Go 1.26.1; go.mod selects newer toolchains.
+      # AtomGit setup-go provides Go 1.26.10; go.mod selects the release toolchain.
       - name: Set up bootstrap Go
         uses: setup-go
         with:
-          version: "1.26.1"
+          version: "1.26.10"
 
       - name: Restore Go build cache
         uses: cache
@@ -235,11 +235,11 @@ jobs:
           restore-keys: |
             go-mod-${{ runner.os }}-
 
-      # AtomGit setup-go provides Go 1.26.1; go.mod selects newer toolchains.
+      # AtomGit setup-go provides Go 1.26.10; go.mod selects the release toolchain.
       - name: Set up bootstrap Go
         uses: setup-go
         with:
-          version: "1.26.1"
+          version: "1.26.10"
 
       - name: Restore Go build cache
         uses: cache
