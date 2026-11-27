@@ -1,3 +1,37 @@
+atomgit-cli (v0.7.5) unstable; urgency=medium
+
+  * Manage repository and organization discussions, including creation,
+    editing, deletion, comments, and replies.
+  * Create organizations, edit profiles, invite or remove members, and
+    inspect followers, custom roles, and Actions runner job history. List
+    user followers and the users and organizations an account follows.
+  * Create, update, and delete repository files. Keep legacy file and
+    directory command warnings on stderr to preserve script output.
+  * Manage repository settings, module switches, and CLA configuration.
+    Inspect account permissions and custom roles, and archive or unarchive
+    organization repositories.
+  * Mark draft pull requests ready or return them to draft, resolve or
+    unresolve review discussions, and refresh inline comment positions.
+    Fix PR reply handling and fetch all pages of PR and issue comments.
+  * Stop, cancel, rerun, and retry Actions runs. Retry selected jobs or
+    automatically select failed jobs.
+  * Add anonymous unified search for pull requests and organizations, and
+    filter model repositories by task, framework, or parameter count.
+  * Delete Release attachments by ID and handle numeric and string IDs.
+  * Add per-command --token and --base-url overrides. Scope credentials to
+    the selected deployment and remove them on cross-origin redirects.
+  * Improve API and credential diagnostics, reject unsafe or oversized
+    credential files, verify OAuth callback state, and make authorization
+    links clickable in supported terminals.
+  * Require a valid, non-empty event list when creating a webhook or
+    replacing its events.
+  * Verify installer archive SHA-256 before extraction, pin release builds
+    to Go 1.26.11, and improve Nix update automation.
+  * Update installation guidance for archlinuxcn, Fedora COPR, and Bash
+    completion.
+
+ -- Dongliang Mu <dzm91@hust.edu.cn>  Fri, 27 Nov 2026 11:39:21 +0800
+
 atomgit-cli (v0.7.4) unstable; urgency=medium
 
   * Rename the executable from ag to ag-cli, without a legacy command shim.
