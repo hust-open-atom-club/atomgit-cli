@@ -223,7 +223,7 @@ func TestPRChecksValidatesFlagsBeforeRequests(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := newCmdPRChecks(&cmdutil.Factory{
 				Config: prTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					t.Fatal("HTTP client should not be created for invalid input")
 					return nil, nil
 				},
@@ -245,7 +245,7 @@ func TestPRChecksValidatesFlagsBeforeRequests(t *testing.T) {
 func checksFactory(transport prRoundTripFunc) *cmdutil.Factory {
 	return &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		},
 	}

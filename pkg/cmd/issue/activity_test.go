@@ -33,7 +33,7 @@ func TestIssueInspectionOutput(t *testing.T) {
 		for _, asJSON := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/json=%v", tc.name, asJSON), func(t *testing.T) {
 				calls := 0
-				f := &cmdutil.Factory{Config: issueTestConfig{}, HttpClient: func() (*http.Client, error) {
+				f := &cmdutil.Factory{Config: issueTestConfig{}, HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						calls++
 						if req.Method != "GET" || req.URL.Path != tc.path {
@@ -116,7 +116,7 @@ func TestIssueInspectionEmptyAndErrors(t *testing.T) {
 		} {
 			for _, asJSON := range []bool{false, true} {
 				t.Run(fmt.Sprintf("%s/%s/%v", tc.name, test.name, asJSON), func(t *testing.T) {
-					f := &cmdutil.Factory{Config: issueTestConfig{}, HttpClient: func() (*http.Client, error) {
+					f := &cmdutil.Factory{Config: issueTestConfig{}, HTTPClient: func() (*http.Client, error) {
 						return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) { return issueResponse(test.status, test.body), nil })}, nil
 					}}
 					cmd := tc.newCmd(f)
@@ -177,7 +177,7 @@ func TestIssueInspectionLimits(t *testing.T) {
 	for _, tc := range inspectionCases {
 		t.Run(tc.name, func(t *testing.T) {
 			calls := 0
-			f := &cmdutil.Factory{Config: issueTestConfig{}, HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{Config: issueTestConfig{}, HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					calls++
 					if tc.name == "reactions" && req.URL.Query().Get("page") != fmt.Sprint(calls) {
@@ -243,7 +243,7 @@ func TestIssueInspectionSanitizesText(t *testing.T) {
 				actor = "bob"
 			}
 			body := strings.ReplaceAll(tc.body, actor, actor+`\u001b[31m`)
-			f := &cmdutil.Factory{Config: issueTestConfig{}, HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{Config: issueTestConfig{}, HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) { return issueResponse(200, body), nil })}, nil
 			}}
 			cmd := tc.newCmd(f)
@@ -268,7 +268,7 @@ func TestIssueInspectionRepositoryContext(t *testing.T) {
 				f := &cmdutil.Factory{Config: issueTestConfig{}, RepositoryResolver: func() (cmdutil.Repository, error) {
 					resolved++
 					return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
-				}, HttpClient: func() (*http.Client, error) {
+				}, HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						if req.URL.Path != tc.path {
 							t.Fatalf("path %s", req.URL.Path)
@@ -301,7 +301,7 @@ func TestIssueInspectionRepositoryContext(t *testing.T) {
 func TestIssueHistoryActions(t *testing.T) {
 	for _, tc := range []struct{ flags, action string }{{`"created":true`, "created"}, {`"created":false`, "updated"}, {`"created":true,"deleted":true`, "deleted"}} {
 		t.Run(tc.action, func(t *testing.T) {
-			f := &cmdutil.Factory{Config: issueTestConfig{}, HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{Config: issueTestConfig{}, HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 					return issueResponse(200, `[{"id":"h","user":{"name":"Display Name"},"created_at":"2026-09-17",`+tc.flags+`}]`), nil
 				})}, nil
@@ -331,7 +331,7 @@ func TestIssueActivityJSONPreservesAuditContext(t *testing.T) {
 		{"partial branch", `"head":{"ref":"feature"}`, `{"body":"","head":{"ref":"feature","sha":"","repo":null,"assigner":null},"base":null}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			f := &cmdutil.Factory{Config: issueTestConfig{}, HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{Config: issueTestConfig{}, HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					if req.Method != "GET" || req.URL.Path != "/api/v5/repos/alice/issues/7/operate_logs" || req.URL.Query().Get("repo") != "demo" {
 						t.Fatalf("unexpected request %s %s", req.Method, req.URL)

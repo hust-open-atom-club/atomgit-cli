@@ -153,7 +153,7 @@ func TestDiscussionEditRejectsInvalidInputBeforeAuthentication(t *testing.T) {
 		{"stdin failure", []string{"owner/repo", "7", "--body-file=-"}, "stdin unavailable"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			f := &cmdutil.Factory{Config: editForbiddenConfig{t: t}, HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{Config: editForbiddenConfig{t: t}, HTTPClient: func() (*http.Client, error) {
 				t.Fatal("invalid input created HTTP client")
 				return nil, nil
 			}}

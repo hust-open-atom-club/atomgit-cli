@@ -27,7 +27,7 @@ func (f tagRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 func newTagCountingFactory(config *recordingConfig, clientCreations, requests *int, handler tagRoundTripFunc) *cmdutil.Factory {
 	return &cmdutil.Factory{
 		Config: config,
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			(*clientCreations)++
 			return &http.Client{Transport: tagRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				(*requests)++
@@ -173,7 +173,7 @@ func TestTagCreateRejectsMissingRefBeforeAuthAndHTTP(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: cfg,
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					httpClientCalls++
 					return &http.Client{Transport: tagRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						requests++
@@ -196,7 +196,7 @@ func TestTagCreateRejectsMissingRefBeforeAuthAndHTTP(t *testing.T) {
 				t.Fatalf("GetToken was called %d times; invalid ref must be rejected before authentication", cfg.getTokenCalls)
 			}
 			if httpClientCalls != 0 {
-				t.Fatalf("HttpClient was called %d times; invalid ref must be rejected before creating an HTTP client", httpClientCalls)
+				t.Fatalf("HTTPClient was called %d times; invalid ref must be rejected before creating an HTTP client", httpClientCalls)
 			}
 			if requests != 0 {
 				t.Fatalf("HTTP request count = %d, want 0", requests)
@@ -211,7 +211,7 @@ func TestTagCreateExecuteRejectsMissingRefBeforeAuthAndHTTP(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: cfg,
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			httpClientCalls++
 			return &http.Client{Transport: tagRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				requests++
@@ -230,7 +230,7 @@ func TestTagCreateExecuteRejectsMissingRefBeforeAuthAndHTTP(t *testing.T) {
 		t.Fatalf("GetToken was called %d times; invalid ref must be rejected before authentication", cfg.getTokenCalls)
 	}
 	if httpClientCalls != 0 {
-		t.Fatalf("HttpClient was called %d times; invalid ref must be rejected before creating an HTTP client", httpClientCalls)
+		t.Fatalf("HTTPClient was called %d times; invalid ref must be rejected before creating an HTTP client", httpClientCalls)
 	}
 	if requests != 0 {
 		t.Fatalf("HTTP request count = %d, want 0", requests)
@@ -250,7 +250,7 @@ func TestTagCreatePreservesRefValues(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: tagTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: tagRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						requests++
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/tags" {
@@ -293,7 +293,7 @@ func TestTagListInfersRepository(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: tagRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/tags" {
@@ -333,7 +333,7 @@ func TestTagListPaginatesAndHonorsLimit(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: tagTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: tagRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						requests++
 						if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/tags" {
@@ -420,7 +420,7 @@ func TestTagListJSON(t *testing.T) {
 				RepositoryResolver: func() (cmdutil.Repository, error) {
 					return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 				},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: tagRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: make(http.Header), Body: io.NopCloser(strings.NewReader(tt.body))}, nil
 					})}, nil
@@ -450,7 +450,7 @@ func TestTagListJSON(t *testing.T) {
 func TestTagListReportsAPIErrorWithContext(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: tagTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: tagRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusForbidden,

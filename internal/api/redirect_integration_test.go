@@ -19,7 +19,7 @@ func TestFactoryClientsEnforceRedirectBoundary(t *testing.T) {
 		for _, target := range []string{"https://api.example.test:443/end", "https://api.example.test:8443/end", "https://other.example.test/end", "http://api.example.test/end"} {
 			t.Run(version+"/"+target, func(t *testing.T) {
 				calls, redirected := 0, 0
-				f := &cmdutil.Factory{BaseURL: "https://api.example.test", HttpClient: func() (*http.Client, error) {
+				f := &cmdutil.Factory{BaseURL: "https://api.example.test", HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: boundaryTransport(func(req *http.Request) (*http.Response, error) {
 						calls++
 						status := 200

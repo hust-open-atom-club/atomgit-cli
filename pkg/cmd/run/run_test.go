@@ -54,7 +54,7 @@ func runResponse(req *http.Request, status int, body string) *http.Response {
 func runFactory(config runTestConfig, transport runRoundTripFunc) *cmdutil.Factory {
 	factory := &cmdutil.Factory{Config: config}
 	if transport != nil {
-		factory.HttpClient = func() (*http.Client, error) {
+		factory.HTTPClient = func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		}
 	}
@@ -935,7 +935,7 @@ func TestRunCommandsReportAuthenticationAndFactoryErrors(t *testing.T) {
 
 	factory := &cmdutil.Factory{
 		Config: runTestConfig{token: "secret"},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return nil, errors.New("factory failed")
 		},
 	}

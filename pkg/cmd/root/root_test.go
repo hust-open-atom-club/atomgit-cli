@@ -187,7 +187,7 @@ func TestRootContextCancelsV5AndActionsRequests(t *testing.T) {
 			var once sync.Once
 			factory := &cmdutil.Factory{
 				Config: rootTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						once.Do(func() { close(requestStarted) })
 						<-req.Context().Done()
@@ -306,7 +306,7 @@ func TestRepoListAcceptsTransientTokenAndBaseURL(t *testing.T) {
 	var requestCount int
 	factory := &cmdutil.Factory{
 		Config: rootTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requestCount++
 				if got, want := req.URL.String(), baseURL+"/api/v5/user/repos?page=1&per_page=100"; got != want {
@@ -370,7 +370,7 @@ func TestExplicitEmptyTokenDoesNotUseStoredCredentials(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: rootTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			requests++
 			return nil, errors.New("unexpected HTTP client")
 		},
@@ -397,7 +397,7 @@ func TestRepoCreateUsesIdentityFromTransientToken(t *testing.T) {
 	var requestPaths []string
 	factory := &cmdutil.Factory{
 		Config: rootTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requestPaths = append(requestPaths, req.URL.Path)
 				if got, want := req.URL.Scheme+"://"+req.URL.Host, baseURL; got != want {
@@ -445,7 +445,7 @@ func TestRepoCloneCustomOriginDoesNotFallBackToPublicHost(t *testing.T) {
 	var requestPaths []string
 	factory := &cmdutil.Factory{
 		Config: rootTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requestPaths = append(requestPaths, req.URL.Path)
 				if got, want := req.URL.Scheme+"://"+req.URL.Host, baseURL; got != want {
@@ -571,7 +571,7 @@ func TestAPIOutputHonorsRootSanitization(t *testing.T) {
 	payload := "api \x1b[31moutput\x1b[0m\n"
 	factory := &cmdutil.Factory{
 		Config: rootTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: make(http.Header), Body: io.NopCloser(strings.NewReader(payload)), Request: req}, nil
 			})}, nil
@@ -609,7 +609,7 @@ func TestCommitDiffHonorsRootSanitization(t *testing.T) {
 	payload := "diff --git a/a b/a\r\n-old\r\n+new\r\n"
 	factory := &cmdutil.Factory{
 		Config: rootTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: rootRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.URL.EscapedPath() != "/api/v5/repos/alice/demo/commit/abc/diff" {
 					t.Fatalf("path = %q", req.URL.EscapedPath())

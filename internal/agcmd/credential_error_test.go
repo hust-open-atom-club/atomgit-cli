@@ -170,7 +170,7 @@ func TestMissingCredentialLookupThroughFactory(t *testing.T) {
 	}
 	factory := &cmdutil.Factory{
 		Config: cfg,
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			t.Fatal("missing credentials must stop before creating an HTTP client")
 			return nil, nil
 		},
@@ -458,7 +458,7 @@ func TestInvalidCredentialDataStopsFallback(t *testing.T) {
 		t.Fatalf("diagnostic = %q, want %q", out.String(), want)
 	}
 	factory.Config = cfg
-	factory.HttpClient = func() (*http.Client, error) {
+	factory.HTTPClient = func() (*http.Client, error) {
 		t.Fatal("invalid credentials must stop before creating an anonymous client")
 		return nil, nil
 	}

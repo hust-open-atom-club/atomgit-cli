@@ -31,7 +31,7 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 
 func newFactory(t *testing.T, cfg *testConfig, transport http.RoundTripper) *cmdutil.Factory {
 	t.Helper()
-	return &cmdutil.Factory{Config: cfg, HttpClient: func() (*http.Client, error) {
+	return &cmdutil.Factory{Config: cfg, HTTPClient: func() (*http.Client, error) {
 		return &http.Client{Transport: transport}, nil
 	}}
 }

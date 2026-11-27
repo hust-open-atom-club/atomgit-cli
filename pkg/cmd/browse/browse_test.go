@@ -65,7 +65,7 @@ func TestBrowseIssueNumber(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
 		Config: browseTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: browseRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.URL.Path == "/api/v5/repos/alice/demo/issues/42" {
 					return &http.Response{
@@ -96,7 +96,7 @@ func TestBrowsePRNumber(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
 		Config: browseTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: browseRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				switch req.URL.Path {
 				case "/api/v5/repos/alice/demo/issues/45":
@@ -125,7 +125,7 @@ func TestBrowsePRNumber(t *testing.T) {
 func TestBrowseNonexistentNumber(t *testing.T) {
 	f := &cmdutil.Factory{
 		Config: browseTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: browseRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
 			})}, nil
@@ -142,7 +142,7 @@ func TestBrowseNonexistentNumber(t *testing.T) {
 func TestBrowseNumberAPICallsReturnError(t *testing.T) {
 	f := &cmdutil.Factory{
 		Config: browseTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: browseRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.URL.Path == "/api/v5/repos/alice/demo/issues/42" {
 					return &http.Response{
@@ -168,7 +168,7 @@ func TestBrowseFilePath(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
 		Config:     browseTestConfig{},
-		HttpClient: mockRepoHTTPClient("main"),
+		HTTPClient: mockRepoHTTPClient("main"),
 		BrowserOpener: func(rawURL string) error {
 			capturedURL = rawURL
 			return nil
@@ -188,7 +188,7 @@ func TestBrowseFileWithLine(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
 		Config:     browseTestConfig{},
-		HttpClient: mockRepoHTTPClient("main"),
+		HTTPClient: mockRepoHTTPClient("main"),
 		BrowserOpener: func(rawURL string) error {
 			capturedURL = rawURL
 			return nil
@@ -208,7 +208,7 @@ func TestBrowseFileWithLineRange(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
 		Config:     browseTestConfig{},
-		HttpClient: mockRepoHTTPClient("main"),
+		HTTPClient: mockRepoHTTPClient("main"),
 		BrowserOpener: func(rawURL string) error {
 			capturedURL = rawURL
 			return nil
@@ -228,7 +228,7 @@ func TestBrowseNonMainDefaultBranch(t *testing.T) {
 	var capturedURL string
 	f := &cmdutil.Factory{
 		Config:     browseTestConfig{},
-		HttpClient: mockRepoHTTPClient("develop"),
+		HTTPClient: mockRepoHTTPClient("develop"),
 		BrowserOpener: func(rawURL string) error {
 			capturedURL = rawURL
 			return nil
@@ -255,7 +255,7 @@ func TestBrowseDefaultBranchFailureReturnsErrorWithoutOpeningBrowser(t *testing.
 			opened := false
 			f := &cmdutil.Factory{
 				Config:     browseTestConfig{},
-				HttpClient: mockRepoHTTPClientWithResponse(status, "unavailable"),
+				HTTPClient: mockRepoHTTPClientWithResponse(status, "unavailable"),
 				BrowserOpener: func(string) error {
 					opened = true
 					return nil
@@ -279,7 +279,7 @@ func TestBrowseEmptyDefaultBranchReturnsError(t *testing.T) {
 	opened := false
 	f := &cmdutil.Factory{
 		Config:     browseTestConfig{},
-		HttpClient: mockRepoHTTPClient(""),
+		HTTPClient: mockRepoHTTPClient(""),
 		BrowserOpener: func(string) error {
 			opened = true
 			return nil
@@ -301,7 +301,7 @@ func TestBrowseDefaultBranchNetworkFailureReturnsError(t *testing.T) {
 	opened := false
 	f := &cmdutil.Factory{
 		Config: browseTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: browseRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return nil, errors.New("network unavailable")
 			})}, nil
@@ -346,7 +346,7 @@ func TestBrowseExplicitRefSkipsDefaultBranchRequest(t *testing.T) {
 			var capturedURL string
 			f := &cmdutil.Factory{
 				Config: browseTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return nil, errors.New("default branch request should be skipped")
 				},
 				BrowserOpener: func(rawURL string) error {

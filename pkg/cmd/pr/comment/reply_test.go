@@ -52,7 +52,7 @@ func TestReplyCommentIdentity(t *testing.T) {
 				for _, inferred := range []bool{false, true} {
 					calls := 0
 					ctx := context.WithValue(t.Context(), replyContextKey{}, "reply-context")
-					f := &cmdutil.Factory{Config: prCommentTestConfig{}, HttpClient: func() (*http.Client, error) {
+					f := &cmdutil.Factory{Config: prCommentTestConfig{}, HTTPClient: func() (*http.Client, error) {
 						return &http.Client{Transport: prCommentRoundTripFunc(func(r *http.Request) (*http.Response, error) {
 							calls++
 							if r.Method != http.MethodPost || r.URL.EscapedPath() != "/api/v5/repos/alice/demo/pulls/8/discussions/thread/comments" || r.Header.Get("Content-Type") != "application/json" || r.Header.Get("Authorization") != "Bearer token" || r.Context().Value(replyContextKey{}) != "reply-context" {

@@ -328,7 +328,7 @@ func TestRepoEditReportsAPIErrors(t *testing.T) {
 
 func TestRepoEditReportsClientConstructionError(t *testing.T) {
 	factory := repoFactory(repoCommandConfig{token: "token", user: "alice"}, nil)
-	factory.HttpClient = func() (*http.Client, error) {
+	factory.HTTPClient = func() (*http.Client, error) {
 		return nil, fmt.Errorf("client unavailable")
 	}
 	cmd := newCmdRepoEdit(factory)

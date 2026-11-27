@@ -75,7 +75,7 @@ func TestIssueCommentDeleteConfirmation(t *testing.T) {
 				}
 			})
 			cfg := &issueDeleteConfig{}
-			factory := &cmdutil.Factory{Config: cfg, HttpClient: func() (*http.Client, error) {
+			factory := &cmdutil.Factory{Config: cfg, HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: transport}, nil
 			}}
 			cmd := newCmdDelete(factory)

@@ -53,7 +53,7 @@ func TestIssuePRsList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: issueTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/issues/7/pull_requests" {
 							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
@@ -82,7 +82,7 @@ func TestIssuePRsList(t *testing.T) {
 func TestIssuePRsJSONSchema(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return issueResponse(http.StatusOK, `[{"id":1,"number":7,"title":"Fix bug","body":"desc","state":"open","html_url":"https://ex.test/pulls/7","url":"https://api.ex.test/pulls/7","created_at":"2026-01-01","updated_at":"2026-01-02"}]`), nil
 			})}, nil
@@ -162,7 +162,7 @@ func TestIssueBranchesList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: issueTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/issues/7/related_branches" {
 							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
@@ -267,7 +267,7 @@ func TestIssueBranchesMutationConfirmation(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: issueTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						requests++
 						if req.Method == http.MethodGet {
@@ -314,7 +314,7 @@ func TestIssueBranchesUnchangedSkipsPUT(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if req.Method == http.MethodGet {
@@ -345,7 +345,7 @@ func TestIssueBranchesChangedPUTCounts(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if requests == 1 && req.Method != http.MethodGet {
@@ -442,7 +442,7 @@ func TestIssueBranchesComputeDesired(t *testing.T) {
 func TestIssueBranchesJSONMutation(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method == http.MethodGet {
 					return issueResponse(http.StatusOK, `["main"]`), nil
@@ -473,7 +473,7 @@ func TestIssueBranchesJSONMutation(t *testing.T) {
 func TestIssueBranchesRemoveLastBranchJSONUsesEmptyArray(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method == http.MethodGet {
 					return issueResponse(http.StatusOK, `["main"]`), nil

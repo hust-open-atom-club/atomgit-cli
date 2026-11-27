@@ -195,7 +195,7 @@ func TestOrgEditFailuresDoNotReplay(t *testing.T) {
 func TestOrgEditClientFailureAndContext(t *testing.T) {
 	cause := errors.New("client unavailable")
 	f := orgFactory(orgTestConfig{}, nil)
-	f.HttpClient = func() (*http.Client, error) { return nil, cause }
+	f.HTTPClient = func() (*http.Client, error) { return nil, cause }
 	out, _, err := executeOrgEdit(t, f, "", "team", "--description", "New", "--yes")
 	if !errors.Is(err, cause) || out != "" {
 		t.Fatalf("error=%v output=%q", err, out)

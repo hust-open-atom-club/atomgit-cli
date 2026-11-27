@@ -148,7 +148,7 @@ func TestUpdateCheckCancelsReleaseRequestWithCommandContext(t *testing.T) {
 	requestStarted := make(chan struct{})
 	factory := &cmdutil.Factory{
 		Context: func() context.Context { return ctx },
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 				close(requestStarted)
 				<-req.Context().Done()
@@ -736,7 +736,7 @@ func TestUpdateRejectsUnknownInstallation(t *testing.T) {
 func TestUpdateRejectsInvalidCurrentVersionBeforeHTTP(t *testing.T) {
 	setCurrentVersion(t, "dev")
 	requested := false
-	factory := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
+	factory := &cmdutil.Factory{HTTPClient: func() (*http.Client, error) {
 		requested = true
 		return &http.Client{}, nil
 	}}
@@ -810,7 +810,7 @@ func TestNPMExecutablePath(t *testing.T) {
 
 func releaseFactory(t *testing.T, latest string) *cmdutil.Factory {
 	t.Helper()
-	return &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
+	return &cmdutil.Factory{HTTPClient: func() (*http.Client, error) {
 		return &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 			if req.Method != http.MethodGet {
 				t.Fatalf("method = %s, want GET", req.Method)

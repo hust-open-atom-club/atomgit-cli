@@ -41,7 +41,7 @@ func response(req *http.Request, status int, body string) *http.Response {
 func newTestFactory(transport http.RoundTripper, token string) *cmdutil.Factory {
 	f := &cmdutil.Factory{}
 	if transport != nil {
-		f.HttpClient = func() (*http.Client, error) {
+		f.HTTPClient = func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		}
 	}

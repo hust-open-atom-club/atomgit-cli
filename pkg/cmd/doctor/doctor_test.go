@@ -86,7 +86,7 @@ func TestOfflineReadOnly(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := credentials(t, tc.body)
-			f := &cmdutil.Factory{HttpClient: func() (*http.Client, error) { t.Fatal("offline requested HTTP client"); return nil, nil }}
+			f := &cmdutil.Factory{HTTPClient: func() (*http.Client, error) { t.Fatal("offline requested HTTP client"); return nil, nil }}
 			r, out, err := execute(t, f)
 			if got := row(t, r, "credentials").Status; got != tc.want {
 				t.Fatalf("status %s", got)
@@ -138,7 +138,7 @@ func TestLiveReadOnlyAndRedaction(t *testing.T) {
 			credentials(t, validCredentials)
 			var paths []string
 			f := &cmdutil.Factory{RepositoryResolver: func() (cmdutil.Repository, error) { t.Fatal("explicit repo ignored"); return cmdutil.Repository{}, nil }}
-			f.HttpClient = func() (*http.Client, error) {
+			f.HTTPClient = func() (*http.Client, error) {
 				return &http.Client{Transport: transport(func(req *http.Request) (*http.Response, error) {
 					if req.Method != "GET" {
 						t.Fatal("non-read request")
@@ -193,7 +193,7 @@ func TestLiveUsesCommandTokenAtSelectedOrigin(t *testing.T) {
 	f := &cmdutil.Factory{
 		BaseURL:       "https://api.gitcode.com",
 		TokenOverride: "command-token",
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: transport(func(req *http.Request) (*http.Response, error) {
 				requests++
 				paths = append(paths, req.URL.Path)
@@ -237,7 +237,7 @@ func TestLiveExplicitEmptyTokenDoesNotUseStoredCredentials(t *testing.T) {
 	requests := 0
 	f := &cmdutil.Factory{
 		TokenOverrideSet: true,
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: transport(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if authorization := req.Header.Get("Authorization"); authorization != "" {
@@ -280,7 +280,7 @@ func TestRepositoryCanonicalPath(t *testing.T) {
 				credentials(t, validCredentials)
 				f := &cmdutil.Factory{RepositoryResolver: func() (cmdutil.Repository, error) {
 					return cmdutil.Repository{Owner: "TEAM", Name: "demo"}, nil
-				}, HttpClient: func() (*http.Client, error) {
+				}, HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: transport(func(req *http.Request) (*http.Response, error) {
 						body := `{"login":"alice"}`
 						switch {
@@ -310,7 +310,7 @@ func TestRepositoryCanonicalPath(t *testing.T) {
 
 func TestRejectedCredentialsSuggestForcedLogin(t *testing.T) {
 	credentials(t, validCredentials)
-	f := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
+	f := &cmdutil.Factory{HTTPClient: func() (*http.Client, error) {
 		return &http.Client{Transport: transport(func(req *http.Request) (*http.Response, error) {
 			return &http.Response{StatusCode: http.StatusUnauthorized, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"message":"Unauthorized"}`)), Request: req}, nil
 		})}, nil
@@ -341,7 +341,7 @@ func TestCancellationAndTransportErrors(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			credentials(t, validCredentials)
-			f := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: transport(func(*http.Request) (*http.Response, error) { return nil, tc.err })}, nil
 			}}
 			r, out, err := execute(t, f, "--live")
@@ -354,7 +354,7 @@ func TestCancellationAndTransportErrors(t *testing.T) {
 		credentials(t, validCredentials)
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		f := &cmdutil.Factory{Context: func() context.Context { return ctx }, HttpClient: func() (*http.Client, error) {
+		f := &cmdutil.Factory{Context: func() context.Context { return ctx }, HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: transport(func(r *http.Request) (*http.Response, error) {
 				if r.Context().Err() != context.Canceled {
 					t.Fatal("context dropped")
@@ -372,7 +372,7 @@ func TestCancellationAndTransportErrors(t *testing.T) {
 func TestLiveWithoutCredentialsStillChecksConnectivity(t *testing.T) {
 	credentials(t, "")
 	calls := 0
-	f := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
+	f := &cmdutil.Factory{HTTPClient: func() (*http.Client, error) {
 		return &http.Client{Transport: transport(func(req *http.Request) (*http.Response, error) {
 			calls++
 			if req.Header.Get("Authorization") != "" {
@@ -389,7 +389,7 @@ func TestLiveWithoutCredentialsStillChecksConnectivity(t *testing.T) {
 
 func TestKnownExpiryAndInvalidUserResponse(t *testing.T) {
 	credentials(t, `{"user":"alice","access_token":"synthetic","created_at":1,"expires_in":1}`)
-	f := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
+	f := &cmdutil.Factory{HTTPClient: func() (*http.Client, error) {
 		return &http.Client{Transport: transport(func(req *http.Request) (*http.Response, error) {
 			return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{}`)), Request: req}, nil
 		})}, nil
@@ -422,7 +422,7 @@ func TestAnonymousServiceFailures(t *testing.T) {
 	for _, status := range []int{401, 403, 404, 429, 500, 503} {
 		t.Run(http.StatusText(status), func(t *testing.T) {
 			credentials(t, "")
-			f := &cmdutil.Factory{HttpClient: func() (*http.Client, error) {
+			f := &cmdutil.Factory{HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: transport(func(req *http.Request) (*http.Response, error) {
 					return &http.Response{StatusCode: status, Status: http.StatusText(status), Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"message":"synthetic-private-response"}`)), Request: req}, nil
 				})}, nil

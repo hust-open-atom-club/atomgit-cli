@@ -215,7 +215,7 @@ func collaborationTestFactory(t *testing.T, roundTrip prRoundTripFunc) *cmdutil.
 	t.Helper()
 	return &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: roundTrip}, nil
 		},
 	}

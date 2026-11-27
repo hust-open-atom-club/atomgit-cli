@@ -54,7 +54,7 @@ func TestLabelListHonorsLimit(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: labelTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: labelRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/labels" {
@@ -103,7 +103,7 @@ func TestLabelListJSONAndEmpty(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: labelTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: labelRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						return labelResponse(http.StatusOK, tt.body), nil
 					})}, nil
@@ -165,7 +165,7 @@ func TestLabelListRejectsInvalidInput(t *testing.T) {
 func TestLabelCreate(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: labelTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: labelRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/labels" {
 					t.Fatalf("request = %s %s", req.Method, req.URL.Path)
@@ -205,7 +205,7 @@ func TestLabelCreate(t *testing.T) {
 func TestLabelEdit(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: labelTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: labelRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method != http.MethodPatch || req.URL.EscapedPath() != "/api/v5/repos/alice/demo/labels/help%20wanted" {
 					t.Fatalf("request = %s %s", req.Method, req.URL.EscapedPath())
@@ -275,7 +275,7 @@ func TestLabelMutationsReportAPIErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: labelTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: labelRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						return labelResponse(tt.status, tt.body), nil
 					})}, nil
@@ -294,7 +294,7 @@ func TestLabelDelete(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: labelTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: labelRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if req.Method != http.MethodDelete || req.URL.EscapedPath() != "/api/v5/repos/alice/demo/labels/help%20wanted" {
@@ -337,7 +337,7 @@ func TestLabelDeleteConfirmation(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: labelTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: labelRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						requests++
 						return labelResponse(http.StatusOK, `{}`), nil
@@ -364,7 +364,7 @@ func TestLabelDeleteConfirmation(t *testing.T) {
 func TestLabelDeleteReportsAPIError(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: labelTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: labelRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return labelResponse(http.StatusForbidden, `{"message":"denied"}`), nil
 			})}, nil

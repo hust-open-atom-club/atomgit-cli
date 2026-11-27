@@ -94,7 +94,7 @@ func TestIssueListUserScopedFilterRequests(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: issueTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						requests++
 						if tt.wantErr != "" {
@@ -152,7 +152,7 @@ func TestIssueListUserScopedFilterRequests(t *testing.T) {
 func TestIssueListUserScopedOutputIncludesRepoIdentity(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				body := `[
 					{"number":"1","title":"Update dependencies","state":"open","html_url":"https://atomgit.com/alice/one/issues/1"},
@@ -187,7 +187,7 @@ func TestIssueListWithoutUserScopeFlagsKeepsRepoEndpoint(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if req.URL.Path != "/api/v5/repos/alice/demo/issues" {

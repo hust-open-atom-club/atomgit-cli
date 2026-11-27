@@ -443,7 +443,7 @@ func (failingReader) Read([]byte) (int, error) { return 0, fmt.Errorf("unexpecte
 func collaboratorFactory(roundTrip collaboratorRoundTripFunc) *cmdutil.Factory {
 	return &cmdutil.Factory{
 		Config: collaboratorTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: roundTrip}, nil
 		},
 	}

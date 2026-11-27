@@ -280,7 +280,7 @@ func TestReleaseCreateInfersRepoFromResolver(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "team", Name: "demo"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		},
 	}

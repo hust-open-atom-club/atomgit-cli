@@ -34,7 +34,7 @@ func TestIssueCommentEditVerifiesParentBeforePatch(t *testing.T) {
 	var methods []string
 	factory := &cmdutil.Factory{
 		Config: issueCommentTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueCommentRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				methods = append(methods, req.Method+" "+req.URL.RequestURI())
 				switch req.Method {
@@ -69,7 +69,7 @@ func TestIssueCommentEditFindsParentOnSecondPage(t *testing.T) {
 	var methods []string
 	factory := &cmdutil.Factory{
 		Config: issueCommentTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueCommentRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				methods = append(methods, req.Method+" "+req.URL.RequestURI())
 				switch req.Method {
@@ -105,7 +105,7 @@ func TestIssueCommentDeleteRejectsCommentFromAnotherIssue(t *testing.T) {
 	deleteCount := 0
 	factory := &cmdutil.Factory{
 		Config: issueCommentTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueCommentRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method == http.MethodDelete {
 					deleteCount++

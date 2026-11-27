@@ -19,7 +19,7 @@ func TestFactoryStoresDependencies(t *testing.T) {
 	wantClient := &http.Client{}
 	factory := &Factory{
 		Config: stubConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return wantClient, nil
 		},
 	}
@@ -33,12 +33,12 @@ func TestFactoryStoresDependencies(t *testing.T) {
 	if host := factory.Config.GetHost(); host != "atomgit.com" {
 		t.Fatalf("GetHost() = %q", host)
 	}
-	client, err := factory.HttpClient()
+	client, err := factory.HTTPClient()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if client != wantClient {
-		t.Fatal("HttpClient returned a different client")
+		t.Fatal("HTTPClient returned a different client")
 	}
 }
 
@@ -126,7 +126,7 @@ func TestFactoryBaseURLSelectsAPIVersion(t *testing.T) {
 	var requestURLs []string
 	factory := &Factory{
 		BaseURL: "https://api.gitcode.com/",
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: factoryRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requestURLs = append(requestURLs, req.URL.String())
 				body := `{}`
@@ -169,7 +169,7 @@ func TestApplyTokenOverrideResolvesUserAgainstSelectedOrigin(t *testing.T) {
 		BaseURL:       "https://api.gitcode.com",
 		Config:        stubConfig{},
 		TokenOverride: "command-token",
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: factoryRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if got, want := req.URL.String(), "https://api.gitcode.com/api/v5/user"; got != want {
@@ -207,7 +207,7 @@ func TestApplyTokenOverrideDoesNotFallBackToStoredUser(t *testing.T) {
 		BaseURL:       "https://api.gitcode.com",
 		Config:        stubConfig{},
 		TokenOverride: commandToken,
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: factoryRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusUnauthorized,

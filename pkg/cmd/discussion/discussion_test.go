@@ -41,7 +41,7 @@ func discussionResponse(status int, body string) *http.Response {
 func discussionFactory(config discussionTestConfig, transport discussionRoundTripFunc) *cmdutil.Factory {
 	factory := &cmdutil.Factory{Config: config}
 	if transport != nil {
-		factory.HttpClient = func() (*http.Client, error) {
+		factory.HTTPClient = func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		}
 	}

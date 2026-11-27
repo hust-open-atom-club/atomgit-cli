@@ -87,7 +87,7 @@ func TestRunForkUpdatesAndVerifiesDescription(t *testing.T) {
 
 	factory := &cmdutil.Factory{
 		Config: forkTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return httpClient, nil
 		},
 	}
@@ -135,7 +135,7 @@ func TestRunForkWithoutDescriptionOnlyForks(t *testing.T) {
 	})}
 	factory := &cmdutil.Factory{
 		Config: forkTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return httpClient, nil
 		},
 	}
@@ -160,7 +160,7 @@ func TestForkCommandInfersRepository(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "team", Name: "inferred"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return httpClient, nil
 		},
 	}

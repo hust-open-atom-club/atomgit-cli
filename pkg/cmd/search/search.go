@@ -64,7 +64,7 @@ func NewCmdSearch(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
-type SearchIssue struct {
+type Issue struct {
 	api.Issue
 	Repository struct {
 		FullName string `json:"full_name"`
@@ -302,7 +302,7 @@ func newCmdSearchIssues(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 
-			issues, err := api.GetPaginatedUntilEmptyWithPageSize[SearchIssue](client, opts.Limit, searchMaxPerPage, searchIssueKey, func(page, perPage int) string {
+			issues, err := api.GetPaginatedUntilEmptyWithPageSize[Issue](client, opts.Limit, searchMaxPerPage, searchIssueKey, func(page, perPage int) string {
 				v := url.Values{}
 				v.Set("q", query)
 				setOptional(v, "sort", opts.Sort)
@@ -350,7 +350,7 @@ func newCmdSearchIssues(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
-func searchIssueKey(issue SearchIssue) string {
+func searchIssueKey(issue Issue) string {
 	if issue.ID != 0 {
 		return fmt.Sprintf("id:%d", issue.ID)
 	}

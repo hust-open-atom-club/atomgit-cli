@@ -15,7 +15,7 @@ import (
 func TestPRCommitsTextOutput(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[{"sha":"abc1234567890","html_url":"https://u","commit":{"message":"fix: resolve issue\n\nbody","author":{"name":"Alice","email":"a@b.com","date":"2024-06-15T10:30:00Z","login":"alice"}}},{"sha":"def5678","html_url":"https://u2","commit":{"message":"chore: cleanup","author":{"name":"Bob","email":"","date":"2024-06-14T08:00:00Z","login":""}}}]`), nil
 			})}, nil
@@ -95,7 +95,7 @@ func TestParseTimestamp(t *testing.T) {
 func TestPRCommitsJSON(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[{"sha":"abc1234","html_url":"https://url","commit":{"message":"fix bug","author":{"name":"Alice","email":"alice@example.com","date":"2024-01-01T00:00:00Z","login":"alice"}}}]`), nil
 			})}, nil
@@ -127,7 +127,7 @@ func TestPRCommitsJSON(t *testing.T) {
 func TestPRCommitsEmptyResponse(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[]`), nil
 			})}, nil
@@ -150,7 +150,7 @@ func TestPRCommitsPagination(t *testing.T) {
 	var pageQuery string
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				pageQuery = req.URL.RawQuery
 				return prResponse(http.StatusOK, `[]`), nil
@@ -203,7 +203,7 @@ func TestPRCommitsInvalidPRNumberBeforeAuth(t *testing.T) {
 func TestPRFilesTextOutput(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[{"sha":"a","filename":"main.go","additions":10,"deletions":2,"too_large":false,"blob_url":"https://b","raw_url":"https://r","patch":{"old_path":"main.go","new_path":"main.go","added_lines":10,"removed_lines":2,"too_large":false,"new_file":false,"renamed_file":false,"deleted_file":false}},{"sha":"b","filename":"old.go","additions":0,"deletions":0,"too_large":false,"blob_url":"https://b2","raw_url":"https://r2","patch":{"old_path":"old.go","new_path":"new.go","added_lines":0,"removed_lines":0,"too_large":false,"new_file":false,"renamed_file":true,"deleted_file":false}}]`), nil
 			})}, nil
@@ -230,7 +230,7 @@ func TestPRFilesTextOutput(t *testing.T) {
 func TestPRFilesJSON(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[{"sha":"a","filename":"main.go","additions":10,"deletions":2,"too_large":false,"blob_url":"https://b","raw_url":"https://r","patch":{"old_path":"main.go","new_path":"main.go","added_lines":10,"removed_lines":2,"too_large":false,"new_file":false,"renamed_file":false,"deleted_file":false}}]`), nil
 			})}, nil
@@ -262,7 +262,7 @@ func TestPRFilesJSON(t *testing.T) {
 func TestPRFilesEmptyResponse(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[]`), nil
 			})}, nil
@@ -283,7 +283,7 @@ func TestPRFilesEmptyResponse(t *testing.T) {
 func TestPRFilesPatchFallback(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[{"sha":"a","filename":"renamed.go","status":"renamed","additions":0,"deletions":0,"too_large":false,"blob_url":"https://b","raw_url":"https://r","patch":{"old_path":"old_name.go","new_path":"renamed.go","added_lines":5,"removed_lines":3,"too_large":true}}]`), nil
 			})}, nil
@@ -329,7 +329,7 @@ func TestPRFilesGETOnlyRequestCount(t *testing.T) {
 	var count int
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				count++
 				if req.Method != http.MethodGet {
@@ -351,7 +351,7 @@ func TestPRFilesGETOnlyRequestCount(t *testing.T) {
 func TestPRReactionsTextOutput(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[{"id":"r1","user":{"login":"alice"},"emoji":"+1","emoji_name":"like"},{"id":"r2","user":{"login":"bob"},"emoji":"heart","emoji_name":"heart"}]`), nil
 			})}, nil
@@ -378,7 +378,7 @@ func TestPRReactionsTextOutput(t *testing.T) {
 func TestPRReactionsJSON(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[{"id":"r1","user":{"login":"alice"},"emoji":"+1","emoji_name":"like"}]`), nil
 			})}, nil
@@ -407,7 +407,7 @@ func TestPRReactionsJSON(t *testing.T) {
 func TestPRReactionsEmptyResponse(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[]`), nil
 			})}, nil
@@ -442,7 +442,7 @@ func TestPRReactionsGETOnlyRequestCount(t *testing.T) {
 	var count int
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				count++
 				if req.Method != http.MethodGet {
@@ -491,7 +491,7 @@ func TestPRDetailsServerOrderPreserved(t *testing.T) {
 	t.Run("commits preserve server order", func(t *testing.T) {
 		factory := &cmdutil.Factory{
 			Config: prTestConfig{},
-			HttpClient: func() (*http.Client, error) {
+			HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 					return prResponse(http.StatusOK, `[{"sha":"c","html_url":"","commit":{"message":"third","author":{"name":"","email":"","date":""}}},{"sha":"b","html_url":"","commit":{"message":"second","author":{"name":"","email":"","date":""}}},{"sha":"a","html_url":"","commit":{"message":"first","author":{"name":"","email":"","date":""}}}]`), nil
 				})}, nil
@@ -515,7 +515,7 @@ func TestPRDetailsServerOrderPreserved(t *testing.T) {
 	t.Run("files preserve server order", func(t *testing.T) {
 		factory := &cmdutil.Factory{
 			Config: prTestConfig{},
-			HttpClient: func() (*http.Client, error) {
+			HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 					return prResponse(http.StatusOK, `[{"sha":"a","filename":"z.go","status":"modified"},{"sha":"b","filename":"a.go","status":"added"}]`), nil
 				})}, nil
@@ -539,7 +539,7 @@ func TestPRDetailsServerOrderPreserved(t *testing.T) {
 	t.Run("reactions preserve server order", func(t *testing.T) {
 		factory := &cmdutil.Factory{
 			Config: prTestConfig{},
-			HttpClient: func() (*http.Client, error) {
+			HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 					return prResponse(http.StatusOK, `[{"id":"r2","user":{"login":"bob"},"emoji":"-1","emoji_name":"dislike"},{"id":"r1","user":{"login":"alice"},"emoji":"+1","emoji_name":"like"}]`), nil
 				})}, nil
@@ -564,7 +564,7 @@ func TestPRDetailsServerOrderPreserved(t *testing.T) {
 func TestPRFilesZeroValueFallbacks(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				body := `[{"sha":"a","filename":"new_file.go","status":"added","additions":0,"deletions":0,"too_large":false,"blob_url":"","raw_url":"","patch":{"old_path":"","new_path":"","added_lines":0,"removed_lines":0,"too_large":false}}]`
 				return &http.Response{
@@ -601,7 +601,7 @@ func TestPRFilesZeroValueFallbacks(t *testing.T) {
 func TestPRActivityTextOutput(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[{"id":1,"action":"add_mr_issue_link","content":"Create mr issue link","created_at":"2024-06-15T10:30:00Z","user":{"login":"alice"}},{"id":2,"action":"closed","content":"","created_at":"2024-06-14T08:00:00Z","user":{"login":"","name":"Bob"}}]`), nil
 			})}, nil
@@ -628,7 +628,7 @@ func TestPRActivityTextOutput(t *testing.T) {
 func TestPRActivityJSON(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[{"id":9,"action":"approved","content":"lgtm","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-02T00:00:00Z","user":{"login":"alice"}}]`), nil
 			})}, nil
@@ -657,7 +657,7 @@ func TestPRActivityJSON(t *testing.T) {
 func TestPRActivityEmptyResponse(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[]`), nil
 			})}, nil
@@ -708,7 +708,7 @@ func TestPRActivityPaginationQuery(t *testing.T) {
 	var rawQuery string
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				rawQuery = req.URL.RawQuery
 				return prResponse(http.StatusOK, `[]`), nil
@@ -727,7 +727,7 @@ func TestPRActivityPaginationQuery(t *testing.T) {
 func TestPRHistoryTextOutput(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[{"id":"a","created":true,"created_at":"2024-06-15T10:30:00Z","content":"initial","user":{"login":"alice"}},{"id":"b","created":false,"updated_at":"2024-06-16T10:30:00Z","content":"edited","user":{"login":"alice"},"updated_user":{"login":"bob"}}]`), nil
 			})}, nil
@@ -782,7 +782,7 @@ func TestPRHistoryTextAttribution(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: prTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						return prResponse(http.StatusOK, tt.body), nil
 					})}, nil
@@ -804,7 +804,7 @@ func TestPRHistoryTextAttribution(t *testing.T) {
 func TestPRHistoryJSON(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[{"id":"a","created":true,"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-02T00:00:00Z","content":"initial","user":{"login":"alice"},"updated_user":{"login":"bob"}}]`), nil
 			})}, nil
@@ -833,7 +833,7 @@ func TestPRHistoryJSON(t *testing.T) {
 func TestPRHistoryEmptyResponse(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[]`), nil
 			})}, nil
@@ -855,7 +855,7 @@ func TestPRHistoryNoPaginationQuery(t *testing.T) {
 	var rawQuery string
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				rawQuery = req.URL.RawQuery
 				return prResponse(http.StatusOK, `[]`), nil

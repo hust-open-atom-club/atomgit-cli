@@ -91,7 +91,7 @@ func TestPRCreateUsesRequestedOrRepositoryDefaultBase(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: prTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						requests++
 						if got := req.Header.Get("Authorization"); got != "Bearer token" {
@@ -172,7 +172,7 @@ func TestPRCreateBodyInput(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: prTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						requests++
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/pulls" {
@@ -267,7 +267,7 @@ func TestPREditBodyInput(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: prTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						requests++
 						if req.Method != http.MethodPatch || req.URL.Path != "/api/v5/repos/alice/demo/pulls/42" {
@@ -383,7 +383,7 @@ func TestPREditBodyInputErrorsDoNotSendRequests(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: prTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						requests++
 						return prResponse(http.StatusOK, `{}`), nil
@@ -412,7 +412,7 @@ func TestPREditServerErrorDoesNotPrintSuccess(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				requests++
 				return prResponse(http.StatusUnprocessableEntity, `{"message":"body rejected"}`), nil
@@ -441,7 +441,7 @@ func TestPREditServerErrorDoesNotPrintSuccess(t *testing.T) {
 func TestPRCreateFallsBackToBrowserURL(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusCreated, `{"number":7}`), nil
 			})}, nil
@@ -476,7 +476,7 @@ func TestPRWriteCommandsUseRequestNumberForEmptyResponses(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: prTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						return prResponse(http.StatusNoContent, ""), nil
 					})}, nil
@@ -533,7 +533,7 @@ func TestPRListInfersRepositoryAndHonorsLimit(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if req.URL.Path != "/api/v5/repos/alice/demo/pulls" || req.URL.Query().Get("state") != "closed" || req.URL.Query().Get("page") != "1" || req.URL.Query().Get("per_page") != "100" {
@@ -560,7 +560,7 @@ func TestPRListJSON(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return prResponse(http.StatusOK, `[{"id":1,"number":9,"title":"change","state":"open","head":{"ref":"feature"},"base":{"ref":"main"},"labels":[{"name":"ready"}]}]`), nil
 			})}, nil
@@ -585,7 +585,7 @@ func TestPRListJSON(t *testing.T) {
 func TestPRViewJSON(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if strings.HasSuffix(req.URL.Path, "/labels") {
 					return prResponse(http.StatusOK, `[{"name":"reviewed"}]`), nil
@@ -724,7 +724,7 @@ func TestPRDiff(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: prTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						if req.Method != http.MethodGet {
 							t.Errorf("request method = %s, want GET", req.Method)
@@ -835,7 +835,7 @@ func TestPRMergeSuccess(t *testing.T) {
 				RepositoryResolver: func() (cmdutil.Repository, error) {
 					return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 				},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
 							return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
@@ -930,7 +930,7 @@ func TestPRMergeFlagsInBody(t *testing.T) {
 			var mergeBody json.RawMessage
 			factory := &cmdutil.Factory{
 				Config: prTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
 							return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
@@ -973,7 +973,7 @@ func TestPRMergeDeleteBranch(t *testing.T) {
 	branchDeleted := false
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
 					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{"full_name":"alice/demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
@@ -1012,7 +1012,7 @@ func TestPRMergeDeleteBranch(t *testing.T) {
 func TestPRMergeDeleteBranchFails(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
 					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{"full_name":"alice/demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
@@ -1052,7 +1052,7 @@ func TestPRMergeDeleteBranchFork(t *testing.T) {
 	branchDeleted := false
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
 					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{"full_name":"alice/fork-demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
@@ -1092,7 +1092,7 @@ func TestPRMergeDeleteBranchWithSlash(t *testing.T) {
 	branchDeleted := false
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
 					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature/x","sha":"abc","repo":{"full_name":"alice/demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
@@ -1132,7 +1132,7 @@ func TestPRMergeDeleteBranchSkipsEmptySourceBranch(t *testing.T) {
 	branchDeleted := false
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
 					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"","sha":"abc","repo":{"full_name":"alice/demo"}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
@@ -1208,7 +1208,7 @@ func TestPRMergeErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: prTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						return prResponse(tt.getStatus, tt.getBody), nil
 					})}, nil
@@ -1227,7 +1227,7 @@ func TestPRMergeErrors(t *testing.T) {
 func TestPRMergeAPIError(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method == http.MethodGet && req.URL.Path == "/api/v5/repos/alice/demo/pulls/42" {
 					return prResponse(http.StatusOK, `{"id":1,"number":"42","title":"test","state":"open","merged":false,"html_url":"https://atomgit.com/alice/demo/pulls/42","head":{"ref":"feature-x","sha":"abc","repo":{}},"base":{"ref":"main","sha":"def","repo":{}}}`), nil
@@ -1308,7 +1308,7 @@ func TestPRMergeValidation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := newCmdPRMerge(&cmdutil.Factory{
 				Config: prTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					t.Fatal("HTTP client should not be created for invalid merge input")
 					return nil, nil
 				},
@@ -1325,7 +1325,7 @@ func TestPRReopenSendsOpenState(t *testing.T) {
 	var gotMethod, gotPath, gotBody string
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				gotMethod = req.Method
 				gotPath = req.URL.Path
@@ -1371,7 +1371,7 @@ func TestPRReopenRejectsWrongArgCount(t *testing.T) {
 func TestPRReopenWrapsAPIError(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: prTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader(`{"message":"not found"}`)), Header: make(http.Header)}, nil
 			})}, nil
@@ -1479,7 +1479,7 @@ func TestPRListJSONSchemaUnchanged(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				body := `[{"id":1,"number":9,"title":"change","body":"desc","state":"open","html_url":"https://u","user":{"login":"alice"},"head":{"ref":"feature"},"base":{"ref":"main"},"labels":[{"name":"bug"}],"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-02T00:00:00Z","merged":false,"mergeable":true}]`
 				return prResponse(http.StatusOK, body), nil
@@ -1519,7 +1519,7 @@ func TestPRViewJSONCollaborationFields(t *testing.T) {
 	t.Run("collaboration fields present when populated", func(t *testing.T) {
 		factory := &cmdutil.Factory{
 			Config: prTestConfig{},
-			HttpClient: func() (*http.Client, error) {
+			HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					if strings.HasSuffix(req.URL.Path, "/labels") {
 						return prResponse(http.StatusOK, `[{"name":"reviewed"}]`), nil
@@ -1564,7 +1564,7 @@ func TestPRViewJSONCollaborationFields(t *testing.T) {
 	t.Run("milestone null when absent", func(t *testing.T) {
 		factory := &cmdutil.Factory{
 			Config: prTestConfig{},
-			HttpClient: func() (*http.Client, error) {
+			HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					if strings.HasSuffix(req.URL.Path, "/labels") {
 						return prResponse(http.StatusOK, `[]`), nil
@@ -1593,7 +1593,7 @@ func TestPRViewJSONCollaborationFields(t *testing.T) {
 	t.Run("non-nil empty arrays for collaboration", func(t *testing.T) {
 		factory := &cmdutil.Factory{
 			Config: prTestConfig{},
-			HttpClient: func() (*http.Client, error) {
+			HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					if strings.HasSuffix(req.URL.Path, "/labels") {
 						return prResponse(http.StatusOK, `[]`), nil
@@ -1625,7 +1625,7 @@ func TestPRViewJSONCollaborationFields(t *testing.T) {
 	t.Run("pr view --json existing fields unchanged", func(t *testing.T) {
 		factory := &cmdutil.Factory{
 			Config: prTestConfig{},
-			HttpClient: func() (*http.Client, error) {
+			HTTPClient: func() (*http.Client, error) {
 				return &http.Client{Transport: prRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 					if strings.HasSuffix(req.URL.Path, "/labels") {
 						return prResponse(http.StatusOK, `[{"name":"reviewed"}]`), nil
@@ -1669,7 +1669,7 @@ func TestPRDiffRejectInvalidNumberBeforeAuth(t *testing.T) {
 	cfg := &recordingConfig{}
 	factory := &cmdutil.Factory{Config: cfg}
 	var requests int
-	factory.HttpClient = func() (*http.Client, error) {
+	factory.HTTPClient = func() (*http.Client, error) {
 		requests++
 		return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return &http.Response{StatusCode: 200, Status: "200 OK", Body: http.NoBody, Header: make(http.Header)}, nil
@@ -1684,7 +1684,7 @@ func TestPRDiffRejectInvalidNumberBeforeAuth(t *testing.T) {
 		t.Fatalf("GetToken was called %d times; parsePRNumber must reject invalid input before authentication", cfg.getTokenCalls)
 	}
 	if requests != 0 {
-		t.Fatalf("HttpClient created %d times; invalid input must not reach network initialization", requests)
+		t.Fatalf("HTTPClient created %d times; invalid input must not reach network initialization", requests)
 	}
 }
 
@@ -1692,7 +1692,7 @@ func TestPRIssuesRejectInvalidNumberBeforeAuth(t *testing.T) {
 	cfg := &recordingConfig{}
 	factory := &cmdutil.Factory{Config: cfg}
 	var requests int
-	factory.HttpClient = func() (*http.Client, error) {
+	factory.HTTPClient = func() (*http.Client, error) {
 		requests++
 		return &http.Client{Transport: prRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			return &http.Response{StatusCode: 200, Status: "200 OK", Body: http.NoBody, Header: make(http.Header)}, nil
@@ -1707,6 +1707,6 @@ func TestPRIssuesRejectInvalidNumberBeforeAuth(t *testing.T) {
 		t.Fatalf("GetToken was called %d times; parsePRNumber must reject invalid input before authentication", cfg.getTokenCalls)
 	}
 	if requests != 0 {
-		t.Fatalf("HttpClient created %d times; invalid input must not reach network initialization", requests)
+		t.Fatalf("HTTPClient created %d times; invalid input must not reach network initialization", requests)
 	}
 }

@@ -97,7 +97,7 @@ func TestIssueCreateBodyInput(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: issueTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						requests++
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/issues" {
@@ -167,7 +167,7 @@ func TestIssueListInfersRepositoryAndHonorsLimit(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if req.URL.Path != "/api/v5/repos/alice/demo/issues" || req.URL.Query().Get("state") != "closed" || req.URL.Query().Get("page") != "1" || req.URL.Query().Get("per_page") != "100" {
@@ -211,7 +211,7 @@ func TestIssueListJSON(t *testing.T) {
 				RepositoryResolver: func() (cmdutil.Repository, error) {
 					return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 				},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						return issueResponse(http.StatusOK, tt.body), nil
 					})}, nil
@@ -251,7 +251,7 @@ func TestIssueReopenUsesOwnerPathWithFormData(t *testing.T) {
 
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				call++
 				switch call {
@@ -326,7 +326,7 @@ func TestIssueReopenFailsWhenStateRemainsClosedAfterUpdate(t *testing.T) {
 
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				call++
 				switch call {
@@ -391,7 +391,7 @@ func TestIssueViewOutputsLabels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			factory := &cmdutil.Factory{
 				Config: issueTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/issues/1" {
 							t.Fatalf("request = %s %s", req.Method, req.URL.Path)
@@ -428,7 +428,7 @@ func TestIssueViewOutputsLabels(t *testing.T) {
 func TestIssueViewJSON(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return issueResponse(http.StatusOK, `{"id":1,"number":"8","title":"bug","body":"details","state":"open","html_url":"https://atomgit.com/alice/demo/issues/8","user":{"login":"alice"},"labels":[{"name":"bug"},{"name":" "}],"created_at":"today"}`), nil
 			})}, nil
@@ -458,7 +458,7 @@ func TestIssueCloseUpdatesAndVerifiesState(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				switch requests {
@@ -505,7 +505,7 @@ func TestIssueCloseFailsWhenStateRemainsOpen(t *testing.T) {
 	requests := 0
 	factory := &cmdutil.Factory{
 		Config: issueTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				requests++
 				switch requests {
@@ -591,7 +591,7 @@ func TestIssueCreateAssignee(t *testing.T) {
 			requests := 0
 			factory := &cmdutil.Factory{
 				Config: issueTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: issueRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 						requests++
 						if req.Method != http.MethodPost || req.URL.Path != "/api/v5/repos/alice/demo/issues" {
@@ -682,7 +682,7 @@ func TestIssueCloseReopenRejectInvalidNumberBeforeAuth(t *testing.T) {
 			cfg := &issueRecordingConfig{}
 			factory := &cmdutil.Factory{Config: cfg}
 			var requests int
-			factory.HttpClient = func() (*http.Client, error) {
+			factory.HTTPClient = func() (*http.Client, error) {
 				requests++
 				return &http.Client{Transport: issueRoundTripFunc(func(*http.Request) (*http.Response, error) {
 					return issueResponse(200, `{}`), nil
@@ -697,7 +697,7 @@ func TestIssueCloseReopenRejectInvalidNumberBeforeAuth(t *testing.T) {
 				t.Fatalf("GetToken was called %d times; parseIssueNumber must reject invalid input before authentication", cfg.getTokenCalls)
 			}
 			if requests != 0 {
-				t.Fatalf("HttpClient created %d times; invalid input must not reach network initialization", requests)
+				t.Fatalf("HTTPClient created %d times; invalid input must not reach network initialization", requests)
 			}
 		})
 	}

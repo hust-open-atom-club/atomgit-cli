@@ -64,7 +64,7 @@ func response(status int, body string) *http.Response {
 func factory(config *commitTestConfig, transport commitRoundTripFunc) *cmdutil.Factory {
 	f := &cmdutil.Factory{Config: config}
 	if transport != nil {
-		f.HttpClient = func() (*http.Client, error) {
+		f.HTTPClient = func() (*http.Client, error) {
 			return &http.Client{Transport: transport}, nil
 		}
 	}
@@ -131,7 +131,7 @@ func TestCommitListInfersRepositoryAndForwardsFilters(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: commitRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/commits" {
@@ -180,7 +180,7 @@ func TestCommitListOmitsUnusedFilters(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: commitRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				query := req.URL.Query()
 				for _, name := range []string{"sha", "path", "since", "until"} {
@@ -206,7 +206,7 @@ func TestCommitListPagination(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: commitRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				requests++
 				page := req.URL.Query().Get("page")
@@ -267,7 +267,7 @@ func TestCommitListEmptyOutput(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: commitRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return commitResponse(http.StatusOK, `[]`), nil
 			})}, nil
@@ -288,7 +288,7 @@ func TestCommitListEmptyOutput(t *testing.T) {
 func TestCommitListTextOutput(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: &commitTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: commitRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return commitResponse(http.StatusOK, `[
 					{"sha":"abcdef1234567890abcdef1234567890abcdef12","html_url":"https://atomgit.com/alice/demo/commit/abcdef1234567890abcdef1234567890abcdef12","commit":{"message":"Fix bug\nbody","author":{"name":"Alice","date":"2026-07-15T10:00:00Z"}},"author":{"login":"alice"}},
@@ -317,7 +317,7 @@ func TestCommitListJSON(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: commitRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return commitResponse(http.StatusOK, `[{"sha":"abcdef1234567890abcdef1234567890abcdef12","html_url":"https://atomgit.com/alice/demo/commit/x","commit":{"message":"Fix bug\nbody","author":{"name":"Alice","date":"2026-07-15T10:00:00Z"}},"author":{"login":"alice"}}]`), nil
 			})}, nil
@@ -359,7 +359,7 @@ func TestCommitListErrorResponse(t *testing.T) {
 		RepositoryResolver: func() (cmdutil.Repository, error) {
 			return cmdutil.Repository{Owner: "alice", Name: "demo"}, nil
 		},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: commitRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return commitResponse(http.StatusInternalServerError, `{"error_message":"boom"}`), nil
 			})}, nil
@@ -375,7 +375,7 @@ func TestCommitListErrorResponse(t *testing.T) {
 func TestCommitViewOutputsDetail(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: &commitTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: commitRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if req.Method != http.MethodGet || req.URL.Path != "/api/v5/repos/alice/demo/commits/abcdef1234567890abcdef1234567890abcdef12" {
 					t.Fatalf("request = %s %s", req.Method, req.URL.Path)
@@ -415,7 +415,7 @@ func TestCommitViewOutputsDetail(t *testing.T) {
 func TestCommitViewEscapesSHA(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: &commitTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: commitRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 				if got := req.URL.EscapedPath(); got != "/api/v5/repos/alice/demo/commits/feature%2Ffoo" {
 					t.Fatalf("escaped path = %q", got)
@@ -434,7 +434,7 @@ func TestCommitViewEscapesSHA(t *testing.T) {
 func TestCommitViewJSON(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: &commitTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: commitRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return commitResponse(http.StatusOK, `{
 					"sha":"abcdef1234567890abcdef1234567890abcdef12",
@@ -503,7 +503,7 @@ func TestCommitViewRejectsBlankSHA(t *testing.T) {
 			browserCalls := 0
 			factory := &cmdutil.Factory{
 				Config: &commitTestConfig{},
-				HttpClient: func() (*http.Client, error) {
+				HTTPClient: func() (*http.Client, error) {
 					return &http.Client{Transport: commitRoundTripFunc(func(*http.Request) (*http.Response, error) {
 						requests++
 						return commitResponse(http.StatusOK, `{}`), nil
@@ -532,7 +532,7 @@ func TestCommitViewRejectsBlankSHA(t *testing.T) {
 func TestCommitViewErrorResponse(t *testing.T) {
 	factory := &cmdutil.Factory{
 		Config: &commitTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: commitRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return commitResponse(http.StatusNotFound, `{"error_message":"not found"}`), nil
 			})}, nil
@@ -615,7 +615,7 @@ func TestCommitListEscapesTextColumns(t *testing.T) {
 	// output goes through the root command's sanitizing writer.
 	factory := &cmdutil.Factory{
 		Config: &commitTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: commitRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return commitResponse(http.StatusOK, `[
 					{"sha":"abcdef1234567890abcdef1234567890abcdef12","html_url":"https://atomgit.com/alice/demo/commit/x","commit":{"message":"Fix\tbug\r\nline","author":{"name":"Alice","date":"2026-07-15T10:00:00Z"}},"author":{"login":"alice"}}
@@ -690,7 +690,7 @@ func TestCommitListAuthorEmailFallback(t *testing.T) {
 	// the author column and the JSON author field must fall back to the email.
 	factory := &cmdutil.Factory{
 		Config: &commitTestConfig{},
-		HttpClient: func() (*http.Client, error) {
+		HTTPClient: func() (*http.Client, error) {
 			return &http.Client{Transport: commitRoundTripFunc(func(*http.Request) (*http.Response, error) {
 				return commitResponse(http.StatusOK, `[
 					{"sha":"abcdef1234567890abcdef1234567890abcdef12","html_url":"https://atomgit.com/alice/demo/commit/x","commit":{"message":"Fix bug","author":{"name":"","email":"bot@example.com","date":"2026-07-15T10:00:00Z"}},"author":{"login":"","name":""}}
