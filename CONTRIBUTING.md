@@ -135,8 +135,8 @@
 
    `go.mod` 的 `go` 行规定源码构建所需的最低版本 Go 1.26.6，`toolchain` 行规定
    开发和正式发布建议使用的精确版本 Go 1.26.11。普通 Make 目标固定使用建议版本，
-   `make test-min-go` 则专门验证最低版本兼容性。AtomGit 的 `setup-go` 当前只提供到
-   Go 1.26.1，因此 CI 先将其作为引导命令，再下载并验证这两个版本。工具链下载
+   `make test-min-go` 则专门验证最低版本兼容性。AtomGit 的 `setup-go` 当前提供到
+   Go 1.26.10，因此 CI 先将其作为引导命令，再下载并验证这两个版本。工具链下载
    遵循 `GOPROXY`，并通过 `GOSUMDB` 配置的校验和数据库验证。参见
    [AtomGit setup 工具支持列表](https://docs.gitcode.com/docs/help/home/org_project/pipeline/syntax-reference/setup-supported-tools/)
    和 [Go 工具链文档](https://go.dev/doc/toolchain)。
