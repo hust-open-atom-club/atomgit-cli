@@ -13,7 +13,7 @@ import (
 
 // TestOrgRolesValidationProcess runs the real entry point with a malformed
 // organization path so the driver test can observe which failure wins.
-func TestOrgRolesValidationProcess(t *testing.T) {
+func TestOrgRolesValidationProcess(_ *testing.T) {
 	if os.Getenv("AG_ORG_ROLES_TEST_PROCESS") != "1" {
 		return
 	}

@@ -98,7 +98,7 @@ func TestOrganizationCustomRolesResponseValidation(t *testing.T) {
 		{"rate limited", `{}`, 429, true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("Retry-After", "999999")
 				w.WriteHeader(tt.status)
 				_, _ = w.Write([]byte(tt.body))
@@ -127,7 +127,7 @@ func TestOrganizationCustomRolesDiagnostics(t *testing.T) {
 		{"second role", `[{"id":"a"},{"id":"b","name_cn":[]}]`, "roles[1].name_cn must be a string"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 				_, _ = w.Write([]byte(tt.body))
 			})
 			_, err := GetOrganizationCustomRoles(client, "team")
