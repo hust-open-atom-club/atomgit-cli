@@ -22,7 +22,7 @@ func GetRepositoryPermissions(client *Client, owner, repo string) (RepositoryPer
 		return nil, fmt.Errorf("get repository permissions: %w", err)
 	}
 	if err := validateRepositoryPermissions(result); err != nil {
-		return nil, fmt.Errorf("%w: repository permissions: %s", ErrInvalidResponse, err)
+		return nil, fmt.Errorf("%w: repository permissions: %w", ErrInvalidResponse, err)
 	}
 	return result, nil
 }

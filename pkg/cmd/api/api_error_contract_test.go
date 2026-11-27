@@ -298,6 +298,7 @@ func TestAPIRawResponseReadContract(t *testing.T) {
 			}
 			if tt.wantError {
 				readErr, ok := errors.AsType[*internalapi.ResponseReadError](err)
+				//nolint:errorlint // The direct read cause must be the original error object.
 				if !ok || readErr.Err != tt.cause || !errors.Is(err, tt.cause) {
 					t.Fatalf("lost response read identity or cause: %v", err)
 				}

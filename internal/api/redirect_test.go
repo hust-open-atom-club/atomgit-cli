@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -178,7 +179,8 @@ func TestRedirectStripsJarCookiesAndCallbackHeaders(t *testing.T) {
 
 func TestRedirectPreservesRefusalAndLimit(t *testing.T) {
 	refused := errors.New("caller refused")
-	for _, reason := range []error{refused, http.ErrUseLastResponse, nil} {
+	wrappedLastResponse := fmt.Errorf("wrapped stop: %w", http.ErrUseLastResponse)
+	for _, reason := range []error{refused, http.ErrUseLastResponse, wrappedLastResponse, nil} {
 		calls := 0
 		hc := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return reason }, Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 			calls++
@@ -192,11 +194,11 @@ func TestRedirectPreservesRefusalAndLimit(t *testing.T) {
 			if err == nil || calls != 10 {
 				t.Fatalf("limit error=%v calls=%d", err, calls)
 			}
-		} else if reason == http.ErrUseLastResponse {
+		} else if reason == http.ErrUseLastResponse { //nolint:errorlint // net/http requires this exact sentinel.
 			if err != nil || calls != 1 || resp.StatusCode != 302 {
 				t.Fatalf("last response error=%v calls=%d", err, calls)
 			}
-		} else if !errors.Is(err, refused) || calls != 1 {
+		} else if !errors.Is(err, reason) || calls != 1 {
 			t.Fatalf("refusal error=%v calls=%d", err, calls)
 		}
 	}
